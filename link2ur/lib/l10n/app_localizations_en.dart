@@ -10700,6 +10700,97 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select the service this activity is based on';
 
   @override
+  String get expertActivityType => 'Activity Type';
+
+  @override
+  String get expertActivityTypeStandard => 'Standard Activity';
+
+  @override
+  String get expertActivityTypeLottery => 'Lottery Activity';
+
+  @override
+  String get expertActivityTypeFirstCome => 'First Come, First Served';
+
+  @override
+  String get expertActivityTypeStandardDesc =>
+      'Linked to a service, participants pay to join';
+
+  @override
+  String get expertActivityTypeLotteryDesc =>
+      'Participants sign up, winners drawn randomly';
+
+  @override
+  String get expertActivityTypeFirstComeDesc =>
+      'Limited slots, first come first served';
+
+  @override
+  String get expertActivityPrizeType => 'Prize Type';
+
+  @override
+  String get expertActivityPrizePhysical => 'Physical Prize';
+
+  @override
+  String get expertActivityPrizeInPerson => 'In-Person Event';
+
+  @override
+  String get expertActivityPrizeDescription => 'Prize Description';
+
+  @override
+  String get expertActivityPrizeDescriptionHint =>
+      'Describe the prize or benefit...';
+
+  @override
+  String get expertActivityPrizeCount => 'Number of Prizes/Slots';
+
+  @override
+  String get expertActivityDrawMode => 'Draw Method';
+
+  @override
+  String get expertActivityDrawModeAuto => 'Auto Draw';
+
+  @override
+  String get expertActivityDrawModeManual => 'Manual Draw';
+
+  @override
+  String get expertActivityDrawTrigger => 'Draw Trigger';
+
+  @override
+  String get expertActivityDrawTriggerByTime => 'By Time';
+
+  @override
+  String get expertActivityDrawTriggerByCount => 'By Participant Count';
+
+  @override
+  String get expertActivityDrawTriggerBoth => 'Whichever Comes First';
+
+  @override
+  String get expertActivityDrawAt => 'Auto Draw Time';
+
+  @override
+  String get expertActivityDrawParticipantCount => 'Draw When Reaching';
+
+  @override
+  String get expertActivityDrawParticipantCountSuffix => 'participants';
+
+  @override
+  String get expertActivityServiceOptional => 'Linked Service (Optional)';
+
+  @override
+  String get expertActivityFree => 'Free (no entry fee)';
+
+  @override
+  String get expertActivityManualDraw => 'Draw Now';
+
+  @override
+  String get expertActivityManualDrawConfirm =>
+      'Are you sure you want to draw winners now? This cannot be undone.';
+
+  @override
+  String expertActivityDrawSuccess(Object count) {
+    return 'Draw completed! $count winners selected.';
+  }
+
+  @override
   String get expertDashboardEditProfile => 'Edit Profile';
 
   @override

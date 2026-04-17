@@ -19667,6 +19667,174 @@ abstract class AppLocalizations {
   /// **'Select the service this activity is based on'**
   String get expertActivitySelectServiceHint;
 
+  /// No description provided for @expertActivityType.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Type'**
+  String get expertActivityType;
+
+  /// No description provided for @expertActivityTypeStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard Activity'**
+  String get expertActivityTypeStandard;
+
+  /// No description provided for @expertActivityTypeLottery.
+  ///
+  /// In en, this message translates to:
+  /// **'Lottery Activity'**
+  String get expertActivityTypeLottery;
+
+  /// No description provided for @expertActivityTypeFirstCome.
+  ///
+  /// In en, this message translates to:
+  /// **'First Come, First Served'**
+  String get expertActivityTypeFirstCome;
+
+  /// No description provided for @expertActivityTypeStandardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked to a service, participants pay to join'**
+  String get expertActivityTypeStandardDesc;
+
+  /// No description provided for @expertActivityTypeLotteryDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Participants sign up, winners drawn randomly'**
+  String get expertActivityTypeLotteryDesc;
+
+  /// No description provided for @expertActivityTypeFirstComeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Limited slots, first come first served'**
+  String get expertActivityTypeFirstComeDesc;
+
+  /// No description provided for @expertActivityPrizeType.
+  ///
+  /// In en, this message translates to:
+  /// **'Prize Type'**
+  String get expertActivityPrizeType;
+
+  /// No description provided for @expertActivityPrizePhysical.
+  ///
+  /// In en, this message translates to:
+  /// **'Physical Prize'**
+  String get expertActivityPrizePhysical;
+
+  /// No description provided for @expertActivityPrizeInPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'In-Person Event'**
+  String get expertActivityPrizeInPerson;
+
+  /// No description provided for @expertActivityPrizeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Prize Description'**
+  String get expertActivityPrizeDescription;
+
+  /// No description provided for @expertActivityPrizeDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the prize or benefit...'**
+  String get expertActivityPrizeDescriptionHint;
+
+  /// No description provided for @expertActivityPrizeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of Prizes/Slots'**
+  String get expertActivityPrizeCount;
+
+  /// No description provided for @expertActivityDrawMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw Method'**
+  String get expertActivityDrawMode;
+
+  /// No description provided for @expertActivityDrawModeAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Draw'**
+  String get expertActivityDrawModeAuto;
+
+  /// No description provided for @expertActivityDrawModeManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual Draw'**
+  String get expertActivityDrawModeManual;
+
+  /// No description provided for @expertActivityDrawTrigger.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw Trigger'**
+  String get expertActivityDrawTrigger;
+
+  /// No description provided for @expertActivityDrawTriggerByTime.
+  ///
+  /// In en, this message translates to:
+  /// **'By Time'**
+  String get expertActivityDrawTriggerByTime;
+
+  /// No description provided for @expertActivityDrawTriggerByCount.
+  ///
+  /// In en, this message translates to:
+  /// **'By Participant Count'**
+  String get expertActivityDrawTriggerByCount;
+
+  /// No description provided for @expertActivityDrawTriggerBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Whichever Comes First'**
+  String get expertActivityDrawTriggerBoth;
+
+  /// No description provided for @expertActivityDrawAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Draw Time'**
+  String get expertActivityDrawAt;
+
+  /// No description provided for @expertActivityDrawParticipantCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw When Reaching'**
+  String get expertActivityDrawParticipantCount;
+
+  /// No description provided for @expertActivityDrawParticipantCountSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'participants'**
+  String get expertActivityDrawParticipantCountSuffix;
+
+  /// No description provided for @expertActivityServiceOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked Service (Optional)'**
+  String get expertActivityServiceOptional;
+
+  /// No description provided for @expertActivityFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free (no entry fee)'**
+  String get expertActivityFree;
+
+  /// No description provided for @expertActivityManualDraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw Now'**
+  String get expertActivityManualDraw;
+
+  /// No description provided for @expertActivityManualDrawConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to draw winners now? This cannot be undone.'**
+  String get expertActivityManualDrawConfirm;
+
+  /// No description provided for @expertActivityDrawSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw completed! {count} winners selected.'**
+  String expertActivityDrawSuccess(Object count);
+
   /// No description provided for @expertDashboardEditProfile.
   ///
   /// In en, this message translates to:

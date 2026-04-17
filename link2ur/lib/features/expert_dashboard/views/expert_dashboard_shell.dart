@@ -162,10 +162,12 @@ class _DashboardTabs extends StatelessWidget {
     return BlocProvider(
       create: (context) => ExpertDashboardBloc(
         repository: context.read<TaskExpertRepository>(),
+        expertTeamRepository: context.read<ExpertTeamRepository>(),
         expertId: expertId,
       )
         ..add(const ExpertDashboardLoadStats())
         ..add(const ExpertDashboardLoadMyServices())
+        ..add(const ExpertDashboardLoadActivities())
         ..add(const ExpertDashboardLoadClosedDates())
         ..add(const ExpertDashboardLoadBusinessHours()),
       child: BlocListener<ExpertDashboardBloc, ExpertDashboardState>(

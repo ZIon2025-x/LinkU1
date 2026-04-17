@@ -10267,6 +10267,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertActivitySelectServiceHint => '选择该活动基于的服务';
 
   @override
+  String get expertActivityType => '活动类型';
+
+  @override
+  String get expertActivityTypeStandard => '普通活动';
+
+  @override
+  String get expertActivityTypeLottery => '抽奖活动';
+
+  @override
+  String get expertActivityTypeFirstCome => '抢位活动';
+
+  @override
+  String get expertActivityTypeStandardDesc => '关联服务，参与者付费参加';
+
+  @override
+  String get expertActivityTypeLotteryDesc => '用户报名，截止后随机抽取中奖者';
+
+  @override
+  String get expertActivityTypeFirstComeDesc => '限定名额，先到先得';
+
+  @override
+  String get expertActivityPrizeType => '奖品类型';
+
+  @override
+  String get expertActivityPrizePhysical => '实物奖品';
+
+  @override
+  String get expertActivityPrizeInPerson => '线下到场';
+
+  @override
+  String get expertActivityPrizeDescription => '奖品描述';
+
+  @override
+  String get expertActivityPrizeDescriptionHint => '描述奖品或福利...';
+
+  @override
+  String get expertActivityPrizeCount => '名额数量';
+
+  @override
+  String get expertActivityDrawMode => '开奖方式';
+
+  @override
+  String get expertActivityDrawModeAuto => '自动开奖';
+
+  @override
+  String get expertActivityDrawModeManual => '手动开奖';
+
+  @override
+  String get expertActivityDrawTrigger => '开奖条件';
+
+  @override
+  String get expertActivityDrawTriggerByTime => '按时间';
+
+  @override
+  String get expertActivityDrawTriggerByCount => '按人数';
+
+  @override
+  String get expertActivityDrawTriggerBoth => '时间或人数先到先开';
+
+  @override
+  String get expertActivityDrawAt => '自动开奖时间';
+
+  @override
+  String get expertActivityDrawParticipantCount => '满员开奖人数';
+
+  @override
+  String get expertActivityDrawParticipantCountSuffix => '人';
+
+  @override
+  String get expertActivityServiceOptional => '关联服务（可选）';
+
+  @override
+  String get expertActivityFree => '免费（无参与费）';
+
+  @override
+  String get expertActivityManualDraw => '立即开奖';
+
+  @override
+  String get expertActivityManualDrawConfirm => '确定要立即开奖吗？此操作不可撤销。';
+
+  @override
+  String expertActivityDrawSuccess(Object count) {
+    return '开奖完成！已抽出 $count 名中奖者。';
+  }
+
+  @override
   String get expertDashboardEditProfile => '编辑资料';
 
   @override
@@ -23185,6 +23271,92 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertActivitySelectServiceHint => '選擇該活動基於的服務';
+
+  @override
+  String get expertActivityType => '活動類型';
+
+  @override
+  String get expertActivityTypeStandard => '普通活動';
+
+  @override
+  String get expertActivityTypeLottery => '抽獎活動';
+
+  @override
+  String get expertActivityTypeFirstCome => '搶位活動';
+
+  @override
+  String get expertActivityTypeStandardDesc => '關聯服務，參與者付費參加';
+
+  @override
+  String get expertActivityTypeLotteryDesc => '用戶報名，截止後隨機抽取中獎者';
+
+  @override
+  String get expertActivityTypeFirstComeDesc => '限定名額，先到先得';
+
+  @override
+  String get expertActivityPrizeType => '獎品類型';
+
+  @override
+  String get expertActivityPrizePhysical => '實物獎品';
+
+  @override
+  String get expertActivityPrizeInPerson => '線下到場';
+
+  @override
+  String get expertActivityPrizeDescription => '獎品描述';
+
+  @override
+  String get expertActivityPrizeDescriptionHint => '描述獎品或福利...';
+
+  @override
+  String get expertActivityPrizeCount => '名額數量';
+
+  @override
+  String get expertActivityDrawMode => '開獎方式';
+
+  @override
+  String get expertActivityDrawModeAuto => '自動開獎';
+
+  @override
+  String get expertActivityDrawModeManual => '手動開獎';
+
+  @override
+  String get expertActivityDrawTrigger => '開獎條件';
+
+  @override
+  String get expertActivityDrawTriggerByTime => '按時間';
+
+  @override
+  String get expertActivityDrawTriggerByCount => '按人數';
+
+  @override
+  String get expertActivityDrawTriggerBoth => '時間或人數先到先開';
+
+  @override
+  String get expertActivityDrawAt => '自動開獎時間';
+
+  @override
+  String get expertActivityDrawParticipantCount => '滿員開獎人數';
+
+  @override
+  String get expertActivityDrawParticipantCountSuffix => '人';
+
+  @override
+  String get expertActivityServiceOptional => '關聯服務（可選）';
+
+  @override
+  String get expertActivityFree => '免費（無參與費）';
+
+  @override
+  String get expertActivityManualDraw => '立即開獎';
+
+  @override
+  String get expertActivityManualDrawConfirm => '確定要立即開獎嗎？此操作不可撤銷。';
+
+  @override
+  String expertActivityDrawSuccess(Object count) {
+    return '開獎完成！已抽出 $count 名中獎者。';
+  }
 
   @override
   String get expertDashboardEditProfile => '編輯資料';

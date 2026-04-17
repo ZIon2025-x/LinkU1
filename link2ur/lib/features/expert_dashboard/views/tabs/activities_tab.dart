@@ -25,47 +25,63 @@ class ActivitiesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ExpertDashboardBloc, ExpertDashboardState>(
       buildWhen: (prev, curr) =>
-          prev.services != curr.services || prev.status != curr.status,
+          prev.services != curr.services ||
+          prev.activities != curr.activities ||
+          prev.status != curr.status,
       builder: (context, state) {
         if ((state.status == ExpertDashboardStatus.initial ||
                 state.status == ExpertDashboardStatus.loading) &&
-            state.services.isEmpty) {
+            state.activities.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
         return Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.event_outlined,
-                    size: 64,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    context.l10n.expertActivitiesEmpty,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    context.l10n.expertActivitiesEmptyMessage,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          body: state.activities.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.event_outlined,
+                          size: 64,
                           color: Theme.of(context).brightness == Brightness.dark
                               ? AppColors.textSecondaryDark
                               : AppColors.textSecondaryLight,
                         ),
-                    textAlign: TextAlign.center,
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          context.l10n.expertActivitiesEmpty,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          context.l10n.expertActivitiesEmptyMessage,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
-          ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: state.activities.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final activity = state.activities[index];
+                    return _ActivityListTile(
+                      activity: activity,
+                      expertId: context.read<SelectedExpertCubit>().state.currentExpertId,
+                      repository: context.read<ExpertTeamRepository>(),
+                    );
+                  },
+                ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => _showActivityFormSheet(context, state.services),
             tooltip: context.l10n.expertActivityCreate,
@@ -1169,6 +1185,204 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
         ),
       ),
     );
+  }
+}
+
+// =============================================================================
+// Activity list tile
+// =============================================================================
+
+class _ActivityListTile extends StatefulWidget {
+  const _ActivityListTile({
+    required this.activity,
+    required this.expertId,
+    required this.repository,
+  });
+
+  final Map<String, dynamic> activity;
+  final String expertId;
+  final ExpertTeamRepository repository;
+
+  @override
+  State<_ActivityListTile> createState() => _ActivityListTileState();
+}
+
+class _ActivityListTileState extends State<_ActivityListTile> {
+  bool _isDrawing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = widget.activity;
+    final title = (a['title'] as String?) ?? '';
+    final activityType = (a['activity_type'] as String?) ?? 'standard';
+    final isDrawn = a['is_drawn'] == true;
+    final status = (a['status'] as String?) ?? '';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+
+    final isLottery = activityType == 'lottery';
+    final isFirstCome = activityType == 'first_come';
+
+    // Badge text
+    String badgeText;
+    Color badgeColor;
+    if (isLottery) {
+      badgeText = l10n.expertActivityTypeLottery;
+      badgeColor = Colors.orange;
+    } else if (isFirstCome) {
+      badgeText = l10n.expertActivityTypeFirstCome;
+      badgeColor = Colors.green;
+    } else {
+      badgeText = l10n.expertActivityTypeStandard;
+      badgeColor = AppColors.primary;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : const Color(0xFFE8E8E8),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: badgeColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: status == 'open'
+                      ? Colors.green.withValues(alpha: 0.12)
+                      : Colors.grey.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: status == 'open' ? Colors.green : Colors.grey,
+                  ),
+                ),
+              ),
+              if (isLottery && isDrawn) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    l10n.activityDrawCompleted,
+                    style: const TextStyle(fontSize: 11, color: Colors.purple),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Draw button for undone lottery activities
+          if (isLottery && !isDrawn && status == 'open') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isDrawing ? null : () => _handleDraw(context),
+                icon: _isDrawing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.casino_outlined, size: 18),
+                label: Text(l10n.expertActivityManualDraw),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDraw(BuildContext context) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final bloc = context.read<ExpertDashboardBloc>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.expertActivityManualDraw),
+        content: Text(l10n.expertActivityManualDrawConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.commonConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDrawing = true);
+    try {
+      final activityId = widget.activity['id'] as int;
+      final result = await widget.repository.drawTeamActivity(
+        widget.expertId,
+        activityId,
+      );
+      if (mounted) {
+        final count = result['winner_count'] as int? ?? 0;
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.expertActivityDrawSuccess(count))),
+        );
+        // Refresh the activities list
+        bloc.add(const ExpertDashboardLoadActivities());
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDrawing = false);
+    }
   }
 }
 

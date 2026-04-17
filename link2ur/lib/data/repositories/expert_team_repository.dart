@@ -409,6 +409,21 @@ class ExpertTeamRepository {
 
   // ==================== 活动发布 ====================
 
+  /// 获取团队活动列表。
+  Future<List<Map<String, dynamic>>> getTeamActivities(
+    String expertId,
+  ) async {
+    final response = await _apiService.get(
+      ApiEndpoints.expertTeamActivities(expertId),
+    );
+    final data = response.data;
+    if (data is List) {
+      return data.cast<Map<String, dynamic>>();
+    }
+    final items = data['items'] ?? data['activities'] ?? [];
+    return (items as List).cast<Map<String, dynamic>>();
+  }
+
   /// 发布团队活动。
   /// [data] 包含 TeamActivityCreate 字段（title, description, location,
   /// task_type, deadline, max_participants, expert_service_id 等）。

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:link2ur/data/models/expert_closed_date.dart';
+import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/repositories/task_expert_repository.dart';
 
 part 'expert_dashboard_event.dart';
@@ -10,11 +11,14 @@ class ExpertDashboardBloc
     extends Bloc<ExpertDashboardEvent, ExpertDashboardState> {
   ExpertDashboardBloc({
     required TaskExpertRepository repository,
+    required ExpertTeamRepository expertTeamRepository,
     required this.expertId,
   })  : _repository = repository,
+        _expertTeamRepository = expertTeamRepository,
         super(const ExpertDashboardState()) {
     on<ExpertDashboardLoadStats>(_onLoadStats);
     on<ExpertDashboardLoadMyServices>(_onLoadMyServices);
+    on<ExpertDashboardLoadActivities>(_onLoadActivities);
     on<ExpertDashboardCreateService>(_onCreateService);
     on<ExpertDashboardUpdateService>(_onUpdateService);
     on<ExpertDashboardDeleteService>(_onDeleteService);
@@ -29,6 +33,7 @@ class ExpertDashboardBloc
   }
 
   final TaskExpertRepository _repository;
+  final ExpertTeamRepository _expertTeamRepository;
   final String expertId;
 
   Future<void> _onLoadStats(
@@ -65,6 +70,26 @@ class ExpertDashboardBloc
       emit(state.copyWith(
         status: ExpertDashboardStatus.error,
         errorMessage: 'expert_dashboard_load_services_failed',
+      ));
+    }
+  }
+
+  Future<void> _onLoadActivities(
+    ExpertDashboardLoadActivities event,
+    Emitter<ExpertDashboardState> emit,
+  ) async {
+    emit(state.copyWith(status: ExpertDashboardStatus.loading));
+    try {
+      final activities =
+          await _expertTeamRepository.getTeamActivities(expertId);
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.loaded,
+        activities: activities,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.error,
+        errorMessage: 'expert_dashboard_load_activities_failed',
       ));
     }
   }

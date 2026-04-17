@@ -14,6 +14,10 @@ class ExpertDashboardLoadMyServices extends ExpertDashboardEvent {
   const ExpertDashboardLoadMyServices();
 }
 
+class ExpertDashboardLoadActivities extends ExpertDashboardEvent {
+  const ExpertDashboardLoadActivities();
+}
+
 class ExpertDashboardCreateService extends ExpertDashboardEvent {
   const ExpertDashboardCreateService(this.data);
   final Map<String, dynamic> data;
