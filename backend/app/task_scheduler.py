@@ -404,7 +404,8 @@ def init_scheduler():
         send_auto_transfer_reminders,
         auto_transfer_expired_tasks,
         auto_confirm_expired_tasks,
-        send_confirmation_reminders
+        send_confirmation_reminders,
+        close_stale_consultations
     )
     from app.customer_service_tasks import (
         process_customer_service_queue,
@@ -642,6 +643,14 @@ def init_scheduler():
         description="检查并取消支付过期的任务"
     )
     
+    # 自动关闭不活跃咨询 - 每小时
+    scheduler.register_task(
+        'close_stale_consultations',
+        with_db(close_stale_consultations),
+        interval_seconds=3600,
+        description="自动关闭超过14天不活跃的咨询占位任务"
+    )
+
     # 处理待处理的支付转账 - 每5分钟（重试失败的转账）
     scheduler.register_task(
         'process_pending_payment_transfers',

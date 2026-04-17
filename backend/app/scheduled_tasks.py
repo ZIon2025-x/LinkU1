@@ -909,6 +909,89 @@ def check_expired_payment_tasks(db: Session):
         return 0
 
 
+def close_stale_consultations(db: Session, inactive_days: int = 14):
+    """自动关闭超过 inactive_days 天不活跃的咨询占位任务。
+
+    不活跃 = 该 Task 下最后一条消息时间距今超过阈值。
+    无消息则以 Task.created_at 为准。
+    """
+    from sqlalchemy import select, func
+    try:
+        cutoff = get_utc_time() - timedelta(days=inactive_days)
+
+        # 子查询: 每个 task 的最后消息时间
+        last_msg_subq = (
+            db.query(
+                models.Message.task_id,
+                func.max(models.Message.created_at).label("last_msg_at"),
+            )
+            .filter(models.Message.conversation_type == "task")
+            .group_by(models.Message.task_id)
+            .subquery()
+        )
+
+        # 主查询: consulting 状态 + consultation 来源 + 不活跃
+        stale_tasks = (
+            db.query(models.Task)
+            .outerjoin(last_msg_subq, models.Task.id == last_msg_subq.c.task_id)
+            .filter(
+                models.Task.status == "consulting",
+                models.Task.task_source.in_(["consultation", "flea_market_consultation"]),
+                func.coalesce(last_msg_subq.c.last_msg_at, models.Task.created_at) < cutoff,
+            )
+            .all()
+        )
+
+        if not stale_tasks:
+            return
+
+        closed_count = 0
+        for task in stale_tasks:
+            task.status = "closed"
+
+            # 系统消息
+            receiver_id = task.taker_id or task.poster_id
+            system_msg = models.Message(
+                sender_id=None,
+                receiver_id=receiver_id,
+                content="咨询已自动关闭（14天未活跃）",
+                task_id=task.id,
+                message_type="system",
+                conversation_type="task",
+            )
+            db.add(system_msg)
+
+            # 同步关闭关联的 ServiceApplication
+            if task.task_source == "consultation":
+                app = db.execute(
+                    select(models.ServiceApplication).where(
+                        models.ServiceApplication.task_id == task.id
+                    )
+                ).scalar_one_or_none()
+                if app and app.status in ("consulting", "negotiating"):
+                    app.status = "cancelled"
+
+            # 同步关闭关联的 FleaMarketPurchaseRequest
+            elif task.task_source == "flea_market_consultation":
+                pr = db.execute(
+                    select(models.FleaMarketPurchaseRequest).where(
+                        models.FleaMarketPurchaseRequest.task_id == task.id
+                    )
+                ).scalar_one_or_none()
+                if pr and pr.status in ("consulting", "negotiating"):
+                    pr.status = "cancelled"
+
+            closed_count += 1
+
+        db.commit()
+        if closed_count > 0:
+            logger.info(f"✅ 自动关闭 {closed_count} 个不活跃咨询任务")
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"close_stale_consultations 失败: {e}", exc_info=True)
+
+
 def send_deadline_reminders(db: Session, hours_before: int):
     """
     发送任务截止日期提醒通知
