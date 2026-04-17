@@ -370,6 +370,7 @@ class _NearbyTabState extends State<_NearbyTab> {
                   if (state.hasMoreNearby || state.hasMoreNearbyServices)
                     SliverToBoxAdapter(
                       child: _NearbyLoadMoreTrigger(
+                        key: ValueKey('nearby_more_${state.nearbyPage}_${state.nearbyServicesPage}'),
                         onVisible: () {
                           final bloc = context.read<HomeBloc>();
                           if (bloc.state.hasMoreNearby) {
