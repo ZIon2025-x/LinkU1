@@ -115,10 +115,13 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   final _scrollController = ScrollController();
 
   String? _currentUserId;
-  List<Message> _messages = [];
+  List<Message> _messages = []; // 新→旧排序（配合 reverse ListView）
   bool _isLoadingMessages = true;
   String? _messagesError;
   bool _isSendingMessage = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = false;
+  String? _nextCursor;
   StreamSubscription? _wsSubscription;
 
   // Consultation mode state
@@ -160,8 +163,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       // Dedup
       if (_messages.any((m) => m.id == message.id)) return;
       if (!mounted) return;
-      setState(() => _messages = [..._messages, message]);
-      _scrollToBottom();
+      setState(() => _messages = [message, ..._messages]); // insert at head (新→旧)
     } catch (_) {}
   }
 
@@ -236,14 +238,15 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       if (!mounted) return;
 
       if (response.isSuccess && response.data != null) {
-        final messages =
-            MessageRepository.parseTaskChatMessagesResponse(response.data!)
-                .reversed.toList();
+        final data = response.data!;
+        // 保持后端顺序：新→旧，配合 ListView reverse:true
+        final messages = MessageRepository.parseTaskChatMessagesResponse(data);
         setState(() {
           _messages = messages;
+          _hasMore = data['has_more'] == true;
+          _nextCursor = data['next_cursor'] as String?;
           _isLoadingMessages = false;
         });
-        _scrollToBottom();
       } else {
         setState(() {
           _isLoadingMessages = false;
@@ -259,16 +262,40 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     }
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore || _nextCursor == null) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final apiService = context.read<ApiService>();
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.taskChatMessages(widget.taskId),
+        queryParameters: {
+          if (_consultationActions?.needsApplicationIdInMessages ?? true)
+            'application_id': widget.applicationId,
+          'limit': 50,
+          'cursor': _nextCursor!,
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
+        final older = MessageRepository.parseTaskChatMessagesResponse(data);
+        setState(() {
+          _messages = [..._messages, ...older]; // append older at end
+          _hasMore = data['has_more'] == true;
+          _nextCursor = data['next_cursor'] as String?;
+          _isLoadingMore = false;
+        });
+      } else {
+        setState(() => _isLoadingMore = false);
       }
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingMore = false);
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -295,10 +322,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         final message = Message.fromJson(response.data!);
         _messageController.clear();
         setState(() {
-          _messages = [..._messages, message];
+          _messages = [message, ..._messages]; // insert at head (新→旧)
           _isSendingMessage = false;
         });
-        _scrollToBottom();
       } else {
         setState(() => _isSendingMessage = false);
         if (mounted) {
@@ -787,14 +813,34 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       );
     }
 
-    // Messages are chronological (oldest first); no reverse needed
+    // Messages stored 新→旧; reverse ListView shows newest at bottom
     final currentUserId = _currentUserId ?? '';
 
-    return ListView.builder(
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // Load more when scrolled near top (reverse list → maxScrollExtent = oldest)
+        if (notification is ScrollUpdateNotification &&
+            _scrollController.position.pixels >=
+                _scrollController.position.maxScrollExtent - 200 &&
+            _hasMore &&
+            !_isLoadingMore) {
+          _loadMore();
+        }
+        return false;
+      },
+      child: ListView.builder(
       controller: _scrollController,
+      reverse: true,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      itemCount: _messages.length,
+      itemCount: _messages.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        // Loading indicator at the end (oldest messages, top of reverse list)
+        if (index >= _messages.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
         final message = _messages[index];
         final isMe = message.senderId == currentUserId;
 
@@ -823,6 +869,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         // Normal message bubble using existing grouping
         return _buildMessageBubble(message, isMe);
       },
+    ),
     );
   }
 
