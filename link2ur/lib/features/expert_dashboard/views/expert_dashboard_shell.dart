@@ -14,6 +14,7 @@ import '../bloc/expert_dashboard_bloc.dart';
 import '../bloc/selected_expert_cubit.dart';
 import 'tabs/activities_tab.dart';
 import 'tabs/applications_tab.dart';
+import 'tabs/my_tasks_tab.dart';
 import 'tabs/schedule_tab.dart';
 import 'tabs/services_tab.dart';
 import 'tabs/stats_tab.dart';
@@ -142,6 +143,7 @@ class _DashboardTabs extends StatelessWidget {
     final tabs = <Widget>[
       Tab(icon: const Icon(Icons.dashboard), text: context.l10n.expertDashboardTabStats),
       Tab(icon: const Icon(Icons.design_services), text: context.l10n.expertDashboardTabServices),
+      Tab(icon: const Icon(Icons.task_outlined), text: context.l10n.expertDashboardTabMyTasks),
       if (canManage)
         Tab(icon: const Icon(Icons.assignment), text: context.l10n.expertDashboardTabApplications),
       Tab(icon: const Icon(Icons.schedule), text: context.l10n.expertDashboardTabTimeSlots),
@@ -153,6 +155,7 @@ class _DashboardTabs extends StatelessWidget {
     final views = <Widget>[
       const StatsTab(),
       const ServicesTab(),
+      const MyTasksTab(),
       if (canManage) const ApplicationsTab(),
       const TimeSlotsTab(),
       const ScheduleTab(),
@@ -167,6 +170,7 @@ class _DashboardTabs extends StatelessWidget {
       )
         ..add(const ExpertDashboardLoadStats())
         ..add(const ExpertDashboardLoadMyServices())
+        ..add(const ExpertDashboardLoadMyTasks())
         ..add(const ExpertDashboardLoadActivities())
         ..add(const ExpertDashboardLoadClosedDates())
         ..add(const ExpertDashboardLoadBusinessHours()),
