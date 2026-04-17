@@ -1195,6 +1195,21 @@ class TaskExpertRepository {
 }
 
 /// 任务达人异常
+///
+/// Supports both the legacy [code] field (inherited from [AppException]) and
+/// a semantic [errorCode] alias that matches the backend response field name.
+/// Both names map to the same underlying value — passing either constructor
+/// parameter works identically.
 class TaskExpertException extends AppException {
-  const TaskExpertException(super.message, {super.code});
+  const TaskExpertException(super.message, {super.code, String? errorCode})
+      : assert(
+          code == null || errorCode == null,
+          'Pass either code or errorCode, not both',
+        ),
+        _errorCodeOverride = errorCode;
+
+  final String? _errorCodeOverride;
+
+  /// Semantic alias for [code] — matches backend `error_code` field name.
+  String? get errorCode => _errorCodeOverride ?? code;
 }

@@ -489,6 +489,7 @@ class TaskExpertState extends Equatable {
     this.serviceQuestionsTotalCount = 0,
     this.serviceQuestionsCurrentPage = 1,
     this.consultationData,
+    this.errorCode,
   });
 
   final TaskExpertStatus status;
@@ -545,6 +546,10 @@ class TaskExpertState extends Equatable {
   /// 咨询创建后返回的数据
   final Map<String, dynamic>? consultationData;
 
+  /// 后端稳定错误码（例: CONSULTATION_ALREADY_EXISTS, SERVICE_INACTIVE 等），
+  /// 用于 UI 按错误码映射 l10n 文案。配合 [errorMessage] 使用。
+  final String? errorCode;
+
   bool get isLoading => status == TaskExpertStatus.loading;
 
   /// 当前是否有激活的筛选条件（类型非全部 或 城市非全部）
@@ -588,6 +593,8 @@ class TaskExpertState extends Equatable {
     int? serviceQuestionsCurrentPage,
     Map<String, dynamic>? consultationData,
     bool clearConsultationData = false,
+    String? errorCode,
+    bool clearErrorCode = false,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -629,6 +636,7 @@ class TaskExpertState extends Equatable {
       consultationData: clearConsultationData
           ? null
           : (consultationData ?? this.consultationData),
+      errorCode: clearErrorCode ? null : (errorCode ?? this.errorCode),
     );
   }
 
@@ -669,6 +677,7 @@ class TaskExpertState extends Equatable {
         serviceQuestionsTotalCount,
         serviceQuestionsCurrentPage,
         consultationData,
+        errorCode,
       ];
 }
 
@@ -1222,6 +1231,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_approved',
+        clearErrorCode: true,
       ));
 
       add(const TaskExpertLoadExpertApplications());
@@ -1231,6 +1241,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         isSubmitting: false,
         actionMessage: 'application_action_failed',
         errorMessage: e.message,
+        errorCode: e.errorCode,
       ));
     } catch (e) {
       AppLogger.error('Failed to owner-approve application', e);
@@ -1238,6 +1249,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         isSubmitting: false,
         actionMessage: 'application_action_failed',
         errorMessage: e.toString(),
+        clearErrorCode: true,
       ));
     }
   }
@@ -1499,11 +1511,22 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         isSubmitting: false,
         actionMessage: 'consultation_started',
         consultationData: result,
+        clearErrorCode: true,
       ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message, actionMessage: 'consultation_failed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+        actionMessage: 'consultation_failed',
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString(), actionMessage: 'consultation_failed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+        actionMessage: 'consultation_failed',
+      ));
     }
   }
 
@@ -1518,11 +1541,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         proposedPrice: event.price,
         serviceId: event.serviceId,
       );
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'negotiation_sent',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1538,11 +1573,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         message: event.message,
         serviceId: event.serviceId,
       );
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'quote_sent',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1562,11 +1609,20 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'negotiate_response_$status',
+        clearErrorCode: true,
       ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1584,11 +1640,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         deadline: event.deadline,
         isFlexible: event.isFlexible,
       );
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'formal_apply_submitted',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1599,11 +1667,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.closeConsultation(event.applicationId);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'consultation_closed',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1616,11 +1696,26 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.createTaskConsultation(event.taskId);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_started', consultationData: result));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'consultation_started',
+        consultationData: result,
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message, actionMessage: 'consultation_failed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+        actionMessage: 'consultation_failed',
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString(), actionMessage: 'consultation_failed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+        actionMessage: 'consultation_failed',
+      ));
     }
   }
 
@@ -1631,11 +1726,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.negotiateTaskConsultation(event.taskId, event.applicationId, proposedPrice: event.price);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'negotiation_sent',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1646,11 +1753,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.quoteTaskConsultation(event.taskId, event.applicationId, quotedPrice: event.price, message: event.message);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'quote_sent',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1666,11 +1785,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         counterPrice: event.counterPrice,
       );
       final status = result['status'] as String? ?? '';
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiate_response_$status'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'negotiate_response_$status',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1685,11 +1816,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         proposedPrice: event.proposedPrice,
         message: event.message,
       );
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'formal_apply_submitted',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1700,11 +1843,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.closeTaskConsultation(event.taskId, event.applicationId);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'consultation_closed',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1717,11 +1872,26 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.createFleaMarketConsultation(event.itemId);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_started', consultationData: result));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'consultation_started',
+        consultationData: result,
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message, actionMessage: 'consultation_failed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+        actionMessage: 'consultation_failed',
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString(), actionMessage: 'consultation_failed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+        actionMessage: 'consultation_failed',
+      ));
     }
   }
 
@@ -1732,11 +1902,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.negotiateFleaMarketConsultation(event.requestId, proposedPrice: event.price);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'negotiation_sent',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1747,11 +1929,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.quoteFleaMarketConsultation(event.requestId, quotedPrice: event.price, message: event.message);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'quote_sent',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1767,11 +1961,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         counterPrice: event.counterPrice,
       );
       final status = result['status'] as String? ?? '';
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiate_response_$status'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'negotiate_response_$status',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1782,11 +1988,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.formalBuyFleaMarket(event.requestId);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'formal_apply_submitted',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1797,11 +2015,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.approveFleaMarketPurchase(event.requestId);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'application_approved'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_approved',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
@@ -1812,11 +2042,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.closeFleaMarketConsultation(event.requestId);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'consultation_closed',
+        clearErrorCode: true,
+      ));
     } on TaskExpertException catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
     }
   }
 
