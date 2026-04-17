@@ -289,6 +289,8 @@ class _NearbyTabState extends State<_NearbyTab> {
           prev.nearbyRadius != curr.nearbyRadius ||
           prev.hasMoreNearby != curr.hasMoreNearby ||
           prev.isLoadingNearby != curr.isLoadingNearby ||
+          prev.nearbyServicesPage != curr.nearbyServicesPage ||
+          prev.hasMoreNearbyServices != curr.hasMoreNearbyServices ||
           prev.isLoading != curr.isLoading,
       builder: (context, state) {
         if (state.isLoading && state.nearbyTasks.isEmpty) {
@@ -359,18 +361,28 @@ class _NearbyTabState extends State<_NearbyTab> {
                     ),
                   ),
                   // Load more trigger
-                  if (state.hasMoreNearby)
+                  if (state.hasMoreNearby || state.hasMoreNearbyServices)
                     SliverToBoxAdapter(
                       child: _NearbyLoadMoreTrigger(
                         onVisible: () {
                           final bloc = context.read<HomeBloc>();
-                          bloc.add(HomeLoadNearby(
-                            latitude: _currentLat,
-                            longitude: _currentLng,
-                            loadMore: true,
-                            city: _city,
-                            radius: bloc.state.nearbyRadius,
-                          ));
+                          if (bloc.state.hasMoreNearby) {
+                            bloc.add(HomeLoadNearby(
+                              latitude: _currentLat,
+                              longitude: _currentLng,
+                              loadMore: true,
+                              city: _city,
+                              radius: bloc.state.nearbyRadius,
+                            ));
+                          }
+                          if (bloc.state.hasMoreNearbyServices) {
+                            bloc.add(HomeLoadNearbyServices(
+                              latitude: _currentLat,
+                              longitude: _currentLng,
+                              radius: bloc.state.nearbyRadius,
+                              loadMore: true,
+                            ));
+                          }
                         },
                       ),
                     ),
