@@ -392,11 +392,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(isLoadingDiscovery: true));
 
     try {
-      // 首次加载不传 seed，后端自动生成；传 GPS 坐标做地理个性化
+      // 首次加载不传 seed，后端自动生成；传 GPS 坐标+城市名做地理个性化
       final loc = LocationCityService.instance;
       final response = await _discoveryRepository.getFeed(
         latitude: loc.latitude,
         longitude: loc.longitude,
+        city: loc.city,
       );
       emit(state.copyWith(
         discoveryItems: response.items,
@@ -428,6 +429,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         seed: state.discoverySeed,
         latitude: loc.latitude,
         longitude: loc.longitude,
+        city: loc.city,
       );
       // 按 ID 去重，防止后端混排偶尔跨页重复
       final existingIds = state.discoveryItems.map((e) => e.id).toSet();

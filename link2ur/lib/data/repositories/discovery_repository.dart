@@ -17,12 +17,14 @@ class DiscoveryRepository {
   /// 获取发现 Feed
   /// [seed] 随机种子，翻页时回传保证排序一致；首次加载不传
   /// [latitude]/[longitude] GPS 坐标，用于地理位置个性化推荐
+  /// [city] GPS 反向编码得到的城市名，用于同城内容加权
   Future<DiscoveryFeedResponse> getFeed({
     int page = 1,
     int limit = 20,
     int? seed,
     double? latitude,
     double? longitude,
+    String? city,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.discoveryFeed,
@@ -30,8 +32,10 @@ class DiscoveryRepository {
         'page': page,
         'limit': limit,
         if (seed != null) 'seed': seed,
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
+        // 保留 3 位小数（~110m 精度），避免全精度坐标导致后端缓存永远 miss
+        if (latitude != null) 'latitude': double.parse(latitude.toStringAsFixed(3)),
+        if (longitude != null) 'longitude': double.parse(longitude.toStringAsFixed(3)),
+        if (city != null && city.isNotEmpty) 'city': city,
       },
     );
     if (!response.isSuccess || response.data == null) {

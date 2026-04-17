@@ -35,6 +35,7 @@ async def get_discovery_feed(
     seed: Optional[int] = Query(None, description="随机种子，保证分页结果一致；首次请求不传则自动生成"),
     latitude: Optional[float] = Query(None, ge=-90, le=90, description="用户当前纬度（GPS）"),
     longitude: Optional[float] = Query(None, ge=-180, le=180, description="用户当前经度（GPS）"),
+    city: Optional[str] = Query(None, max_length=100, description="用户当前城市名（GPS反向编码），用于同城内容加权"),
     request: Request = None,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -73,7 +74,11 @@ async def get_discovery_feed(
     user_preferred_categories = []
     user_lat = latitude
     user_lng = longitude
+    # 确定用户城市：前端传的 GPS 城市 > 用户资料 residence_city
+    user_city = city
     if current_user:
+        if not user_city and current_user.residence_city:
+            user_city = current_user.residence_city
         # 用户没传 GPS 坐标时，尝试用 residence_city 做文本级 location 匹配
         user_location = None
         if user_lat is None and current_user.residence_city:
@@ -105,6 +110,33 @@ async def get_discovery_feed(
         except Exception as e:
             logger.debug(f"Failed to load user preferences: {e}")
 
+    # 构建用户兴趣画像（轻量版），用于活动/服务的 match_score
+    user_interest_types = set()
+    if current_user:
+        try:
+            # 从历史申请的任务类型中提取兴趣
+            applied_types_result = await db.execute(
+                select(models.Task.task_type)
+                .join(models.TaskApplication, models.TaskApplication.task_id == models.Task.id)
+                .where(models.TaskApplication.applicant_id == current_user.id)
+                .group_by(models.Task.task_type)
+                .limit(20)
+            )
+            user_interest_types.update(r[0] for r in applied_types_result.all() if r[0])
+
+            # 从参加过的活动类型中提取兴趣
+            attended_types_result = await db.execute(
+                select(models.Activity.task_type)
+                .join(models.OfficialActivityApplication,
+                      models.OfficialActivityApplication.activity_id == models.Activity.id)
+                .where(models.OfficialActivityApplication.user_id == current_user.id)
+                .group_by(models.Activity.task_type)
+                .limit(20)
+            )
+            user_interest_types.update(r[0] for r in attended_types_result.all() if r[0])
+        except Exception as e:
+            logger.debug(f"Failed to build user interest profile: {e}")
+
     # 每个 fetch 用 SAVEPOINT 隔离，单个类型失败不影响其他类型
     fetch_tasks = [
         ("forum posts", lambda: _fetch_forum_posts(db, fetch_limit, visible_category_ids, current_user=current_user)),
@@ -131,7 +163,9 @@ async def get_discovery_feed(
 
     # 加权随机混排（确定性 seed）
     feed_items = _weighted_shuffle(all_items, limit, page, seed=seed,
-                                    user_preferred_categories=user_preferred_categories)
+                                    user_preferred_categories=user_preferred_categories,
+                                    user_city=user_city,
+                                    user_interest_types=user_interest_types)
 
     # has_more: 返回的条数 == limit 说明可能还有更多；
     # 不足 limit 说明数据已经耗尽
@@ -611,6 +645,7 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
             getattr(models.CustomLeaderboard, "description_zh", None).label("description_zh"),
             getattr(models.CustomLeaderboard, "description_en", None).label("description_en"),
             models.CustomLeaderboard.cover_image,
+            models.CustomLeaderboard.location,
             models.CustomLeaderboard.applicant_id,
             models.CustomLeaderboard.created_at,
             models.User.name.label("user_name"),
@@ -703,7 +738,7 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
             "is_experienced": None,
             "is_favorited": None,
             "user_vote_type": None,
-            "extra_data": {"top3": top3},
+            "extra_data": {"top3": top3, "location": row.location},
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items
@@ -733,6 +768,7 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             models.TaskExpertService.description_en,
             models.TaskExpertService.description_zh,
             models.TaskExpertService.category,
+            models.TaskExpertService.location.label("service_location"),
             models.TaskExpertService.images.label("service_images"),
             models.TaskExpertService.base_price,
             models.TaskExpertService.currency,
@@ -800,7 +836,10 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             "is_experienced": None,
             "is_favorited": None,
             "user_vote_type": None,
-            "extra_data": {"category": row.category} if row.category else None,
+            "extra_data": {
+                "category": row.category,
+                "location": row.service_location,
+            } if (row.category or row.service_location) else None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items
@@ -1003,6 +1042,7 @@ async def _fetch_activities(db: AsyncSession, limit: int, current_user=None) -> 
             models.Activity.description_en,
             models.Activity.images,
             models.Activity.activity_type,
+            models.Activity.task_type,
             models.Activity.location,
             models.Activity.deadline,
             models.Activity.reward_type,
@@ -1085,7 +1125,9 @@ async def _fetch_activities(db: AsyncSession, limit: int, current_user=None) -> 
             "is_experienced": None,
             "is_favorited": None,
             "user_vote_type": None,
-            "extra_data": None,
+            "extra_data": {
+                "task_type": row.task_type,
+            },
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items
@@ -1198,6 +1240,36 @@ async def _batch_resolve_linked_items(db: AsyncSession, pairs: list) -> dict:
     return result_map
 
 
+_CITY_EN_TO_ZH = {
+    'london': '伦敦', 'edinburgh': '爱丁堡', 'manchester': '曼彻斯特',
+    'birmingham': '伯明翰', 'glasgow': '格拉斯哥', 'bristol': '布里斯托',
+    'sheffield': '谢菲尔德', 'leeds': '利兹', 'nottingham': '诺丁汉',
+    'newcastle': '纽卡斯尔', 'southampton': '南安普顿', 'liverpool': '利物浦',
+    'cardiff': '卡迪夫', 'coventry': '考文垂', 'leicester': '莱斯特',
+    'york': '约克', 'aberdeen': '阿伯丁', 'bath': '巴斯',
+    'cambridge': '剑桥', 'oxford': '牛津', 'brighton': '布莱顿',
+    'reading': '雷丁', 'belfast': '贝尔法斯特',
+}
+_CITY_ZH_TO_EN = {v: k for k, v in _CITY_EN_TO_ZH.items()}
+
+
+def _get_city_variants(city: str) -> set:
+    """返回城市名的中英文变体（小写），用于同城匹配。
+    与 Flutter 端 DiscoverBloc._getCityVariants 保持一致。
+    中文字符 .lower() 不变，所以统一用 lower 处理。"""
+    if not city:
+        return set()
+    cleaned = city.strip()
+    lower = cleaned.lower()
+    variants = {lower}
+    if lower in _CITY_EN_TO_ZH:
+        variants.add(_CITY_EN_TO_ZH[lower])
+    # 中文 key 原样匹配（中文无大小写区别）
+    if cleaned in _CITY_ZH_TO_EN:
+        variants.add(_CITY_ZH_TO_EN[cleaned])
+    return variants
+
+
 def _compute_score(item: dict) -> float:
     """计算内容热度分数（时间衰减 + 互动加权）
 
@@ -1230,50 +1302,106 @@ def _compute_score(item: dict) -> float:
     return score
 
 
-def _compute_score_with_prefs(item: dict, user_prefs: set) -> float:
-    """热度分 + 用户偏好加分
+def _compute_score_with_prefs(item: dict, user_prefs: set, city_variants: set = None,
+                              user_interest_types: set = None) -> float:
+    """热度分 + 用户偏好加分 + 同城加分 + 行为兴趣加分
 
-    如果内容的类别/标签匹配用户偏好的 task_type 或 preferred_categories，
-    热度分 * 1.5 提升排序优先级。
-
-    匹配逻辑：
-    - 帖子: extra_data.category_name_zh / category_name_en
-    - 服务: title 或 description 包含偏好关键词
-    - 商品: title 包含偏好关键词
-    - 排行榜/评价: 不加分（与用户偏好无直接关联）
+    - 偏好匹配 (preferred_categories/task_types): 热度分 * 1.5
+    - 同城匹配: 热度分 * 1.3
+    - 行为兴趣 (历史申请/参加过的类型): 热度分 * 1.4
+    - 可叠加，最高 1.5 * 1.4 * 1.3 = 2.73x
     """
     base_score = _compute_score(item)
-    if not user_prefs:
-        return base_score
 
-    # 检查内容是否匹配用户偏好
-    matched = False
+    multiplier = 1.0
     ft = item.get("feed_type", "")
     extra = item.get("extra_data") or {}
 
-    if ft == "forum_post":
-        # 帖子的分类名
-        cat_zh = extra.get("category_name_zh", "")
-        cat_en = extra.get("category_name_en", "")
-        for pref in user_prefs:
-            pref_lower = pref.lower()
-            if pref_lower in (cat_zh or "").lower() or pref_lower in (cat_en or "").lower():
-                matched = True
-                break
+    # --- 偏好加分 ---
+    if user_prefs:
+        pref_matched = False
+        if ft == "forum_post":
+            cat_zh = extra.get("category_name_zh", "")
+            cat_en = extra.get("category_name_en", "")
+            for pref in user_prefs:
+                pref_lower = pref.lower()
+                if pref_lower in (cat_zh or "").lower() or pref_lower in (cat_en or "").lower():
+                    pref_matched = True
+                    break
+        elif ft == "activity":
+            # 活动的 task_type 匹配用户偏好（如 tutoring, translation 等）
+            task_type = (extra.get("task_type") or "").lower()
+            if task_type:
+                for pref in user_prefs:
+                    if pref.lower() == task_type or pref.lower() in task_type:
+                        pref_matched = True
+                        break
+        elif ft == "service":
+            # 服务的 category 匹配用户偏好
+            category = (extra.get("category") or "").lower()
+            if category:
+                for pref in user_prefs:
+                    if pref.lower() == category or pref.lower() in category:
+                        pref_matched = True
+                        break
+            # category 没匹配到时，fallback 到标题/描述
+            if not pref_matched:
+                title = (item.get("title") or "").lower()
+                desc = (item.get("description") or "").lower()
+                for pref in user_prefs:
+                    if pref.lower() in title or pref.lower() in desc:
+                        pref_matched = True
+                        break
+        elif ft == "product":
+            title = (item.get("title") or "").lower()
+            desc = (item.get("description") or "").lower()
+            for pref in user_prefs:
+                if pref.lower() in title or pref.lower() in desc:
+                    pref_matched = True
+                    break
+        if pref_matched:
+            multiplier *= 1.5
 
-    elif ft in ("service", "product"):
-        # 服务/商品的标题
-        title = (item.get("title") or "").lower()
-        desc = (item.get("description") or "").lower()
-        for pref in user_prefs:
-            if pref.lower() in title or pref.lower() in desc:
-                matched = True
-                break
+    # --- 同城加分 ---
+    if city_variants:
+        city_matched = False
+        if ft == "activity":
+            activity_info = item.get("activity_info") or {}
+            loc = activity_info.get("location") or ""
+            city_matched = bool(loc) and any(v in loc.lower() for v in city_variants)
+        elif ft == "ranking":
+            loc = extra.get("location") or ""
+            city_matched = bool(loc) and any(v in loc.lower() for v in city_variants)
+        elif ft == "service":
+            loc = extra.get("location") or ""
+            if loc:
+                city_matched = any(v in loc.lower() for v in city_variants)
+            else:
+                text = ((item.get("title") or "") + " " + (item.get("description") or "")).lower()
+                city_matched = any(v in text for v in city_variants)
+        elif ft == "product":
+            text = ((item.get("title") or "") + " " + (item.get("description") or "")).lower()
+            city_matched = any(v in text for v in city_variants)
 
-    if matched:
-        return base_score * 1.5
+        if city_matched:
+            multiplier *= 1.3
 
-    return base_score
+    # --- 行为兴趣加分（历史申请/参加过的类型匹配）---
+    # user_interest_types 已在调用方预计算为小写 set
+    if user_interest_types:
+        interest_matched = False
+        if ft == "activity":
+            task_type = (extra.get("task_type") or "").lower()
+            if task_type and task_type in user_interest_types:
+                interest_matched = True
+        elif ft == "service":
+            category = (extra.get("category") or "").lower()
+            if category and category in user_interest_types:
+                interest_matched = True
+        if interest_matched:
+            multiplier *= 1.4
+
+    return base_score * multiplier
 
 
 def _compute_task_score(item: dict) -> float:
@@ -1311,7 +1439,9 @@ def _compute_task_score(item: dict) -> float:
 
 
 def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
-                      user_preferred_categories: list = None) -> list:
+                      user_preferred_categories: list = None,
+                      user_city: str = None,
+                      user_interest_types: set = None) -> list:
     """加权随机混排
 
     - 每种类型内部按热度分数排序（时间衰减 + 互动加权），而非纯时间
@@ -1344,14 +1474,17 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
             by_type[ft] = []
         by_type[ft].append(item)
 
-    # 按分数排序：task 用个性化排序，其他用热度+偏好加分
+    # 按分数排序：task 用推荐引擎，其他用热度+偏好+同城+行为兴趣
     prefs = set(user_preferred_categories or [])
+    city_variants = _get_city_variants(user_city) if user_city else set()
+    # 预计算小写化的兴趣集合，避免每个 item 重复构建
+    interests = {t.lower() for t in (user_interest_types or set())}
     for ft in by_type:
         if ft == "task":
             by_type[ft].sort(key=_compute_task_score, reverse=True)
         else:
             by_type[ft].sort(
-                key=lambda item, _prefs=prefs: _compute_score_with_prefs(item, _prefs),
+                key=lambda item, _p=prefs, _cv=city_variants, _i=interests: _compute_score_with_prefs(item, _p, _cv, _i),
                 reverse=True,
             )
 
