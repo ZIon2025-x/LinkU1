@@ -7,6 +7,7 @@ from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
+from app.consultation import error_codes
 from app.consultation.helpers import (
     check_consultation_idempotency,
     close_consultation_task,
@@ -15,6 +16,7 @@ from app.consultation.helpers import (
 )
 from app.consultation.notifications import consultation_submitted
 from app.deps import get_async_db_dependency
+from app.error_handlers import raise_http_error_with_code
 from app.async_routers import (
     get_current_user_secure_async_csrf,
     get_current_user_optional,
@@ -94,9 +96,9 @@ async def apply_for_service(
     )
     service = service_result.scalar_one_or_none()
     if not service:
-        raise HTTPException(status_code=404, detail="服务不存在")
+        raise_http_error_with_code("服务不存在", 404, error_codes.SERVICE_NOT_FOUND)
     if service.status != "active":
-        raise HTTPException(status_code=400, detail="服务未上架")
+        raise_http_error_with_code("服务未上架", 400, error_codes.SERVICE_INACTIVE)
 
     # 检查是否已有 pending 申请
     existing = await db.execute(
@@ -219,7 +221,7 @@ async def create_consultation(
     )
     service = service_result.scalar_one_or_none()
     if not service:
-        raise HTTPException(status_code=404, detail="服务不存在")
+        raise_http_error_with_code("服务不存在", 404, error_codes.SERVICE_NOT_FOUND)
 
     # 检查是否已有进行中的咨询/申请（幂等）
     existing_app = await check_consultation_idempotency(
@@ -327,9 +329,9 @@ async def create_team_consultation(
     result = await db.execute(select(Expert).where(Expert.id == expert_id))
     expert = result.scalar_one_or_none()
     if not expert:
-        raise HTTPException(status_code=404, detail="达人团队不存在")
+        raise_http_error_with_code("达人团队不存在", 404, error_codes.EXPERT_TEAM_NOT_FOUND)
     if expert.status != "active":
-        raise HTTPException(status_code=400, detail="该团队未在运营中")
+        raise_http_error_with_code("该团队未在运营中", 400, error_codes.EXPERT_TEAM_INACTIVE)
 
     # 不能咨询自己的团队
     member_check = await db.execute(
@@ -342,7 +344,7 @@ async def create_team_consultation(
         ).limit(1)
     )
     if member_check.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=400, detail="不能咨询自己所在的团队")
+        raise_http_error_with_code("不能咨询自己所在的团队", 400, error_codes.CANNOT_CONSULT_SELF)
 
     # 幂等：已有进行中的团队咨询直接返回
     existing = await db.execute(
@@ -447,16 +449,16 @@ async def negotiate_price(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
     if application.applicant_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权操作")
 
     try:
         price = float(body.get("price", 0))
     except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="price 必须为数字")
+        raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
     if price <= 0:
-        raise HTTPException(status_code=400, detail="price 必须大于 0")
+        raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
     # 团队咨询：议价时必须绑定服务
     service_id = body.get("service_id")
     if application.service_id is None:
@@ -474,7 +476,7 @@ async def negotiate_price(
             )
         )
         if not svc_result.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="service_not_found")
+            raise_http_error_with_code("service_not_found", 400, error_codes.SERVICE_NOT_FOUND)
         application.service_id = int(service_id)
     application.negotiated_price = price
     application.status = "negotiating"
@@ -497,7 +499,7 @@ async def quote_price(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
     # 检查是否为服务的达人团队成员
     if application.new_expert_id:
@@ -505,14 +507,14 @@ async def quote_price(
     elif application.service_owner_id == current_user.id:
         pass  # 个人服务 owner
     else:
-        raise HTTPException(status_code=403, detail="无权操作")
+        raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
 
     try:
         price = float(body.get("price", 0))
     except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="price 必须为数字")
+        raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
     if price <= 0:
-        raise HTTPException(status_code=400, detail="price 必须大于 0")
+        raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
     # 团队咨询：报价时必须绑定服务
     service_id = body.get("service_id")
     if application.service_id is None:
@@ -529,7 +531,7 @@ async def quote_price(
             )
         )
         if not svc_result.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="service_not_found")
+            raise_http_error_with_code("service_not_found", 400, error_codes.SERVICE_NOT_FOUND)
         application.service_id = int(service_id)
     application.expert_counter_price = price
     application.status = "negotiating"
@@ -578,9 +580,10 @@ async def respond_to_negotiation(
 
     # 状态校验: 仅 negotiating 状态可回应
     if application.status not in ("negotiating", "pending"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"当前状态({application.status})不允许回应协商",
+        raise_http_error_with_code(
+            f"当前状态({application.status})不允许回应协商",
+            400,
+            error_codes.INVALID_STATUS_TRANSITION,
         )
 
     action = body.get("action")  # accept, reject, counter
@@ -601,9 +604,9 @@ async def respond_to_negotiation(
         try:
             price = float(body.get("price", 0))
         except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="price 必须为数字")
+            raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
         if price <= 0:
-            raise HTTPException(status_code=400, detail="price 必须大于 0")
+            raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
         # 团队咨询还价时可更换服务
         service_id = body.get("service_id")
         if application.service_id is None and not service_id:
@@ -620,7 +623,7 @@ async def respond_to_negotiation(
                 )
             )
             if not svc_result.scalar_one_or_none():
-                raise HTTPException(status_code=400, detail="service_not_found")
+                raise_http_error_with_code("service_not_found", 400, error_codes.SERVICE_NOT_FOUND)
             application.service_id = int(service_id)
         # 按身份区分写哪个字段(不再依赖匿名 fallback)
         if is_applicant:
@@ -648,7 +651,7 @@ async def formal_apply(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
     if application.applicant_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权操作")
 
@@ -706,7 +709,7 @@ async def close_consultation(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
     # 权限检查 — 修复 IDOR
     await _check_application_party(db, application, current_user.id)
@@ -718,7 +721,11 @@ async def close_consultation(
     # 仅在 consulting/negotiating/pending/price_agreed 状态可关闭
     # approved/rejected 状态不允许关闭(已有最终结果)
     if application.status not in ("consulting", "negotiating", "pending", "price_agreed"):
-        raise HTTPException(status_code=400, detail=f"当前状态({application.status})不允许关闭")
+        raise_http_error_with_code(
+            f"当前状态({application.status})不允许关闭",
+            400,
+            error_codes.INVALID_STATUS_TRANSITION,
+        )
 
     application.status = "cancelled"
     application.updated_at = get_utc_time()
@@ -758,13 +765,13 @@ async def approve_application(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
     # 权限检查
     if application.new_expert_id:
         await _get_member_or_403(db, application.new_expert_id, current_user.id, required_roles=["owner", "admin"])
     elif application.service_owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="无权操作")
+        raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
 
     # 幂等性：已经 approved 且关联了 task → 返回现状，不重复创建
     if application.status == "approved" and application.task_id:
@@ -815,14 +822,14 @@ async def _approve_team_service_application(
 
     # 1. 状态校验：仅允许从 pending / price_agreed 进入 approved
     if application.status not in ("pending", "price_agreed"):
-        raise HTTPException(status_code=409, detail="当前状态不允许批准")
+        raise_http_error_with_code("当前状态不允许批准", 409, error_codes.INVALID_STATUS_TRANSITION)
 
     # 2. 加载服务
     service = await db.get(models.TaskExpertService, application.service_id)
     if not service:
-        raise HTTPException(status_code=404, detail="服务不存在")
+        raise_http_error_with_code("服务不存在", 404, error_codes.SERVICE_NOT_FOUND)
     if service.status != "active":
-        raise HTTPException(status_code=400, detail="服务未上架，无法创建任务")
+        raise_http_error_with_code("服务未上架，无法创建任务", 400, error_codes.SERVICE_INACTIVE)
 
     # 3. 解析团队 taker（同时校验 Stripe Connect + GBP 货币）
     taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
@@ -1048,12 +1055,12 @@ async def reject_application(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
     if application.new_expert_id:
         await _get_member_or_403(db, application.new_expert_id, current_user.id, required_roles=["owner", "admin"])
     elif application.service_owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="无权操作")
+        raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
 
     application.status = "rejected"
     application.rejected_at = get_utc_time()
@@ -1078,21 +1085,21 @@ async def counter_offer(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
     if application.new_expert_id:
         await _get_member_or_403(db, application.new_expert_id, current_user.id, required_roles=["owner", "admin"])
     elif application.service_owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="无权操作")
+        raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
 
     price = body.get("price")
     if price is not None:
         try:
             price = float(price)
         except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="price 必须为数字")
+            raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
         if price <= 0:
-            raise HTTPException(status_code=400, detail="price 必须大于 0")
+            raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
 
     # 团队咨询：还价时必须绑定服务
     service_id = body.get("service_id")
@@ -1110,7 +1117,7 @@ async def counter_offer(
             )
         )
         if not svc_result.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="service_not_found")
+            raise_http_error_with_code("service_not_found", 400, error_codes.SERVICE_NOT_FOUND)
         application.service_id = int(service_id)
 
     if price is not None:
@@ -1136,7 +1143,7 @@ async def get_application_status(
     )
     application = app_result.scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
     # 权限检查: 申请人、团队 owner/admin、或团队 member 可查看
     is_applicant = application.applicant_id == current_user.id

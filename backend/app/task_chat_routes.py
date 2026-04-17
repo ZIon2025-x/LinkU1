@@ -22,7 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
+from app.consultation import error_codes
 from app.deps import get_async_db_dependency
+from app.error_handlers import raise_http_error_with_code
 from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 from app.push_notification_service import send_push_notification_async_safe
 
@@ -4755,11 +4757,15 @@ async def create_task_consultation(
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
         if task.status not in ("open", "chatting", "pending_acceptance"):
-            raise HTTPException(status_code=400, detail="任务当前状态不允许咨询")
+            raise_http_error_with_code(
+                "任务当前状态不允许咨询", 400, error_codes.INVALID_STATUS_TRANSITION
+            )
 
         # 2. 不能咨询自己发布的任务
         if str(task.poster_id) == str(current_user.id):
-            raise HTTPException(status_code=400, detail="不能咨询自己发布的任务")
+            raise_http_error_with_code(
+                "不能咨询自己发布的任务", 400, error_codes.CANNOT_CONSULT_SELF
+            )
 
         # 3. 查找是否已有此用户对该原始任务的咨询占位任务
         existing_placeholder_result = await db.execute(
@@ -4951,7 +4957,7 @@ async def consult_negotiate(
         )
         application = app_result.scalar_one_or_none()
         if not application:
-            raise HTTPException(status_code=404, detail="申请不存在")
+            raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 验证是申请者
         if str(application.applicant_id) != str(current_user.id):
@@ -4959,7 +4965,11 @@ async def consult_negotiate(
 
         # 验证状态
         if application.status not in ("consulting", "negotiating"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许议价")
+            raise_http_error_with_code(
+                f"当前状态 {application.status} 不允许议价",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         # 获取任务信息（通知用）
         task_result = await db.execute(
@@ -5062,10 +5072,14 @@ async def consult_quote(
         )
         application = app_result.scalar_one_or_none()
         if not application:
-            raise HTTPException(status_code=404, detail="申请不存在")
+            raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         if application.status not in ("consulting", "negotiating"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许报价")
+            raise_http_error_with_code(
+                f"当前状态 {application.status} 不允许报价",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         # 更新状态和价格
         quoted_price = body.quoted_price
@@ -5153,7 +5167,7 @@ async def consult_respond(
         )
         application = app_result.scalar_one_or_none()
         if not application:
-            raise HTTPException(status_code=404, detail="申请不存在")
+            raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 验证身份：双方均可回应
         is_poster = str(task.poster_id) == str(current_user.id)
@@ -5164,7 +5178,11 @@ async def consult_respond(
 
         # 状态必须为 negotiating
         if application.status != "negotiating":
-            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许回应")
+            raise_http_error_with_code(
+                f"当前状态 {application.status} 不允许回应",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         action = body.action
         currency = application.currency or task.currency or "GBP"
@@ -5275,7 +5293,7 @@ async def consult_formal_apply(
         )
         application = app_result.scalar_one_or_none()
         if not application:
-            raise HTTPException(status_code=404, detail="申请不存在")
+            raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 验证是申请者
         if str(application.applicant_id) != str(current_user.id):
@@ -5283,7 +5301,11 @@ async def consult_formal_apply(
 
         # 验证状态
         if application.status not in ("consulting", "price_agreed"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许转为正式申请")
+            raise_http_error_with_code(
+                f"当前状态 {application.status} 不允许转为正式申请",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         # 获取任务
         task_result = await db.execute(
@@ -5316,7 +5338,11 @@ async def consult_formal_apply(
             if not orig_task:
                 raise HTTPException(status_code=404, detail="原任务不存在")
             if orig_task.status not in ("open", "chatting", "pending_acceptance"):
-                raise HTTPException(status_code=400, detail="原任务当前状态不允许申请")
+                raise_http_error_with_code(
+                    "原任务当前状态不允许申请",
+                    400,
+                    error_codes.INVALID_STATUS_TRANSITION,
+                )
 
             # Check if user already has an application on original task
             existing_orig_app = await db.execute(
@@ -5448,7 +5474,7 @@ async def consult_close(
         )
         application = app_result.scalar_one_or_none()
         if not application:
-            raise HTTPException(status_code=404, detail="申请不存在")
+            raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 双方均可关闭
         is_poster = str(task.poster_id) == str(current_user.id)
@@ -5459,7 +5485,11 @@ async def consult_close(
 
         # 验证状态
         if application.status not in ("consulting", "negotiating", "price_agreed"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许关闭咨询")
+            raise_http_error_with_code(
+                f"当前状态 {application.status} 不允许关闭咨询",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         application.status = "cancelled"
         # Also close the placeholder task
@@ -5544,7 +5574,7 @@ async def consult_status(
         )
         application = app_result.scalar_one_or_none()
         if not application:
-            raise HTTPException(status_code=404, detail="申请不存在")
+            raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 验证双方均可查看
         is_poster = str(task.poster_id) == str(current_user.id)
