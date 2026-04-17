@@ -28,6 +28,7 @@ EXPECTED_CODES = {
     "CONSULTATION_CLOSED",
     "SERVICE_NOT_FOUND",
     "SERVICE_INACTIVE",
+    "TASK_NOT_FOUND",
     "EXPERT_TEAM_NOT_FOUND",
     "EXPERT_TEAM_INACTIVE",
     "CANNOT_CONSULT_SELF",
@@ -96,6 +97,7 @@ ROUTE_FILES = [
 DIRECTLY_USED_IN_ROUTES = {
     "SERVICE_NOT_FOUND",
     "SERVICE_INACTIVE",
+    "TASK_NOT_FOUND",
     "EXPERT_TEAM_NOT_FOUND",
     "EXPERT_TEAM_INACTIVE",
     "CANNOT_CONSULT_SELF",
@@ -299,3 +301,26 @@ async def test_close_task_consultation_on_wrong_status_returns_invalid_transitio
     assert exc.value.status_code == 400
     assert isinstance(exc.value.detail, dict)
     assert exc.value.detail.get("error_code") == error_codes.INVALID_STATUS_TRANSITION
+
+
+@pytest.mark.asyncio
+async def test_consult_nonexistent_task_raises_task_not_found():
+    """POST /api/tasks/{id}/consult → 任务不存在 → TASK_NOT_FOUND"""
+    from app.task_chat_routes import create_task_consultation
+
+    db = MagicMock()
+    empty_result = MagicMock()
+    empty_result.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=empty_result)
+
+    with pytest.raises(HTTPException) as exc:
+        await create_task_consultation(
+            task_id=999999,
+            request=MagicMock(),
+            current_user=_make_current_user(),
+            db=db,
+        )
+
+    assert exc.value.status_code == 404
+    assert isinstance(exc.value.detail, dict)
+    assert exc.value.detail.get("error_code") == error_codes.TASK_NOT_FOUND

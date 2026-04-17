@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app import models
+from app.consultation import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ async def require_team_role(
         raise HTTPException(
             status_code=403,
             detail={
-                "error_code": "NOT_TEAM_MEMBER",
+                "error_code": error_codes.NOT_TEAM_MEMBER,
                 "message": "您不是该团队成员",
             },
         )
@@ -103,7 +104,7 @@ async def require_team_role(
         raise HTTPException(
             status_code=403,
             detail={
-                "error_code": "INSUFFICIENT_TEAM_ROLE",
+                "error_code": error_codes.INSUFFICIENT_TEAM_ROLE,
                 "message": "角色权限不足",
                 "required_role": minimum,
             },

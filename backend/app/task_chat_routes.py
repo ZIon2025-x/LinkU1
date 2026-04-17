@@ -4755,7 +4755,7 @@ async def create_task_consultation(
         )
         task = task_result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
         if task.status not in ("open", "chatting", "pending_acceptance"):
             raise_http_error_with_code(
                 "任务当前状态不允许咨询", 400, error_codes.INVALID_STATUS_TRANSITION
@@ -4977,7 +4977,7 @@ async def consult_negotiate(
         )
         task = task_result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
 
         # 更新状态和价格
         proposed_price = body.proposed_price
@@ -5052,7 +5052,7 @@ async def consult_quote(
         )
         task = task_result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
         # 咨询类任务：卖家/服务者(taker)报价；普通任务：发布者(poster)报价
         if task.status == "consulting" or getattr(task, "task_source", "") == "flea_market_consultation":
             if str(task.taker_id) != str(current_user.id):
@@ -5154,7 +5154,7 @@ async def consult_respond(
         )
         task = task_result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
 
         # 行锁查询申请
         app_result = await db.execute(
@@ -5313,7 +5313,7 @@ async def consult_formal_apply(
         )
         task = task_result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
 
         current_time = get_utc_time()
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
@@ -5336,7 +5336,7 @@ async def consult_formal_apply(
             )
             orig_task = orig_task_result.scalar_one_or_none()
             if not orig_task:
-                raise HTTPException(status_code=404, detail="原任务不存在")
+                raise_http_error_with_code("原任务不存在", 404, error_codes.TASK_NOT_FOUND)
             if orig_task.status not in ("open", "chatting", "pending_acceptance"):
                 raise_http_error_with_code(
                     "原任务当前状态不允许申请",
@@ -5461,7 +5461,7 @@ async def consult_close(
         )
         task = task_result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
 
         # 行锁查询申请
         app_result = await db.execute(
@@ -5563,7 +5563,7 @@ async def consult_status(
         )
         task = task_result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
 
         # 查询申请
         app_result = await db.execute(
