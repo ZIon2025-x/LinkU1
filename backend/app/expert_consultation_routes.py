@@ -117,6 +117,24 @@ async def apply_for_service(
     # 并发安全: 用 SELECT FOR UPDATE 锁定 slot 行,然后 count + insert,
     # 这样并发请求会串行化,避免超额。
     time_slot_id = body.get("time_slot_id")
+
+    # 护栏：议价服务 + 无基础价 + 无时间段 → apply 流程无处落地价格，
+    # 到审批时会撞 DB 约束（chk_tasks_reward_type_consistency）且 Stripe 拒 0 金额。
+    # 引导用户走 /consult 咨询流程（那边原生支持 reward_to_be_quoted）。
+    _is_negotiable = (service.pricing_type or "fixed") == "negotiable"
+    _no_base_price = service.base_price is None or float(service.base_price) <= 0
+    if _is_negotiable and _no_base_price and not time_slot_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "apply_requires_consultation",
+                "message": "此服务为议价服务且未设定基础价格，请使用『咨询』功能先与服务提供者沟通价格后再申请。",
+                "message_en": "This service has no fixed price. Please use consultation to discuss price before applying.",
+                "suggested_action": "consult",
+                "service_id": service_id,
+            },
+        )
+
     if time_slot_id:
         slot_result = await db.execute(
             select(models.ServiceTimeSlot)
