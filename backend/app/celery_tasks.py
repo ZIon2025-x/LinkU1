@@ -1280,7 +1280,10 @@ if CELERY_AVAILABLE:
         """发送自动转账提醒 - 每1小时"""
         task_name = 'send_auto_transfer_reminders_task'
         lock_key = f"celery_lock:{task_name}"
-        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        # lock_ttl=1200s 是 "崩溃恢复窗口":正常路径上 finally 会 release 锁,
+        # 只有进程崩溃(finally 未执行)才依赖 Redis TTL 自然过期。取值 < interval
+        # 避免原来 lock_ttl==interval=3600 的边界 race:上一次 tick 的锁在 T+3600
+        # 刚好过期,与下一次 tick 启动同时发生,两实例会并发获锁。
         if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
@@ -1429,7 +1432,10 @@ if CELERY_AVAILABLE:
         """计算热门搜索 - 每1小时"""
         task_name = 'compute_trending_searches_task'
         lock_key = f"celery_lock:{task_name}"
-        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        # lock_ttl=1200s 是 "崩溃恢复窗口":正常路径上 finally 会 release 锁,
+        # 只有进程崩溃(finally 未执行)才依赖 Redis TTL 自然过期。取值 < interval
+        # 避免原来 lock_ttl==interval=3600 的边界 race:上一次 tick 的锁在 T+3600
+        # 刚好过期,与下一次 tick 启动同时发生,两实例会并发获锁。
         if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
@@ -1454,7 +1460,10 @@ if CELERY_AVAILABLE:
         """计算技能分类计数 - 每1小时"""
         task_name = 'compute_skill_category_counts_task'
         lock_key = f"celery_lock:{task_name}"
-        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        # lock_ttl=1200s 是 "崩溃恢复窗口":正常路径上 finally 会 release 锁,
+        # 只有进程崩溃(finally 未执行)才依赖 Redis TTL 自然过期。取值 < interval
+        # 避免原来 lock_ttl==interval=3600 的边界 race:上一次 tick 的锁在 T+3600
+        # 刚好过期,与下一次 tick 启动同时发生,两实例会并发获锁。
         if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
@@ -1534,7 +1543,10 @@ if CELERY_AVAILABLE:
         """检查逾期租赁 - 每1小时"""
         task_name = 'check_overdue_rentals_task'
         lock_key = f"celery_lock:{task_name}"
-        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        # lock_ttl=1200s 是 "崩溃恢复窗口":正常路径上 finally 会 release 锁,
+        # 只有进程崩溃(finally 未执行)才依赖 Redis TTL 自然过期。取值 < interval
+        # 避免原来 lock_ttl==interval=3600 的边界 race:上一次 tick 的锁在 T+3600
+        # 刚好过期,与下一次 tick 启动同时发生,两实例会并发获锁。
         if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
@@ -1559,7 +1571,9 @@ if CELERY_AVAILABLE:
         """检查待归还超时 - 每6小时"""
         task_name = 'check_pending_return_timeout_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=21600):
+        # lock_ttl=7200s 是崩溃恢复窗口(< interval_seconds=21600),避免 lock_ttl==interval
+        # 的边界 race(上一次 tick 锁在 T+interval 刚好过期与下一次 tick 启动撞车)。
+        if not get_redis_distributed_lock(lock_key, lock_ttl=7200):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
@@ -1583,7 +1597,9 @@ if CELERY_AVAILABLE:
         """检查过期租赁审批 - 每30分钟"""
         task_name = 'check_expired_rental_approvals_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+        # lock_ttl=600s 是崩溃恢复窗口(< interval_seconds=1800),避免 lock_ttl==interval
+        # 的边界 race(上一次 tick 锁在 T+interval 刚好过期与下一次 tick 启动撞车)。
+        if not get_redis_distributed_lock(lock_key, lock_ttl=600):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
@@ -1610,7 +1626,9 @@ if CELERY_AVAILABLE:
         """每天扫一次,通知 owner 接近 90 天 Transfer 时效的 in-flight 团队任务. spec §3.4a"""
         task_name = 'warn_long_running_team_tasks_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=86400):
+        # lock_ttl=28800s=8h 是崩溃恢复窗口(< interval_seconds=86400/1day),避免
+        # lock_ttl==interval 的边界 race。
+        if not get_redis_distributed_lock(lock_key, lock_ttl=28800):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
@@ -1680,9 +1698,11 @@ if CELERY_AVAILABLE:
         """自动关闭超过14天不活跃的咨询占位任务 - 每小时"""
         task_name = 'close_stale_consultations_task'
         lock_key = f"celery_lock:{task_name}"
-        # lock_ttl 必须小于调度间隔 (interval_seconds=3600, task_scheduler.py:648),
-        # 否则长时间运行会让下一次调度获取到已释放的锁从而并发执行。
-        # 实测 close_stale_consultations 最长 <5min,设 1200s (20min) 充裕。
+        # lock_ttl=1200s 是 "崩溃恢复窗口":正常路径上 finally 会 release 锁,
+        # 只有进程崩溃(finally 未执行)才依赖 Redis TTL 自然过期。取值 < interval
+        # 避免原来 lock_ttl==interval=3600 的边界 race:上一次 tick 的锁在 T+3600
+        # 刚好过期,与下一次 tick 启动同时发生,两实例会并发获锁。
+        # 实测 close_stale_consultations 最长 <5min,1200s 有充分余量。
         if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
@@ -1706,7 +1726,10 @@ if CELERY_AVAILABLE:
         """套餐过期提醒: 到期 7d/3d/1d 前给买家发通知。"""
         task_name = 'send_package_expiry_reminders_task'
         lock_key = f"celery_lock:{task_name}"
-        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        # lock_ttl=1200s 是 "崩溃恢复窗口":正常路径上 finally 会 release 锁,
+        # 只有进程崩溃(finally 未执行)才依赖 Redis TTL 自然过期。取值 < interval
+        # 避免原来 lock_ttl==interval=3600 的边界 race:上一次 tick 的锁在 T+3600
+        # 刚好过期,与下一次 tick 启动同时发生,两实例会并发获锁。
         if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()

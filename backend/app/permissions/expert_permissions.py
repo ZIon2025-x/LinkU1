@@ -64,6 +64,15 @@ async def get_team_member(
 
     供需要 ExpertMember 对象的调用方(如 `expert_routes._get_member_or_403`
     和修改 member.status 的场景)使用。
+
+    **缓存新鲜度注意事项**:
+    - 缓存存的是 SQLAlchemy ORM 行对象本身,同一请求内多次调用返回同一实例。
+    - 如果调用方原地修改了 `member.status`(如 "离开团队" 端点把 status 从
+      'active' 改成 'left'),随后同一请求再次调用 `get_team_member` 仍会拿到
+      这个已修改的对象 — 它从数据库角度看是 stale 的,但仍被视为成员存在。
+    - 当前所有已知 mutation 调用方都是 "写完立即返回响应",不会同请求内再查,
+      因此此行为无风险。未来若添加需要读取最新 DB 状态的路径,显式调用
+      `reset_role_cache()` 或直接走 `_query_team_member(db, ...)` 绕过缓存。
     """
     cache = _cache()
     key = (expert_id, user_id)
