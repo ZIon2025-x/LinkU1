@@ -12,7 +12,9 @@ from sqlalchemy import select, and_, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
+from app.consultation import error_codes
 from app.deps import get_async_db_dependency
+from app.error_handlers import raise_http_error_with_code
 from app.async_routers import (
     get_current_user_secure_async_csrf,
     get_current_user_optional,
@@ -137,8 +139,6 @@ async def _compute_is_open_batch(
 
 async def _get_expert_or_404(db: AsyncSession, expert_id: str) -> Expert:
     """获取达人团队，不存在则 404"""
-    from app.consultation import error_codes
-    from app.error_handlers import raise_http_error_with_code
     result = await db.execute(select(Expert).where(Expert.id == expert_id))
     expert = result.scalar_one_or_none()
     if not expert:
@@ -160,8 +160,6 @@ async def _get_member_or_403(
     - NOT_TEAM_MEMBER (403): 用户不是该团队成员
     - INSUFFICIENT_TEAM_ROLE (403): 是成员但角色不够(required_roles 过滤不通过)
     """
-    from app.consultation import error_codes
-    from app.error_handlers import raise_http_error_with_code
     result = await db.execute(
         select(ExpertMember).where(
             and_(
