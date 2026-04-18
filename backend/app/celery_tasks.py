@@ -1280,7 +1280,8 @@ if CELERY_AVAILABLE:
         """发送自动转账提醒 - 每1小时"""
         task_name = 'send_auto_transfer_reminders_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
@@ -1428,7 +1429,8 @@ if CELERY_AVAILABLE:
         """计算热门搜索 - 每1小时"""
         task_name = 'compute_trending_searches_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
@@ -1452,7 +1454,8 @@ if CELERY_AVAILABLE:
         """计算技能分类计数 - 每1小时"""
         task_name = 'compute_skill_category_counts_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
@@ -1531,7 +1534,8 @@ if CELERY_AVAILABLE:
         """检查逾期租赁 - 每1小时"""
         task_name = 'check_overdue_rentals_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
@@ -1702,7 +1706,8 @@ if CELERY_AVAILABLE:
         """套餐过期提醒: 到期 7d/3d/1d 前给买家发通知。"""
         task_name = 'send_package_expiry_reminders_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+        # lock_ttl 必须 < interval_seconds=3600,否则长时间运行会让下一次调度并发执行
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
         try:
