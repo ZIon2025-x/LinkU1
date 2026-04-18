@@ -151,3 +151,20 @@ async def create_placeholder_task(
     db.add(task)
     await db.flush()
     return task
+
+
+def consultation_task_id_for(app) -> Optional[int]:
+    """返回应该用来查 messages 的 task_id。None 表示不存在咨询消息。
+
+    适用于 ServiceApplication / TaskApplication / FleaMarketPurchaseRequest
+    三种申请类型,遵循 "consultation_task_id 优先,fallback 到 task_id" 的规则。
+
+    详见 2026-04-18-consultation-upgrade-design.md §C.3 分场景表。
+    """
+    if app.consultation_task_id is not None:
+        return app.consultation_task_id  # approve/正式转换后场景
+    if app.task_id is not None:
+        # app.task_id 此时指向占位 task(is_consultation_placeholder=True)
+        # SA approve 前 / TA 占位态 / FMPR 未晋升态 都走这条
+        return app.task_id
+    return None
