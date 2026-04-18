@@ -13668,4 +13668,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileMyPackagesSubtitle => 'Purchased service packages';
+
+  @override
+  String get consultationErrorAlreadyExists =>
+      'You already have an ongoing consultation for this item';
+
+  @override
+  String get consultationErrorNotFound => 'Consultation not found';
+
+  @override
+  String get consultationErrorClosed => 'This consultation has been closed';
+
+  @override
+  String get consultationErrorServiceNotFound => 'Service not found';
+
+  @override
+  String get consultationErrorServiceInactive =>
+      'This service is no longer available';
+
+  @override
+  String get consultationErrorTeamNotFound => 'Expert team not found';
+
+  @override
+  String get consultationErrorTeamInactive => 'This expert team is not active';
+
+  @override
+  String get consultationErrorCannotConsultSelf =>
+      'You cannot consult your own service';
+
+  @override
+  String get consultationErrorNotServiceOwner =>
+      'You are not the owner of this service';
+
+  @override
+  String get consultationErrorNotTeamMember =>
+      'You are not a member of this team';
+
+  @override
+  String get consultationErrorInsufficientTeamRole =>
+      'Your team role does not permit this action';
+
+  @override
+  String get consultationErrorInvalidStatusTransition =>
+      'This action is not allowed in the current consultation state';
+
+  @override
+  String get consultationErrorPriceOutOfRange =>
+      'Price is outside the allowed range';
+
+  @override
+  String get consultationErrorTaskNotFound => 'Task not found';
+
+  @override
+  String get consultationErrorGeneric =>
+      'Consultation action failed. Please try again.';
 }

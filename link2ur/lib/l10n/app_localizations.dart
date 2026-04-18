@@ -25157,6 +25157,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Purchased service packages'**
   String get profileMyPackagesSubtitle;
+
+  /// No description provided for @consultationErrorAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an ongoing consultation for this item'**
+  String get consultationErrorAlreadyExists;
+
+  /// No description provided for @consultationErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation not found'**
+  String get consultationErrorNotFound;
+
+  /// No description provided for @consultationErrorClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'This consultation has been closed'**
+  String get consultationErrorClosed;
+
+  /// No description provided for @consultationErrorServiceNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Service not found'**
+  String get consultationErrorServiceNotFound;
+
+  /// No description provided for @consultationErrorServiceInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'This service is no longer available'**
+  String get consultationErrorServiceInactive;
+
+  /// No description provided for @consultationErrorTeamNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert team not found'**
+  String get consultationErrorTeamNotFound;
+
+  /// No description provided for @consultationErrorTeamInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'This expert team is not active'**
+  String get consultationErrorTeamInactive;
+
+  /// No description provided for @consultationErrorCannotConsultSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot consult your own service'**
+  String get consultationErrorCannotConsultSelf;
+
+  /// No description provided for @consultationErrorNotServiceOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not the owner of this service'**
+  String get consultationErrorNotServiceOwner;
+
+  /// No description provided for @consultationErrorNotTeamMember.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not a member of this team'**
+  String get consultationErrorNotTeamMember;
+
+  /// No description provided for @consultationErrorInsufficientTeamRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Your team role does not permit this action'**
+  String get consultationErrorInsufficientTeamRole;
+
+  /// No description provided for @consultationErrorInvalidStatusTransition.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is not allowed in the current consultation state'**
+  String get consultationErrorInvalidStatusTransition;
+
+  /// No description provided for @consultationErrorPriceOutOfRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Price is outside the allowed range'**
+  String get consultationErrorPriceOutOfRange;
+
+  /// No description provided for @consultationErrorTaskNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Task not found'**
+  String get consultationErrorTaskNotFound;
+
+  /// No description provided for @consultationErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation action failed. Please try again.'**
+  String get consultationErrorGeneric;
 }
 
 class _AppLocalizationsDelegate

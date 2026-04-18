@@ -13089,6 +13089,51 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileMyPackagesSubtitle => '已购买的服务套餐';
+
+  @override
+  String get consultationErrorAlreadyExists => '您已有进行中的咨询申请';
+
+  @override
+  String get consultationErrorNotFound => '咨询申请不存在';
+
+  @override
+  String get consultationErrorClosed => '该咨询已关闭';
+
+  @override
+  String get consultationErrorServiceNotFound => '服务不存在';
+
+  @override
+  String get consultationErrorServiceInactive => '该服务已下架';
+
+  @override
+  String get consultationErrorTeamNotFound => '专家团队不存在';
+
+  @override
+  String get consultationErrorTeamInactive => '该专家团队未激活';
+
+  @override
+  String get consultationErrorCannotConsultSelf => '不能对自己发起咨询';
+
+  @override
+  String get consultationErrorNotServiceOwner => '您不是该服务的所有者';
+
+  @override
+  String get consultationErrorNotTeamMember => '您不是该团队成员';
+
+  @override
+  String get consultationErrorInsufficientTeamRole => '您的团队角色不足以执行该操作';
+
+  @override
+  String get consultationErrorInvalidStatusTransition => '当前咨询状态不允许该操作';
+
+  @override
+  String get consultationErrorPriceOutOfRange => '价格超出允许范围';
+
+  @override
+  String get consultationErrorTaskNotFound => '任务不存在';
+
+  @override
+  String get consultationErrorGeneric => '咨询操作失败,请稍后重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -26176,4 +26221,49 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileMyPackagesSubtitle => '已購買的服務套餐';
+
+  @override
+  String get consultationErrorAlreadyExists => '您已有進行中的諮詢申請';
+
+  @override
+  String get consultationErrorNotFound => '諮詢申請不存在';
+
+  @override
+  String get consultationErrorClosed => '該諮詢已關閉';
+
+  @override
+  String get consultationErrorServiceNotFound => '服務不存在';
+
+  @override
+  String get consultationErrorServiceInactive => '該服務已下架';
+
+  @override
+  String get consultationErrorTeamNotFound => '專家團隊不存在';
+
+  @override
+  String get consultationErrorTeamInactive => '該專家團隊未啟用';
+
+  @override
+  String get consultationErrorCannotConsultSelf => '不能對自己發起諮詢';
+
+  @override
+  String get consultationErrorNotServiceOwner => '您不是該服務的所有者';
+
+  @override
+  String get consultationErrorNotTeamMember => '您不是該團隊成員';
+
+  @override
+  String get consultationErrorInsufficientTeamRole => '您的團隊角色不足以執行該操作';
+
+  @override
+  String get consultationErrorInvalidStatusTransition => '當前諮詢狀態不允許該操作';
+
+  @override
+  String get consultationErrorPriceOutOfRange => '價格超出允許範圍';
+
+  @override
+  String get consultationErrorTaskNotFound => '任務不存在';
+
+  @override
+  String get consultationErrorGeneric => '諮詢操作失敗,請稍後再試';
 }
