@@ -5,10 +5,18 @@ import pytest
 from fastapi import HTTPException
 
 from app.permissions.expert_permissions import (
+    get_team_member,
     get_team_role,
     require_team_role,
     reset_role_cache,
 )
+
+
+def _make_member(role: str | None, member_id: int = 1):
+    """构造一个"返回指定 role 的假 ExpertMember"对象。"""
+    if role is None:
+        return None
+    return type("_FakeMember", (), {"role": role, "id": member_id})()
 
 
 @pytest.fixture(autouse=True)
@@ -21,9 +29,9 @@ def _reset():
 @pytest.mark.asyncio
 async def test_get_team_role_returns_owner(monkeypatch):
     async def fake_query(db, expert_id, user_id):
-        return "owner"
+        return _make_member("owner")
     monkeypatch.setattr(
-        "app.permissions.expert_permissions._query_team_role", fake_query
+        "app.permissions.expert_permissions._query_team_member", fake_query
     )
     role = await get_team_role(None, "exp-1", "u0000042")
     assert role == "owner"
@@ -34,7 +42,7 @@ async def test_get_team_role_returns_none_for_non_member(monkeypatch):
     async def fake_query(db, expert_id, user_id):
         return None
     monkeypatch.setattr(
-        "app.permissions.expert_permissions._query_team_role", fake_query
+        "app.permissions.expert_permissions._query_team_member", fake_query
     )
     assert await get_team_role(None, "exp-1", "u0000999") is None
 
@@ -45,10 +53,10 @@ async def test_get_team_role_caches_within_request(monkeypatch):
 
     async def fake_query(db, expert_id, user_id):
         calls["n"] += 1
-        return "admin"
+        return _make_member("admin")
 
     monkeypatch.setattr(
-        "app.permissions.expert_permissions._query_team_role", fake_query
+        "app.permissions.expert_permissions._query_team_member", fake_query
     )
     await get_team_role(None, "exp-1", "u0000042")
     await get_team_role(None, "exp-1", "u0000042")
@@ -62,15 +70,34 @@ async def test_get_team_role_cache_resets_between_requests(monkeypatch):
 
     async def fake_query(db, expert_id, user_id):
         calls["n"] += 1
-        return "member"
+        return _make_member("member")
 
     monkeypatch.setattr(
-        "app.permissions.expert_permissions._query_team_role", fake_query
+        "app.permissions.expert_permissions._query_team_member", fake_query
     )
     await get_team_role(None, "exp-1", "u0000042")
     reset_role_cache()
     await get_team_role(None, "exp-1", "u0000042")
     assert calls["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_get_team_member_and_get_team_role_share_cache(monkeypatch):
+    """两个 helper 共享 request-scoped 缓存,避免重复 DB 查询。"""
+    calls = {"n": 0}
+
+    async def fake_query(db, expert_id, user_id):
+        calls["n"] += 1
+        return _make_member("admin")
+
+    monkeypatch.setattr(
+        "app.permissions.expert_permissions._query_team_member", fake_query
+    )
+    member = await get_team_member(None, "exp-1", "u0000042")
+    role = await get_team_role(None, "exp-1", "u0000042")
+    assert member is not None and member.role == "admin"
+    assert role == "admin"
+    assert calls["n"] == 1  # 两个 helper 合计只查一次 DB
 
 
 @pytest.mark.asyncio
@@ -91,9 +118,9 @@ async def test_get_team_role_cache_resets_between_requests(monkeypatch):
 )
 async def test_require_team_role_matrix(monkeypatch, role, minimum, should_pass):
     async def fake_query(db, expert_id, user_id):
-        return role
+        return _make_member(role)
     monkeypatch.setattr(
-        "app.permissions.expert_permissions._query_team_role", fake_query
+        "app.permissions.expert_permissions._query_team_member", fake_query
     )
     if should_pass:
         got = await require_team_role(None, "exp-1", "u0000042", minimum=minimum)

@@ -12,7 +12,6 @@ from app.async_routers import get_current_user_secure_async_csrf
 from app.models_expert import (
     Expert, ExpertMember, ChatParticipant,
 )
-from app.expert_routes import _get_member_or_403
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)

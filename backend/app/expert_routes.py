@@ -154,22 +154,18 @@ async def _get_member_or_403(
     user_id: str,
     required_roles: Optional[List[str]] = None,
 ) -> ExpertMember:
-    """检查用户是否为活跃成员，可选角色检查。
+    """检查用户是否为活跃成员，可选角色检查,返回 ExpertMember 行。
 
     抛带 error_code 的 HTTPException,Flutter 端据此做 l10n:
     - NOT_TEAM_MEMBER (403): 用户不是该团队成员
     - INSUFFICIENT_TEAM_ROLE (403): 是成员但角色不够(required_roles 过滤不通过)
+
+    内部走 `app.permissions.get_team_member` 的请求级缓存,与
+    `require_team_role` / `get_team_role` 共享单次请求内的 DB 查询结果。
     """
-    result = await db.execute(
-        select(ExpertMember).where(
-            and_(
-                ExpertMember.expert_id == expert_id,
-                ExpertMember.user_id == user_id,
-                ExpertMember.status == "active",
-            )
-        )
-    )
-    member = result.scalar_one_or_none()
+    from app.permissions import get_team_member
+
+    member = await get_team_member(db, expert_id, user_id)
     if not member:
         raise_http_error_with_code(
             "你不是该团队的活跃成员", 403, error_codes.NOT_TEAM_MEMBER
