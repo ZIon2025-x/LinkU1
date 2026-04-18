@@ -39,6 +39,7 @@ from app.deps import get_async_db_dependency
 from app.error_handlers import raise_http_error_with_code
 from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 from app.push_notification_service import send_push_notification_async_safe
+from app.consultation.helpers import create_placeholder_task
 
 logger = logging.getLogger(__name__)
 
@@ -4865,25 +4866,23 @@ async def create_task_consultation(
         task_title_zh = getattr(task, "title_zh", None) or task_title
         task_title_en = getattr(task, "title_en", None) or task_title
 
-        consulting_task = models.Task(
+        consulting_task = await create_placeholder_task(
+            db,
+            consultation_type="task_consultation",
             title=f"咨询: {task_title}",
+            applicant_id=current_user.id,
+            taker_id=task.poster_id,
+            description=f"original_task_id:{task_id}",
             title_zh=f"咨询: {task_title_zh}",
             title_en=f"Consultation: {task_title_en}",
-            description=f"original_task_id:{task_id}",
             reward=task.base_reward or 0,
             base_reward=task.base_reward or 0,
             reward_to_be_quoted=getattr(task, "reward_to_be_quoted", False),
             currency=task.currency or "GBP",
             location=task.location or "",
             task_type=task.task_type or "other",
-            task_source="task_consultation",
-            poster_id=current_user.id,
-            taker_id=task.poster_id,
-            status="consulting",
             task_level=getattr(task, "task_level", "normal"),
         )
-        db.add(consulting_task)
-        await db.flush()  # 获取 consulting_task.id
 
         # 6. 创建 TaskApplication 指向占位任务
         new_application = models.TaskApplication(
