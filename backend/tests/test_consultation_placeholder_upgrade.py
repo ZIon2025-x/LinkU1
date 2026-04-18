@@ -106,3 +106,98 @@ async def test_load_real_task_or_404_returns_404_for_nonexistent():
     with pytest.raises(HTTPException) as exc:
         await load_real_task_or_404(db, 9999)
     assert exc.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Task 11: admin task list default-excludes placeholder tasks
+# ---------------------------------------------------------------------------
+
+def _make_db_mock(tasks=None, total=0):
+    """构造一个模拟 db，使 db.query().filter().count() 和 .all() 按预期工作。"""
+    tasks = tasks or []
+    query_mock = MagicMock()
+    # filter() returns self so chained calls work
+    query_mock.filter.return_value = query_mock
+    query_mock.count.return_value = total
+    query_mock.order_by.return_value = query_mock
+    query_mock.offset.return_value = query_mock
+    query_mock.limit.return_value = query_mock
+    query_mock.all.return_value = tasks
+
+    db = MagicMock()
+    db.query.return_value = query_mock
+    return db, query_mock
+
+
+def test_admin_task_list_excludes_placeholders_by_default():
+    """默认调用（include_placeholders=False）必须添加 is_consultation_placeholder==False 过滤。"""
+    from app.admin_task_management_routes import admin_get_tasks
+    from app.models import Task
+
+    db, query_mock = _make_db_mock()
+    current_user = MagicMock()
+
+    admin_get_tasks(
+        skip=0,
+        limit=50,
+        status=None,
+        task_type=None,
+        location=None,
+        keyword=None,
+        include_placeholders=False,
+        current_user=current_user,
+        db=db,
+    )
+
+    # At least one filter call must filter on is_consultation_placeholder == False
+    filter_calls = query_mock.filter.call_args_list
+    assert filter_calls, "Expected at least one .filter() call"
+
+    # Inspect the SQL expression passed to filter
+    found = False
+    for call in filter_calls:
+        args = call[0]
+        for arg in args:
+            # SQLAlchemy BinaryExpression converts to string; check for the column name
+            expr_str = str(arg)
+            if "is_consultation_placeholder" in expr_str and "false" in expr_str.lower():
+                found = True
+                break
+        if found:
+            break
+
+    assert found, (
+        "admin_get_tasks did not filter out is_consultation_placeholder=False by default. "
+        f"Actual filter calls: {filter_calls}"
+    )
+
+
+def test_admin_task_list_include_placeholders_flag():
+    """include_placeholders=True 时不添加 is_consultation_placeholder 过滤。"""
+    from app.admin_task_management_routes import admin_get_tasks
+
+    db, query_mock = _make_db_mock()
+    current_user = MagicMock()
+
+    admin_get_tasks(
+        skip=0,
+        limit=50,
+        status=None,
+        task_type=None,
+        location=None,
+        keyword=None,
+        include_placeholders=True,
+        current_user=current_user,
+        db=db,
+    )
+
+    filter_calls = query_mock.filter.call_args_list
+
+    # None of the filter calls should reference is_consultation_placeholder
+    for call in filter_calls:
+        args = call[0]
+        for arg in args:
+            assert "is_consultation_placeholder" not in str(arg), (
+                "admin_get_tasks must NOT filter is_consultation_placeholder when "
+                "include_placeholders=True"
+            )
