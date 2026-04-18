@@ -10,11 +10,15 @@ content_en 按表不同处理: `notifications` 表有 content_en 列直接写入
 - **service 家族** (expert_consultation_routes / flea_market_routes):
   `consultation_submitted`(基于 service_name)、`consultation_closed`、
   `consultation_stale_auto_closed`
-- **task 家族** (task_chat_routes 基于 task_title):
-  `task_consultation_submitted` / `consultation_negotiation_accepted` /
-  `consultation_negotiation_rejected` / `consultation_counter_offer` /
-  `consultation_formal_apply_submitted` / `consultation_promoted_to_formal` /
-  `consultation_closed_by_user`
+- **task 家族** (task_chat_routes 基于 task_title, `task_` 前缀):
+  `task_consultation_submitted` / `task_negotiation_accepted` /
+  `task_negotiation_rejected` / `task_counter_offer` /
+  `task_formal_apply_submitted` / `task_promoted_to_formal` /
+  `task_closed_by_user` / `task_notif_price_accepted` /
+  `task_notif_price_rejected` / `task_notif_counter_offer`
+
+命名约定:`task_` 前缀 = task-consultation 语义,避免和未来可能的
+service-family 同名模板(如 negotiation_*)冲突。
 """
 from typing import Optional, TypedDict
 
@@ -58,7 +62,7 @@ def task_consultation_submitted(*, user_name: str, task_title: str) -> Bilingual
     }
 
 
-def consultation_negotiation_accepted(
+def task_negotiation_accepted(
     *, user_name: str, currency: str, price: float
 ) -> Bilingual:
     return {
@@ -67,14 +71,14 @@ def consultation_negotiation_accepted(
     }
 
 
-def consultation_negotiation_rejected(*, user_name: str) -> Bilingual:
+def task_negotiation_rejected(*, user_name: str) -> Bilingual:
     return {
         "content_zh": f"{user_name} 拒绝了当前报价",
         "content_en": f"{user_name} rejected the current price",
     }
 
 
-def consultation_counter_offer(
+def task_counter_offer(
     *, user_name: str, currency: str, price: float
 ) -> Bilingual:
     return {
@@ -83,7 +87,7 @@ def consultation_counter_offer(
     }
 
 
-def consultation_formal_apply_submitted(
+def task_formal_apply_submitted(
     *, user_name: str, price_info: Optional[str] = None
 ) -> Bilingual:
     """消息落在**原任务**上:用户通过咨询提交了正式申请。"""
@@ -95,7 +99,7 @@ def consultation_formal_apply_submitted(
     }
 
 
-def consultation_promoted_to_formal(
+def task_promoted_to_formal(
     *, user_name: str, price_info: Optional[str] = None
 ) -> Bilingual:
     """消息落在**咨询占位任务**上:用户已将咨询转为正式申请。"""
@@ -107,7 +111,7 @@ def consultation_promoted_to_formal(
     }
 
 
-def consultation_closed_by_user(*, user_name: str) -> Bilingual:
+def task_closed_by_user(*, user_name: str) -> Bilingual:
     return {
         "content_zh": f"{user_name} 关闭了咨询",
         "content_en": f"{user_name} closed the consultation",

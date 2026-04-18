@@ -1,15 +1,15 @@
 """咨询通知模板测试"""
 from app.consultation.notifications import (
     consultation_closed,
-    consultation_closed_by_user,
-    consultation_counter_offer,
-    consultation_formal_apply_submitted,
-    consultation_negotiation_accepted,
-    consultation_negotiation_rejected,
-    consultation_promoted_to_formal,
     consultation_stale_auto_closed,
     consultation_submitted,
+    task_closed_by_user,
     task_consultation_submitted,
+    task_counter_offer,
+    task_formal_apply_submitted,
+    task_negotiation_accepted,
+    task_negotiation_rejected,
+    task_promoted_to_formal,
 )
 
 
@@ -32,20 +32,34 @@ def test_task_consultation_submitted_uses_task_title():
 
 
 def test_negotiation_accepted_includes_price():
-    msg = consultation_negotiation_accepted(user_name="Alice", currency="GBP", price=123.45)
+    msg = task_negotiation_accepted(user_name="Alice", currency="GBP", price=123.45)
     assert "123.45" in msg["content_zh"]
     assert "GBP" in msg["content_zh"]
     assert "123.45" in msg["content_en"]
+    assert "GBP" in msg["content_en"]  # M4: 同时断言英文
+
+
+def test_negotiation_rejected_content():
+    """M3: 断言拒绝文案不包含价格且两 locale 有意义。"""
+    msg = task_negotiation_rejected(user_name="Alice")
+    assert "Alice" in msg["content_zh"]
+    assert "拒绝" in msg["content_zh"]
+    assert "Alice" in msg["content_en"]
+    assert "rejected" in msg["content_en"]
+    # 负面断言:拒绝消息不应包含金额/货币
+    for field in (msg["content_zh"], msg["content_en"]):
+        assert "GBP" not in field
+        assert "0.00" not in field
 
 
 def test_counter_offer_includes_price():
-    msg = consultation_counter_offer(user_name="Bob", currency="GBP", price=99.99)
+    msg = task_counter_offer(user_name="Bob", currency="GBP", price=99.99)
     assert "99.99" in msg["content_zh"]
     assert "99.99" in msg["content_en"]
 
 
 def test_formal_apply_with_price_info():
-    msg = consultation_formal_apply_submitted(
+    msg = task_formal_apply_submitted(
         user_name="Carol", price_info="，报价 GBP 500.00"
     )
     assert "Carol" in msg["content_zh"]
@@ -53,20 +67,20 @@ def test_formal_apply_with_price_info():
 
 
 def test_formal_apply_without_price_info():
-    msg = consultation_formal_apply_submitted(user_name="Carol")
+    msg = task_formal_apply_submitted(user_name="Carol")
     assert "Carol" in msg["content_zh"]
     assert msg["content_zh"].endswith("提交了正式申请")
 
 
 def test_promoted_to_formal_differs_from_submitted():
     """promoted_to_formal 用在占位任务上,submitted 用在原任务上 — 文案应不同。"""
-    submitted = consultation_formal_apply_submitted(user_name="x")
-    promoted = consultation_promoted_to_formal(user_name="x")
+    submitted = task_formal_apply_submitted(user_name="x")
+    promoted = task_promoted_to_formal(user_name="x")
     assert submitted["content_zh"] != promoted["content_zh"]
 
 
 def test_closed_by_user_includes_user_name():
-    msg = consultation_closed_by_user(user_name="Alice")
+    msg = task_closed_by_user(user_name="Alice")
     assert "Alice" in msg["content_zh"]
     assert "关闭" in msg["content_zh"]
 
@@ -77,12 +91,12 @@ def test_all_templates_return_dict_with_zh_en_keys():
         consultation_closed(),
         consultation_stale_auto_closed(days=14),
         task_consultation_submitted(user_name="x", task_title="y"),
-        consultation_negotiation_accepted(user_name="x", currency="GBP", price=1.0),
-        consultation_negotiation_rejected(user_name="x"),
-        consultation_counter_offer(user_name="x", currency="GBP", price=1.0),
-        consultation_formal_apply_submitted(user_name="x"),
-        consultation_promoted_to_formal(user_name="x", price_info="，报价 GBP 1.00"),
-        consultation_closed_by_user(user_name="x"),
+        task_negotiation_accepted(user_name="x", currency="GBP", price=1.0),
+        task_negotiation_rejected(user_name="x"),
+        task_counter_offer(user_name="x", currency="GBP", price=1.0),
+        task_formal_apply_submitted(user_name="x"),
+        task_promoted_to_formal(user_name="x", price_info="，报价 GBP 1.00"),
+        task_closed_by_user(user_name="x"),
     ]
     for m in samples:
         assert set(m.keys()) == {"content_zh", "content_en"}

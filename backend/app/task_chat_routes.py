@@ -24,13 +24,13 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.consultation import error_codes
 from app.consultation.notifications import (
-    consultation_closed_by_user,
-    consultation_counter_offer,
-    consultation_formal_apply_submitted,
-    consultation_negotiation_accepted,
-    consultation_negotiation_rejected,
-    consultation_promoted_to_formal,
+    task_closed_by_user,
     task_consultation_submitted,
+    task_counter_offer,
+    task_formal_apply_submitted,
+    task_negotiation_accepted,
+    task_negotiation_rejected,
+    task_promoted_to_formal,
 )
 from app.deps import get_async_db_dependency
 from app.error_handlers import raise_http_error_with_code
@@ -5207,7 +5207,7 @@ async def consult_respond(
         if action == "accept":
             application.status = "price_agreed"
             message_type = "negotiation_accepted"
-            _msg = consultation_negotiation_accepted(
+            _msg = task_negotiation_accepted(
                 user_name=user_name,
                 currency=currency,
                 price=float(application.negotiated_price or 0),
@@ -5221,7 +5221,7 @@ async def consult_respond(
         elif action == "reject":
             application.status = "consulting"
             message_type = "negotiation_rejected"
-            _msg = consultation_negotiation_rejected(user_name=user_name)
+            _msg = task_negotiation_rejected(user_name=user_name)
             content_zh = _msg["content_zh"]
             content_en = _msg["content_en"]
             notif_title = "报价被拒绝"
@@ -5232,7 +5232,7 @@ async def consult_respond(
             counter_price = body.counter_price
             application.negotiated_price = Decimal(str(counter_price))
             message_type = "counter_offer"
-            _msg = consultation_counter_offer(
+            _msg = task_counter_offer(
                 user_name=user_name,
                 currency=currency,
                 price=float(counter_price),
@@ -5395,7 +5395,7 @@ async def consult_formal_apply(
             if application.negotiated_price:
                 currency = application.currency or orig_task.currency or "GBP"
                 price_info = f"，报价 {currency} {float(application.negotiated_price):.2f}"
-            _orig_msg = consultation_formal_apply_submitted(
+            _orig_msg = task_formal_apply_submitted(
                 user_name=user_name, price_info=price_info or None
             )
             orig_content_zh = _orig_msg["content_zh"]
@@ -5427,7 +5427,7 @@ async def consult_formal_apply(
         if application.negotiated_price:
             currency = application.currency or task.currency or "GBP"
             price_info = f"，报价 {currency} {float(application.negotiated_price):.2f}"
-        _msg = consultation_promoted_to_formal(
+        _msg = task_promoted_to_formal(
             user_name=user_name, price_info=price_info or None
         )
         content_zh = _msg["content_zh"]
@@ -5526,7 +5526,7 @@ async def consult_close(
         # 系统消息
         current_time = get_utc_time()
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
-        _msg = consultation_closed_by_user(user_name=user_name)
+        _msg = task_closed_by_user(user_name=user_name)
         content_zh = _msg["content_zh"]
         content_en = _msg["content_en"]
         system_message = models.Message(
