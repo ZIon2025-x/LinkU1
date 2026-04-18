@@ -23,6 +23,15 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.consultation import error_codes
+from app.consultation.notifications import (
+    consultation_closed_by_user,
+    consultation_counter_offer,
+    consultation_formal_apply_submitted,
+    consultation_negotiation_accepted,
+    consultation_negotiation_rejected,
+    consultation_promoted_to_formal,
+    task_consultation_submitted,
+)
 from app.deps import get_async_db_dependency
 from app.error_handlers import raise_http_error_with_code
 from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
@@ -4818,8 +4827,9 @@ async def create_task_consultation(
                 # 发送系统消息
                 task_title = task.title or ""
                 user_name = current_user.name if hasattr(current_user, "name") else "用户"
-                content_zh = f"{user_name} 想咨询您的任务「{task_title}」"
-                content_en = f"{user_name} wants to consult about your task \"{task_title}\""
+                _msg = task_consultation_submitted(user_name=user_name, task_title=task_title)
+                content_zh = _msg["content_zh"]
+                content_en = _msg["content_en"]
                 current_time = get_utc_time()
                 system_message = models.Message(
                     sender_id=None,
@@ -4885,8 +4895,9 @@ async def create_task_consultation(
 
         # 7. 发送系统消息
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
-        content_zh = f"{user_name} 想咨询您的任务「{task_title}」"
-        content_en = f"{user_name} wants to consult about your task \"{task_title}\""
+        _msg = task_consultation_submitted(user_name=user_name, task_title=task_title)
+        content_zh = _msg["content_zh"]
+        content_en = _msg["content_en"]
         system_message = models.Message(
             sender_id=None,
             receiver_id=None,
@@ -5196,8 +5207,13 @@ async def consult_respond(
         if action == "accept":
             application.status = "price_agreed"
             message_type = "negotiation_accepted"
-            content_zh = f"{user_name} 接受了报价 {currency} {float(application.negotiated_price or 0):.2f}"
-            content_en = f"{user_name} accepted the price {currency} {float(application.negotiated_price or 0):.2f}"
+            _msg = consultation_negotiation_accepted(
+                user_name=user_name,
+                currency=currency,
+                price=float(application.negotiated_price or 0),
+            )
+            content_zh = _msg["content_zh"]
+            content_en = _msg["content_en"]
             notif_title = "报价已接受"
             notif_title_en = "Price Accepted"
             notif_body = f'{user_name} 接受了任务「{task.title}」的报价'
@@ -5205,8 +5221,9 @@ async def consult_respond(
         elif action == "reject":
             application.status = "consulting"
             message_type = "negotiation_rejected"
-            content_zh = f"{user_name} 拒绝了当前报价"
-            content_en = f"{user_name} rejected the current price"
+            _msg = consultation_negotiation_rejected(user_name=user_name)
+            content_zh = _msg["content_zh"]
+            content_en = _msg["content_en"]
             notif_title = "报价被拒绝"
             notif_title_en = "Price Rejected"
             notif_body = f'{user_name} 拒绝了任务「{task.title}」的报价'
@@ -5215,8 +5232,13 @@ async def consult_respond(
             counter_price = body.counter_price
             application.negotiated_price = Decimal(str(counter_price))
             message_type = "counter_offer"
-            content_zh = f"{user_name} 提出还价 {currency} {float(counter_price):.2f}"
-            content_en = f"{user_name} counter-offered {currency} {float(counter_price):.2f}"
+            _msg = consultation_counter_offer(
+                user_name=user_name,
+                currency=currency,
+                price=float(counter_price),
+            )
+            content_zh = _msg["content_zh"]
+            content_en = _msg["content_en"]
             notif_title = "收到还价"
             notif_title_en = "Counter Offer"
             notif_body = f'{user_name} 对任务「{task.title}」还价 {currency} {float(counter_price):.2f}'
@@ -5373,8 +5395,11 @@ async def consult_formal_apply(
             if application.negotiated_price:
                 currency = application.currency or orig_task.currency or "GBP"
                 price_info = f"，报价 {currency} {float(application.negotiated_price):.2f}"
-            orig_content_zh = f"{user_name} 通过咨询提交了正式申请{price_info}"
-            orig_content_en = f"{user_name} submitted formal application via consultation{price_info}"
+            _orig_msg = consultation_formal_apply_submitted(
+                user_name=user_name, price_info=price_info or None
+            )
+            orig_content_zh = _orig_msg["content_zh"]
+            orig_content_en = _orig_msg["content_en"]
             orig_sys_msg = models.Message(
                 sender_id=None,
                 receiver_id=None,
@@ -5402,8 +5427,11 @@ async def consult_formal_apply(
         if application.negotiated_price:
             currency = application.currency or task.currency or "GBP"
             price_info = f"，报价 {currency} {float(application.negotiated_price):.2f}"
-        content_zh = f"{user_name} 已将咨询转为正式申请{price_info}"
-        content_en = f"{user_name} converted consultation to formal application{price_info}"
+        _msg = consultation_promoted_to_formal(
+            user_name=user_name, price_info=price_info or None
+        )
+        content_zh = _msg["content_zh"]
+        content_en = _msg["content_en"]
         system_message = models.Message(
             sender_id=None,
             receiver_id=None,
@@ -5498,8 +5526,9 @@ async def consult_close(
         # 系统消息
         current_time = get_utc_time()
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
-        content_zh = f"{user_name} 关闭了咨询"
-        content_en = f"{user_name} closed the consultation"
+        _msg = consultation_closed_by_user(user_name=user_name)
+        content_zh = _msg["content_zh"]
+        content_en = _msg["content_en"]
         system_message = models.Message(
             sender_id=None,
             receiver_id=None,
