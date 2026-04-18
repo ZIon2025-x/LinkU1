@@ -86,7 +86,10 @@ def update_task_expert_bio(db: Session, user_id: str):
     )
 
     posted_tasks = (
-        db.query(Task).filter(Task.poster_id == user_id).count()
+        db.query(Task).filter(
+            Task.poster_id == user_id,
+            Task.is_consultation_placeholder == False,
+        ).count()
     )
     taken_tasks = (
         db.query(Task).filter(Task.taker_id == user_id).count()

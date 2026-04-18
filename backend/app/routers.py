@@ -5016,8 +5016,11 @@ def user_profile(
     # 获取用户的任务统计（真实数据：计算所有任务，不限制状态和公开性）
     from app.models import Task
     
-    # 计算发布的任务数（所有状态）
-    posted_tasks_count = db.query(Task).filter(Task.poster_id == user_id).count()
+    # 计算发布的任务数（所有状态，排除咨询占位任务）
+    posted_tasks_count = db.query(Task).filter(
+        Task.poster_id == user_id,
+        Task.is_consultation_placeholder == False,
+    ).count()
     
     # 计算接取的任务数（所有状态）
     taken_tasks_count = db.query(Task).filter(Task.taker_id == user_id).count()

@@ -37,8 +37,11 @@ def check_and_upgrade_vip_to_super(db: Session, user_id: str):
         settings.get("vip_to_super_completion_rate_threshold", 0.8)
     )
 
-    # 计算用户的任务统计
-    posted_tasks = db.query(Task).filter(Task.poster_id == user_id).count()
+    # 计算用户的任务统计（排除咨询占位任务）
+    posted_tasks = db.query(Task).filter(
+        Task.poster_id == user_id,
+        Task.is_consultation_placeholder == False,
+    ).count()
     accepted_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
     total_task_count = posted_tasks + accepted_tasks
 

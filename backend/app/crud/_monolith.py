@@ -1283,8 +1283,11 @@ def get_user_task_statistics(db: Session, user_id: str):
     """获取用户的任务统计信息"""
     from app.models import Task
 
-    # 发布任务数量
-    posted_tasks = db.query(Task).filter(Task.poster_id == user_id).count()
+    # 发布任务数量（排除咨询占位任务）
+    posted_tasks = db.query(Task).filter(
+        Task.poster_id == user_id,
+        Task.is_consultation_placeholder == False,
+    ).count()
 
     # 接受任务数量
     accepted_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
