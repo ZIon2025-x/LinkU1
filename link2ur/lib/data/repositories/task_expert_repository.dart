@@ -62,7 +62,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人列表失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人列表失败', errorCode: response.errorCode);
     }
 
     if (keyword == null) {
@@ -96,7 +96,7 @@ class TaskExpertRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人详情失败', code: response.errorCode);
+        throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人详情失败', errorCode: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
@@ -138,7 +138,7 @@ class TaskExpertRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人服务失败', code: response.errorCode);
+        throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人服务失败', errorCode: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
@@ -195,7 +195,7 @@ class TaskExpertRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskExpertException(response.errorCode ?? response.message ?? '获取服务详情失败', code: response.errorCode);
+        throw TaskExpertException(response.errorCode ?? response.message ?? '获取服务详情失败', errorCode: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
@@ -227,7 +227,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取评价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取评价失败', errorCode: response.errorCode);
     }
 
     final data = response.data!;
@@ -264,7 +264,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '申请服务失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '申请服务失败', errorCode: response.errorCode);
     }
 
     // 清除相关缓存以便刷新服务详情
@@ -283,7 +283,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '申请成为达人失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '申请成为达人失败', errorCode: response.errorCode);
     }
 
     return response.data!;
@@ -317,7 +317,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取服务申请失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取服务申请失败', errorCode: response.errorCode);
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -336,7 +336,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人评价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人评价失败', errorCode: response.errorCode);
     }
 
     final data = response.data!;
@@ -356,7 +356,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取申请状态失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取申请状态失败', errorCode: response.errorCode);
     }
 
     return response.data;
@@ -369,7 +369,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人资料失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人资料失败', errorCode: response.errorCode);
     }
 
     return response.data;
@@ -394,7 +394,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取申请记录失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取申请记录失败', errorCode: response.errorCode);
     }
 
     // 后端直接返回数组
@@ -419,7 +419,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取统计数据失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取统计数据失败', errorCode: response.errorCode);
     }
 
     return response.data!;
@@ -433,7 +433,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取服务列表失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取服务列表失败', errorCode: response.errorCode);
     }
 
     final List<dynamic> items;
@@ -457,7 +457,7 @@ class TaskExpertRepository {
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(
         response.errorCode ?? response.message ?? '创建服务失败',
-        code: response.errorCode,
+        errorCode: response.errorCode,
       );
     }
 
@@ -474,7 +474,7 @@ class TaskExpertRepository {
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(
         response.errorCode ?? response.message ?? '更新服务失败',
-        code: response.errorCode,
+        errorCode: response.errorCode,
       );
     }
 
@@ -491,7 +491,7 @@ class TaskExpertRepository {
     if (!response.isSuccess) {
       throw TaskExpertException(
         response.errorCode ?? response.message ?? '操作失败',
-        code: response.errorCode,
+        errorCode: response.errorCode,
       );
     }
     return response.data as Map<String, dynamic>? ?? {};
@@ -505,7 +505,7 @@ class TaskExpertRepository {
     if (!response.isSuccess) {
       throw TaskExpertException(
         response.errorCode ?? response.message ?? '加载任务失败',
-        code: response.errorCode,
+        errorCode: response.errorCode,
       );
     }
     final data = response.data;
@@ -527,7 +527,7 @@ class TaskExpertRepository {
     if (!response.isSuccess) {
       throw TaskExpertException(
         response.errorCode ?? response.message ?? '删除服务失败',
-        code: response.errorCode,
+        errorCode: response.errorCode,
       );
     }
   }
@@ -541,7 +541,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取时间段失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取时间段失败', errorCode: response.errorCode);
     }
 
     final List<dynamic> items;
@@ -648,10 +648,10 @@ class TaskExpertRepository {
       if (response.errorCode == 'outside_business_hours') {
         throw const TaskExpertException(
           'outside_business_hours',
-          code: 'outside_business_hours',
+          errorCode: 'outside_business_hours',
         );
       }
-      throw TaskExpertException(response.errorCode ?? response.message ?? '创建时间段失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '创建时间段失败', errorCode: response.errorCode);
     }
 
     return response.data!;
@@ -664,7 +664,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '删除时间段失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '删除时间段失败', errorCode: response.errorCode);
     }
   }
 
@@ -677,7 +677,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取营业时间失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取营业时间失败', errorCode: response.errorCode);
     }
 
     final bh = response.data!['business_hours'];
@@ -696,7 +696,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '更新营业时间失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '更新营业时间失败', errorCode: response.errorCode);
     }
   }
 
@@ -708,7 +708,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取休息日失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取休息日失败', errorCode: response.errorCode);
     }
 
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
@@ -725,7 +725,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '创建休息日失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '创建休息日失败', errorCode: response.errorCode);
     }
 
     return response.data!;
@@ -738,7 +738,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '删除休息日失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '删除休息日失败', errorCode: response.errorCode);
     }
   }
 
@@ -750,7 +750,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '获取时间段失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取时间段失败', errorCode: response.errorCode);
     }
 
     // 后端直接返回数组，不是 {time_slots: [...]}
@@ -774,7 +774,7 @@ class TaskExpertRepository {
       ApiEndpoints.ownerApproveApplication(applicationId),
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '同意申请失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '同意申请失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -786,7 +786,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '同意申请失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '同意申请失败', errorCode: response.errorCode);
     }
 
     return response.data!;
@@ -802,7 +802,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '拒绝申请失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '拒绝申请失败', errorCode: response.errorCode);
     }
   }
 
@@ -823,7 +823,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', errorCode: response.errorCode);
     }
 
     return response.data!;
@@ -837,7 +837,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '回应还价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '回应还价失败', errorCode: response.errorCode);
     }
   }
 
@@ -848,7 +848,7 @@ class TaskExpertRepository {
       data: {},
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '创建咨询失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '创建咨询失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -867,7 +867,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -888,7 +888,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '报价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '报价失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -909,7 +909,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '操作失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '操作失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -934,7 +934,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '提交申请失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '提交申请失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -945,7 +945,7 @@ class TaskExpertRepository {
       ApiEndpoints.closeConsultation(applicationId),
     );
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '关闭咨询失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '关闭咨询失败', errorCode: response.errorCode);
     }
   }
 
@@ -957,7 +957,7 @@ class TaskExpertRepository {
       ApiEndpoints.consultTask(taskId),
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '创建咨询失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '创建咨询失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -973,7 +973,7 @@ class TaskExpertRepository {
       data: {'proposed_price': proposedPrice},
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -993,7 +993,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '报价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '报价失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1013,7 +1013,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '操作失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '操作失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1033,7 +1033,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '提交申请失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '提交申请失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1044,7 +1044,7 @@ class TaskExpertRepository {
       ApiEndpoints.taskConsultClose(taskId, applicationId),
     );
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '关闭咨询失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '关闭咨询失败', errorCode: response.errorCode);
     }
   }
 
@@ -1056,7 +1056,7 @@ class TaskExpertRepository {
       ApiEndpoints.consultFleaMarketItem(itemId),
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '创建咨询失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '创建咨询失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1071,7 +1071,7 @@ class TaskExpertRepository {
       data: {'proposed_price': proposedPrice},
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1090,7 +1090,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '报价失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '报价失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1109,7 +1109,7 @@ class TaskExpertRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '操作失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '操作失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1120,7 +1120,7 @@ class TaskExpertRepository {
       ApiEndpoints.fleaMarketConsultFormalBuy(requestId),
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '购买失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '购买失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1131,7 +1131,7 @@ class TaskExpertRepository {
       ApiEndpoints.fleaMarketApprovePurchaseRequest(requestId.toString()),
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '审批失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '审批失败', errorCode: response.errorCode);
     }
     return response.data!;
   }
@@ -1142,7 +1142,7 @@ class TaskExpertRepository {
       ApiEndpoints.fleaMarketConsultClose(requestId),
     );
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '关闭咨询失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '关闭咨询失败', errorCode: response.errorCode);
     }
   }
 
@@ -1153,7 +1153,7 @@ class TaskExpertRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '取消申请失败', code: response.errorCode);
+      throw TaskExpertException(response.errorCode ?? response.message ?? '取消申请失败', errorCode: response.errorCode);
     }
   }
 
@@ -1196,20 +1196,13 @@ class TaskExpertRepository {
 
 /// 任务达人异常
 ///
-/// Supports both the legacy [code] field (inherited from [AppException]) and
-/// a semantic [errorCode] alias that matches the backend response field name.
-/// Both names map to the same underlying value — passing either constructor
-/// parameter works identically.
+/// [errorCode] 对应后端 `error_code` 响应字段,与 BLoC state.errorCode / l10n
+/// 路径对齐。内部委托给父类 [AppException.code],同时暴露 [errorCode] getter
+/// 作为语义名。
 class TaskExpertException extends AppException {
-  const TaskExpertException(super.message, {super.code, String? errorCode})
-      : assert(
-          code == null || errorCode == null,
-          'Pass either code or errorCode, not both',
-        ),
-        _errorCodeOverride = errorCode;
-
-  final String? _errorCodeOverride;
+  const TaskExpertException(super.message, {String? errorCode})
+      : super(code: errorCode);
 
   /// Semantic alias for [code] — matches backend `error_code` field name.
-  String? get errorCode => _errorCodeOverride ?? code;
+  String? get errorCode => code;
 }
