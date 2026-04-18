@@ -80,9 +80,17 @@ class FleaMarketConsultationActions extends ConsultationActions {
     double? price,
     String? message,
   }) {
-    // 闲置物品只需确认购买，不需要价格/消息（此方法仅供基类 dialog 调用，
-    // 但因 FleaMarket override 了 showFormalApplyDialog 为纯确认弹窗，
-    // 所以价格参数被忽略）
+    // Contract: FleaMarket 的"正式申请"是纯确认购买弹窗(由下方 override 的
+    // showFormalApplyDialog 驱动),不接受价格/消息协商。基类签名包含 price/message
+    // 是为了和 Service/Task 共用接口,但 FleaMarket 调用路径上这两个参数**必须**
+    // 为 null;下面的 assert 在 debug 构建时强制这一不变量,防止未来误用导致静默
+    // 丢失数据。
+    assert(
+      price == null && message == null,
+      'FleaMarketConsultationActions.onFormalApply must not receive price or message. '
+      'Flea market uses confirm-only dialog (see showFormalApplyDialog override). '
+      'If you need price/message flow, use Service/Task variant instead.',
+    );
     context.read<TaskExpertBloc>().add(
       TaskExpertFleaMarketFormalBuy(applicationId),
     );
