@@ -5857,5 +5857,11 @@
   "consultationErrorTaskNotFound": "任務不存在",
   "@consultationErrorTaskNotFound": {},
   "consultationErrorGeneric": "諮詢操作失敗,請稍後再試",
-  "@consultationErrorGeneric": {}
+  "@consultationErrorGeneric": {},
+  "errorApprovalPriceNotSetNegotiable": "該服務為議價服務，申請人未報價且您尚未還價。請先通過『還價』設定價格，待申請人確認後再批准。",
+  "@errorApprovalPriceNotSetNegotiable": {},
+  "errorApprovalPriceNotSet": "該申請價格異常（0 或未設定），請通過『還價』設定價格後再批准。",
+  "@errorApprovalPriceNotSet": {},
+  "errorApplyRequiresConsultation": "此服務為議價服務且未設定基礎價格，請使用『諮詢』功能先與服務提供者溝通價格後再申請。",
+  "@errorApplyRequiresConsultation": {}
 }

@@ -5920,5 +5920,11 @@
   "consultationErrorTaskNotFound": "任务不存在",
   "@consultationErrorTaskNotFound": {},
   "consultationErrorGeneric": "咨询操作失败,请稍后重试",
-  "@consultationErrorGeneric": {}
+  "@consultationErrorGeneric": {},
+  "errorApprovalPriceNotSetNegotiable": "该服务为议价服务，申请人未报价且您尚未还价。请先通过『还价』设定价格，待申请人确认后再批准。",
+  "@errorApprovalPriceNotSetNegotiable": {},
+  "errorApprovalPriceNotSet": "该申请价格异常（0 或未设定），请通过『还价』设定价格后再批准。",
+  "@errorApprovalPriceNotSet": {},
+  "errorApplyRequiresConsultation": "此服务为议价服务且未设定基础价格，请使用『咨询』功能先与服务提供者沟通价格后再申请。",
+  "@errorApplyRequiresConsultation": {}
 }

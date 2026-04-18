@@ -13134,6 +13134,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get consultationErrorGeneric => '咨询操作失败,请稍后重试';
+
+  @override
+  String get errorApprovalPriceNotSetNegotiable =>
+      '该服务为议价服务，申请人未报价且您尚未还价。请先通过『还价』设定价格，待申请人确认后再批准。';
+
+  @override
+  String get errorApprovalPriceNotSet => '该申请价格异常（0 或未设定），请通过『还价』设定价格后再批准。';
+
+  @override
+  String get errorApplyRequiresConsultation =>
+      '此服务为议价服务且未设定基础价格，请使用『咨询』功能先与服务提供者沟通价格后再申请。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -26266,4 +26277,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get consultationErrorGeneric => '諮詢操作失敗,請稍後再試';
+
+  @override
+  String get errorApprovalPriceNotSetNegotiable =>
+      '該服務為議價服務，申請人未報價且您尚未還價。請先通過『還價』設定價格，待申請人確認後再批准。';
+
+  @override
+  String get errorApprovalPriceNotSet => '該申請價格異常（0 或未設定），請通過『還價』設定價格後再批准。';
+
+  @override
+  String get errorApplyRequiresConsultation =>
+      '此服務為議價服務且未設定基礎價格，請使用『諮詢』功能先與服務提供者溝通價格後再申請。';
 }

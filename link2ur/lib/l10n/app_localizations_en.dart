@@ -13722,4 +13722,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get consultationErrorGeneric =>
       'Consultation action failed. Please try again.';
+
+  @override
+  String get errorApprovalPriceNotSetNegotiable =>
+      'This is a negotiable service with no agreed price. Send a counter-offer and wait for the applicant to accept before approving.';
+
+  @override
+  String get errorApprovalPriceNotSet =>
+      'Application price is missing or invalid. Send a counter-offer with a valid price before approving.';
+
+  @override
+  String get errorApplyRequiresConsultation =>
+      'This service has no fixed price. Use Consult to discuss the price before applying.';
 }

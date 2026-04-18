@@ -494,6 +494,14 @@ class ErrorLocalizer {
       case 'expert_team_review_replied': return context.l10n.expertTeamReviewReplied;
       // 时间段容量已满 (后端 expert_consultation_routes.apply_for_service 返回)
       case 'time_slot_full': return context.l10n.expertTimeSlotFull;
+      // 申请议价服务但未设定价格 → 引导到咨询 (apply_for_service)
+      case 'apply_requires_consultation':
+        return context.l10n.errorApplyRequiresConsultation;
+      // 批准时价格为 0 / 未设定 (owner_approve_application)
+      case 'approval_price_not_set_negotiable':
+        return context.l10n.errorApprovalPriceNotSetNegotiable;
+      case 'approval_price_not_set':
+        return context.l10n.errorApprovalPriceNotSet;
       // 团队 stripe 未就绪 / 货币不支持 (resolve_task_taker)
       case 'expert_stripe_not_ready': return context.l10n.expertStripeNotReady;
       case 'expert_currency_unsupported': return context.l10n.expertCurrencyUnsupported;

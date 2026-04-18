@@ -6028,5 +6028,11 @@
   "consultationErrorTaskNotFound": "Task not found",
   "@consultationErrorTaskNotFound": {},
   "consultationErrorGeneric": "Consultation action failed. Please try again.",
-  "@consultationErrorGeneric": {}
+  "@consultationErrorGeneric": {},
+  "errorApprovalPriceNotSetNegotiable": "This is a negotiable service with no agreed price. Send a counter-offer and wait for the applicant to accept before approving.",
+  "@errorApprovalPriceNotSetNegotiable": {},
+  "errorApprovalPriceNotSet": "Application price is missing or invalid. Send a counter-offer with a valid price before approving.",
+  "@errorApprovalPriceNotSet": {},
+  "errorApplyRequiresConsultation": "This service has no fixed price. Use Consult to discuss the price before applying.",
+  "@errorApplyRequiresConsultation": {}
 }

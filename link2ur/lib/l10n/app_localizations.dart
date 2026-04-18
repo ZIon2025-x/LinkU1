@@ -25247,6 +25247,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Consultation action failed. Please try again.'**
   String get consultationErrorGeneric;
+
+  /// No description provided for @errorApprovalPriceNotSetNegotiable.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a negotiable service with no agreed price. Send a counter-offer and wait for the applicant to accept before approving.'**
+  String get errorApprovalPriceNotSetNegotiable;
+
+  /// No description provided for @errorApprovalPriceNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Application price is missing or invalid. Send a counter-offer with a valid price before approving.'**
+  String get errorApprovalPriceNotSet;
+
+  /// No description provided for @errorApplyRequiresConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'This service has no fixed price. Use Consult to discuss the price before applying.'**
+  String get errorApplyRequiresConsultation;
 }
 
 class _AppLocalizationsDelegate
