@@ -30,6 +30,9 @@ from app.consultation.notifications import (
     task_formal_apply_submitted,
     task_negotiation_accepted,
     task_negotiation_rejected,
+    task_notif_counter_offer,
+    task_notif_price_accepted,
+    task_notif_price_rejected,
     task_promoted_to_formal,
 )
 from app.deps import get_async_db_dependency
@@ -5214,20 +5217,22 @@ async def consult_respond(
             )
             content_zh = _msg["content_zh"]
             content_en = _msg["content_en"]
-            notif_title = "报价已接受"
-            notif_title_en = "Price Accepted"
-            notif_body = f'{user_name} 接受了任务「{task.title}」的报价'
-            notif_body_en = f'{user_name} accepted the price for task "{task.title}"'
+            _notif = task_notif_price_accepted(user_name=user_name, task_title=task.title)
+            notif_title = _notif["title_zh"]
+            notif_title_en = _notif["title_en"]
+            notif_body = _notif["body_zh"]
+            notif_body_en = _notif["body_en"]
         elif action == "reject":
             application.status = "consulting"
             message_type = "negotiation_rejected"
             _msg = task_negotiation_rejected(user_name=user_name)
             content_zh = _msg["content_zh"]
             content_en = _msg["content_en"]
-            notif_title = "报价被拒绝"
-            notif_title_en = "Price Rejected"
-            notif_body = f'{user_name} 拒绝了任务「{task.title}」的报价'
-            notif_body_en = f'{user_name} rejected the price for task "{task.title}"'
+            _notif = task_notif_price_rejected(user_name=user_name, task_title=task.title)
+            notif_title = _notif["title_zh"]
+            notif_title_en = _notif["title_en"]
+            notif_body = _notif["body_zh"]
+            notif_body_en = _notif["body_en"]
         elif action == "counter":
             counter_price = body.counter_price
             application.negotiated_price = Decimal(str(counter_price))
@@ -5239,10 +5244,16 @@ async def consult_respond(
             )
             content_zh = _msg["content_zh"]
             content_en = _msg["content_en"]
-            notif_title = "收到还价"
-            notif_title_en = "Counter Offer"
-            notif_body = f'{user_name} 对任务「{task.title}」还价 {currency} {float(counter_price):.2f}'
-            notif_body_en = f'{user_name} counter-offered {currency} {float(counter_price):.2f} for task "{task.title}"'
+            _notif = task_notif_counter_offer(
+                user_name=user_name,
+                task_title=task.title,
+                currency=currency,
+                price=float(counter_price),
+            )
+            notif_title = _notif["title_zh"]
+            notif_title_en = _notif["title_en"]
+            notif_body = _notif["body_zh"]
+            notif_body_en = _notif["body_en"]
         else:
             raise HTTPException(status_code=400, detail="无效的 action，必须为 accept / reject / counter")
 

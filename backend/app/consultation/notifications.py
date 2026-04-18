@@ -24,8 +24,17 @@ from typing import Optional, TypedDict
 
 
 class Bilingual(TypedDict):
+    """Messages 表系统消息用: content_zh → content column, content_en → meta JSON."""
     content_zh: str
     content_en: str
+
+
+class NotifPayload(TypedDict):
+    """Notifications 表用: title/body 都有 _zh/_en 双语列。"""
+    title_zh: str
+    title_en: str
+    body_zh: str
+    body_en: str
 
 
 # ==================== service 家族 ====================
@@ -115,4 +124,36 @@ def task_closed_by_user(*, user_name: str) -> Bilingual:
     return {
         "content_zh": f"{user_name} 关闭了咨询",
         "content_en": f"{user_name} closed the consultation",
+    }
+
+
+# ==================== task 家族 — Notifications 表 (title + body) ====================
+
+
+def task_notif_price_accepted(*, user_name: str, task_title: str) -> NotifPayload:
+    return {
+        "title_zh": "报价已接受",
+        "title_en": "Price Accepted",
+        "body_zh": f"{user_name} 接受了任务「{task_title}」的报价",
+        "body_en": f'{user_name} accepted the price for task "{task_title}"',
+    }
+
+
+def task_notif_price_rejected(*, user_name: str, task_title: str) -> NotifPayload:
+    return {
+        "title_zh": "报价被拒绝",
+        "title_en": "Price Rejected",
+        "body_zh": f"{user_name} 拒绝了任务「{task_title}」的报价",
+        "body_en": f'{user_name} rejected the price for task "{task_title}"',
+    }
+
+
+def task_notif_counter_offer(
+    *, user_name: str, task_title: str, currency: str, price: float
+) -> NotifPayload:
+    return {
+        "title_zh": "收到还价",
+        "title_en": "Counter Offer",
+        "body_zh": f"{user_name} 对任务「{task_title}」还价 {currency} {price:.2f}",
+        "body_en": f'{user_name} counter-offered {currency} {price:.2f} for task "{task_title}"',
     }

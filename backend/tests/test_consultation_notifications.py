@@ -9,6 +9,9 @@ from app.consultation.notifications import (
     task_formal_apply_submitted,
     task_negotiation_accepted,
     task_negotiation_rejected,
+    task_notif_counter_offer,
+    task_notif_price_accepted,
+    task_notif_price_rejected,
     task_promoted_to_formal,
 )
 
@@ -83,6 +86,32 @@ def test_closed_by_user_includes_user_name():
     msg = task_closed_by_user(user_name="Alice")
     assert "Alice" in msg["content_zh"]
     assert "关闭" in msg["content_zh"]
+
+
+def test_notif_price_accepted_has_title_and_body():
+    notif = task_notif_price_accepted(user_name="Alice", task_title="搬家")
+    assert set(notif.keys()) == {"title_zh", "title_en", "body_zh", "body_en"}
+    assert "Alice" in notif["body_zh"]
+    assert "搬家" in notif["body_zh"]
+    assert "Alice" in notif["body_en"]
+    assert notif["title_zh"] and notif["title_en"]
+
+
+def test_notif_price_rejected_has_title_and_body():
+    notif = task_notif_price_rejected(user_name="Bob", task_title="翻译")
+    assert "Bob" in notif["body_zh"]
+    assert "翻译" in notif["body_zh"]
+    assert "rejected" in notif["body_en"].lower()
+
+
+def test_notif_counter_offer_includes_price():
+    notif = task_notif_counter_offer(
+        user_name="Carol", task_title="搬家", currency="GBP", price=250.50
+    )
+    assert "250.50" in notif["body_zh"]
+    assert "GBP" in notif["body_zh"]
+    assert "250.50" in notif["body_en"]
+    assert "GBP" in notif["body_en"]
 
 
 def test_all_templates_return_dict_with_zh_en_keys():
