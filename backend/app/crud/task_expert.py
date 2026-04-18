@@ -108,6 +108,7 @@ def update_task_expert_bio(db: Session, user_id: str):
         .filter(
             Task.poster_id == user_id,
             Task.status == "completed",
+            Task.is_consultation_placeholder == False,  # noqa: E712
         )
         .count()
     )
