@@ -484,12 +484,16 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       return BlocListener<TaskExpertBloc, TaskExpertState>(
         listenWhen: (prev, curr) =>
             prev.actionMessage != curr.actionMessage ||
-            prev.errorMessage != curr.errorMessage,
+            prev.errorMessage != curr.errorMessage ||
+            prev.errorCode != curr.errorCode,
         listener: (context, expertState) {
-          // Handle errors
-          if (expertState.errorMessage != null) {
+          // Handle errors — prefer backend errorCode over raw errorMessage for l10n
+          if (expertState.errorMessage != null || expertState.errorCode != null) {
+            final text = expertState.errorCode != null
+                ? context.localizeErrorCode(expertState.errorCode)
+                : context.localizeError(expertState.errorMessage);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.localizeError(expertState.errorMessage))),
+              SnackBar(content: Text(text)),
             );
             return;
           }

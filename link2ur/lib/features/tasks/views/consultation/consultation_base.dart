@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_radius.dart';
+import '../../../../core/utils/l10n_extension.dart';
+import '../../../../data/models/task_expert.dart';
+import '../../../../data/repositories/task_expert_repository.dart';
 import 'service_consultation_actions.dart';
 import 'task_consultation_actions.dart';
 import 'flea_market_consultation_actions.dart';
@@ -67,12 +71,432 @@ abstract class ConsultationActions {
   /// 处理议价回复（接受/拒绝/还价）
   void handleNegotiationResponse(BuildContext context, String action, {int? serviceId});
 
-  /// 显示还价弹窗
+  // ---------------------------------------------------------------------------
+  // Abstract action dispatchers — subclasses implement per-type bloc calls
+  // ---------------------------------------------------------------------------
+
+  /// 议价 — 申请方提出期望价格
+  void onNegotiate(
+    BuildContext context, {
+    required double price,
+    int? serviceId,
+  });
+
+  /// 报价 — 发布方/Owner 报价
+  void onQuote(
+    BuildContext context, {
+    required double price,
+    String? message,
+    int? serviceId,
+  });
+
+  /// 还价 — 双方任一方在议价中还价
+  void onCounterOffer(
+    BuildContext context, {
+    required double price,
+    int? serviceId,
+  });
+
+  /// 正式申请 — 申请方提交最终申请（FleaMarket 里相当于"确认购买"）
+  void onFormalApply(
+    BuildContext context, {
+    double? price,
+    String? message,
+  });
+
+  /// 批准 — 发布方同意正式申请
+  void onApprove(
+    BuildContext context, {
+    Map<String, dynamic>? consultationApp,
+  });
+
+  /// 关闭咨询
+  void onClose(BuildContext context);
+
+  // ---------------------------------------------------------------------------
+  // Shared dialog UI — all 3 subclasses used to duplicate this code
+  // ---------------------------------------------------------------------------
+
+  /// 议价弹窗 — 申请方输入期望价格；Service 类型可选服务下拉
+  Future<void> showNegotiateDialog(
+    BuildContext context,
+    String Function() getCurrencySymbol, {
+    String? expertId,
+  }) async {
+    // Pre-fetch services for team consultation (only when expertId provided)
+    List<TaskExpertService>? services;
+    if (expertId != null) {
+      try {
+        services = await context.read<TaskExpertRepository>().getExpertServices(expertId);
+      } catch (_) {
+        services = [];
+      }
+    }
+
+    if (!context.mounted) return;
+    final priceController = TextEditingController();
+    String? errorText;
+    int? selectedServiceId;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.negotiatePrice),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (expertId != null && services != null && services.isNotEmpty) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: selectedServiceId,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.consultationSelectService,
+                  ),
+                  items: services.map((s) => DropdownMenuItem<int>(
+                    value: s.id,
+                    child: Text(s.serviceName, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (v) => setDialogState(() => selectedServiceId = v),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.negotiatePriceHint,
+                  prefixText: getCurrencySymbol(),
+                  errorText: errorText,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () {
+                if (expertId != null && services != null && services.isNotEmpty && selectedServiceId == null) {
+                  setDialogState(() => errorText = context.l10n.consultationSelectServiceHint);
+                  return;
+                }
+                final price = double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() => errorText = context.l10n.negotiatePriceHint);
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                onNegotiate(context, price: price, serviceId: selectedServiceId);
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+    priceController.dispose();
+  }
+
+  /// 报价弹窗 — 发布方输入报价+消息；Service 类型可选服务下拉
+  Future<void> showQuoteDialog(
+    BuildContext context,
+    String Function() getCurrencySymbol, {
+    String? expertId,
+  }) async {
+    List<TaskExpertService>? services;
+    if (expertId != null) {
+      try {
+        services = await context.read<TaskExpertRepository>().getExpertServices(expertId);
+      } catch (_) {
+        services = [];
+      }
+    }
+
+    if (!context.mounted) return;
+    final priceController = TextEditingController();
+    final messageController = TextEditingController();
+    String? errorText;
+    int? selectedServiceId;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.quotePrice),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (expertId != null && services != null && services.isNotEmpty) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: selectedServiceId,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.consultationSelectService,
+                  ),
+                  items: services.map((s) => DropdownMenuItem<int>(
+                    value: s.id,
+                    child: Text(s.serviceName, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (v) => setDialogState(() => selectedServiceId = v),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.quotePriceHint,
+                  prefixText: getCurrencySymbol(),
+                  errorText: errorText,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: messageController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: context.l10n.quoteMessageHint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () {
+                if (expertId != null && services != null && services.isNotEmpty && selectedServiceId == null) {
+                  setDialogState(() => errorText = context.l10n.consultationSelectServiceHint);
+                  return;
+                }
+                final price = double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() => errorText = context.l10n.quotePriceHint);
+                  return;
+                }
+                final msg = messageController.text.trim();
+                Navigator.pop(dialogContext);
+                onQuote(
+                  context,
+                  price: price,
+                  message: msg.isNotEmpty ? msg : null,
+                  serviceId: selectedServiceId,
+                );
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+    priceController.dispose();
+    messageController.dispose();
+  }
+
+  /// 还价弹窗 — 双方在议价过程中还价；Service 类型可选服务下拉
   Future<void> showCounterOfferDialog(
     BuildContext context, {
     required String Function() getCurrencySymbol,
     String? expertId,
-  });
+  }) async {
+    List<TaskExpertService>? services;
+    if (expertId != null) {
+      try {
+        services = await context.read<TaskExpertRepository>().getExpertServices(expertId);
+      } catch (_) {
+        services = [];
+      }
+    }
+
+    if (!context.mounted) return;
+    final priceController = TextEditingController();
+    String? errorText;
+    int? selectedServiceId;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.counterOffer),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (expertId != null && services != null && services.isNotEmpty) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: selectedServiceId,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.consultationSelectService,
+                  ),
+                  items: services.map((s) => DropdownMenuItem<int>(
+                    value: s.id,
+                    child: Text(s.serviceName, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (v) => setDialogState(() => selectedServiceId = v),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.counterOfferHint,
+                  prefixText: getCurrencySymbol(),
+                  errorText: errorText,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () {
+                if (expertId != null && services != null && services.isNotEmpty && selectedServiceId == null) {
+                  setDialogState(() => errorText = context.l10n.consultationSelectServiceHint);
+                  return;
+                }
+                final price = double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() => errorText = context.l10n.counterOfferHint);
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                onCounterOffer(context, price: price, serviceId: selectedServiceId);
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+    priceController.dispose();
+  }
+
+  /// 正式申请弹窗 — 申请方提交价格+消息。
+  /// 子类可 override 为不同 UI（如 FleaMarket 的纯确认弹窗）。
+  Future<void> showFormalApplyDialog(
+    BuildContext context,
+    String Function() getCurrencySymbol,
+  ) async {
+    final priceController = TextEditingController();
+    final messageController = TextEditingController();
+    String? errorText;
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.formalApply),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.negotiatePriceHint,
+                  prefixText: getCurrencySymbol(),
+                  errorText: errorText,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: messageController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: context.l10n.quoteMessageHint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () {
+                final price = double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() => errorText = context.l10n.negotiatePriceHint);
+                  return;
+                }
+                final msg = messageController.text.trim();
+                Navigator.pop(dialogContext);
+                onFormalApply(
+                  context,
+                  price: price,
+                  message: msg.isNotEmpty ? msg : null,
+                );
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+    priceController.dispose();
+    messageController.dispose();
+  }
+
+  /// 批准弹窗 — 发布方确认同意正式申请
+  Future<void> showApproveConfirmation(
+    BuildContext context, {
+    Map<String, dynamic>? consultationApp,
+  }) async {
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.expertApplicationConfirmApprove),
+        content: Text(context.l10n.expertApplicationConfirmApproveMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onApprove(context, consultationApp: consultationApp);
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.success),
+            child: Text(context.l10n.expertApplicationConfirmApprove),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 关闭咨询弹窗
+  Future<void> showCloseConfirmation(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.closeConsultation),
+        content: Text(context.l10n.closeConsultationConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onClose(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Pill 形状操作按钮

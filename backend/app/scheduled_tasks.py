@@ -909,15 +909,23 @@ def check_expired_payment_tasks(db: Session):
         return 0
 
 
-def close_stale_consultations(db: Session, inactive_days: int = 14):
+def close_stale_consultations(db: Session, inactive_days: int | None = None):
     """自动关闭超过 inactive_days 天不活跃的咨询占位任务。
 
     不活跃 = 该 Task 下最后一条消息时间距今超过阈值。
     无消息则以 Task.created_at 为准。
+
+    Args:
+        db: SQLAlchemy Session
+        inactive_days: 不活跃天数阈值;None 表示读取 Config.CONSULTATION_STALE_DAYS(默认 14)。
     """
+    import json
     from sqlalchemy import select, func
+    from app.config import Config
+    from app.consultation.notifications import consultation_stale_auto_closed
+    days = inactive_days if inactive_days is not None else Config.CONSULTATION_STALE_DAYS
     try:
-        cutoff = get_utc_time() - timedelta(days=inactive_days)
+        cutoff = get_utc_time() - timedelta(days=days)
 
         # 子查询: 每个 task 的最后消息时间
         last_msg_subq = (
@@ -946,18 +954,23 @@ def close_stale_consultations(db: Session, inactive_days: int = 14):
             return
 
         closed_count = 0
+        _stale_msg = consultation_stale_auto_closed(days=days)
         for task in stale_tasks:
             task.status = "closed"
 
-            # 系统消息
+            # 系统消息（中文进 content,英文通过 meta.content_en 承载,与其他咨询系统消息对齐）
             receiver_id = task.taker_id or task.poster_id
             system_msg = models.Message(
                 sender_id=None,
                 receiver_id=receiver_id,
-                content=f"咨询已自动关闭（{inactive_days}天未活跃）",
+                content=_stale_msg["content_zh"],
                 task_id=task.id,
                 message_type="system",
                 conversation_type="task",
+                meta=json.dumps({
+                    "system_action": "consultation_stale_auto_closed",
+                    "content_en": _stale_msg["content_en"],
+                }),
             )
             db.add(system_msg)
 

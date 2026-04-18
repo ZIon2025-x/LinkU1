@@ -34,55 +34,76 @@ class TaskConsultationActions extends ConsultationActions {
   }
 
   @override
-  Future<void> showCounterOfferDialog(
+  void onNegotiate(
     BuildContext context, {
-    required String Function() getCurrencySymbol,
-    String? expertId,
-  }) async {
-    final priceController = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.counterOffer),
-          content: TextField(
-            controller: priceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.counterOfferHint,
-              prefixText: getCurrencySymbol(),
-              errorText: errorText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() => errorText = context.l10n.counterOfferHint);
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                bloc.add(
-                  TaskExpertTaskNegotiateResponse(
-                    taskId, applicationId,
-                    action: 'counter',
-                    counterPrice: price,
-                  ),
-                );
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
+    required double price,
+    int? serviceId,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertTaskNegotiate(taskId, applicationId, price: price),
+    );
+  }
+
+  @override
+  void onQuote(
+    BuildContext context, {
+    required double price,
+    String? message,
+    int? serviceId,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertTaskQuote(
+        taskId, applicationId,
+        price: price,
+        message: message,
       ),
-    ).whenComplete(() => priceController.dispose());
+    );
+  }
+
+  @override
+  void onCounterOffer(
+    BuildContext context, {
+    required double price,
+    int? serviceId,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertTaskNegotiateResponse(
+        taskId, applicationId,
+        action: 'counter',
+        counterPrice: price,
+      ),
+    );
+  }
+
+  @override
+  void onFormalApply(
+    BuildContext context, {
+    double? price,
+    String? message,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertTaskFormalApply(
+        taskId, applicationId,
+        proposedPrice: price,
+        message: message,
+      ),
+    );
+  }
+
+  @override
+  void onApprove(
+    BuildContext context, {
+    Map<String, dynamic>? consultationApp,
+  }) {
+    // Task 审批走 TaskDetailBloc（页面级 bloc）
+    context.read<TaskDetailBloc>().add(TaskDetailAcceptApplicant(applicationId));
+  }
+
+  @override
+  void onClose(BuildContext context) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertCloseTaskConsultation(taskId, applicationId),
+    );
   }
 
   @override
@@ -112,7 +133,7 @@ class TaskConsultationActions extends ConsultationActions {
                 label: context.l10n.negotiatePrice,
                 onTap: isSubmitting
                     ? null
-                    : () => _showNegotiateDialog(context, getCurrencySymbol),
+                    : () => showNegotiateDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -123,7 +144,7 @@ class TaskConsultationActions extends ConsultationActions {
                 label: context.l10n.formalApply,
                 onTap: isSubmitting
                     ? null
-                    : () => _showFormalApplyDialog(context, getCurrencySymbol),
+                    : () => showFormalApplyDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -133,7 +154,7 @@ class TaskConsultationActions extends ConsultationActions {
                 label: context.l10n.quotePrice,
                 onTap: isSubmitting
                     ? null
-                    : () => _showQuoteDialog(context, getCurrencySymbol),
+                    : () => showQuoteDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -144,7 +165,7 @@ class TaskConsultationActions extends ConsultationActions {
                 label: context.l10n.formalApply,
                 onTap: isSubmitting
                     ? null
-                    : () => _showFormalApplyDialog(context, getCurrencySymbol),
+                    : () => showFormalApplyDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -156,7 +177,7 @@ class TaskConsultationActions extends ConsultationActions {
                 color: AppColors.success,
                 onTap: isSubmitting
                     ? null
-                    : () => _showApproveConfirmation(context),
+                    : () => showApproveConfirmation(context),
               ),
               const SizedBox(width: 8),
             ],
@@ -167,236 +188,11 @@ class TaskConsultationActions extends ConsultationActions {
                 color: AppColors.error.withValues(alpha: 0.8),
                 onTap: isSubmitting
                     ? null
-                    : () => _showCloseConfirmation(context),
+                    : () => showCloseConfirmation(context),
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  void _showNegotiateDialog(BuildContext context, String Function() getCurrencySymbol) {
-    final priceController = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.negotiatePrice),
-          content: TextField(
-            controller: priceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.negotiatePriceHint,
-              prefixText: getCurrencySymbol(),
-              errorText: errorText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() => errorText = context.l10n.negotiatePriceHint);
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                bloc.add(
-                  TaskExpertTaskNegotiate(taskId, applicationId, price: price),
-                );
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(() => priceController.dispose());
-  }
-
-  void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
-    final priceController = TextEditingController();
-    final messageController = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.quotePrice),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: context.l10n.quotePriceHint,
-                  prefixText: getCurrencySymbol(),
-                  errorText: errorText,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: context.l10n.quoteMessageHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() => errorText = context.l10n.quotePriceHint);
-                  return;
-                }
-                final msg = messageController.text.trim();
-                Navigator.pop(dialogContext);
-                bloc.add(
-                  TaskExpertTaskQuote(
-                    taskId, applicationId,
-                    price: price,
-                    message: msg.isNotEmpty ? msg : null,
-                  ),
-                );
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(() {
-      priceController.dispose();
-      messageController.dispose();
-    });
-  }
-
-  void _showFormalApplyDialog(BuildContext context, String Function() getCurrencySymbol) {
-    final priceController = TextEditingController();
-    final messageController = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.formalApply),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: context.l10n.negotiatePriceHint,
-                  prefixText: getCurrencySymbol(),
-                  errorText: errorText,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: context.l10n.quoteMessageHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() => errorText = context.l10n.negotiatePriceHint);
-                  return;
-                }
-                final msg = messageController.text.trim();
-                Navigator.pop(dialogContext);
-                bloc.add(
-                  TaskExpertTaskFormalApply(
-                    taskId, applicationId,
-                    proposedPrice: price,
-                    message: msg.isNotEmpty ? msg : null,
-                  ),
-                );
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(() {
-      priceController.dispose();
-      messageController.dispose();
-    });
-  }
-
-  void _showApproveConfirmation(BuildContext context) {
-    final bloc = context.read<TaskDetailBloc>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.expertApplicationConfirmApprove),
-        content: Text(context.l10n.expertApplicationConfirmApproveMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              bloc.add(TaskDetailAcceptApplicant(applicationId));
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.success),
-            child: Text(context.l10n.expertApplicationConfirmApprove),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCloseConfirmation(BuildContext context) {
-    final bloc = context.read<TaskExpertBloc>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.closeConsultation),
-        content: Text(context.l10n.closeConsultationConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              bloc.add(TaskExpertCloseTaskConsultation(taskId, applicationId));
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(MaterialLocalizations.of(context).okButtonLabel),
-          ),
-        ],
       ),
     );
   }

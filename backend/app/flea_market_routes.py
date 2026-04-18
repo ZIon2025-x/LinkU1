@@ -32,8 +32,10 @@ from sqlalchemy import case, select, update, and_, or_, func, text
 from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
+from app.consultation import error_codes
 from app.deps import get_async_db_dependency
 from app.async_routers import get_current_user_optional
+from app.error_handlers import raise_http_error_with_code
 
 # 管理员认证函数（从forum_routes复制，因为flea_market也需要）
 async def get_current_admin_async(
@@ -4013,13 +4015,15 @@ async def create_flea_market_consultation(
         item = result.scalar_one_or_none()
 
         if not item:
-            raise HTTPException(status_code=404, detail="商品不存在")
+            raise_http_error_with_code("商品不存在", 404, error_codes.SERVICE_NOT_FOUND)
         if item.status != "active":
-            raise HTTPException(status_code=400, detail="商品不在销售中")
+            raise_http_error_with_code("商品不在销售中", 400, error_codes.SERVICE_INACTIVE)
 
         # 2. 不能咨询自己的商品
         if item.seller_id == current_user.id:
-            raise HTTPException(status_code=400, detail="不能咨询自己的商品")
+            raise_http_error_with_code(
+                "不能咨询自己的商品", 400, error_codes.CANNOT_CONSULT_SELF
+            )
 
         # 3. 检查是否已有活跃的咨询
         existing_result = await db.execute(
@@ -4137,16 +4141,20 @@ async def flea_market_consult_negotiate(
         purchase_req = req_result.scalar_one_or_none()
 
         if not purchase_req:
-            raise HTTPException(status_code=404, detail="购买申请不存在")
+            raise_http_error_with_code("购买申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
         if purchase_req.buyer_id != current_user.id:
             raise HTTPException(status_code=403, detail="只有买家可以发起议价")
         if purchase_req.status not in ("consulting", "negotiating"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许议价")
+            raise_http_error_with_code(
+                f"当前状态 {purchase_req.status} 不允许议价",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         # 检查商品是否仍然有效
         item = await db.get(models.FleaMarketItem, purchase_req.item_id)
         if item and item.status != "active":
-            raise HTTPException(status_code=400, detail="商品已下架或已售出")
+            raise_http_error_with_code("商品已下架或已售出", 400, error_codes.SERVICE_INACTIVE)
 
         # 更新状态
         purchase_req.status = "negotiating"
@@ -4221,19 +4229,23 @@ async def flea_market_consult_quote(
         purchase_req = req_result.scalar_one_or_none()
 
         if not purchase_req:
-            raise HTTPException(status_code=404, detail="购买申请不存在")
+            raise_http_error_with_code("购买申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 验证当前用户是卖家
         item = await db.get(models.FleaMarketItem, purchase_req.item_id)
         if not item:
-            raise HTTPException(status_code=404, detail="商品不存在")
+            raise_http_error_with_code("商品不存在", 404, error_codes.SERVICE_NOT_FOUND)
         if item.seller_id != current_user.id:
-            raise HTTPException(status_code=403, detail="只有卖家可以报价")
+            raise_http_error_with_code("只有卖家可以报价", 403, error_codes.NOT_SERVICE_OWNER)
         if item.status != "active":
-            raise HTTPException(status_code=400, detail="商品已下架或已售出")
+            raise_http_error_with_code("商品已下架或已售出", 400, error_codes.SERVICE_INACTIVE)
 
         if purchase_req.status not in ("consulting", "negotiating"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许报价")
+            raise_http_error_with_code(
+                f"当前状态 {purchase_req.status} 不允许报价",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         # 更新状态
         purchase_req.status = "negotiating"
@@ -4309,14 +4321,14 @@ async def flea_market_consult_respond(
         purchase_req = req_result.scalar_one_or_none()
 
         if not purchase_req:
-            raise HTTPException(status_code=404, detail="购买申请不存在")
+            raise_http_error_with_code("购买申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 获取商品信息
         item = await db.get(models.FleaMarketItem, purchase_req.item_id)
         if not item:
-            raise HTTPException(status_code=404, detail="商品不存在")
+            raise_http_error_with_code("商品不存在", 404, error_codes.SERVICE_NOT_FOUND)
         if item.status != "active":
-            raise HTTPException(status_code=400, detail="商品已下架或已售出")
+            raise_http_error_with_code("商品已下架或已售出", 400, error_codes.SERVICE_INACTIVE)
 
         # 双方都可以响应
         is_buyer = purchase_req.buyer_id == current_user.id
@@ -4325,7 +4337,11 @@ async def flea_market_consult_respond(
             raise HTTPException(status_code=403, detail="无权操作此申请")
 
         if purchase_req.status != "negotiating":
-            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许响应议价")
+            raise_http_error_with_code(
+                f"当前状态 {purchase_req.status} 不允许响应议价",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         action = request_data.action
         now = get_utc_time()
@@ -4442,16 +4458,20 @@ async def flea_market_consult_formal_buy(
         purchase_req = req_result.scalar_one_or_none()
 
         if not purchase_req:
-            raise HTTPException(status_code=404, detail="购买申请不存在")
+            raise_http_error_with_code("购买申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
         if purchase_req.buyer_id != current_user.id:
             raise HTTPException(status_code=403, detail="只有买家可以发起正式购买")
         if purchase_req.status not in ("consulting", "price_agreed"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许转为正式购买")
+            raise_http_error_with_code(
+                f"当前状态 {purchase_req.status} 不允许转为正式购买",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         # 检查商品是否仍然有效
         item_check = await db.get(models.FleaMarketItem, purchase_req.item_id)
         if item_check and item_check.status != "active":
-            raise HTTPException(status_code=400, detail="商品已下架或已售出")
+            raise_http_error_with_code("商品已下架或已售出", 400, error_codes.SERVICE_INACTIVE)
 
         # 如果有协商价格，使用协商价格作为 proposed_price
         if purchase_req.final_price:
@@ -4526,12 +4546,12 @@ async def flea_market_consult_close(
         purchase_req = req_result.scalar_one_or_none()
 
         if not purchase_req:
-            raise HTTPException(status_code=404, detail="购买申请不存在")
+            raise_http_error_with_code("购买申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 获取商品信息
         item = await db.get(models.FleaMarketItem, purchase_req.item_id)
         if not item:
-            raise HTTPException(status_code=404, detail="商品不存在")
+            raise_http_error_with_code("商品不存在", 404, error_codes.SERVICE_NOT_FOUND)
 
         # 双方都可以关闭
         is_buyer = purchase_req.buyer_id == current_user.id
@@ -4540,7 +4560,11 @@ async def flea_market_consult_close(
             raise HTTPException(status_code=403, detail="无权操作此申请")
 
         if purchase_req.status not in ("consulting", "negotiating"):
-            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许关闭")
+            raise_http_error_with_code(
+                f"当前状态 {purchase_req.status} 不允许关闭",
+                400,
+                error_codes.INVALID_STATUS_TRANSITION,
+            )
 
         # 设置为 cancelled
         purchase_req.status = "cancelled"
@@ -4553,13 +4577,19 @@ async def flea_market_consult_close(
                 task.status = "cancelled"
 
             # 发送系统消息
+            from app.consultation.notifications import consultation_closed
+            _closed_msg = consultation_closed()
             system_msg = models.Message(
                 sender_id=None,
                 receiver_id=item.seller_id if is_buyer else purchase_req.buyer_id,
-                content="咨询已关闭",
+                content=_closed_msg["content_zh"],
                 task_id=purchase_req.task_id,
                 message_type="system",
                 conversation_type="task",
+                meta=json.dumps({
+                    "system_action": "consultation_closed",
+                    "content_en": _closed_msg["content_en"],
+                }),
             )
             db.add(system_msg)
 
@@ -4613,12 +4643,12 @@ async def flea_market_consult_status(
         purchase_req = req_result.scalar_one_or_none()
 
         if not purchase_req:
-            raise HTTPException(status_code=404, detail="购买申请不存在")
+            raise_http_error_with_code("购买申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
         # 获取商品信息
         item = await db.get(models.FleaMarketItem, purchase_req.item_id)
         if not item:
-            raise HTTPException(status_code=404, detail="商品不存在")
+            raise_http_error_with_code("商品不存在", 404, error_codes.SERVICE_NOT_FOUND)
 
         # 双方都可以查看
         if purchase_req.buyer_id != current_user.id and item.seller_id != current_user.id:

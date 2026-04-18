@@ -1726,7 +1726,10 @@ if CELERY_AVAILABLE:
         """自动关闭超过14天不活跃的咨询占位任务 - 每小时"""
         task_name = 'close_stale_consultations_task'
         lock_key = f"celery_lock:{task_name}"
-        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+        # lock_ttl 必须小于调度间隔 (interval_seconds=3600, task_scheduler.py:648),
+        # 否则长时间运行会让下一次调度获取到已释放的锁从而并发执行。
+        # 实测 close_stale_consultations 最长 <5min,设 1200s (20min) 充裕。
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1200):
             return {"status": "skipped"}
         db = SessionLocal()
         try:

@@ -5,12 +5,59 @@ import '../utils/l10n_extension.dart';
 extension ErrorLocalizerExtension on BuildContext {
   String localizeError(String? errorMessage) =>
       ErrorLocalizer.localize(this, errorMessage);
+
+  /// 优先使用 backend 返回的 error_code → l10n；供咨询等启用 errorCode 的流程使用。
+  String localizeErrorCode(String? code) =>
+      ErrorLocalizer.localizeErrorCode(this, code);
 }
 
 /// 错误消息本地化工具
 /// 将 API 返回的错误码转为本地化文字
 class ErrorLocalizer {
   ErrorLocalizer._();
+
+  /// 专门处理 backend 返回的 error_code → l10n。供咨询(及其他启用 errorCode 的)流程使用。
+  ///
+  /// 与 [localize] 的差异:
+  /// - 输入是严格的 error_code (UPPER_SNAKE_CASE),而非 snake_case 消息码
+  /// - 未命中时返回通用咨询错误 ([consultationErrorGeneric]),不再原样透传
+  static String localizeErrorCode(BuildContext context, String? errorCode) {
+    if (errorCode == null || errorCode.isEmpty) {
+      return context.l10n.errorUnknownGeneric;
+    }
+    switch (errorCode) {
+      case 'CONSULTATION_ALREADY_EXISTS':
+        return context.l10n.consultationErrorAlreadyExists;
+      case 'CONSULTATION_NOT_FOUND':
+        return context.l10n.consultationErrorNotFound;
+      case 'CONSULTATION_CLOSED':
+        return context.l10n.consultationErrorClosed;
+      case 'SERVICE_NOT_FOUND':
+        return context.l10n.consultationErrorServiceNotFound;
+      case 'SERVICE_INACTIVE':
+        return context.l10n.consultationErrorServiceInactive;
+      case 'EXPERT_TEAM_NOT_FOUND':
+        return context.l10n.consultationErrorTeamNotFound;
+      case 'EXPERT_TEAM_INACTIVE':
+        return context.l10n.consultationErrorTeamInactive;
+      case 'CANNOT_CONSULT_SELF':
+        return context.l10n.consultationErrorCannotConsultSelf;
+      case 'NOT_SERVICE_OWNER':
+        return context.l10n.consultationErrorNotServiceOwner;
+      case 'NOT_TEAM_MEMBER':
+        return context.l10n.consultationErrorNotTeamMember;
+      case 'INSUFFICIENT_TEAM_ROLE':
+        return context.l10n.consultationErrorInsufficientTeamRole;
+      case 'INVALID_STATUS_TRANSITION':
+        return context.l10n.consultationErrorInvalidStatusTransition;
+      case 'PRICE_OUT_OF_RANGE':
+        return context.l10n.consultationErrorPriceOutOfRange;
+      case 'TASK_NOT_FOUND':
+        return context.l10n.consultationErrorTaskNotFound;
+      default:
+        return context.l10n.consultationErrorGeneric;
+    }
+  }
 
   /// 从异常对象提取用户可读的本地化消息
   /// 处理 DioException、SocketException 等常见网络/请求异常

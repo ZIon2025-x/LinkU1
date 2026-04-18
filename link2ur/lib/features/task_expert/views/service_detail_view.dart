@@ -138,9 +138,11 @@ class _ServiceDetailContent extends StatelessWidget {
                 final message = switch (state.actionMessage) {
                   'application_submitted' =>
                     context.l10n.actionApplicationSubmitted,
-                  'application_failed' => state.errorMessage != null
-                      ? context.localizeError(state.errorMessage)
-                      : context.l10n.actionApplicationFailed,
+                  'application_failed' => state.errorCode != null
+                      ? context.localizeErrorCode(state.errorCode)
+                      : (state.errorMessage != null
+                          ? context.localizeError(state.errorMessage)
+                          : context.l10n.actionApplicationFailed),
                   'service_reply_submitted' => context.l10n.successOperationSuccess,
                   'qa_ask_success' => context.l10n.qaAskSuccess,
                   'qa_reply_success' => context.l10n.qaReplySuccess,
@@ -1649,13 +1651,15 @@ class _BottomApplyBar extends StatelessWidget {
             context.push('/tasks/$taskId/applications/$appId/chat?consultation=true');
           }
         } else if (state.actionMessage == 'consultation_failed') {
+          // Prefer backend errorCode → l10n; fall back to errorMessage, then generic
+          final text = state.errorCode != null
+              ? context.localizeErrorCode(state.errorCode)
+              : (state.errorMessage != null
+                  ? context.localizeError(state.errorMessage)
+                  : context.l10n.consultationFailed);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                state.errorMessage != null
-                    ? context.localizeError(state.errorMessage)
-                    : context.l10n.consultationFailed,
-              ),
+              content: Text(text),
               backgroundColor: AppColors.error,
             ),
           );
