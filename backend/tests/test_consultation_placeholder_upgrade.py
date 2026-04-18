@@ -64,3 +64,45 @@ def test_consultation_task_id_for_all_scenarios():
     # 边界:两个都为 NULL → None
     null_case = MagicMock(consultation_task_id=None, task_id=None)
     assert consultation_task_id_for(null_case) is None
+
+
+@pytest.mark.asyncio
+async def test_load_real_task_or_404_rejects_placeholder():
+    """守卫对占位 task 返回 404(伪装成不存在,防探测)."""
+    from app.utils.task_guards import load_real_task_or_404
+    from fastapi import HTTPException
+
+    placeholder_task = MagicMock(id=100, is_consultation_placeholder=True)
+    db = MagicMock()
+    db.get = AsyncMock(return_value=placeholder_task)
+
+    with pytest.raises(HTTPException) as exc:
+        await load_real_task_or_404(db, 100)
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_load_real_task_or_404_returns_real_task():
+    """守卫对真任务正常返回."""
+    from app.utils.task_guards import load_real_task_or_404
+
+    real_task = MagicMock(id=200, is_consultation_placeholder=False)
+    db = MagicMock()
+    db.get = AsyncMock(return_value=real_task)
+
+    result = await load_real_task_or_404(db, 200)
+    assert result is real_task
+
+
+@pytest.mark.asyncio
+async def test_load_real_task_or_404_returns_404_for_nonexistent():
+    """守卫对不存在的 id 返回 404."""
+    from app.utils.task_guards import load_real_task_or_404
+    from fastapi import HTTPException
+
+    db = MagicMock()
+    db.get = AsyncMock(return_value=None)
+
+    with pytest.raises(HTTPException) as exc:
+        await load_real_task_or_404(db, 9999)
+    assert exc.value.status_code == 404
