@@ -145,6 +145,7 @@ async def create_placeholder_task(
         taker_id=taker_id,
         status="consulting",
         task_source=consultation_type,
+        is_consultation_placeholder=True,
         **extra_fields,
     )
     db.add(task)
