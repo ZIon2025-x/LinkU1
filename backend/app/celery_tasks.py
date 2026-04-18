@@ -1668,13 +1668,15 @@ if CELERY_AVAILABLE:
             db.close()
             release_redis_distributed_lock(lock_key)
 
-    # ── 套餐过期扫描 (每 15 分钟) ──
+    # ── 套餐过期扫描 (每 1 小时,见 task_scheduler.py `interval_seconds=3600`) ──
     # 没有这个任务,过期套餐会永远停在 status='active',资金永远滞留 pending transfer。
     @celery_app.task(name='app.celery_tasks.check_expired_packages_task', bind=True, max_retries=2, default_retry_delay=60)
     def check_expired_packages_task(self):
         """套餐过期扫描: 把 expires_at < now 的 active 套餐标 expired 并触发结算。"""
         task_name = 'check_expired_packages_task'
         lock_key = f"celery_lock:{task_name}"
+        # lock_ttl=1800s 是崩溃恢复窗口(< interval_seconds=3600),避免 lock_ttl==interval
+        # 的边界 race。正常路径由下方 try/finally 释放锁。
         if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
             return {"status": "skipped"}
         db = SessionLocal()
