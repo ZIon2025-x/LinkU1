@@ -1020,6 +1020,9 @@ async def _approve_team_service_application(
     # 12. 更新 application
     application.status = "approved"
     application.final_price = price
+    # 备份咨询占位 id,保留 team 成员访问历史消息的路径(防御性兜底,双层防护)
+    if application.task_id and not application.consultation_task_id:
+        application.consultation_task_id = application.task_id
     application.task_id = new_task.id
     application.approved_at = get_utc_time()
     application.updated_at = get_utc_time()

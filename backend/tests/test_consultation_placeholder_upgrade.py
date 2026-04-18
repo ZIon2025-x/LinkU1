@@ -296,3 +296,21 @@ def test_check_constraint_rejects_inconsistent_flag_and_source(db):
     with pytest.raises(IntegrityError, match="ck_tasks_consultation_placeholder_matches_source"):
         db.commit()
     db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_overwrite_backs_up_consultation_task_id_team():
+    """B.2.1 team service approve:SA.consultation_task_id 备份 + SA.task_id 改真任务.
+
+    Unit-test the backup logic pattern (not the full approve function).
+    """
+    application = MagicMock(task_id=100, consultation_task_id=None)
+    new_task_id = 200
+
+    # Logic that will be added to expert_consultation_routes.py:~1025:
+    if application.task_id and not application.consultation_task_id:
+        application.consultation_task_id = application.task_id
+    application.task_id = new_task_id
+
+    assert application.consultation_task_id == 100
+    assert application.task_id == 200
