@@ -268,6 +268,9 @@ class Task(Base):
     counter_offer_price = Column(DECIMAL(12, 2), nullable=True)
     counter_offer_status = Column(String(20), nullable=True)   # None / 'pending' / 'accepted' / 'rejected'
     counter_offer_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    is_consultation_placeholder = Column(
+        Boolean, nullable=False, default=False, server_default='false'
+    )
 
     # 关系
     poster = relationship(
