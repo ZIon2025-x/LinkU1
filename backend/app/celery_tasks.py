@@ -6,62 +6,12 @@ import logging
 import time
 from typing import Dict, Any
 
+from app.redis_utils import (
+    get_redis_distributed_lock,  # noqa: F401 — re-export for backward compat
+    release_redis_distributed_lock,  # noqa: F401
+)
+
 logger = logging.getLogger(__name__)
-
-
-def get_redis_distributed_lock(lock_key: str, lock_ttl: int = 3600) -> bool:
-    """
-    获取 Redis 分布式锁（使用 SETNX）
-    返回 True 表示获取成功，False 表示锁已被占用
-    
-    Args:
-        lock_key: 锁的键名
-        lock_ttl: 锁的过期时间（秒），默认1小时
-    
-    Returns:
-        bool: 是否成功获取锁
-    """
-    try:
-        from app.redis_cache import get_redis_client
-        redis_client = get_redis_client()
-        
-        if not redis_client:
-            # Redis 不可用时，返回 True（允许执行，但会有多实例重复执行的风险）
-            logger.warning(f"Redis 不可用，跳过分布式锁检查: {lock_key}")
-            return True
-        
-        # 使用 SETNX 原子操作获取锁
-        lock_value = str(time.time())
-        result = redis_client.set(lock_key, lock_value, nx=True, ex=lock_ttl)
-        
-        if result:
-            logger.debug(f"成功获取分布式锁: {lock_key}")
-            return True
-        else:
-            logger.debug(f"分布式锁已被占用: {lock_key}")
-            return False
-            
-    except Exception as e:
-        logger.warning(f"获取分布式锁失败 {lock_key}: {e}，允许执行（降级处理）")
-        return True  # 出错时允许执行，避免因锁机制故障导致任务无法执行
-
-
-def release_redis_distributed_lock(lock_key: str):
-    """
-    释放 Redis 分布式锁
-    
-    Args:
-        lock_key: 锁的键名
-    """
-    try:
-        from app.redis_cache import get_redis_client
-        redis_client = get_redis_client()
-        
-        if redis_client:
-            redis_client.delete(lock_key)
-            logger.debug(f"释放分布式锁: {lock_key}")
-    except Exception as e:
-        logger.warning(f"释放分布式锁失败 {lock_key}: {e}")
 
 # 辅助函数：记录 Prometheus 指标
 def _record_task_metrics(task_name: str, status: str, duration: float):
