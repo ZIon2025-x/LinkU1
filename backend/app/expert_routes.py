@@ -137,10 +137,14 @@ async def _compute_is_open_batch(
 
 async def _get_expert_or_404(db: AsyncSession, expert_id: str) -> Expert:
     """获取达人团队，不存在则 404"""
+    from app.consultation import error_codes
+    from app.error_handlers import raise_http_error_with_code
     result = await db.execute(select(Expert).where(Expert.id == expert_id))
     expert = result.scalar_one_or_none()
     if not expert:
-        raise HTTPException(status_code=404, detail="达人团队不存在")
+        raise_http_error_with_code(
+            "达人团队不存在", 404, error_codes.EXPERT_TEAM_NOT_FOUND
+        )
     return expert
 
 
@@ -150,7 +154,14 @@ async def _get_member_or_403(
     user_id: str,
     required_roles: Optional[List[str]] = None,
 ) -> ExpertMember:
-    """检查用户是否为活跃成员，可选角色检查"""
+    """检查用户是否为活跃成员，可选角色检查。
+
+    抛带 error_code 的 HTTPException,Flutter 端据此做 l10n:
+    - NOT_TEAM_MEMBER (403): 用户不是该团队成员
+    - INSUFFICIENT_TEAM_ROLE (403): 是成员但角色不够(required_roles 过滤不通过)
+    """
+    from app.consultation import error_codes
+    from app.error_handlers import raise_http_error_with_code
     result = await db.execute(
         select(ExpertMember).where(
             and_(
@@ -162,9 +173,13 @@ async def _get_member_or_403(
     )
     member = result.scalar_one_or_none()
     if not member:
-        raise HTTPException(status_code=403, detail="你不是该团队的活跃成员")
+        raise_http_error_with_code(
+            "你不是该团队的活跃成员", 403, error_codes.NOT_TEAM_MEMBER
+        )
     if required_roles and member.role not in required_roles:
-        raise HTTPException(status_code=403, detail="权限不足")
+        raise_http_error_with_code(
+            "权限不足", 403, error_codes.INSUFFICIENT_TEAM_ROLE
+        )
     return member
 
 
