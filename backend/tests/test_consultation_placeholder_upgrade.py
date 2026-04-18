@@ -201,3 +201,98 @@ def test_admin_task_list_include_placeholders_flag():
                 "admin_get_tasks must NOT filter is_consultation_placeholder when "
                 "include_placeholders=True"
             )
+
+
+# ---------------------------------------------------------------------------
+# Task 15: CHECK constraint rejects inconsistent flag/source rows (208b)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.skip(
+    reason=(
+        "Integration test — requires real PostgreSQL DB with migration 208b applied. "
+        "Run manually in staging: psql $DATABASE_URL -f migrations/208b_add_consultation_placeholder_check.sql, "
+        "then re-run with TEST_DATABASE_URL set."
+    )
+)
+def test_check_constraint_rejects_inconsistent_flag_and_source(db):
+    """208b CHECK 约束：is_consultation_placeholder 和 task_source 必须一致。
+
+    Integration test — skipped in unit test runs (no local Postgres with 208b applied).
+
+    What this verifies
+    ------------------
+    Migration 208b adds:
+
+        ALTER TABLE tasks
+          ADD CONSTRAINT ck_tasks_consultation_placeholder_matches_source
+          CHECK (
+            (is_consultation_placeholder = TRUE
+              AND task_source IN ('consultation', 'task_consultation', 'flea_market_consultation'))
+            OR
+            (is_consultation_placeholder = FALSE
+              AND task_source NOT IN ('consultation', 'task_consultation', 'flea_market_consultation'))
+          );
+
+    Two violation scenarios are tested:
+      A) is_consultation_placeholder=TRUE but task_source='normal'
+         → DB must reject with IntegrityError / CheckViolation
+      B) is_consultation_placeholder=FALSE but task_source='consultation'
+         → DB must reject with IntegrityError / CheckViolation
+
+    Manual SQL verification steps
+    ------------------------------
+    1. Apply migration 208b to a Postgres DB.
+    2. Run (in psql):
+
+       -- Scenario A: flag=TRUE, non-consultation source → must fail
+       BEGIN;
+       INSERT INTO tasks (title, status, task_source, is_consultation_placeholder, poster_id)
+         VALUES ('t_A', 'open', 'normal', FALSE, 'u_test_208b');
+       UPDATE tasks SET is_consultation_placeholder = TRUE WHERE poster_id = 'u_test_208b';
+       -- Expected: ERROR: new row violates check constraint "ck_tasks_consultation_placeholder_matches_source"
+       ROLLBACK;
+
+       -- Scenario B: flag=FALSE, consultation source → must fail
+       BEGIN;
+       INSERT INTO tasks (title, status, task_source, is_consultation_placeholder, poster_id)
+         VALUES ('t_B', 'open', 'consultation', TRUE, 'u_test_208b_2');
+       UPDATE tasks SET is_consultation_placeholder = FALSE WHERE poster_id = 'u_test_208b_2';
+       -- Expected: ERROR: new row violates check constraint "ck_tasks_consultation_placeholder_matches_source"
+       ROLLBACK;
+    """
+    from sqlalchemy.exc import IntegrityError
+    from app import models
+
+    # --- Scenario A: flag=TRUE, non-consultation source ---
+    task_a = models.Task(
+        title="test_208b_A",
+        status="open",
+        task_source="normal",
+        is_consultation_placeholder=False,
+        poster_id="u_test_208b_A",
+    )
+    db.add(task_a)
+    db.flush()
+
+    # Violate: flip flag without changing source
+    task_a.is_consultation_placeholder = True
+    with pytest.raises(IntegrityError, match="ck_tasks_consultation_placeholder_matches_source"):
+        db.commit()
+    db.rollback()
+
+    # --- Scenario B: flag=FALSE, consultation source ---
+    task_b = models.Task(
+        title="test_208b_B",
+        status="open",
+        task_source="consultation",
+        is_consultation_placeholder=True,
+        poster_id="u_test_208b_B",
+    )
+    db.add(task_b)
+    db.flush()
+
+    # Violate: flip flag without changing source
+    task_b.is_consultation_placeholder = False
+    with pytest.raises(IntegrityError, match="ck_tasks_consultation_placeholder_matches_source"):
+        db.commit()
+    db.rollback()
