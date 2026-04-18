@@ -868,7 +868,37 @@ async def _approve_team_service_application(
     elif application.negotiated_price is not None:
         price = float(application.negotiated_price)
     else:
-        price = float(service.base_price)
+        price = float(service.base_price) if service.base_price is not None else 0.0
+
+    # 价格护栏（与 user_service_application_routes 同款）：
+    # 0 价会违反 chk_tasks_reward_type_consistency 且 Stripe 拒 0 金额。
+    # 团队议价服务需先通过『还价』定价；定价服务异常则属数据问题。
+    if price is None or price <= 0:
+        is_negotiable = (getattr(service, "pricing_type", None) or "fixed") == "negotiable"
+        if is_negotiable:
+            detail_msg = (
+                "该团队服务为议价服务，申请人未报价且未有还价价格。"
+                "请先通过『还价』设定价格，待申请人确认后再批准。"
+            )
+            detail_msg_en = (
+                "This team service is negotiable with no agreed price. "
+                "Please send a counter-offer first and wait for the applicant to accept."
+            )
+            error_code = "approval_price_not_set_negotiable"
+        else:
+            detail_msg = "该申请价格异常（0 或未设定），请通过『还价』重新设定价格。"
+            detail_msg_en = "Application price is invalid (0 or unset). Please send a counter-offer."
+            error_code = "approval_price_not_set"
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": error_code,
+                "message": detail_msg,
+                "message_en": detail_msg_en,
+                "current_price": price,
+                "pricing_type": getattr(service, "pricing_type", None),
+            },
+        )
 
     # 6. 决定截止日期
     if application.is_flexible == 1:

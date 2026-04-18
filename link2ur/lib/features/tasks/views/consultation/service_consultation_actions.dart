@@ -159,7 +159,11 @@ class ServiceConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            if (canQuote && (isConsulting || isNegotiating)) ...[
+            // 报价按钮对 owner 可见：consulting / negotiating 以及 pending 状态。
+            // 加入 pending: 议价服务 + 无基础价的申请会在 approve 时被后端 400
+            // 拒绝 (approval_price_not_set_negotiable)，此时 owner 必须先通过
+            // Quote Price 发送还价，否则无下一步路径。
+            if (canQuote && (isConsulting || isNegotiating || appStatus == 'pending')) ...[
               ActionPill(
                 icon: Icons.request_quote,
                 label: context.l10n.quotePrice,

@@ -227,7 +227,17 @@ api.interceptors.response.use(
     } else {
       logger.error('API请求错误:', error);
     }
-    
+
+    // 后端 http_exception_handler 把 error_code/message 打平到 response 顶层
+    // 但老 web 代码普遍读 .data.detail。这里做向后兼容 shim:
+    // 若 detail 缺失且 message 可用, 拷一份到 detail, 让老调用方仍拿得到文案。
+    const respData = error.response?.data as any;
+    if (respData && typeof respData === 'object' && !Array.isArray(respData)) {
+      if (respData.detail === undefined && typeof respData.message === 'string') {
+        respData.detail = respData.message;
+      }
+    }
+
     // 处理速率限制错误（429）
     if (error.response?.status === 429) {
       const retryAfter = error.response.headers['retry-after'] || error.response.headers['Retry-After'];

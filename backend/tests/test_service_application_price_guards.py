@@ -320,3 +320,164 @@ async def test_apply_allows_fixed_service_with_positive_base_price():
 
     assert result["service_id"] == 9
     assert result["status"] == "pending"
+
+
+# ---------------------------------------------------------------------------
+# Team-service approve guard (_approve_team_service_application)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_team_service_approve_rejects_zero_price_with_negotiable_code():
+    """Mirror of the personal-service approve guard but for team services
+    (expert_consultation_routes._approve_team_service_application). Same SA#9
+    class of bug: price falls through to service.base_price=0 -> DB constraint
+    violation. Guard must fire first.
+    """
+    from app.expert_consultation_routes import _approve_team_service_application
+
+    application = MagicMock(
+        status="pending",
+        expert_counter_price=None,
+        final_price=None,
+        negotiated_price=None,
+        time_slot_id=None,
+        applicant_id="u_applicant",
+        currency=None,
+        is_flexible=0,
+        deadline=None,
+        task_id=None,
+        service_id=9,
+    )
+    service = MagicMock(
+        id=9,
+        status="active",
+        base_price=0,
+        currency="GBP",
+        pricing_type="negotiable",
+        service_name="team svc",
+        description="...",
+        location="线上",
+        category="other",
+        images=None,
+    )
+    expert = MagicMock(id="e_team", stripe_account_id="acct_team")
+
+    # db.get is called for: service, expert, applicant. Return service first,
+    # then expert, then an applicant user.
+    applicant = MagicMock(id="u_applicant", name="Alice", email="a@x.com")
+    get_calls = iter([service, expert, applicant])
+
+    db = MagicMock()
+    db.get = AsyncMock(side_effect=lambda *a, **kw: next(get_calls))
+
+    current_user = MagicMock(
+        id="u_owner",
+        stripe_account_id="acct_owner",
+        user_level="normal",
+    )
+
+    with patch(
+        "app.services.expert_task_resolver.resolve_task_taker_from_service",
+        AsyncMock(return_value=("u_team_owner", "e_team")),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await _approve_team_service_application(
+                db=db,
+                request=MagicMock(),
+                current_user=current_user,
+                application=application,
+            )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail["error_code"] == "approval_price_not_set_negotiable"
+
+
+# ---------------------------------------------------------------------------
+# Pydantic schema guard (F)
+# ---------------------------------------------------------------------------
+
+
+def test_personal_service_create_rejects_zero_base_price_for_fixed():
+    """Tightening PersonalServiceCreate: base_price=0 is not allowed when
+    pricing_type='fixed' (or any non-negotiable). Prevents an admin/API caller
+    from seeding the SA#9 failure mode into the DB in the first place.
+    """
+    from pydantic import ValidationError
+    from app.schemas import PersonalServiceCreate
+
+    with pytest.raises(ValidationError) as exc_info:
+        PersonalServiceCreate(
+            service_name="svc",
+            description="x",
+            base_price=0,
+            pricing_type="fixed",
+        )
+    errors = exc_info.value.errors()
+    assert any("greater than 0" in str(e.get("msg", "")) for e in errors), (
+        f"expected 'greater than 0' validator, got: {errors}"
+    )
+
+
+def test_personal_service_create_allows_zero_base_price_for_negotiable():
+    """Negotiable personal services legitimately have base_price=0 (面议).
+    The create schema must still let this through — approve-side guard is the
+    correct backstop for negotiable-with-no-price.
+    """
+    from app.schemas import PersonalServiceCreate
+
+    svc = PersonalServiceCreate(
+        service_name="面议svc",
+        description="x",
+        base_price=0,
+        pricing_type="negotiable",
+    )
+    assert svc.pricing_type == "negotiable"
+    assert float(svc.base_price) == 0.0
+
+
+def test_personal_service_create_allows_positive_base_price_for_fixed():
+    """Happy path sanity: pricing_type='fixed' + base_price>0 goes through."""
+    from app.schemas import PersonalServiceCreate
+
+    svc = PersonalServiceCreate(
+        service_name="svc",
+        description="x",
+        base_price=10,
+        pricing_type="fixed",
+    )
+    assert float(svc.base_price) == 10.0
+
+
+# ---------------------------------------------------------------------------
+# Static check — Flutter error_localizer wiring (G)
+# ---------------------------------------------------------------------------
+
+
+def test_flutter_error_localizer_has_all_three_codes():
+    """Regression: ensure the 3 backend error_codes remain wired into the
+    Flutter error_localizer switch. If someone removes a case, this fails
+    before the app silently shows raw backend strings.
+    """
+    from pathlib import Path
+
+    # tests/ -> backend/ -> repo_root/
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    localizer_path = repo_root / "link2ur" / "lib" / "core" / "utils" / "error_localizer.dart"
+    assert localizer_path.exists(), f"error_localizer.dart not found at {localizer_path}"
+
+    content = localizer_path.read_text(encoding="utf-8")
+    required_codes = [
+        ("approval_price_not_set_negotiable", "errorApprovalPriceNotSetNegotiable"),
+        ("approval_price_not_set", "errorApprovalPriceNotSet"),
+        ("apply_requires_consultation", "errorApplyRequiresConsultation"),
+    ]
+    for code, l10n_key in required_codes:
+        assert f"case '{code}'" in content, (
+            f"error_localizer.dart missing switch case for '{code}' — "
+            f"backend fix 25992bb0c is not surfaced to users"
+        )
+        assert l10n_key in content, (
+            f"error_localizer.dart references '{code}' but does not return "
+            f"context.l10n.{l10n_key}"
+        )

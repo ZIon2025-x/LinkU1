@@ -2444,8 +2444,14 @@ class PersonalServiceCreate(BaseModel):
 
     @model_validator(mode='after')
     def validate_price(self):
-        if self.pricing_type != 'negotiable' and self.base_price is None:
-            raise ValueError('base_price is required when pricing_type is not negotiable')
+        if self.pricing_type != 'negotiable':
+            if self.base_price is None:
+                raise ValueError('base_price is required when pricing_type is not negotiable')
+            if self.base_price <= 0:
+                # 防止创建 pricing_type='fixed' + base_price=0 的服务,
+                # 这类服务在审批时会因 reward=0 违反 chk_tasks_reward_type_consistency。
+                # 议价服务 (negotiable) 允许 base_price=0/NULL, 由审批护栏兜底。
+                raise ValueError('base_price must be greater than 0 for non-negotiable pricing')
         return self
 
 
