@@ -350,10 +350,10 @@ def get_user_primary_expert_sync(db: Session, user_id: str) -> Optional[Expert]:
 
 | 文件 | 行号 | 当前逻辑 | 改造 |
 |------|------|----------|------|
-| `services/ai_tools.py` | 791-827 (`list_task_experts` tool) | 搜 TaskExpert.expert_name/.bio，按 rating 排序 | 搜 Expert.name/.bio，按 rating 排序 |
-| `services/ai_tools.py` | 842-880 (`get_activity_detail`) 里 L860-862 | 查 activity.expert_id 的 expert_name | 查 Expert.name（activity.expert_id 在新数据下是团队 id） |
-| `services/ai_tools.py` | 895-927 (某 get_expert_detail tool) | 查 expert 详情 + 服务列表 | 查 Expert + 通过 owner_type/owner_id 查 TaskExpertService |
-| `services/ai_tools.py` | 1101-1118 (list_service_applications tool) | JOIN ServiceApplication + TaskExpertService + TaskExpert + User | JOIN ServiceApplication + TaskExpertService + Expert（通过 owner_id） |
+| `services/ai_tools.py` | 791-827 (`list_task_experts` tool) | 搜 `TaskExpert.expert_name/.bio`，按 rating 排序 | 搜 `Expert.name/.bio`，按 rating 排序；查 Expert 直接用表，不需 FK 跳转 |
+| `services/ai_tools.py` | 842-880 (`get_activity_detail`) 里 L860-862 | `JOIN TaskExpert ON TaskExpert.id == activity.expert_id` (activity.expert_id legacy 指向 `users.id`) | **改用新字段**：`WHERE activity.owner_type='expert'` → `JOIN Expert ON Expert.id = activity.owner_id`。**不要**继续用 `activity.expert_id`（legacy，值是 user_id 不是 team_id） |
+| `services/ai_tools.py` | 895-927 (`get_expert_detail` tool) 查 expert 详情 + 服务列表 | L901-903 `JOIN TaskExpert ON TaskExpert.id == expert_id` 参数；L910-911 `TaskExpertService.expert_id == expert_id` | L901-903 改 `SELECT Expert WHERE id = expert_id` (input 已是 team_id 语义 per §7.5)；L910-911 改 `WHERE TaskExpertService.owner_type='expert' AND TaskExpertService.owner_id = expert_id` — **不要**用 `TaskExpertService.expert_id` legacy 列 |
+| `services/ai_tools.py` | 1101-1118 (`list_my_service_applications` tool) | L1109 `TaskExpert.expert_name` + L1113 `JOIN TaskExpert ON ServiceApplication.expert_id = TaskExpert.id` + L1114 `JOIN User ON TaskExpert.id = User.id` | 改用 `Expert.name` + L1113 `JOIN Expert ON ServiceApplication.new_expert_id = Expert.id` (**`new_expert_id` 列是 Phase A 应使用的列**，见 `models.py:1761`；**不要**用 legacy `expert_id` 列 L1759)；L1114 的 User JOIN 如需达人代表 user，改走 `ExpertMember(owner) → User` |
 
 ### 7.3 Phase A 写路径改造
 
@@ -543,6 +543,10 @@ Phase A 重点覆盖：
 ## 修订历史
 
 - **2026-04-19 v1.0** 初始 spec，§7 代码改造列 "11 处 TaskExpert + 10 处 FeaturedTaskExpert"（基于早期 Explore agent audit）
+- **2026-04-19 v1.8** 第八轮核验，legacy/新列并存的精确改造：
+  - 发现 `ServiceApplication` 有 `expert_id` (FK→task_experts, legacy, L1759) + `new_expert_id` (FK→experts, L1761) 两列并存；`TaskExpertService` 有 `expert_id` (FK→task_experts) + `owner_type`/`owner_id` 并存；`Activity` 有 `expert_id` (FK→users，user_id 语义) + `owner_type`/`owner_id` 并存
+  - Spec v1.7 §7.2.7 AI 工具层改造仅说"通过 owner_id 查"过粗，没明确三处各自该用哪个新列。重写为具体列名对照：`ServiceApplication.new_expert_id`、`TaskExpertService.owner_type+owner_id`、`Activity.owner_type+owner_id`
+  - 核心 pitfall：L2154 `activity.expert_id` 的 FK 是 **users.id**（legacy 代表 user），不是 TaskExpert.id；继续用 legacy 列不会匹配 Phase A 的 team_id 语义
 - **2026-04-19 v1.7** 第七轮核验，测试基础设施 + 调度确认：
   - 发现 spec §8.1 假设用 testcontainers / pytest-postgresql **未成立**—仓库零引用这两个包。实际测试基础设施是 `backend/tests/conftest.py` 的 `db` fixture（连 `TEST_DATABASE_URL` 或 `DATABASE_URL` 的真实 PG；CI 里由 service 提供，本地需自己跑 PG）。SQLite fallback 不支持 migration 209 的 JSONB cast / DO block 语法。§8.1 改为用现有 fixture 模式 + 新增 `migrated_db` fixture
   - 确认 `update_all_featured_task_experts_response_time` **是活跃调度**：`celery_tasks.py:48/469` + `task_scheduler.py:419/1131`（每天 UTC 3:00）+ `main.py:976` (legacy fallback 调 deprecated wrapper)，有 `backend/docs/TASK_SCHEDULER_GUIDE.md` #24 文档。Spec v1.6 的 "writing-plans 阶段再确认" 改为直接列出所有调度点
