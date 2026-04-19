@@ -113,10 +113,13 @@ async def get_my_service_applications(
             owner = await async_crud.async_user_crud.get_user_by_id(db, app.service_owner_id)
             if owner:
                 app_dict["owner_name"] = owner.name
-        elif app.expert_id:
-            expert = await db.get(models.TaskExpert, app.expert_id)
-            if expert:
-                app_dict["owner_name"] = expert.expert_name
+        elif app.new_expert_id:
+            # 用 new_expert_id (FK → experts.id, team_id 语义)
+            # 而非 legacy expert_id (FK → task_experts.id, user_id 语义)
+            from app.models_expert import Expert
+            expert_team = await db.get(Expert, app.new_expert_id)
+            if expert_team:
+                app_dict["owner_name"] = expert_team.name
         items.append(app_dict)
     
     return {
