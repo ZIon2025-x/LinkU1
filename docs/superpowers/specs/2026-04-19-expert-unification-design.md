@@ -102,103 +102,17 @@ CREATE INDEX IF NOT EXISTS ix_experts_success_rate ON experts(success_rate);
 ### 6.3 Migration SQL 骨架
 
 ```sql
-BEGIN;
+-- 注意: backend/app/db_migrations.py 的 execute_sql_file 会按 statement 拆分执行,
+--       每条 statement 独立 commit;BEGIN/COMMIT 不构成原子事务。因此:
+--       (1) ALTER TABLE 放外部,幂等 IF NOT EXISTS 保证重跑无副作用
+--       (2) 所有 UPDATE + 验证打包进一个大 DO $$ ... $$ 块作为单个 statement,
+--           psycopg2 把它当一条 SQL 执行,DO 内部 RAISE EXCEPTION 会回滚整个 DO 块
 
--- Schema 变更
+-- Schema 变更 (ALTER 不能放 DO 内部)
 ALTER TABLE experts ADD COLUMN IF NOT EXISTS success_rate FLOAT NOT NULL DEFAULT 0.0;
 CREATE INDEX IF NOT EXISTS ix_experts_success_rate ON experts(success_rate);
 
--- 1. 统计字段 (从 task_experts,TE 权威的 rating/completed_tasks/total_services;
---    completion_rate 不从 TE 取 — TaskExpert 模型未定义该字段,DB 层虽有列但无人维护)
-UPDATE experts e
-SET rating          = COALESCE(te.rating, e.rating),
-    total_services  = COALESCE(te.total_services, e.total_services),
-    completed_tasks = COALESCE(te.completed_tasks, e.completed_tasks),
-    is_official     = COALESCE(te.is_official, e.is_official),
-    official_badge  = COALESCE(te.official_badge, e.official_badge),
-    updated_at      = NOW()
-FROM _expert_id_migration_map m
-JOIN task_experts te ON te.id = m.old_id
-WHERE e.id = m.new_id
-  AND (te.rating IS DISTINCT FROM e.rating
-    OR te.total_services IS DISTINCT FROM e.total_services
-    OR te.completed_tasks IS DISTINCT FROM e.completed_tasks);
-
--- 2. 基础展示字段 (updated_at 较新一侧为准)
-UPDATE experts e
-SET name   = CASE WHEN te.updated_at > e.updated_at
-                  THEN COALESCE(te.expert_name, e.name) ELSE e.name END,
-    bio    = CASE WHEN te.updated_at > e.updated_at
-                  THEN COALESCE(te.bio, e.bio) ELSE e.bio END,
-    avatar = CASE WHEN te.updated_at > e.updated_at
-                  THEN COALESCE(te.avatar, e.avatar) ELSE e.avatar END
-FROM _expert_id_migration_map m
-JOIN task_experts te ON te.id = m.old_id
-WHERE e.id = m.new_id;
-
--- 3. 聚合指标回填 (覆盖式 — FTE 是从 reviews 聚合得到的权威值)
---    同步 completion_rate + success_rate
-UPDATE experts e
-SET completion_rate = COALESCE(fte.completion_rate, e.completion_rate),
-    success_rate    = COALESCE(fte.success_rate, e.success_rate)
-FROM _expert_id_migration_map m
-JOIN featured_task_experts fte ON fte.user_id = m.old_id
-WHERE e.id = m.new_id
-  AND (fte.completion_rate IS DISTINCT FROM e.completion_rate
-    OR fte.success_rate    IS DISTINCT FROM e.success_rate);
-
--- 4. 画像字段补刷 (补 migration 188 漏项; COALESCE 保留 Expert 已有值)
-UPDATE experts e
-SET bio_en             = COALESCE(e.bio_en, fte.bio_en),
-    expertise_areas    = COALESCE(e.expertise_areas,
-        CASE WHEN fte.expertise_areas IS NOT NULL AND fte.expertise_areas <> ''
-             THEN fte.expertise_areas::jsonb END),
-    expertise_areas_en = COALESCE(e.expertise_areas_en,
-        CASE WHEN fte.expertise_areas_en IS NOT NULL AND fte.expertise_areas_en <> ''
-             THEN fte.expertise_areas_en::jsonb END),
-    featured_skills    = COALESCE(e.featured_skills,
-        CASE WHEN fte.featured_skills IS NOT NULL AND fte.featured_skills <> ''
-             THEN fte.featured_skills::jsonb END),
-    featured_skills_en = COALESCE(e.featured_skills_en,
-        CASE WHEN fte.featured_skills_en IS NOT NULL AND fte.featured_skills_en <> ''
-             THEN fte.featured_skills_en::jsonb END),
-    achievements       = COALESCE(e.achievements,
-        CASE WHEN fte.achievements IS NOT NULL AND fte.achievements <> ''
-             THEN fte.achievements::jsonb END),
-    achievements_en    = COALESCE(e.achievements_en,
-        CASE WHEN fte.achievements_en IS NOT NULL AND fte.achievements_en <> ''
-             THEN fte.achievements_en::jsonb END),
-    response_time      = COALESCE(e.response_time, fte.response_time),
-    response_time_en   = COALESCE(e.response_time_en, fte.response_time_en),
-    category           = COALESCE(e.category, fte.category),
-    location           = COALESCE(e.location, fte.location),
-    display_order      = CASE WHEN e.display_order = 0
-                              THEN COALESCE(fte.display_order, 0)
-                              ELSE e.display_order END,
-    is_verified        = CASE WHEN e.is_verified = false
-                              THEN (COALESCE(fte.is_verified, 0) <> 0)
-                              ELSE e.is_verified END,
-    user_level         = CASE WHEN e.user_level = 'normal'
-                              THEN COALESCE(fte.user_level, 'normal')
-                              ELSE e.user_level END
-FROM featured_task_experts fte
-JOIN _expert_id_migration_map m ON m.old_id = fte.user_id
-WHERE e.id = m.new_id;
-
--- 5. FeaturedExpertV2 统计补刷
-UPDATE featured_experts_v2 fv2
-SET category      = COALESCE(fv2.category, fte.category),
-    is_featured   = CASE WHEN fv2.is_featured = false
-                         THEN COALESCE(fte.is_featured, 0) <> 0
-                         ELSE fv2.is_featured END,
-    display_order = CASE WHEN fv2.display_order = 0
-                         THEN COALESCE(fte.display_order, 0)
-                         ELSE fv2.display_order END
-FROM _expert_id_migration_map m
-JOIN featured_task_experts fte ON fte.user_id = m.old_id
-WHERE fv2.expert_id = m.new_id;
-
--- 6. 验证
+-- 数据回填 + 验证 (整个 DO 块作为一个 statement,DO 内 RAISE EXCEPTION 回滚整个块)
 DO $$
 DECLARE
     orphan_count INTEGER;
@@ -206,6 +120,7 @@ DECLARE
     stats_mismatch INTEGER;
     aggregate_mismatch INTEGER;
 BEGIN
+    -- 前置 orphan 检查: 任何 task_expert 没有映射即中止回滚
     SELECT COUNT(*) INTO orphan_count
     FROM task_experts te
     WHERE NOT EXISTS (SELECT 1 FROM _expert_id_migration_map m WHERE m.old_id = te.id);
@@ -213,6 +128,96 @@ BEGIN
         RAISE EXCEPTION '209: % orphan task_experts without mapping — run migration 185 first', orphan_count;
     END IF;
 
+    -- 1. 统计字段 (TE 权威: rating/completed_tasks/total_services + is_official/official_badge)
+    --    completion_rate 不从 TE 取 (TaskExpert 模型未定义,DB 列无维护)
+    UPDATE experts e
+    SET rating          = COALESCE(te.rating, e.rating),
+        total_services  = COALESCE(te.total_services, e.total_services),
+        completed_tasks = COALESCE(te.completed_tasks, e.completed_tasks),
+        is_official     = COALESCE(te.is_official, e.is_official),
+        official_badge  = COALESCE(te.official_badge, e.official_badge),
+        updated_at      = NOW()
+    FROM _expert_id_migration_map m
+    JOIN task_experts te ON te.id = m.old_id
+    WHERE e.id = m.new_id
+      AND (te.rating IS DISTINCT FROM e.rating
+        OR te.total_services IS DISTINCT FROM e.total_services
+        OR te.completed_tasks IS DISTINCT FROM e.completed_tasks);
+
+    -- 2. 基础展示字段 (updated_at 较新一侧为准)
+    UPDATE experts e
+    SET name   = CASE WHEN te.updated_at > e.updated_at
+                      THEN COALESCE(te.expert_name, e.name) ELSE e.name END,
+        bio    = CASE WHEN te.updated_at > e.updated_at
+                      THEN COALESCE(te.bio, e.bio) ELSE e.bio END,
+        avatar = CASE WHEN te.updated_at > e.updated_at
+                      THEN COALESCE(te.avatar, e.avatar) ELSE e.avatar END
+    FROM _expert_id_migration_map m
+    JOIN task_experts te ON te.id = m.old_id
+    WHERE e.id = m.new_id;
+
+    -- 3. 聚合指标回填 (FTE 权威 — 由 crud/task_expert.py.update_task_expert_bio 聚合写入)
+    UPDATE experts e
+    SET completion_rate = COALESCE(fte.completion_rate, e.completion_rate),
+        success_rate    = COALESCE(fte.success_rate, e.success_rate)
+    FROM _expert_id_migration_map m
+    JOIN featured_task_experts fte ON fte.user_id = m.old_id
+    WHERE e.id = m.new_id
+      AND (fte.completion_rate IS DISTINCT FROM e.completion_rate
+        OR fte.success_rate    IS DISTINCT FROM e.success_rate);
+
+    -- 4. 画像字段补刷 (补 migration 188 漏项; COALESCE 保留 Expert 已有值)
+    UPDATE experts e
+    SET bio_en             = COALESCE(e.bio_en, fte.bio_en),
+        expertise_areas    = COALESCE(e.expertise_areas,
+            CASE WHEN fte.expertise_areas IS NOT NULL AND fte.expertise_areas <> ''
+                 THEN fte.expertise_areas::jsonb END),
+        expertise_areas_en = COALESCE(e.expertise_areas_en,
+            CASE WHEN fte.expertise_areas_en IS NOT NULL AND fte.expertise_areas_en <> ''
+                 THEN fte.expertise_areas_en::jsonb END),
+        featured_skills    = COALESCE(e.featured_skills,
+            CASE WHEN fte.featured_skills IS NOT NULL AND fte.featured_skills <> ''
+                 THEN fte.featured_skills::jsonb END),
+        featured_skills_en = COALESCE(e.featured_skills_en,
+            CASE WHEN fte.featured_skills_en IS NOT NULL AND fte.featured_skills_en <> ''
+                 THEN fte.featured_skills_en::jsonb END),
+        achievements       = COALESCE(e.achievements,
+            CASE WHEN fte.achievements IS NOT NULL AND fte.achievements <> ''
+                 THEN fte.achievements::jsonb END),
+        achievements_en    = COALESCE(e.achievements_en,
+            CASE WHEN fte.achievements_en IS NOT NULL AND fte.achievements_en <> ''
+                 THEN fte.achievements_en::jsonb END),
+        response_time      = COALESCE(e.response_time, fte.response_time),
+        response_time_en   = COALESCE(e.response_time_en, fte.response_time_en),
+        category           = COALESCE(e.category, fte.category),
+        location           = COALESCE(e.location, fte.location),
+        display_order      = CASE WHEN e.display_order = 0
+                                  THEN COALESCE(fte.display_order, 0)
+                                  ELSE e.display_order END,
+        is_verified        = CASE WHEN e.is_verified = false
+                                  THEN (COALESCE(fte.is_verified, 0) <> 0)
+                                  ELSE e.is_verified END,
+        user_level         = CASE WHEN e.user_level = 'normal'
+                                  THEN COALESCE(fte.user_level, 'normal')
+                                  ELSE e.user_level END
+    FROM featured_task_experts fte
+    JOIN _expert_id_migration_map m ON m.old_id = fte.user_id
+    WHERE e.id = m.new_id;
+
+    -- 5. FeaturedExpertV2 精简字段补刷
+    UPDATE featured_experts_v2 fv2
+    SET category      = COALESCE(fv2.category, fte.category),
+        is_featured   = CASE WHEN fv2.is_featured = false
+                             THEN COALESCE(fte.is_featured, 0) <> 0
+                             ELSE fv2.is_featured END,
+        display_order = CASE WHEN fv2.display_order = 0
+                             THEN COALESCE(fte.display_order, 0)
+                             ELSE fv2.display_order END
+    FROM _expert_id_migration_map m
+    JOIN featured_task_experts fte ON fte.user_id = m.old_id
+    WHERE fv2.expert_id = m.new_id;
+
+    -- 6. 后置验证
     SELECT COUNT(*) INTO service_orphan_count
     FROM task_expert_services
     WHERE service_type = 'expert' AND owner_id IS NULL;
@@ -243,15 +248,14 @@ BEGIN
     RAISE NOTICE '209 complete: orphans=%, service_orphans=%, stats_mismatch=%, aggregate_mismatch=%',
         orphan_count, service_orphan_count, stats_mismatch, aggregate_mismatch;
 END $$;
-
-COMMIT;
 ```
 
 ### 6.4 特性
 
 - **幂等**：`IS DISTINCT FROM` 过滤无变动行，重跑零副作用
 - **CASCADE 安全**：仅 UPDATE，无 INSERT/DELETE/DROP
-- **失败即中止**：orphan 检测直接 EXCEPTION 回滚
+- **原子性**：所有 UPDATE + 验证在一个 DO block 内，作为单个 statement 被 psycopg2 执行。DO 内 `RAISE EXCEPTION` 会回滚整个 DO 块（含 5 个 UPDATE）。ALTER TABLE 和 CREATE INDEX 在 DO 外部，`IF NOT EXISTS` 保证幂等，即使 DO 块回滚也不冲突
+- **已考虑 `execute_sql_file` 行为**：该 executor 按 statement 拆分 + 逐条 commit，普通的 `BEGIN; ... COMMIT;` 不构成事务。DO block 包裹是应对此 executor 的标准做法（与 migration 185 / 209 的设计一致）
 
 ## 7. 代码改造详解
 
@@ -464,10 +468,12 @@ Phase A 重点覆盖：
 | Step | 动作 | 回滚 |
 |------|------|------|
 | T-1 | PR 进入 review | — |
-| T+0 | Staging Railway deploy：migration 209 自动跑 + backend 代码部署 | migration 事务回滚；代码 revert |
+| T+0 | Staging Railway deploy：migration 209 自动跑 (ALTER + DO block) + backend 代码部署 | DO 块失败 → 整块数据变更回滚；ALTER 幂等，IF NOT EXISTS 保护下次重跑；人工修数据后重启 |
+| T+0.1 | **强制**检查 staging backend 启动日志，确认 migration 209 产生 `209 complete: orphans=0, ...` NOTICE。若看到 `RAISE EXCEPTION` 则立刻人工介入修复数据（不 revert code） | — |
 | T+0.5 | Staging smoke test（§8.2 5 流程） | — |
 | T+1 | Prod Railway deploy：migration 209 自动跑 + backend 代码 | 同 T+0 |
-| T+2 | Prod 监控 30min（Sentry 搜 `AttributeError: TaskExpert`） | git revert + redeploy；数据无损（TE 表仍在） |
+| T+1.1 | 同 T+0.1 — 强制看 prod logs 确认 migration 209 成功 | — |
+| T+2 | Prod 监控 30min（Sentry 搜 `AttributeError: TaskExpert` / `column experts.success_rate does not exist`） | git revert + redeploy；数据无损（TE 表仍在） |
 
 ## 10. 风险清单
 
@@ -482,6 +488,7 @@ Phase A 重点覆盖：
 | R7 | `expert_user_id` 字段值从 user_id 变 team_id 破坏客户端 | 高 | **Q-B 决策：同时返回 `expert_user_id` + `expert_team_id`**；Phase D 再删前者 |
 | R8 | ALTER TABLE 锁表 | 低 | `ADD COLUMN ... DEFAULT 0.0` Postgres 11+ fast default |
 | R9 | 大 PR 审查疲劳（§7 audit 显示实际改动 25+ 点 / 15 文件，含 AI 工具层 4 个 tool 大改） | 中-高 | PR 按 §7.2.1-7.2.7 的 7 个功能组分 commit，每个 commit 单一 scope；reviewer 可分组审 |
+| R10 | Migration 209 的 DO block 失败（e.g., orphan），但 ALTER TABLE 已成功且 backend 启动继续，代码读到 `Expert.success_rate = 0.0` default 值而非真实值 | 中 | §6.4 注明 DO block 是原子单元；§9 发布流程**必须**部署后看 migration logs 确认 `209 complete: ...` NOTICE 出现，若出现 RAISE EXCEPTION 立即人工修复（不是 revert code —— 数据修好再重启） |
 
 ## 11. Open Questions 决议
 
@@ -515,6 +522,12 @@ Phase A 重点覆盖：
 ## 修订历史
 
 - **2026-04-19 v1.0** 初始 spec，§7 代码改造列 "11 处 TaskExpert + 10 处 FeaturedTaskExpert"（基于早期 Explore agent audit）
+- **2026-04-19 v1.4** 第四轮核验，转向部署/执行机制层：
+  - 发现 backend `execute_sql_file` (`db_migrations.py:193-256`) 按 statement 拆分 + 逐条 commit，**不是原子事务**；`BEGIN/COMMIT` 被当独立语句。Spec v1.3 声称的"失败即中止"不成立
+  - 重构 migration 209：ALTER TABLE / CREATE INDEX 保留在外部（幂等 IF NOT EXISTS），所有 UPDATE + 验证打包进**一个大 DO block**，作为单 statement。DO 内 `RAISE EXCEPTION` 回滚整个 DO 块；ALTER 不回滚但重跑无副作用
+  - §6.4 特性改写：新增"原子性"和"已考虑 execute_sql_file 行为"说明
+  - §9 发布流程强制加 T+0.1 / T+1.1 步骤：必须部署后检查 migration logs 确认 `209 complete: ...` NOTICE 出现
+  - §10 新增 R10 风险：DO 失败 + ALTER 成功时的数据不一致 → 人工修复而非 revert code
 - **2026-04-19 v1.3** 第三轮核验，转向 SQL/字段层：
   - 发现 `TaskExpert` SQLAlchemy 模型**未定义** `completion_rate` 字段（DB 层虽有此列但无代码维护），migration 185 引用 `te.completion_rate` 是 DB 层直接访问。v1.2 的 §6.2/§6.3 SQL 仍把 completion_rate 归到 TE 权威，**是错的**
   - 修正：completion_rate 权威源改为 `featured_task_experts`（由 `crud/task_expert.py.update_task_expert_bio` L158 维护）
