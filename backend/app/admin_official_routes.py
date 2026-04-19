@@ -55,10 +55,11 @@ async def get_current_admin_async(
 
 # ── 工具函数 ───────────────────────────────────────
 
-async def _get_official_expert(db: AsyncSession) -> models.TaskExpert:
-    """获取官方达人账号，不存在则报错"""
+async def _get_official_expert(db: AsyncSession):
+    """获取官方达人团队，不存在则报错"""
+    from app.models_expert import Expert
     result = await db.execute(
-        select(models.TaskExpert).where(models.TaskExpert.is_official == True)
+        select(Expert).where(Expert.is_official == True).limit(1)
     )
     expert = result.scalar_one_or_none()
     if not expert:
@@ -198,19 +199,34 @@ async def get_official_account(
     admin: models.AdminUser = Depends(get_current_admin_async),
 ):
     """获取当前官方账号信息"""
+    from app.models_expert import Expert, ExpertMember
     result = await db.execute(
-        select(models.TaskExpert, models.User)
-        .join(models.User, models.User.id == models.TaskExpert.id)
-        .where(models.TaskExpert.is_official == True)
+        select(Expert).where(Expert.is_official == True).limit(1)
     )
-    row = result.first()
-    if not row:
+    expert = result.scalar_one_or_none()
+    if not expert:
         return {"official_account": None}
-    expert, user = row
+
+    # 从 ExpertMember(owner) JOIN User 取代表用户
+    owner_row = await db.execute(
+        select(ExpertMember, models.User)
+        .join(models.User, models.User.id == ExpertMember.user_id)
+        .where(
+            ExpertMember.expert_id == expert.id,
+            ExpertMember.role == "owner",
+            ExpertMember.status == "active",
+        )
+        .limit(1)
+    )
+    rec = owner_row.first()
+    if not rec:
+        # 数据异常(Expert 存在但无 active owner),不崩
+        return {"official_account": None}
+    _member, owner_user = rec
     return {
         "official_account": {
-            "user_id": expert.id,
-            "name": user.name,
+            "user_id": owner_user.id,      # 保持兼容 key: 填代表 user 的 id
+            "name": owner_user.name,
             "badge": expert.official_badge,
             "avatar": expert.avatar,
             "status": expert.status,
