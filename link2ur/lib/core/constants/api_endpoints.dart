@@ -233,6 +233,8 @@ class ApiEndpoints {
       '/api/applications/$applicationId/negotiate-response';
   static String formalApply(int applicationId) =>
       '/api/applications/$applicationId/formal-apply';
+  static String payAndFinalize(int applicationId) =>
+      '/api/applications/$applicationId/pay-and-finalize';
   static String closeConsultation(int applicationId) =>
       '/api/applications/$applicationId/close';
   static String approveServiceApplication(int applicationId) =>

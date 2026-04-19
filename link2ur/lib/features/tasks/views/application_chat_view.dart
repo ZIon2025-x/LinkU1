@@ -485,8 +485,43 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         listenWhen: (prev, curr) =>
             prev.actionMessage != curr.actionMessage ||
             prev.errorMessage != curr.errorMessage ||
-            prev.errorCode != curr.errorCode,
+            prev.errorCode != curr.errorCode ||
+            prev.payAndFinalizeData != curr.payAndFinalizeData,
         listener: (context, expertState) {
+          // pay-and-finalize 成功 → 跳转 ApprovalPaymentPage
+          final payData = expertState.payAndFinalizeData;
+          if (payData != null) {
+            final clientSecret = payData['client_secret'] as String?;
+            final taskIdRaw = payData['task_id'];
+            final taskId = taskIdRaw is int
+                ? taskIdRaw
+                : int.tryParse(taskIdRaw?.toString() ?? '');
+            if (clientSecret != null && clientSecret.isNotEmpty && taskId != null) {
+              context.read<TaskExpertBloc>().add(
+                    const TaskExpertClearPayAndFinalizeData(),
+                  );
+              final accepted = AcceptPaymentData(
+                taskId: taskId,
+                clientSecret: clientSecret,
+                customerId: payData['customer_id']?.toString() ?? '',
+                ephemeralKeySecret:
+                    payData['ephemeral_key_secret']?.toString() ?? '',
+                amountDisplay: payData['amount_display']?.toString(),
+                paymentExpiresAt: payData['payment_expires_at']?.toString(),
+                taskSource: 'expert_service',
+                currency: (payData['currency'] as String?) ?? 'GBP',
+              );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                pushWithSwipeBack<bool>(
+                  context,
+                  ApprovalPaymentPage(paymentData: accepted),
+                );
+              });
+              return;
+            }
+          }
+
           // Handle errors — prefer backend errorCode over raw errorMessage for l10n
           if (expertState.errorMessage != null || expertState.errorCode != null) {
             final text = expertState.errorCode != null

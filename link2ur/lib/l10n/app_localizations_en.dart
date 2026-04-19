@@ -11156,6 +11156,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmAndPay => 'Confirm & Pay';
 
   @override
+  String get confirmAndPayHint =>
+      'Both sides agreed on the price. Confirm to create the order and complete payment to start the task.';
+
+  @override
   String get chatStarted => 'Chat channel opened';
 
   @override

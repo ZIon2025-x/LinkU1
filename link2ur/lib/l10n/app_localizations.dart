@@ -20543,6 +20543,12 @@ abstract class AppLocalizations {
   /// **'Confirm & Pay'**
   String get confirmAndPay;
 
+  /// No description provided for @confirmAndPayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Both sides agreed on the price. Confirm to create the order and complete payment to start the task.'**
+  String get confirmAndPayHint;
+
   /// No description provided for @chatStarted.
   ///
   /// In en, this message translates to:

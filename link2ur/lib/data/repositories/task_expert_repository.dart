@@ -792,6 +792,31 @@ class TaskExpertRepository {
     return response.data!;
   }
 
+  /// 申请方在 price_agreed 下确认订单并进入付款（仅团队咨询）
+  Future<Map<String, dynamic>> payAndFinalizeApplication(
+    int applicationId, {
+    String? deadline,
+    bool? isFlexible,
+  }) async {
+    final body = <String, dynamic>{};
+    if (deadline != null) body['deadline'] = deadline;
+    if (isFlexible != null) body['is_flexible'] = isFlexible;
+
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.payAndFinalize(applicationId),
+      data: body,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(
+        response.errorCode ?? response.message ?? '创建订单失败',
+        errorCode: response.errorCode,
+      );
+    }
+
+    return response.data!;
+  }
+
   /// 达人拒绝申请
   Future<void> rejectServiceApplication(int applicationId, {String? reason}) async {
     final response = await _apiService.post(

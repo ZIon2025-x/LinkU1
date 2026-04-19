@@ -10707,6 +10707,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirmAndPay => '确认并付款';
 
   @override
+  String get confirmAndPayHint => '双方已就价格达成一致。确认后将创建订单,请立即完成付款以开始任务。';
+
+  @override
   String get chatStarted => '聊天通道已开启';
 
   @override
@@ -23848,6 +23851,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get confirmAndPay => '確認並付款';
+
+  @override
+  String get confirmAndPayHint => '雙方已就價格達成一致。確認後將創建訂單,請立即完成付款以開始任務。';
 
   @override
   String get chatStarted => '聊天通道已開啟';

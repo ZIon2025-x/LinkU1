@@ -151,6 +151,27 @@ class TaskExpertOwnerApproveApplication extends TaskExpertEvent {
   List<Object?> get props => [applicationId];
 }
 
+/// 申请方在 price_agreed 下确认订单并付款（仅团队咨询）
+class TaskExpertPayAndFinalize extends TaskExpertEvent {
+  const TaskExpertPayAndFinalize(
+    this.applicationId, {
+    this.deadline,
+    this.isFlexible,
+  });
+
+  final int applicationId;
+  final String? deadline;
+  final bool? isFlexible;
+
+  @override
+  List<Object?> get props => [applicationId, deadline, isFlexible];
+}
+
+/// 清除 pay-and-finalize 数据(view 导航后触发)
+class TaskExpertClearPayAndFinalizeData extends TaskExpertEvent {
+  const TaskExpertClearPayAndFinalizeData();
+}
+
 /// 达人拒绝申请
 class TaskExpertRejectApplication extends TaskExpertEvent {
   const TaskExpertRejectApplication(this.applicationId, {this.reason});
@@ -489,6 +510,7 @@ class TaskExpertState extends Equatable {
     this.serviceQuestionsTotalCount = 0,
     this.serviceQuestionsCurrentPage = 1,
     this.consultationData,
+    this.payAndFinalizeData,
     this.errorCode,
   });
 
@@ -546,6 +568,10 @@ class TaskExpertState extends Equatable {
   /// 咨询创建后返回的数据
   final Map<String, dynamic>? consultationData;
 
+  /// pay-and-finalize 成功后端返回的支付信息(client_secret/customer_id/ephemeral_key_secret/amount)
+  /// View 监听此字段 → 跳转 ApprovalPaymentPage → 清除
+  final Map<String, dynamic>? payAndFinalizeData;
+
   /// 后端稳定错误码（例: CONSULTATION_ALREADY_EXISTS, SERVICE_INACTIVE 等），
   /// 用于 UI 按错误码映射 l10n 文案。配合 [errorMessage] 使用。
   final String? errorCode;
@@ -593,6 +619,8 @@ class TaskExpertState extends Equatable {
     int? serviceQuestionsCurrentPage,
     Map<String, dynamic>? consultationData,
     bool clearConsultationData = false,
+    Map<String, dynamic>? payAndFinalizeData,
+    bool clearPayAndFinalizeData = false,
     String? errorCode,
     bool clearErrorCode = false,
   }) {
@@ -636,6 +664,9 @@ class TaskExpertState extends Equatable {
       consultationData: clearConsultationData
           ? null
           : (consultationData ?? this.consultationData),
+      payAndFinalizeData: clearPayAndFinalizeData
+          ? null
+          : (payAndFinalizeData ?? this.payAndFinalizeData),
       errorCode: clearErrorCode ? null : (errorCode ?? this.errorCode),
     );
   }
@@ -677,6 +708,7 @@ class TaskExpertState extends Equatable {
         serviceQuestionsTotalCount,
         serviceQuestionsCurrentPage,
         consultationData,
+        payAndFinalizeData,
         errorCode,
       ];
 }
@@ -709,6 +741,10 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertLoadExpertApplications>(_onLoadExpertApplications);
     on<TaskExpertApproveApplication>(_onApproveApplication);
     on<TaskExpertOwnerApproveApplication>(_onOwnerApproveApplication);
+    on<TaskExpertPayAndFinalize>(_onPayAndFinalize);
+    on<TaskExpertClearPayAndFinalizeData>(
+      (event, emit) => emit(state.copyWith(clearPayAndFinalizeData: true)),
+    );
     on<TaskExpertRejectApplication>(_onRejectApplication);
     on<TaskExpertCounterOffer>(_onCounterOffer);
     on<TaskExpertLoadMyExpertApplicationStatus>(_onLoadMyExpertApplicationStatus);
@@ -1263,6 +1299,47 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       ));
     }
   }
+
+  Future<void> _onPayAndFinalize(
+    TaskExpertPayAndFinalize event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      final result = await _taskExpertRepository.payAndFinalizeApplication(
+        event.applicationId,
+        deadline: event.deadline,
+        isFlexible: event.isFlexible,
+      );
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'order_created_pending_payment',
+        payAndFinalizeData: result,
+        clearErrorCode: true,
+      ));
+
+      add(const TaskExpertLoadExpertApplications());
+    } on TaskExpertException catch (e) {
+      AppLogger.error('Failed to pay-and-finalize', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to pay-and-finalize', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
+    }
+  }
+
 
   Future<void> _onRejectApplication(
     TaskExpertRejectApplication event,

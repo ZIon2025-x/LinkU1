@@ -4865,6 +4865,7 @@
   "agreeToChat": "同意溝通",
   "modifyQuote": "修改報價",
   "confirmAndPay": "確認並付款",
+  "confirmAndPayHint": "雙方已就價格達成一致。確認後將創建訂單,請立即完成付款以開始任務。",
   "chatStarted": "聊天通道已開啟",
   "priceProposed": "已提出新報價",
   "applicationChatting": "溝通中",

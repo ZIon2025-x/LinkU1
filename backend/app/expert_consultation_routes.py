@@ -501,17 +501,20 @@ async def negotiate_price(
             raise_http_error_with_code("service_not_found", 400, error_codes.SERVICE_NOT_FOUND)
         application.service_id = int(service_id)
     application.negotiated_price = price
+    application.expert_counter_price = None  # 新一轮议价,清掉对方前一次的价
     application.status = "negotiating"
     application.updated_at = get_utc_time()
 
     # 写议价卡片消息（镜像 task_chat_routes 模式）
-    if application.task_id:
+    task = await db.get(models.Task, application.task_id) if application.task_id else None
+    if task:
+        receiver_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
         currency = application.currency or "GBP"
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
         _msg = task_counter_offer(user_name=user_name, currency=currency, price=float(price))
         system_message = models.Message(
-            sender_id=None,
-            receiver_id=None,
+            sender_id=current_user.id,
+            receiver_id=str(receiver_id) if receiver_id else None,
             task_id=application.task_id,
             application_id=None,
             message_type="negotiation",
@@ -580,17 +583,20 @@ async def quote_price(
             raise_http_error_with_code("service_not_found", 400, error_codes.SERVICE_NOT_FOUND)
         application.service_id = int(service_id)
     application.expert_counter_price = price
+    application.negotiated_price = None  # 新一轮报价,清掉对方前一次的价
     application.status = "negotiating"
     application.updated_at = get_utc_time()
 
     # 写报价卡片消息（镜像 task_chat_routes 模式）
-    if application.task_id:
+    task = await db.get(models.Task, application.task_id) if application.task_id else None
+    if task:
+        receiver_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
         currency = application.currency or "GBP"
         user_name = current_user.name if hasattr(current_user, "name") else "达人"
         _msg = task_counter_offer(user_name=user_name, currency=currency, price=float(price))
         system_message = models.Message(
-            sender_id=None,
-            receiver_id=None,
+            sender_id=current_user.id,
+            receiver_id=str(receiver_id) if receiver_id else None,
             task_id=application.task_id,
             application_id=None,
             message_type="quote",
@@ -661,7 +667,14 @@ async def respond_to_negotiation(
         raise HTTPException(status_code=400, detail="action 必须为 accept/reject/counter")
 
     if action == "accept":
-        application.final_price = application.expert_counter_price or application.negotiated_price
+        # 只能接受对方的报价,不能自己同意自己提的价
+        other_side_price = (
+            application.expert_counter_price if is_applicant
+            else application.negotiated_price
+        )
+        if other_side_price is None:
+            raise HTTPException(status_code=400, detail="尚未收到对方报价,不能接受")
+        application.final_price = other_side_price
         application.status = "price_agreed"
         application.price_agreed_at = get_utc_time()
     elif action == "reject":
@@ -695,17 +708,21 @@ async def respond_to_negotiation(
             if not svc_result.scalar_one_or_none():
                 raise_http_error_with_code("service_not_found", 400, error_codes.SERVICE_NOT_FOUND)
             application.service_id = int(service_id)
-        # 按身份区分写哪个字段(不再依赖匿名 fallback)
+        # 按身份区分写哪个字段(不再依赖匿名 fallback),并清掉对方前一次的价
         if is_applicant:
             application.negotiated_price = price
+            application.expert_counter_price = None
         else:
             application.expert_counter_price = price
+            application.negotiated_price = None
         application.status = "negotiating"
 
     application.updated_at = get_utc_time()
 
     # 写协商结果卡片消息（镜像 task_chat_routes 模式）
-    if application.task_id:
+    task = await db.get(models.Task, application.task_id) if application.task_id else None
+    if task:
+        receiver_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
         currency = application.currency or "GBP"
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
         if action == "accept":
@@ -722,8 +739,8 @@ async def respond_to_negotiation(
             message_type = "counter_offer"
             meta_price = float(price)
         system_message = models.Message(
-            sender_id=None,
-            receiver_id=None,
+            sender_id=current_user.id,
+            receiver_id=str(receiver_id) if receiver_id else None,
             task_id=application.task_id,
             application_id=None,
             message_type=message_type,
@@ -766,8 +783,103 @@ async def formal_apply(
     application.is_flexible = body.get("is_flexible", 0)
     application.status = "pending"
     application.updated_at = get_utc_time()
+
+    # 写系统卡片:申请已正式提交,等待服务方批准
+    if application.task_id:
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            task_id=application.task_id,
+            application_id=None,
+            message_type="system",
+            conversation_type="task",
+            content="申请已正式提交,等待服务方批准",
+            meta=json.dumps({
+                "content_en": "Application submitted. Waiting for provider approval.",
+                "event": "formal_apply_submitted",
+            }),
+            created_at=get_utc_time(),
+        )
+        db.add(system_message)
+
     await db.commit()
     return {"status": "pending"}
+
+
+@consultation_router.post("/api/applications/{application_id}/pay-and-finalize")
+async def pay_and_finalize(
+    application_id: int,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """申请方在 price_agreed 状态下确认订单并进入付款。
+
+    团队咨询 → 复用 _approve_team_service_application;
+    个人服务 → 复用 user_service_application_routes.finalize_personal_service_application。
+    两条路径返回相同 shape(含 client_secret),供 Flutter 打开 Stripe payment sheet。
+    """
+    app_result = await db.execute(
+        select(models.ServiceApplication).where(models.ServiceApplication.id == application_id)
+    )
+    application = app_result.scalar_one_or_none()
+    if not application:
+        raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
+
+    if application.applicant_id != current_user.id:
+        raise HTTPException(status_code=403, detail="只有申请方可以确认付款")
+
+    if application.status != "price_agreed":
+        raise_http_error_with_code(
+            f"当前状态({application.status})不允许确认付款",
+            400,
+            error_codes.INVALID_STATUS_TRANSITION,
+        )
+
+    # 解析 body:deadline / is_flexible
+    deadline_val = body.get("deadline") if body else None
+    parsed_deadline = None
+    if deadline_val:
+        try:
+            from datetime import datetime as _dt
+            parsed_deadline = (
+                _dt.fromisoformat(deadline_val.replace("Z", "+00:00"))
+                if isinstance(deadline_val, str) else deadline_val
+            )
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="deadline 格式无效")
+    is_flexible_val = body.get("is_flexible") if body else None
+
+    if application.new_expert_id:
+        # 团队咨询:写 deadline/flex 后委托给 team helper
+        if parsed_deadline is not None:
+            application.deadline = parsed_deadline
+        if is_flexible_val is not None:
+            application.is_flexible = 1 if is_flexible_val else 0
+        return await _approve_team_service_application(
+            db=db,
+            request=request,
+            current_user=current_user,
+            application=application,
+        )
+
+    # 个人服务:加载服务提供方,调用 personal helper
+    if not application.service_owner_id:
+        raise HTTPException(status_code=400, detail="申请缺少服务提供方信息")
+    owner_user = await db.get(models.User, application.service_owner_id)
+    if not owner_user:
+        raise HTTPException(status_code=404, detail="服务提供方不存在")
+
+    from app.user_service_application_routes import finalize_personal_service_application
+    return await finalize_personal_service_application(
+        db=db,
+        request=request,
+        application=application,
+        owner_user=owner_user,
+        deadline_override=parsed_deadline,
+        is_flexible_override=is_flexible_val,
+    )
 
 
 async def _check_application_party(
@@ -1165,6 +1277,52 @@ async def _approve_team_service_application(
     except Exception as e:
         logger.warning(f"团队服务批准通知发送失败: {e}")
 
+    # 写系统卡片:订单已创建,请完成付款(owner 批准 / applicant pay-and-finalize 共用)
+    try:
+        order_msg = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            task_id=new_task.id,
+            application_id=None,
+            message_type="system",
+            conversation_type="task",
+            content="订单已创建,请完成付款以开始任务",
+            meta=json.dumps({
+                "content_en": "Order created. Please complete payment to start the task.",
+                "event": "order_created",
+            }),
+            created_at=get_utc_time(),
+        )
+        db.add(order_msg)
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"写入订单创建系统卡片失败: {e}")
+
+    # 创建 Stripe Customer + EphemeralKey(供 Flutter payment sheet 使用,与个人服务 helper 对称)
+    customer_id = None
+    ephemeral_key_secret = None
+    try:
+        from app.utils.stripe_utils import get_or_create_stripe_customer
+        customer_id = get_or_create_stripe_customer(applicant_user)
+        if customer_id and applicant_user and (
+            not applicant_user.stripe_customer_id
+            or applicant_user.stripe_customer_id != customer_id
+        ):
+            from sqlalchemy import update as _sa_update
+            await db.execute(
+                _sa_update(models.User)
+                .where(models.User.id == applicant_user.id)
+                .values(stripe_customer_id=customer_id)
+            )
+            await db.commit()
+        ephemeral_key = stripe.EphemeralKey.create(
+            customer=customer_id,
+            stripe_version="2025-01-27.acacia",
+        )
+        ephemeral_key_secret = ephemeral_key.secret
+    except Exception as e:
+        logger.warning(f"团队服务:创建 Stripe Customer / EphemeralKey 失败: {e}")
+
     return {
         "message": "申请已同意，请等待申请者完成支付",
         "application_id": application.id,
@@ -1175,6 +1333,8 @@ async def _approve_team_service_application(
         "amount": payment_intent.amount,
         "amount_display": f"{payment_intent.amount / 100:.2f}",
         "currency": (payment_intent.currency or "gbp").upper(),
+        "customer_id": customer_id,
+        "ephemeral_key_secret": ephemeral_key_secret,
         "taker_expert_id": taker_expert_id_value,
         "task": new_task,
     }
@@ -1261,17 +1421,20 @@ async def counter_offer(
 
     if price is not None:
         application.expert_counter_price = price
+        application.negotiated_price = None  # 新一轮还价,清掉对方前一次的价
     application.status = "negotiating"
     application.updated_at = get_utc_time()
 
     # 写还价卡片消息（镜像 task_chat_routes 模式）
-    if application.task_id and price is not None:
+    task = await db.get(models.Task, application.task_id) if application.task_id else None
+    if task and price is not None:
+        receiver_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
         currency = application.currency or "GBP"
         user_name = current_user.name if hasattr(current_user, "name") else "达人"
         _msg = task_counter_offer(user_name=user_name, currency=currency, price=float(price))
         system_message = models.Message(
-            sender_id=None,
-            receiver_id=None,
+            sender_id=current_user.id,
+            receiver_id=str(receiver_id) if receiver_id else None,
             task_id=application.task_id,
             application_id=None,
             message_type="counter_offer",

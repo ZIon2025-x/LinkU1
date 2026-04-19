@@ -364,9 +364,11 @@ class _NotificationListViewContentState
     }
 
     // ==================== 咨询议价 ====================
+    // 议价卡片渲染在 task chat 的 message 里（negotiation_accepted / counter_offer / quote），
+    // 任务详情页不显示。跳 chat 让用户能看到并操作卡片。
     if (type == 'consultation_update') {
       final id = taskId ?? relatedId;
-      if (id != null) context.safePush('/tasks/$id');
+      if (id != null) context.safePush('/task-chat/$id');
       return;
     }
 
@@ -384,7 +386,13 @@ class _NotificationListViewContentState
       case 'activity':
         if (relatedId != null) context.push('/activities/$relatedId');
         break;
+      // 议价/报价卡片在 chat 里渲染，跳 chat 让用户看到卡片
       case 'negotiation_offer':
+      case 'negotiation_rejected':
+      case 'price_proposal':
+        final nId = taskId ?? relatedId;
+        if (nId != null) context.safePush('/task-chat/$nId');
+        break;
       case 'application_message':
         final nId = taskId ?? relatedId;
         if (nId != null) context.safePush('/tasks/$nId', extra: notification.id);
@@ -394,9 +402,11 @@ class _NotificationListViewContentState
       case 'application_accepted':
       case 'application_rejected':
       case 'application_withdrawn':
-      case 'negotiation_rejected':
       case 'application_message_reply':
-        if (taskId != null) context.safePush('/tasks/$taskId');
+      // 发布者公开回复申请：回复展示在任务详情页的申请卡上
+      case 'public_reply':
+        final id = taskId ?? relatedId;
+        if (id != null) context.safePush('/tasks/$id');
         break;
       // 评价通知：related_id 是 task_id
       case 'review_created':

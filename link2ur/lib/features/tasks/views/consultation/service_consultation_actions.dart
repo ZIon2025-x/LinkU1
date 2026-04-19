@@ -91,6 +91,37 @@ class ServiceConsultationActions extends ConsultationActions {
     );
   }
 
+  /// 申请方在 price_agreed 下确认订单并进入付款（仅团队咨询）
+  void onPayAndFinalize(BuildContext context) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertPayAndFinalize(applicationId),
+    );
+  }
+
+  Future<void> _showConfirmPayDialog(BuildContext context) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.confirmAndPay),
+        content: Text(l10n.confirmAndPayHint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.commonConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      onPayAndFinalize(context);
+    }
+  }
+
   @override
   void onApprove(
     BuildContext context, {
@@ -173,14 +204,15 @@ class ServiceConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            // 价格已确认时：正式申请（团队咨询无正式申请）
-            if (isPriceAgreed && isApplicant && expertId == null) ...[
+            // 价格已确认时：申请方确认订单并付款(团队 + 个人统一路径,后端 pay-and-finalize 创建订单 + PaymentIntent)
+            if (isPriceAgreed && isApplicant) ...[
               ActionPill(
-                icon: Icons.assignment,
-                label: context.l10n.formalApply,
+                icon: Icons.payment,
+                label: context.l10n.confirmAndPay,
+                color: AppColors.success,
                 onTap: isSubmitting
                     ? null
-                    : () => showFormalApplyDialog(context, getCurrencySymbol),
+                    : () => _showConfirmPayDialog(context),
               ),
               const SizedBox(width: 8),
             ],

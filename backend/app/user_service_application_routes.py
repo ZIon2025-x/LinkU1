@@ -437,19 +437,48 @@ async def owner_approve_application(
 ):
     """服务所有者同意申请（创建任务 + 支付流程）"""
     application = await _get_application_as_owner(application_id, current_user, db)
+    return await finalize_personal_service_application(
+        db=db,
+        request=request,
+        application=application,
+        owner_user=current_user,
+    )
+
+
+async def finalize_personal_service_application(
+    *,
+    db: AsyncSession,
+    request: Request,
+    application: "models.ServiceApplication",
+    owner_user: "models.User",
+    deadline_override=None,
+    is_flexible_override=None,
+) -> dict:
+    """创建个人服务 Task + PaymentIntent。
+
+    调用方负责 (1) auth check (2) status check (为 pending 或 price_agreed)。
+    `owner_user` 是服务提供方,可能等于调用方 (owner 自助批准) 也可能由调用方 (applicant
+    在 price_agreed 下触发) 从 application.service_owner_id 解析。
+    """
 
     # 幂等性检查
     if application.status == "approved" and application.task_id:
         task = await db.get(models.Task, application.task_id)
         return {
             "message": "任务已创建",
-            "application_id": application_id,
+            "application_id": application.id,
             "task_id": application.task_id,
             "task": task,
         }
 
     if application.status not in ("pending", "price_agreed"):
         raise HTTPException(status_code=409, detail="当前状态不允许创建任务")
+
+    # 可选 override: 调用方(例如 applicant 触发 pay-and-finalize)可传入 deadline/is_flexible
+    if deadline_override is not None:
+        application.deadline = deadline_override
+    if is_flexible_override is not None:
+        application.is_flexible = 1 if is_flexible_override else 0
 
     # 获取服务信息
     service = await db.get(models.TaskExpertService, application.service_id)
@@ -534,7 +563,7 @@ async def owner_approve_application(
         raise HTTPException(status_code=404, detail="申请用户不存在")
 
     # 获取服务所有者的 Stripe Connect 账户（收款方）
-    taker_stripe_account_id = current_user.stripe_account_id
+    taker_stripe_account_id = owner_user.stripe_account_id
     if not taker_stripe_account_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -547,7 +576,7 @@ async def owner_approve_application(
     settings = await AsyncTaskCRUD.get_system_settings_dict(db)
     vip_threshold = float(settings.get("vip_price_threshold", 10.0))
     super_threshold = float(settings.get("super_vip_price_threshold", 50.0))
-    user_level = str(current_user.user_level) if current_user.user_level else "normal"
+    user_level = str(owner_user.user_level) if owner_user.user_level else "normal"
     if user_level == "super":
         task_level = "vip"
     elif price >= super_threshold:
@@ -606,7 +635,7 @@ async def owner_approve_application(
             task_type=service.category or "其他",
             task_level=task_level,
             poster_id=application.applicant_id,
-            taker_id=current_user.id,  # 服务所有者是接收方
+            taker_id=owner_user.id,  # 服务所有者是接收方
             expert_service_id=service.id,  # 关联服务，支付过期时能找到对应申请
             status="pending_payment",
             is_paid=0,
@@ -655,15 +684,15 @@ async def owner_approve_application(
                 "task_title": service.service_name[:200] if service.service_name else "",
                 "poster_id": str(application.applicant_id),
                 "poster_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
-                "taker_id": str(current_user.id),
-                "taker_name": current_user.name or f"User {current_user.id}",
+                "taker_id": str(owner_user.id),
+                "taker_name": owner_user.name or f"User {owner_user.id}",
                 "taker_stripe_account_id": taker_stripe_account_id,
                 "application_fee": str(application_fee_pence),
                 "task_amount": str(task_amount_pence),
                 "task_amount_display": f"{price:.2f}",
                 "platform": "Link²Ur",
                 "payment_type": "service_application_approve",
-                "service_application_id": str(application_id),
+                "service_application_id": str(application.id),
                 "service_id": str(service.id)
             },
         }
@@ -721,16 +750,38 @@ async def owner_approve_application(
         await send_service_application_approved_notification(
             db=db,
             applicant_id=application.applicant_id,
-            expert_id=current_user.id,  # 服务所有者
+            expert_id=owner_user.id,  # 服务所有者
             task_id=new_task.id,
             service_name=service.service_name
         )
     except Exception as e:
         logger.error(f"Failed to send approval notification: {e}")
 
+    # 写系统卡片:订单已创建,请完成付款
+    try:
+        import json as _json
+        order_msg = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            task_id=new_task.id,
+            application_id=None,
+            message_type="system",
+            conversation_type="task",
+            content="订单已创建,请完成付款以开始任务",
+            meta=_json.dumps({
+                "content_en": "Order created. Please complete payment to start the task.",
+                "event": "order_created",
+            }),
+            created_at=get_utc_time(),
+        )
+        db.add(order_msg)
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"写入订单创建系统卡片失败: {e}")
+
     return {
         "message": "申请已同意，请等待申请者完成支付",
-        "application_id": application_id,
+        "application_id": application.id,
         "task_id": new_task.id,
         "task_status": "pending_payment",
         "payment_intent_id": payment_intent.id,

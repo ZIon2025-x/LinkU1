@@ -4955,6 +4955,7 @@
   "agreeToChat": "同意沟通",
   "modifyQuote": "修改报价",
   "confirmAndPay": "确认并付款",
+  "confirmAndPayHint": "双方已就价格达成一致。确认后将创建订单,请立即完成付款以开始任务。",
   "chatStarted": "聊天通道已开启",
   "priceProposed": "已提出新报价",
   "applicationChatting": "沟通中",

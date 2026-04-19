@@ -5063,6 +5063,7 @@
   "agreeToChat": "Agree to Chat",
   "modifyQuote": "Modify Quote",
   "confirmAndPay": "Confirm & Pay",
+  "confirmAndPayHint": "Both sides agreed on the price. Confirm to create the order and complete payment to start the task.",
   "chatStarted": "Chat channel opened",
   "priceProposed": "New price proposed",
   "applicationChatting": "Chatting",
