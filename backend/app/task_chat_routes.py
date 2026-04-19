@@ -860,53 +860,10 @@ async def get_task_messages(
                     detail="无权限查看该申请的消息"
                 )
 
-        # 合并咨询历史: 若当前 task 是 approve 后的正式订单 task,
-        # 对应申请的 consultation_task_id 指向原咨询占位 Task。把占位 Task 的
-        # 消息也纳入对话,解决"完成订单后看不到议价历史"的 UX 割裂(C3)。
-        # 仅主聊天(application_id=None)时合并;申请频道私聊(application_id 不为 None)不变。
-        merged_task_ids: List[int] = [task_id]
-        if not application_id:
-            async def _collect_consultation_ids(field_task_id, field_consult_id):
-                res = await db.execute(
-                    select(field_consult_id).where(
-                        field_task_id == task_id,
-                        field_consult_id.isnot(None),
-                    )
-                )
-                return [row for row in res.scalars().all() if row and row != task_id]
-
-            # ServiceApplication
-            merged_task_ids.extend(
-                await _collect_consultation_ids(
-                    models.ServiceApplication.task_id,
-                    models.ServiceApplication.consultation_task_id,
-                )
-            )
-            # TaskApplication (consult-formal-apply 后 TA.task_id=原任务, consultation_task_id=占位)
-            merged_task_ids.extend(
-                await _collect_consultation_ids(
-                    models.TaskApplication.task_id,
-                    models.TaskApplication.consultation_task_id,
-                )
-            )
-            # FleaMarketPurchaseRequest
-            merged_task_ids.extend(
-                await _collect_consultation_ids(
-                    models.FleaMarketPurchaseRequest.task_id,
-                    models.FleaMarketPurchaseRequest.consultation_task_id,
-                )
-            )
-            merged_task_ids = list(dict.fromkeys(merged_task_ids))  # 去重保序
-
         # 构建消息查询
-        task_id_filter = (
-            models.Message.task_id == task_id
-            if len(merged_task_ids) == 1
-            else models.Message.task_id.in_(merged_task_ids)
-        )
         messages_query = select(models.Message).where(
             and_(
-                task_id_filter,
+                models.Message.task_id == task_id,
                 models.Message.conversation_type == 'task'
             )
         )
