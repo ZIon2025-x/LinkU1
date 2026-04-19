@@ -4,7 +4,7 @@ import random
 from decimal import Decimal
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.utils.time_utils import parse_iso_utc
@@ -52,7 +52,10 @@ def get_all_users(db: Session):
 
 def update_user_statistics(db: Session, user_id: str):
     """自动更新用户的统计信息：task_count, completed_task_count 和 avg_rating；
-    同时同步更新 TaskExpert 与 FeaturedTaskExpert（如存在）。"""
+    同时同步更新 Expert 团队的统计字段 (通过 _expert_id_migration_map 查 team_id)。
+    Phase A: 不再写 legacy TaskExpert/FeaturedTaskExpert;
+    FeaturedExpertV2 精简 schema 的 is_featured/display_order/category 由 admin
+    操作驱动,不在此同步."""
     from app.models import Review, Task
 
     posted_tasks = db.query(Task).filter(
@@ -92,30 +95,27 @@ def update_user_statistics(db: Session, user_id: str):
         db.commit()
         db.refresh(user)
 
-        task_expert = (
-            db.query(models.TaskExpert)
-            .options(joinedload(models.TaskExpert.services))
-            .filter(models.TaskExpert.id == user_id)
-            .first()
-        )
-        if task_expert:
-            task_expert.completed_tasks = completed_tasks
-            task_expert.rating = Decimal(str(avg_rating)).quantize(Decimal("0.01"))
-            db.commit()
-            db.refresh(task_expert)
+        # Phase A: 通过 _expert_id_migration_map 查出用户作为 owner 的 Expert 团队
+        # 并同步统计字段到 Expert 表 (不再写 legacy TaskExpert/FeaturedTaskExpert)
+        from sqlalchemy import text as sa_text
+        from app.models_expert import Expert
 
-        featured_expert = (
-            db.query(models.FeaturedTaskExpert)
-            .filter(models.FeaturedTaskExpert.id == user_id)
-            .first()
-        )
-        if featured_expert:
-            featured_expert.avg_rating = avg_rating
-            featured_expert.completed_tasks = completed_tasks
-            featured_expert.total_tasks = total_tasks
-            featured_expert.completion_rate = completion_rate
-            db.commit()
-            db.refresh(featured_expert)
+        map_row = db.execute(
+            sa_text(
+                "SELECT new_id FROM _expert_id_migration_map WHERE old_id = :uid"
+            ),
+            {"uid": user_id},
+        ).first()
+
+        if map_row:
+            expert_id = map_row[0]
+            expert = db.get(Expert, expert_id)
+            if expert:
+                expert.rating = Decimal(str(avg_rating)).quantize(Decimal("0.01"))
+                expert.completed_tasks = completed_tasks
+                expert.completion_rate = completion_rate
+                db.commit()
+                db.refresh(expert)
 
     return {
         "task_count": total_tasks,
