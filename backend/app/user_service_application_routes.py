@@ -679,6 +679,9 @@ async def owner_approve_application(
     # 更新申请记录
     application.status = "approved"
     application.final_price = price
+    # 关闭旧的咨询占位 Task(与 team 分支对称;close_consultation_task 对 task_id=None 是 no-op)
+    from app.consultation.helpers import close_consultation_task
+    await close_consultation_task(db, application, reason="咨询已转为正式订单")
     # 备份咨询占位 id(与 team 分支对称,防御性兜底)
     if application.task_id and not application.consultation_task_id:
         application.consultation_task_id = application.task_id
