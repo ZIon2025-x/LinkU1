@@ -469,6 +469,12 @@ class _TaskChatItem extends StatelessWidget {
         return Icons.star;
       case 'expert_activity':
         return Icons.groups;
+      case 'consultation':
+        return Icons.star_outline;
+      case 'flea_market_consultation':
+        return Icons.shopping_bag_outlined;
+      case 'task_consultation':
+        return Icons.work_outline;
       default:
         if (taskChat.taskType != null) {
           return TaskTypeHelper.getIcon(taskChat.taskType!);
