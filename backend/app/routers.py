@@ -2277,8 +2277,8 @@ def get_task_reviews(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
     # 内容审核检查：隐藏的任务不返回评价
-    task = crud.get_task(db, task_id)
-    if not task or not task.is_visible:
+    task = load_real_task_or_404_sync(db, task_id)
+    if not task.is_visible:
         raise HTTPException(status_code=404, detail="Task not found")
     current_user_id = current_user.id if current_user else None
     reviews = crud.get_task_reviews(db, task_id, current_user_id=current_user_id)
@@ -3012,9 +3012,7 @@ def get_refund_status(
     db: Session = Depends(get_db),
 ):
     """查询任务的退款申请状态（返回最新的退款申请）"""
-    task = crud.get_task(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found or no permission")
+    task = load_real_task_or_404_sync(db, task_id)
     # 发布者和接单人都可以查看退款状态
     uid = str(current_user.id)
     if str(task.poster_id) != uid and str(task.taker_id or "") != uid:
@@ -3101,10 +3099,8 @@ def get_task_dispute_timeline(
     获取任务的完整争议时间线
     包括：任务完成时间线、退款申请、反驳、管理员裁定等所有相关信息
     """
-    task = crud.get_task(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
+    task = load_real_task_or_404_sync(db, task_id)
+
     # 验证用户权限：必须是任务参与者（发布者或接单者）
     if task.poster_id != current_user.id and (not task.taker_id or task.taker_id != current_user.id):
         raise HTTPException(status_code=403, detail="Only task participants can view dispute timeline")
@@ -3432,9 +3428,7 @@ def get_refund_history(
     db: Session = Depends(get_db),
 ):
     """获取任务的退款申请历史记录（所有退款申请）"""
-    task = crud.get_task(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found or no permission")
+    task = load_real_task_or_404_sync(db, task_id)
     # 发布者和接单人都可以查看退款历史
     uid = str(current_user.id)
     if str(task.poster_id) != uid and str(task.taker_id or "") != uid:
