@@ -51,6 +51,7 @@ class Expert(Base):
     total_services = Column(Integer, nullable=False, default=0)
     completed_tasks = Column(Integer, nullable=False, default=0)
     completion_rate = Column(Float, nullable=False, default=0.0)
+    success_rate = Column(Float, nullable=False, default=0.0, server_default="0.0")  # migration 210
     is_official = Column(Boolean, nullable=False, default=False)
     official_badge = Column(String(50), nullable=True)
     stripe_account_id = Column(String(255), nullable=True)
