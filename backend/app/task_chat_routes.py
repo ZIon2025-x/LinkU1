@@ -264,19 +264,26 @@ async def get_task_chat_list(
         # 获取所有相关的任务ID
         task_ids_set = set()
         
-        # 1. 作为发布者或接受者的任务（排除已取消的任务）
+        # 1. 作为发布者或接受者的任务（排除已取消；排除已关闭的咨询占位任务）
+        # Fix 1+2: 隐藏 is_consultation_placeholder=True AND status='closed' 的占位任务，
+        # 避免 consult_close / 14天清理 / team approve 后永久堆积在聊天列表。
+        # 真实任务（is_consultation_placeholder=False）status='closed' 仍正常显示。
         tasks_query_1 = select(models.Task.id).where(
             and_(
                 or_(
                     models.Task.poster_id == current_user.id,
                     models.Task.taker_id == current_user.id
                 ),
-                models.Task.status != 'cancelled'
+                models.Task.status != 'cancelled',
+                ~and_(
+                    models.Task.is_consultation_placeholder == True,
+                    models.Task.status == 'closed'
+                )
             )
         )
         result_1 = await db.execute(tasks_query_1)
         task_ids_set.update([row[0] for row in result_1.all()])
-        
+
         # 1b. 多人任务：作为任务达人创建者（单独查询，避免在 or_() 中使用 and_() 导致的问题）
         expert_creator_query = select(models.Task.id).where(
             and_(
@@ -313,6 +320,7 @@ async def get_task_chat_list(
             task_ids_set.update([row[0] for row in result_2.all()])
 
         # 3. 作为团队成员的 consultation 任务
+        # Fix 5: 加 Task join，过滤 cancelled 任务；同时排除已关闭的咨询占位任务（与 sub-query 1 保持一致）
         from app.models_expert import ExpertMember
         sa_team_query = (
             select(models.ServiceApplication.task_id)
@@ -324,10 +332,19 @@ async def get_task_chat_list(
                     ExpertMember.status == "active",
                 ),
             )
+            .join(
+                models.Task,
+                models.Task.id == models.ServiceApplication.task_id,
+            )
             .where(
                 and_(
                     models.ServiceApplication.new_expert_id.isnot(None),
                     models.ServiceApplication.task_id.isnot(None),
+                    models.Task.status != 'cancelled',
+                    ~and_(
+                        models.Task.is_consultation_placeholder == True,
+                        models.Task.status == 'closed'
+                    )
                 )
             )
         )
@@ -509,20 +526,41 @@ async def get_task_chat_list(
                     flea_app_map.setdefault(flea_consultation_task_id, flea_id)
 
         # TaskApplication: 只查剩下没被 SA/FMPR 匹配的 task(这些是 task_consultation 类型)
+        # Fix 3: 按 is_consultation_placeholder 分两路查询：
+        #   - 占位任务：包含 'cancelled'（consult_close 后 TA.status='cancelled'，仍需路由到咨询UI）
+        #   - 真实任务：不包含 'cancelled'（避免被拒绝的 orig_application 路由到咨询UI）
         task_consult_ids = [t.id for t in tasks if t.id not in service_app_map and t.id not in flea_app_map]
         task_app_map = {}
         if task_consult_ids:
-            ta_query = select(
-                models.TaskApplication.task_id,
-                models.TaskApplication.id
-            ).where(
-                models.TaskApplication.task_id.in_(task_consult_ids),
-                models.TaskApplication.status.in_(["consulting", "negotiating", "price_agreed"]),
-            )
-            ta_result = await db.execute(ta_query)
-            for row in ta_result.all():
-                if row[0] not in task_app_map:
-                    task_app_map[row[0]] = row[1]
+            placeholder_task_ids_set = {t.id for t in tasks if getattr(t, 'is_consultation_placeholder', False)}
+
+            placeholder_candidate_ids = [tid for tid in task_consult_ids if tid in placeholder_task_ids_set]
+            real_candidate_ids = [tid for tid in task_consult_ids if tid not in placeholder_task_ids_set]
+
+            if placeholder_candidate_ids:
+                ta_query = select(
+                    models.TaskApplication.task_id,
+                    models.TaskApplication.id
+                ).where(
+                    models.TaskApplication.task_id.in_(placeholder_candidate_ids),
+                    models.TaskApplication.status.in_(["consulting", "negotiating", "price_agreed", "cancelled"]),
+                )
+                ta_result = await db.execute(ta_query)
+                for row in ta_result.all():
+                    task_app_map.setdefault(row[0], row[1])
+
+            if real_candidate_ids:
+                # 真实任务 TA：不含 'cancelled'，防止被拒绝的申请错误路由到咨询UI
+                ta_query = select(
+                    models.TaskApplication.task_id,
+                    models.TaskApplication.id
+                ).where(
+                    models.TaskApplication.task_id.in_(real_candidate_ids),
+                    models.TaskApplication.status.in_(["consulting", "negotiating", "price_agreed"]),
+                )
+                ta_result = await db.execute(ta_query)
+                for row in ta_result.all():
+                    task_app_map.setdefault(row[0], row[1])
 
         # 一次查询所有用户信息
         if all_user_ids:
