@@ -361,9 +361,9 @@ def get_user_primary_expert_sync(db: Session, user_id: str) -> Optional[Expert]:
 |------|------|----------|------|
 | `admin_official_routes.py` | 80-192 (`setup_official_account`) | 双写 TaskExpert + Expert | 单写 Expert + ExpertMember + `_expert_id_migration_map`（删除 L94-113 TaskExpert 写入） |
 | `crud/user.py` | 55 注释 + 87-110 统计同步 | 写 User + TaskExpert + FeaturedTaskExpert | 写 User + Expert（通过 `_expert_id_migration_map` 查 new_id）；不写 FeaturedExpertV2（其精简 schema 的 is_featured/display_order/category 由 admin_expert_routes 的 admin 操作驱动，Phase B 完整迁移） |
-| `crud/task_expert.py` | 141-163 (`update_task_expert_bio`) — 聚合 success_rate (L141-145) + 写 FeaturedTaskExpert 7 个字段 response_time/response_time_en/avg_rating/completed_tasks/total_tasks/completion_rate/success_rate (L147-161) | 写 FeaturedTaskExpert | 改写 `Expert` 同名字段（通过映射查 new_id），success_rate 用 Phase A §6 新增列 |
-| `crud/task_expert.py` | 166-168 (`update_all_task_experts_bio` — deprecated wrapper，委托给下一行函数) | — | 随下方函数一起处理 |
-| `crud/task_expert.py` | 171-195 (`update_all_featured_task_experts_response_time` 定时任务) — L179 `db.query(FeaturedTaskExpert).all()` 遍历 | 遍历 FeaturedTaskExpert 调 `update_task_expert_bio` | 改遍历 `Expert` 表；**writing-plans 阶段需先 grep 该函数调用点确认是否活跃调度**（scheduled_tasks.py / celery tasks） |
+| `crud/task_expert.py` | 46-163 (`update_task_expert_bio` 整函数) — 函数内 L141-145 聚合 success_rate + L147-161 写 FeaturedTaskExpert 7 字段 (response_time/response_time_en/avg_rating/completed_tasks/total_tasks/completion_rate/success_rate) | 写 FeaturedTaskExpert | 改写 `Expert` 同名字段（通过 `_expert_id_migration_map` 查 new_id）。注意 success_rate 用 §6.1 新增列。`avg_rating` → Expert 的 `rating` 字段（字段名不同） |
+| `crud/task_expert.py` | 166-168 (`update_all_task_experts_bio` — deprecated wrapper，仍在 `main.py:976` 被调用) | 委托给下方函数 | 函数体不变（保留 deprecated wrapper），内部函数改造即可 |
+| `crud/task_expert.py` | 171-195 (`update_all_featured_task_experts_response_time` 定时任务) — **确认活跃调度**：`celery_tasks.py:48,469` + `task_scheduler.py:419,1131`（每天 UTC 3:00 per `backend/docs/TASK_SCHEDULER_GUIDE.md` #24）+ `main.py:976` (legacy fallback)。L179 `db.query(FeaturedTaskExpert).all()` 遍历 | 遍历 FeaturedTaskExpert 调 `update_task_expert_bio` | 改 `db.query(Expert).all()` 遍历；传给 `update_task_expert_bio` 的是 `ExpertMember(owner).user_id`（因为子函数签名是 `user_id`），或改签名为 `expert_id`（需考察子函数内部逻辑） |
 | `crud/admin_ops.py` | 57 注释 + 73-74 | 删 admin 时检查 FeaturedTaskExpert.created_by | 改检查 FeaturedExpertV2.created_by（表结构相同） |
 
 ### 7.4 边缘改造
@@ -450,7 +450,12 @@ grep -rn "\bmodels\.TaskExpert\b\|\bmodels\.FeaturedTaskExpert\b\|\bTaskExpert\b
 - `test_is_user_expert_sync_multi_teams` — 任一 active 即 True
 - `test_get_user_primary_expert_returns_owner_team` — 返回 owner 所属团队
 
-**`backend/tests/migrations/test_209_sync_fields.py`**（testcontainers / pytest-postgresql）:
+**`backend/tests/migrations/test_209_sync_fields.py`** — 使用现有测试基础设施：
+- `backend/tests/conftest.py` 已提供 `db` fixture（连 `TEST_DATABASE_URL` 或 `DATABASE_URL`，事务 rollback 隔离，**需本地 PostgreSQL 或 CI 的 PG service**，SQLite fallback **不支持**本 migration 的 JSONB cast / DO block / IS DISTINCT FROM 语法）
+- 需新增 fixture：`migrated_db`（session scope）— 在 test DB 上按序跑 migrations 158-208，确保 `task_experts` / `featured_task_experts` / `experts` / `_expert_id_migration_map` 等表和数据都就位
+- 每个 test 在 `migrated_db` 上插入 legacy 数据 → 手动跑 209 SQL → 断言字段对齐 → rollback
+
+测试用例：
 - `test_209_syncs_stats_from_task_experts` — rating/completed_tasks 回填
 - `test_209_preserves_newer_expert_name` — updated_at 规则验证
 - `test_209_backfills_bio_en_for_null_only` — COALESCE 策略验证
@@ -538,6 +543,11 @@ Phase A 重点覆盖：
 ## 修订历史
 
 - **2026-04-19 v1.0** 初始 spec，§7 代码改造列 "11 处 TaskExpert + 10 处 FeaturedTaskExpert"（基于早期 Explore agent audit）
+- **2026-04-19 v1.7** 第七轮核验，测试基础设施 + 调度确认：
+  - 发现 spec §8.1 假设用 testcontainers / pytest-postgresql **未成立**—仓库零引用这两个包。实际测试基础设施是 `backend/tests/conftest.py` 的 `db` fixture（连 `TEST_DATABASE_URL` 或 `DATABASE_URL` 的真实 PG；CI 里由 service 提供，本地需自己跑 PG）。SQLite fallback 不支持 migration 209 的 JSONB cast / DO block 语法。§8.1 改为用现有 fixture 模式 + 新增 `migrated_db` fixture
+  - 确认 `update_all_featured_task_experts_response_time` **是活跃调度**：`celery_tasks.py:48/469` + `task_scheduler.py:419/1131`（每天 UTC 3:00）+ `main.py:976` (legacy fallback 调 deprecated wrapper)，有 `backend/docs/TASK_SCHEDULER_GUIDE.md` #24 文档。Spec v1.6 的 "writing-plans 阶段再确认" 改为直接列出所有调度点
+  - 修正 `crud/task_expert.py` 行号：`update_task_expert_bio` 函数从 **L46** 开始（不是 L141，L141 是函数内统计段）。函数完整范围 L46-163
+  - 补充 FTE → Expert 的字段名差异：`avg_rating` → Expert 的 `rating`（其他同名）
 - **2026-04-19 v1.6** 第六轮核验，代码细节等价性 + 业务边界：
   - 发现 `cleanup_tasks.py` 原代码 `valid_ids = existing_expert_ids | existing_user_ids` 是**冗余计算**：`TaskExpert.id` 定义是 `ForeignKey("users.id")`，TaskExpert.id 集合 ⊂ User.id 集合。Spec v1.5 的 "改为遍历 ExpertMember owner user_id" 完全不必要——直接**删除两行 TaskExpert 查询**就行，行为等价且少一次 DB query。§7.4 改为"化简而非替换"
   - 发现 `setup_official_account` 单写 Expert 后对"已是其他团队 owner 的用户"会**再创新团队**（既有行为，Phase A 前就存在，不是 Phase A 引入）。新增 R11 风险记录，Phase A 不修；§8.2 流程 2 补说明"用干净用户测试"
