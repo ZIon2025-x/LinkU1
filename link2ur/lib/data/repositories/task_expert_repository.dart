@@ -792,7 +792,7 @@ class TaskExpertRepository {
     return response.data!;
   }
 
-  /// 申请方在 price_agreed 下确认订单并进入付款（仅团队咨询）
+  /// 申请方在 price_agreed 下确认订单并进入付款（团队咨询 + 个人服务统一路径）
   Future<Map<String, dynamic>> payAndFinalizeApplication(
     int applicationId, {
     String? deadline,

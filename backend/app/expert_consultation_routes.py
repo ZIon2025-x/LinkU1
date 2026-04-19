@@ -814,14 +814,21 @@ async def pay_and_finalize(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """申请方在 price_agreed 状态下确认订单并进入付款。
+    """申请方在 price_agreed 状态下确认订单并进入付款(仅限申请方调用)。
 
     团队咨询 → 复用 _approve_team_service_application;
     个人服务 → 复用 user_service_application_routes.finalize_personal_service_application。
     两条路径返回相同 shape(含 client_secret),供 Flutter 打开 Stripe payment sheet。
+
+    并发安全: SELECT ... FOR UPDATE 锁住 application 行,防止双击造成重复
+    Task + PaymentIntent。第二次请求在第一次 commit 完后拿锁,看到 status=approved
+    直接走幂等路径。
     """
+    # 加行锁防止并发重复创建(applicant 可能快速双击)
     app_result = await db.execute(
-        select(models.ServiceApplication).where(models.ServiceApplication.id == application_id)
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.id == application_id)
+        .with_for_update()
     )
     application = app_result.scalar_one_or_none()
     if not application:
@@ -829,6 +836,42 @@ async def pay_and_finalize(
 
     if application.applicant_id != current_user.id:
         raise HTTPException(status_code=403, detail="只有申请方可以确认付款")
+
+    # 幂等: 第一次 pay-and-finalize 已完成, 第二次拿锁时看到 approved → 不重复创建
+    # 但我们需要返回完整的支付信息(client_secret + customer_id + ephemeral_key_secret),
+    # 让客户端能重开付款 sheet。所以需要重新 retrieve PI + 新建 ephemeral key。
+    if application.status == "approved" and application.task_id:
+        import stripe as _stripe
+        existing_task = await db.get(models.Task, application.task_id)
+        if existing_task and existing_task.payment_intent_id:
+            try:
+                pi = _stripe.PaymentIntent.retrieve(existing_task.payment_intent_id)
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                applicant_user = await db.get(models.User, application.applicant_id)
+                customer_id = get_or_create_stripe_customer(applicant_user) if applicant_user else None
+                ek = _stripe.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-01-27.acacia",
+                ) if customer_id else None
+                return {
+                    "message": "订单已创建,请完成付款",
+                    "application_id": application.id,
+                    "task_id": existing_task.id,
+                    "task_status": existing_task.status,
+                    "payment_intent_id": pi.id,
+                    "client_secret": pi.client_secret,
+                    "amount": pi.amount,
+                    "amount_display": f"{pi.amount / 100:.2f}",
+                    "currency": (pi.currency or "gbp").upper(),
+                    "customer_id": customer_id,
+                    "ephemeral_key_secret": ek.secret if ek else None,
+                }
+            except Exception as e:
+                logger.error(f"pay_and_finalize 幂等路径重新 retrieve PI 失败: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="订单已创建但重新获取支付信息失败,请稍后前往任务详情页付款",
+                )
 
     if application.status != "price_agreed":
         raise_http_error_with_code(
@@ -857,29 +900,52 @@ async def pay_and_finalize(
             application.deadline = parsed_deadline
         if is_flexible_val is not None:
             application.is_flexible = 1 if is_flexible_val else 0
-        return await _approve_team_service_application(
+        result = await _approve_team_service_application(
             db=db,
             request=request,
             current_user=current_user,
             application=application,
         )
+    else:
+        # 个人服务:加载服务提供方,调用 personal helper
+        if not application.service_owner_id:
+            raise HTTPException(status_code=400, detail="申请缺少服务提供方信息")
+        owner_user = await db.get(models.User, application.service_owner_id)
+        if not owner_user:
+            raise HTTPException(status_code=404, detail="服务提供方不存在")
 
-    # 个人服务:加载服务提供方,调用 personal helper
-    if not application.service_owner_id:
-        raise HTTPException(status_code=400, detail="申请缺少服务提供方信息")
-    owner_user = await db.get(models.User, application.service_owner_id)
-    if not owner_user:
-        raise HTTPException(status_code=404, detail="服务提供方不存在")
+        from app.user_service_application_routes import finalize_personal_service_application
+        result = await finalize_personal_service_application(
+            db=db,
+            request=request,
+            application=application,
+            owner_user=owner_user,
+            deadline_override=parsed_deadline,
+            is_flexible_override=is_flexible_val,
+        )
 
-    from app.user_service_application_routes import finalize_personal_service_application
-    return await finalize_personal_service_application(
-        db=db,
-        request=request,
-        application=application,
-        owner_user=owner_user,
-        deadline_override=parsed_deadline,
-        is_flexible_override=is_flexible_val,
-    )
+    # 严格校验:applicant pay-and-finalize 必须返回完整支付信息给 Flutter;
+    # 两端 helper 都把 Stripe Customer/EphemeralKey 创建包在 broad except,
+    # 失败时静默返回 None。对 applicant 路径而言这会导致客户端打开付款 sheet 时报错。
+    # 此时 Task + PI 已创建(可走任务详情页重新获取付款信息),给 502 提示用户。
+    if isinstance(result, dict) and (
+        not result.get("client_secret")
+        or not result.get("customer_id")
+        or not result.get("ephemeral_key_secret")
+    ):
+        logger.error(
+            "pay-and-finalize 返回缺失支付字段: app=%s client_secret=%s customer=%s ek=%s",
+            application_id,
+            bool(result.get("client_secret")),
+            bool(result.get("customer_id")),
+            bool(result.get("ephemeral_key_secret")),
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="订单已创建但付款准备失败,请前往任务详情页继续付款",
+        )
+
+    return result
 
 
 async def _check_application_party(

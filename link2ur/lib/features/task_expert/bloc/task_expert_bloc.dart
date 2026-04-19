@@ -151,7 +151,7 @@ class TaskExpertOwnerApproveApplication extends TaskExpertEvent {
   List<Object?> get props => [applicationId];
 }
 
-/// 申请方在 price_agreed 下确认订单并付款（仅团队咨询）
+/// 申请方在 price_agreed 下确认订单并付款（团队咨询 + 个人服务统一路径）
 class TaskExpertPayAndFinalize extends TaskExpertEvent {
   const TaskExpertPayAndFinalize(
     this.applicationId, {
