@@ -264,10 +264,7 @@ async def get_task_chat_list(
         # 获取所有相关的任务ID
         task_ids_set = set()
         
-        # 1. 作为发布者或接受者的任务（排除已取消；排除已关闭的咨询占位任务）
-        # Fix 1+2: 隐藏 is_consultation_placeholder=True AND status='closed' 的占位任务，
-        # 避免 consult_close / 14天清理 / team approve 后永久堆积在聊天列表。
-        # 真实任务（is_consultation_placeholder=False）status='closed' 仍正常显示。
+        # 1. 作为发布者或接受者的任务（排除已取消）
         tasks_query_1 = select(models.Task.id).where(
             and_(
                 or_(
@@ -275,10 +272,6 @@ async def get_task_chat_list(
                     models.Task.taker_id == current_user.id
                 ),
                 models.Task.status != 'cancelled',
-                ~and_(
-                    models.Task.is_consultation_placeholder == True,
-                    models.Task.status == 'closed'
-                )
             )
         )
         result_1 = await db.execute(tasks_query_1)
@@ -320,7 +313,7 @@ async def get_task_chat_list(
             task_ids_set.update([row[0] for row in result_2.all()])
 
         # 3. 作为团队成员的 consultation 任务
-        # Fix 5: 加 Task join，过滤 cancelled 任务；同时排除已关闭的咨询占位任务（与 sub-query 1 保持一致）
+        # Fix 5: 加 Task join，过滤 cancelled 任务（与 sub-query 1 保持一致）
         from app.models_expert import ExpertMember
         sa_team_query = (
             select(models.ServiceApplication.task_id)
@@ -341,10 +334,6 @@ async def get_task_chat_list(
                     models.ServiceApplication.new_expert_id.isnot(None),
                     models.ServiceApplication.task_id.isnot(None),
                     models.Task.status != 'cancelled',
-                    ~and_(
-                        models.Task.is_consultation_placeholder == True,
-                        models.Task.status == 'closed'
-                    )
                 )
             )
         )
