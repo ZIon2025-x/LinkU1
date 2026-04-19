@@ -59,7 +59,10 @@ def update_user_statistics(db: Session, user_id: str):
         Task.poster_id == user_id,
         Task.is_consultation_placeholder == False,
     ).count()
-    taken_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
+    taken_tasks = db.query(Task).filter(
+        Task.taker_id == user_id,
+        Task.is_consultation_placeholder == False,  # noqa: E712
+    ).count()
     total_tasks = posted_tasks + taken_tasks
 
     completed_taken_tasks = db.query(Task).filter(

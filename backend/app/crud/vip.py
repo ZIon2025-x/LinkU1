@@ -42,7 +42,10 @@ def check_and_upgrade_vip_to_super(db: Session, user_id: str):
         Task.poster_id == user_id,
         Task.is_consultation_placeholder == False,
     ).count()
-    accepted_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
+    accepted_tasks = db.query(Task).filter(
+        Task.taker_id == user_id,
+        Task.is_consultation_placeholder == False,  # noqa: E712
+    ).count()
     total_task_count = posted_tasks + accepted_tasks
 
     completed_tasks = (

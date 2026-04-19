@@ -1290,7 +1290,10 @@ def get_user_task_statistics(db: Session, user_id: str):
     ).count()
 
     # 接受任务数量
-    accepted_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
+    accepted_tasks = db.query(Task).filter(
+        Task.taker_id == user_id,
+        Task.is_consultation_placeholder == False,  # noqa: E712
+    ).count()
 
     # 完成任务数量
     completed_tasks = (

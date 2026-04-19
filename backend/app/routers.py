@@ -5006,7 +5006,10 @@ def user_profile(
     ).count()
     
     # 计算接取的任务数（所有状态）
-    taken_tasks_count = db.query(Task).filter(Task.taker_id == user_id).count()
+    taken_tasks_count = db.query(Task).filter(
+        Task.taker_id == user_id,
+        Task.is_consultation_placeholder == False,  # noqa: E712
+    ).count()
     
     # 计算完成的任务数（接取的任务中已完成的数量）
     completed_tasks_count = db.query(Task).filter(
