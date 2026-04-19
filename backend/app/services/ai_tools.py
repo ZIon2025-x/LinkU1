@@ -800,29 +800,29 @@ async def _get_leaderboard_summary(executor: ToolExecutor, input: dict) -> dict:
     categories=[ToolCategory.PLATFORM],
 )
 async def _list_task_experts(executor: ToolExecutor, input: dict) -> dict:
+    from app.models_expert import Expert
     keyword = input.get("keyword", "")
-    conditions = [models.TaskExpert.status == "active"]
+    conditions = [Expert.status == "active"]
     if keyword:
         like_kw = f"%{keyword}%"
         conditions.append(or_(
-            models.TaskExpert.expert_name.ilike(like_kw),
-            models.TaskExpert.bio.ilike(like_kw),
+            Expert.name.ilike(like_kw),
+            Expert.bio.ilike(like_kw),
         ))
 
     rows = (await executor.db.execute(
-        select(models.TaskExpert, models.User.name)
-        .join(models.User, models.TaskExpert.id == models.User.id)
+        select(Expert)
         .where(and_(*conditions))
-        .order_by(desc(models.TaskExpert.rating)).limit(10)
-    )).all()
+        .order_by(desc(Expert.rating)).limit(10)
+    )).scalars().all()
 
     experts = [{
-        "id": expert.id,
-        "name": expert.expert_name or user_name,
-        "bio": _truncate(expert.bio, 80),
-        "rating": float(expert.rating) if expert.rating else 0,
-        "completed_tasks": expert.completed_tasks,
-    } for expert, user_name in rows]
+        "id": e.id,
+        "name": e.name,
+        "bio": _truncate(e.bio, 80),
+        "rating": float(e.rating) if e.rating else 0,
+        "completed_tasks": e.completed_tasks,
+    } for e in rows]
 
     return {"experts": experts, "count": len(experts)}
 
@@ -855,14 +855,21 @@ async def _get_activity_detail(executor: ToolExecutor, input: dict) -> dict:
 
     lang = executor._tool_lang()
     expert_name = None
-    if activity.expert_id:
+    # 用新字段 owner_type='expert' + owner_id → Expert (activity.expert_id 是 legacy
+    # FK→users.id, 值是 user_id, Phase A 后不应使用)
+    if activity.owner_type == "expert" and activity.owner_id:
+        from app.models_expert import Expert
         row = (await executor.db.execute(
-            select(models.TaskExpert.expert_name, models.User.name)
-            .join(models.User, models.TaskExpert.id == models.User.id)
-            .where(models.TaskExpert.id == activity.expert_id)
+            select(Expert.name).where(Expert.id == activity.owner_id)
         )).first()
         if row:
-            expert_name = row[0] or row[1]
+            expert_name = row[0]
+    elif activity.owner_type == "user" and activity.owner_id:
+        row = (await executor.db.execute(
+            select(models.User.name).where(models.User.id == activity.owner_id)
+        )).first()
+        if row:
+            expert_name = row[0]
 
     return {
         "id": activity.id,
@@ -897,18 +904,19 @@ async def _get_expert_detail(executor: ToolExecutor, input: dict) -> dict:
     if not expert_id:
         return {"error": msgs["expert_not_found"]}
 
-    row = (await executor.db.execute(
-        select(models.TaskExpert, models.User.name)
-        .join(models.User, models.TaskExpert.id == models.User.id)
-        .where(models.TaskExpert.id == expert_id)
-    )).first()
-    if not row:
+    from app.models_expert import Expert
+    # input expert_id 在 Phase A 后语义是 team_id (见 spec §7.5)
+    expert = (await executor.db.execute(
+        select(Expert).where(Expert.id == expert_id)
+    )).scalar_one_or_none()
+    if not expert:
         return {"error": msgs["expert_not_found"]}
 
-    expert, user_name = row
+    # Service 用新字段 owner_type='expert' + owner_id (不是 legacy expert_id 列)
     svc_rows = (await executor.db.execute(
         select(models.TaskExpertService).where(and_(
-            models.TaskExpertService.expert_id == expert_id,
+            models.TaskExpertService.owner_type == "expert",
+            models.TaskExpertService.owner_id == expert_id,
             models.TaskExpertService.status == "active",
         )).order_by(models.TaskExpertService.display_order)
     )).scalars().all()
@@ -919,7 +927,7 @@ async def _get_expert_detail(executor: ToolExecutor, input: dict) -> dict:
     } for s in svc_rows]
 
     return {
-        "id": expert.id, "name": expert.expert_name or user_name,
+        "id": expert.id, "name": expert.name,
         "bio": _truncate(expert.bio, 200),
         "rating": float(expert.rating) if expert.rating else 0,
         "completed_tasks": expert.completed_tasks,
@@ -1102,16 +1110,15 @@ async def _list_my_service_applications(executor: ToolExecutor, input: dict) -> 
         select(func.count()).select_from(models.ServiceApplication).where(and_(*conditions))
     )).scalar() or 0
 
+    from app.models_expert import Expert
     rows = (await executor.db.execute(
         select(
             models.ServiceApplication,
             models.TaskExpertService.service_name,
-            models.TaskExpert.expert_name,
-            models.User.name,
+            Expert.name,
         )
         .join(models.TaskExpertService, models.ServiceApplication.service_id == models.TaskExpertService.id)
-        .join(models.TaskExpert, models.ServiceApplication.expert_id == models.TaskExpert.id)
-        .join(models.User, models.TaskExpert.id == models.User.id)
+        .outerjoin(Expert, models.ServiceApplication.new_expert_id == Expert.id)
         .where(and_(*conditions))
         .order_by(desc(models.ServiceApplication.created_at))
         .offset((page - 1) * page_size).limit(page_size)
@@ -1119,12 +1126,12 @@ async def _list_my_service_applications(executor: ToolExecutor, input: dict) -> 
 
     applications = [{
         "id": app.id, "service_name": service_name,
-        "expert_name": expert_name or user_name,
+        "expert_name": expert_name or "",
         "status": app.status,
         "final_price": app.final_price,
         "negotiated_price": app.negotiated_price,
         "currency": app.currency,
-    } for app, service_name, expert_name, user_name in rows]
+    } for app, service_name, expert_name in rows]
 
     return {"applications": applications, "total": total, "page": page}
 
