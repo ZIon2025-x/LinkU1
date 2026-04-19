@@ -463,34 +463,53 @@ async def get_task_chat_list(
                 task_participants_dict.setdefault(row.task_id, []).append(row.user_id)
                 all_user_ids.add(row.user_id)
 
-        # 批量查询 consultation 任务的 ServiceApplication ID
-        consultation_task_ids = [t.id for t in tasks if getattr(t, 'task_source', '') == 'consultation']
+        # 批量建 service_application_id 映射:对**所有** task 用 dual-key (task_id OR consultation_task_id),
+        # 这样 approve 前(task_id=占位)和 approve 后(consultation_task_id=占位 / task_id=真任务)
+        # 两种状态都能 resolve 到对应的 SA / FMPR / TA。
+        all_task_ids = [t.id for t in tasks]
         service_app_map = {}
-        if consultation_task_ids:
+        flea_app_map = {}
+
+        if all_task_ids:
+            # ServiceApplication: dual-key lookup
             sa_query = select(
                 models.ServiceApplication.task_id,
-                models.ServiceApplication.id
+                models.ServiceApplication.consultation_task_id,
+                models.ServiceApplication.id,
             ).where(
-                models.ServiceApplication.task_id.in_(consultation_task_ids)
+                or_(
+                    models.ServiceApplication.task_id.in_(all_task_ids),
+                    models.ServiceApplication.consultation_task_id.in_(all_task_ids),
+                )
             )
             sa_result = await db.execute(sa_query)
-            service_app_map = {row[0]: row[1] for row in sa_result.all()}
+            for sa_task_id, sa_consultation_task_id, sa_id in sa_result.all():
+                # 优先 task_id 匹配(post-approve 真任务),fallback consultation_task_id(pre-approve 占位)
+                if sa_task_id in all_task_ids:
+                    service_app_map.setdefault(sa_task_id, sa_id)
+                if sa_consultation_task_id in all_task_ids:
+                    service_app_map.setdefault(sa_consultation_task_id, sa_id)
 
-        # 批量查询 flea_market_consultation 任务的 FleaMarketPurchaseRequest ID
-        flea_consultation_task_ids = [t.id for t in tasks if getattr(t, 'task_source', '') == 'flea_market_consultation']
-        flea_app_map = {}
-        if flea_consultation_task_ids:
+            # FleaMarketPurchaseRequest: dual-key lookup
             flea_query = select(
                 models.FleaMarketPurchaseRequest.task_id,
-                models.FleaMarketPurchaseRequest.id
+                models.FleaMarketPurchaseRequest.consultation_task_id,
+                models.FleaMarketPurchaseRequest.id,
             ).where(
-                models.FleaMarketPurchaseRequest.task_id.in_(flea_consultation_task_ids)
+                or_(
+                    models.FleaMarketPurchaseRequest.task_id.in_(all_task_ids),
+                    models.FleaMarketPurchaseRequest.consultation_task_id.in_(all_task_ids),
+                )
             )
             flea_result = await db.execute(flea_query)
-            flea_app_map = {row[0]: row[1] for row in flea_result.all()}
+            for flea_task_id, flea_consultation_task_id, flea_id in flea_result.all():
+                if flea_task_id in all_task_ids:
+                    flea_app_map.setdefault(flea_task_id, flea_id)
+                if flea_consultation_task_id in all_task_ids:
+                    flea_app_map.setdefault(flea_consultation_task_id, flea_id)
 
-        # 批量查询 task consultation 的 TaskApplication ID
-        task_consult_ids = [t.id for t in tasks if getattr(t, 'task_source', 'normal') not in ('consultation', 'flea_market_consultation')]
+        # TaskApplication: 只查剩下没被 SA/FMPR 匹配的 task(这些是 task_consultation 类型)
+        task_consult_ids = [t.id for t in tasks if t.id not in service_app_map and t.id not in flea_app_map]
         task_app_map = {}
         if task_consult_ids:
             ta_query = select(
