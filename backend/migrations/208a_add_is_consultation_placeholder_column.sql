@@ -8,7 +8,8 @@ ALTER TABLE tasks
 UPDATE tasks
 SET is_consultation_placeholder = TRUE
 WHERE task_source IN ('consultation', 'task_consultation', 'flea_market_consultation')
-  AND is_consultation_placeholder = FALSE;
+  AND is_consultation_placeholder = FALSE
+  AND status = 'consulting';  -- only rows that are actually still placeholders (protect already-promoted tasks)
 
 -- 针对 stale cleanup 和 admin 过滤的局部索引
 -- CONCURRENTLY avoids write-blocking on large tasks table (per project convention migrations 204+)
