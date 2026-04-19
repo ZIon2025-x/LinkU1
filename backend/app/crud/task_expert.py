@@ -144,21 +144,30 @@ def update_task_expert_bio(db: Session, user_id: str):
         else 0.0
     )
 
-    featured_expert = (
-        db.query(models.FeaturedTaskExpert)
-        .filter(models.FeaturedTaskExpert.id == user_id)
-        .first()
-    )
-    if featured_expert:
-        featured_expert.response_time = response_time_zh
-        featured_expert.response_time_en = response_time_en
-        featured_expert.avg_rating = avg_rating
-        featured_expert.completed_tasks = completed_tasks
-        featured_expert.total_tasks = total_tasks
-        featured_expert.completion_rate = completion_rate
-        featured_expert.success_rate = success_rate
-        db.commit()
-        db.refresh(featured_expert)
+    # Phase A: 写 Expert 代替 FeaturedTaskExpert (通过 _expert_id_migration_map 查 team_id)
+    from sqlalchemy import text as sa_text
+    from app.models_expert import Expert
+
+    map_row = db.execute(
+        sa_text(
+            "SELECT new_id FROM _expert_id_migration_map WHERE old_id = :uid"
+        ),
+        {"uid": user_id},
+    ).first()
+
+    if map_row:
+        expert_id = map_row[0]
+        expert = db.get(Expert, expert_id)
+        if expert:
+            expert.response_time = response_time_zh
+            expert.response_time_en = response_time_en
+            expert.rating = avg_rating  # FTE.avg_rating → Expert.rating (字段名不同)
+            expert.completed_tasks = completed_tasks
+            # Expert 无 total_tasks 字段;该统计只在 FTE 有过,Phase A 不迁
+            expert.completion_rate = completion_rate
+            expert.success_rate = success_rate  # 210 migration 已加此列
+            db.commit()
+            db.refresh(expert)
 
     return response_time_zh
 
@@ -169,37 +178,44 @@ def update_all_task_experts_bio():
 
 
 def update_all_featured_task_experts_response_time():
-    """更新所有 FeaturedTaskExpert 的响应时间（每天执行一次）。"""
+    """更新所有 Expert 团队 owner 的响应时间/统计（每天执行一次）。
+
+    Phase A: 遍历 Expert owner users 调 update_task_expert_bio (签名保持
+    user_id,内部通过映射找 Expert 团队写入).
+    函数名保留(已有 Celery/scheduler 调用),语义迁移到 Expert.
+    """
     from app.database import SessionLocal
-    from app.models import FeaturedTaskExpert
+    from app.models_expert import ExpertMember
 
     db = None
     try:
         db = SessionLocal()
-        featured_experts = db.query(FeaturedTaskExpert).all()
+        # 取所有 active owner 的 user_id
+        owner_rows = (
+            db.query(ExpertMember.user_id)
+            .filter(
+                ExpertMember.role == "owner",
+                ExpertMember.status == "active",
+            )
+            .all()
+        )
         updated_count = 0
-        for expert in featured_experts:
+        for (user_id,) in owner_rows:
             try:
-                update_task_expert_bio(db, expert.id)
+                update_task_expert_bio(db, user_id)
                 updated_count += 1
             except Exception as e:
                 logger.error(
-                    "更新特征任务达人 %s 的响应时间时出错: %s",
-                    expert.id,
+                    "更新 expert team owner %s 的响应时间时出错: %s",
+                    user_id,
                     e,
                 )
                 continue
         if updated_count > 0:
             logger.info(
-                "成功更新 %s 个特征任务达人的响应时间",
+                "成功更新 %s 个 expert team owner 的响应时间/统计",
                 updated_count,
             )
-        else:
-            logger.info("没有需要更新的特征任务达人")
-        return updated_count
-    except Exception as e:
-        logger.error("更新特征任务达人响应时间时出错: %s", e)
-        raise
     finally:
-        if db:
+        if db is not None:
             db.close()
