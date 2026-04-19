@@ -1,4 +1,5 @@
 """达人服务申请/咨询/协商路由"""
+import json
 import logging
 from typing import List, Optional
 
@@ -14,7 +15,12 @@ from app.consultation.helpers import (
     create_placeholder_task,
     resolve_taker_from_service,
 )
-from app.consultation.notifications import consultation_submitted
+from app.consultation.notifications import (
+    consultation_submitted,
+    task_negotiation_accepted,
+    task_negotiation_rejected,
+    task_counter_offer,
+)
 from app.deps import get_async_db_dependency
 from app.error_handlers import raise_http_error_with_code
 from app.async_routers import (
@@ -497,6 +503,30 @@ async def negotiate_price(
     application.negotiated_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
+
+    # 写议价卡片消息（镜像 task_chat_routes 模式）
+    if application.task_id:
+        currency = application.currency or "GBP"
+        user_name = current_user.name if hasattr(current_user, "name") else "用户"
+        _msg = task_counter_offer(user_name=user_name, currency=currency, price=float(price))
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            task_id=application.task_id,
+            application_id=None,
+            message_type="negotiation",
+            conversation_type="task",
+            content=_msg["content_zh"],
+            meta=json.dumps({
+                "content_en": _msg["content_en"],
+                "action": "negotiate",
+                "price": float(price),
+                "currency": currency,
+            }),
+            created_at=get_utc_time(),
+        )
+        db.add(system_message)
+
     await db.commit()
     return {"status": "negotiating"}
 
@@ -552,6 +582,30 @@ async def quote_price(
     application.expert_counter_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
+
+    # 写报价卡片消息（镜像 task_chat_routes 模式）
+    if application.task_id:
+        currency = application.currency or "GBP"
+        user_name = current_user.name if hasattr(current_user, "name") else "达人"
+        _msg = task_counter_offer(user_name=user_name, currency=currency, price=float(price))
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            task_id=application.task_id,
+            application_id=None,
+            message_type="quote",
+            conversation_type="task",
+            content=_msg["content_zh"],
+            meta=json.dumps({
+                "content_en": _msg["content_en"],
+                "action": "quote",
+                "price": float(price),
+                "currency": currency,
+            }),
+            created_at=get_utc_time(),
+        )
+        db.add(system_message)
+
     await db.commit()
     return {"status": "negotiating"}
 
@@ -649,6 +703,42 @@ async def respond_to_negotiation(
         application.status = "negotiating"
 
     application.updated_at = get_utc_time()
+
+    # 写协商结果卡片消息（镜像 task_chat_routes 模式）
+    if application.task_id:
+        currency = application.currency or "GBP"
+        user_name = current_user.name if hasattr(current_user, "name") else "用户"
+        if action == "accept":
+            accepted_price = float(application.final_price or application.expert_counter_price or application.negotiated_price or 0)
+            _msg = task_negotiation_accepted(user_name=user_name, currency=currency, price=accepted_price)
+            message_type = "negotiation_accepted"
+            meta_price = accepted_price
+        elif action == "reject":
+            _msg = task_negotiation_rejected(user_name=user_name)
+            message_type = "negotiation_rejected"
+            meta_price = float(application.negotiated_price or application.expert_counter_price or 0)
+        else:  # counter
+            _msg = task_counter_offer(user_name=user_name, currency=currency, price=float(price))
+            message_type = "counter_offer"
+            meta_price = float(price)
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            task_id=application.task_id,
+            application_id=None,
+            message_type=message_type,
+            conversation_type="task",
+            content=_msg["content_zh"],
+            meta=json.dumps({
+                "content_en": _msg["content_en"],
+                "action": action,
+                "price": meta_price,
+                "currency": currency,
+            }),
+            created_at=get_utc_time(),
+        )
+        db.add(system_message)
+
     await db.commit()
     return {"status": application.status}
 
@@ -1173,6 +1263,30 @@ async def counter_offer(
         application.expert_counter_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
+
+    # 写还价卡片消息（镜像 task_chat_routes 模式）
+    if application.task_id and price is not None:
+        currency = application.currency or "GBP"
+        user_name = current_user.name if hasattr(current_user, "name") else "达人"
+        _msg = task_counter_offer(user_name=user_name, currency=currency, price=float(price))
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            task_id=application.task_id,
+            application_id=None,
+            message_type="counter_offer",
+            conversation_type="task",
+            content=_msg["content_zh"],
+            meta=json.dumps({
+                "content_en": _msg["content_en"],
+                "action": "counter",
+                "price": float(price),
+                "currency": currency,
+            }),
+            created_at=get_utc_time(),
+        )
+        db.add(system_message)
+
     await db.commit()
     return {"status": "negotiating", "counter_price": float(application.expert_counter_price) if application.expert_counter_price else None}
 
