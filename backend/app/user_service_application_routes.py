@@ -741,8 +741,29 @@ async def finalize_personal_service_application(
             stripe_version="2025-01-27.acacia",
         )
         ephemeral_key_secret = ephemeral_key.secret
+    except stripe.error.StripeError as e:
+        # Stripe API 错误（如 customer 未激活、API key 失效、网络等）
+        logger.error(
+            "个人服务:Stripe Customer/EphemeralKey 创建失败 "
+            "app=%s applicant=%s stripe_code=%s stripe_type=%s customer_id=%s: %s",
+            application.id,
+            applicant_user.id if applicant_user else None,
+            getattr(e, "code", None),
+            type(e).__name__,
+            customer_id,
+            e,
+            exc_info=True,
+        )
     except Exception as e:
-        logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+        # 非 Stripe 错误（DB、导入、字段访问等）
+        logger.exception(
+            "个人服务:创建 Stripe Customer/EphemeralKey 时发生非 Stripe 异常 "
+            "app=%s applicant=%s customer_id=%s: %s",
+            application.id,
+            applicant_user.id if applicant_user else None,
+            customer_id,
+            e,
+        )
 
     # 发送通知给申请用户
     from app.task_notifications import send_service_application_approved_notification

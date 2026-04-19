@@ -511,12 +511,21 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 taskSource: 'expert_service',
                 currency: (payData['currency'] as String?) ?? 'GBP',
               );
-              WidgetsBinding.instance.addPostFrameCallback((_) {
+              // 捕获 router/navigator,避免付款页返回后 context 失效
+              final router = GoRouter.of(context);
+              final navigator = Navigator.of(context);
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
                 if (!context.mounted) return;
-                pushWithSwipeBack<bool>(
+                final paid = await pushWithSwipeBack<bool>(
                   context,
                   ApprovalPaymentPage(paymentData: accepted),
                 );
+                // 付款成功 → pop 掉占位咨询聊天,跳到新任务详情页
+                // (占位 task 已被后端关闭,留在此页会一直显示 stale 状态)
+                if (paid == true) {
+                  if (navigator.canPop()) navigator.pop();
+                  router.push('/tasks/$taskId');
+                }
               });
               return;
             }

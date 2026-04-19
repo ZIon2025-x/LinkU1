@@ -1386,8 +1386,27 @@ async def _approve_team_service_application(
             stripe_version="2025-01-27.acacia",
         )
         ephemeral_key_secret = ephemeral_key.secret
+    except stripe.error.StripeError as e:
+        logger.error(
+            "团队服务:Stripe Customer/EphemeralKey 创建失败 "
+            "app=%s applicant=%s stripe_code=%s stripe_type=%s customer_id=%s: %s",
+            application.id,
+            applicant_user.id if applicant_user else None,
+            getattr(e, "code", None),
+            type(e).__name__,
+            customer_id,
+            e,
+            exc_info=True,
+        )
     except Exception as e:
-        logger.warning(f"团队服务:创建 Stripe Customer / EphemeralKey 失败: {e}")
+        logger.exception(
+            "团队服务:创建 Stripe Customer/EphemeralKey 时发生非 Stripe 异常 "
+            "app=%s applicant=%s customer_id=%s: %s",
+            application.id,
+            applicant_user.id if applicant_user else None,
+            customer_id,
+            e,
+        )
 
     return {
         "message": "申请已同意，请等待申请者完成支付",
