@@ -1,12 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:link2ur/data/models/flea_market_purchase_request.dart';
+import 'package:link2ur/data/models/flea_market.dart';
 
 // ---------------------------------------------------------------------------
 // Minimal JSON factory — only required fields
 // ---------------------------------------------------------------------------
 Map<String, dynamic> _base({
-  int id = 1,
-  int itemId = 10,
+  String id = '1',
   String buyerId = 'u_1',
   String status = 'pending',
   int? taskId,
@@ -14,7 +13,6 @@ Map<String, dynamic> _base({
 }) =>
     <String, dynamic>{
       'id': id,
-      'item_id': itemId,
       'buyer_id': buyerId,
       'status': status,
       if (taskId != null) 'task_id': taskId,
@@ -26,11 +24,10 @@ void main() {
   // -------------------------------------------------------------------------
   // fromJson basics
   // -------------------------------------------------------------------------
-  group('FleaMarketPurchaseRequest.fromJson', () {
+  group('PurchaseRequest.fromJson', () {
     test('parses all basic fields from a realistic payload', () {
       final json = <String, dynamic>{
-        'id': 5,
-        'item_id': 20,
+        'id': '5',
         'buyer_id': 'u_2',
         'buyer_name': 'Bob',
         'buyer_avatar': 'https://example.com/b.png',
@@ -44,77 +41,73 @@ void main() {
         'created_at': '2026-01-01T00:00:00Z',
         'updated_at': '2026-01-02T00:00:00Z',
       };
-      final fmpr = FleaMarketPurchaseRequest.fromJson(json);
-      expect(fmpr.id, 5);
-      expect(fmpr.itemId, 20);
-      expect(fmpr.buyerId, 'u_2');
-      expect(fmpr.buyerName, 'Bob');
-      expect(fmpr.buyerAvatar, 'https://example.com/b.png');
-      expect(fmpr.proposedPrice, 12.5);
-      expect(fmpr.sellerCounterPrice, 15.0);
-      expect(fmpr.message, 'interested');
-      expect(fmpr.status, 'negotiating');
-      expect(fmpr.finalPrice, isNull);
-      expect(fmpr.taskId, 101);
-      expect(fmpr.consultationTaskId, 55);
-      expect(fmpr.createdAt, DateTime.parse('2026-01-01T00:00:00Z'));
-      expect(fmpr.updatedAt, DateTime.parse('2026-01-02T00:00:00Z'));
+      final pr = PurchaseRequest.fromJson(json);
+      expect(pr.id, '5');
+      expect(pr.buyerId, 'u_2');
+      expect(pr.buyerName, 'Bob');
+      expect(pr.buyerAvatar, 'https://example.com/b.png');
+      expect(pr.proposedPrice, 12.5);
+      expect(pr.sellerCounterPrice, 15.0);
+      expect(pr.message, 'interested');
+      expect(pr.status, 'negotiating');
+      expect(pr.finalPrice, isNull);
+      expect(pr.taskId, 101);
+      expect(pr.consultationTaskId, 55);
+      expect(pr.createdAt, DateTime.parse('2026-01-01T00:00:00Z'));
+      expect(pr.updatedAt, DateTime.parse('2026-01-02T00:00:00Z'));
     });
 
     test('defaults status to pending when missing', () {
-      final fmpr = FleaMarketPurchaseRequest.fromJson(<String, dynamic>{
-        'id': 1,
-        'item_id': 10,
+      final pr = PurchaseRequest.fromJson(<String, dynamic>{
+        'id': '1',
         'buyer_id': 'u_1',
       });
-      expect(fmpr.status, 'pending');
+      expect(pr.status, 'pending');
     });
 
     test('consultation_task_id is null when key is absent', () {
-      final fmpr = FleaMarketPurchaseRequest.fromJson(_base());
-      expect(fmpr.consultationTaskId, isNull);
+      final pr = PurchaseRequest.fromJson(_base());
+      expect(pr.consultationTaskId, isNull);
     });
 
     test('consultation_task_id is null when explicitly null in JSON', () {
       final json = _base()..['consultation_task_id'] = null;
-      final fmpr = FleaMarketPurchaseRequest.fromJson(json);
-      expect(fmpr.consultationTaskId, isNull);
+      final pr = PurchaseRequest.fromJson(json);
+      expect(pr.consultationTaskId, isNull);
     });
 
     test('consultation_task_id parses integer correctly', () {
-      final fmpr = FleaMarketPurchaseRequest.fromJson(
+      final pr = PurchaseRequest.fromJson(
         _base(consultationTaskId: 77),
       );
-      expect(fmpr.consultationTaskId, 77);
+      expect(pr.consultationTaskId, 77);
     });
   });
 
   // -------------------------------------------------------------------------
   // copyWith
   // -------------------------------------------------------------------------
-  group('FleaMarketPurchaseRequest.copyWith', () {
+  group('PurchaseRequest.copyWith', () {
     test('preserves consultationTaskId when not overridden', () {
-      final fmpr = FleaMarketPurchaseRequest(
-        id: 1,
-        itemId: 10,
+      const pr = PurchaseRequest(
+        id: '1',
         buyerId: 'u_1',
         status: 'consulting',
         taskId: 200,
         consultationTaskId: 100,
       );
-      final updated = fmpr.copyWith(taskId: 300);
+      final updated = pr.copyWith(taskId: 300);
       expect(updated.consultationTaskId, 100);
       expect(updated.taskId, 300);
     });
 
     test('can update consultationTaskId', () {
-      final fmpr = FleaMarketPurchaseRequest(
-        id: 1,
-        itemId: 10,
+      const pr = PurchaseRequest(
+        id: '1',
         buyerId: 'u_1',
         status: 'consulting',
       );
-      final updated = fmpr.copyWith(consultationTaskId: 50);
+      final updated = pr.copyWith(consultationTaskId: 50);
       expect(updated.consultationTaskId, 50);
     });
   });
@@ -122,11 +115,10 @@ void main() {
   // -------------------------------------------------------------------------
   // Equatable props
   // -------------------------------------------------------------------------
-  group('FleaMarketPurchaseRequest Equatable', () {
+  group('PurchaseRequest Equatable', () {
     test('includes consultationTaskId in equality check', () {
-      final base = FleaMarketPurchaseRequest(
-        id: 1,
-        itemId: 10,
+      const base = PurchaseRequest(
+        id: '1',
         buyerId: 'u_1',
         status: 'consulting',
         consultationTaskId: 50,
@@ -136,16 +128,14 @@ void main() {
     });
 
     test('equal when all props match', () {
-      const a = FleaMarketPurchaseRequest(
-        id: 1,
-        itemId: 10,
+      const a = PurchaseRequest(
+        id: '1',
         buyerId: 'u_1',
         status: 'consulting',
         consultationTaskId: 50,
       );
-      const b = FleaMarketPurchaseRequest(
-        id: 1,
-        itemId: 10,
+      const b = PurchaseRequest(
+        id: '1',
         buyerId: 'u_1',
         status: 'consulting',
         consultationTaskId: 50,
@@ -160,53 +150,50 @@ void main() {
   group('FleaMarketPurchaseRequestConsultationRoute.consultationMessageTaskId',
       () {
     test('FMPR 咨询中: fallback taskId=占位', () {
-      final fmpr = FleaMarketPurchaseRequest.fromJson({
-        'id': 1,
-        'item_id': 10,
+      final pr = PurchaseRequest.fromJson({
+        'id': '1',
         'buyer_id': 'u_1',
         'status': 'consulting',
         'task_id': 102,
         'consultation_task_id': null,
       });
-      expect(fmpr.consultationMessageTaskId, 102);
+      expect(pr.consultationMessageTaskId, 102);
     });
 
     test(
         'FMPR 晋升后: consultationTaskId == taskId (special!), helper returns consultation_task_id',
         () {
-      final fmpr = FleaMarketPurchaseRequest.fromJson({
-        'id': 1,
-        'item_id': 10,
+      final pr = PurchaseRequest.fromJson({
+        'id': '1',
         'buyer_id': 'u_1',
         'status': 'accepted',
         'task_id': 102,
         'consultation_task_id': 102,
       });
-      expect(fmpr.consultationMessageTaskId, 102);
+      expect(pr.consultationMessageTaskId, 102);
       // 断言 quirk itself 而非 bug:FMPR 晋升后两字段确实相等
       expect(
-        fmpr.consultationTaskId,
-        equals(fmpr.taskId),
+        pr.consultationTaskId,
+        equals(pr.taskId),
         reason: 'FMPR promotion quirk: both fields point to same task row. '
             'Not a bug. Do NOT use == for 成单判断.',
       );
     });
 
     test('NULL boundary', () {
-      final fmpr = FleaMarketPurchaseRequest.fromJson({
-        'id': 1,
-        'item_id': 10,
+      final pr = PurchaseRequest.fromJson({
+        'id': '1',
         'buyer_id': 'u_1',
         'status': 'pending',
         'task_id': null,
         'consultation_task_id': null,
       });
-      expect(fmpr.consultationMessageTaskId, isNull);
+      expect(pr.consultationMessageTaskId, isNull);
     });
 
     test('returns taskId when consultationTaskId is null (no key in JSON)', () {
-      final fmpr = FleaMarketPurchaseRequest.fromJson(_base(taskId: 77));
-      expect(fmpr.consultationMessageTaskId, 77);
+      final pr = PurchaseRequest.fromJson(_base(taskId: 77));
+      expect(pr.consultationMessageTaskId, 77);
     });
   });
 }

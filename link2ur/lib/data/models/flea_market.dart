@@ -444,7 +444,11 @@ class PurchaseRequest extends Equatable {
     this.message,
     this.status = 'pending',
     this.sellerCounterPrice,
+    this.finalPrice,
     this.createdAt,
+    this.updatedAt,
+    this.taskId,
+    this.consultationTaskId,
   });
 
   final String id;
@@ -454,9 +458,32 @@ class PurchaseRequest extends Equatable {
   final UserBadge? buyerDisplayedBadge;
   final double? proposedPrice;
   final String? message;
-  final String status; // pending, seller_negotiating, accepted, rejected
+  final String status; // pending, seller_negotiating, accepted, rejected, consulting, negotiating, price_agreed, cancelled
   final double? sellerCounterPrice;
+  final double? finalPrice;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  /// 付款晋升后关联的真实任务 ID。
+  ///
+  /// - 咨询阶段：指向 `is_consultation_placeholder=true` 的占位 task。
+  /// - 晋升后：占位 task 被改为真实任务（`is_consultation_placeholder=false`），
+  ///   此字段仍指向同一行。
+  ///
+  /// 使用 [FleaMarketPurchaseRequestConsultationRoute.consultationMessageTaskId]
+  /// 作为统一入口，无需在调用方判断。
+  final int? taskId;
+
+  /// 咨询占位 task id。
+  ///
+  /// **FMPR 特殊性**:flea_market 不新建真任务,而是把占位 task 直接晋升为真任务
+  /// (改 `is_consultation_placeholder=false` + `task_source='flea_market'`)。
+  /// 付款晋升后本字段和 [taskId] **指向同一行 task**,这是预期行为不是 bug。
+  ///
+  /// 判断"是否已成单"**不要**用 `consultationTaskId == taskId` 比较——这个比较
+  /// 只在 FMPR 晋升后为 true,SA/TA 的任何阶段都是 false,**不是跨类型的成单判断**。
+  /// 应该用 `task.isConsultationPlaceholder == false` 或 `purchaseRequest.status` 判断。
+  final int? consultationTaskId;
 
   factory PurchaseRequest.fromJson(Map<String, dynamic> json) {
     return PurchaseRequest(
@@ -473,14 +500,68 @@ class PurchaseRequest extends Equatable {
       message: json['message'] as String?,
       status: json['status'] as String? ?? 'pending',
       sellerCounterPrice: _toDoubleNullable(json['seller_counter_price']),
+      finalPrice: _toDoubleNullable(json['final_price']),
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'] as String)
           : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'] as String)
+          : null,
+      taskId: _toIntNullable(json['task_id']),
+      consultationTaskId: _toIntNullable(json['consultation_task_id']),
+    );
+  }
+
+  PurchaseRequest copyWith({
+    String? id,
+    String? buyerId,
+    String? buyerName,
+    String? buyerAvatar,
+    UserBadge? buyerDisplayedBadge,
+    double? proposedPrice,
+    String? message,
+    String? status,
+    double? sellerCounterPrice,
+    double? finalPrice,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? taskId,
+    int? consultationTaskId,
+  }) {
+    return PurchaseRequest(
+      id: id ?? this.id,
+      buyerId: buyerId ?? this.buyerId,
+      buyerName: buyerName ?? this.buyerName,
+      buyerAvatar: buyerAvatar ?? this.buyerAvatar,
+      buyerDisplayedBadge: buyerDisplayedBadge ?? this.buyerDisplayedBadge,
+      proposedPrice: proposedPrice ?? this.proposedPrice,
+      message: message ?? this.message,
+      status: status ?? this.status,
+      sellerCounterPrice: sellerCounterPrice ?? this.sellerCounterPrice,
+      finalPrice: finalPrice ?? this.finalPrice,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      taskId: taskId ?? this.taskId,
+      consultationTaskId: consultationTaskId ?? this.consultationTaskId,
     );
   }
 
   @override
-  List<Object?> get props => [id, status, sellerCounterPrice, buyerDisplayedBadge];
+  List<Object?> get props => [
+        id,
+        status,
+        sellerCounterPrice,
+        buyerDisplayedBadge,
+        finalPrice,
+        taskId,
+        consultationTaskId,
+        updatedAt,
+      ];
+}
+
+/// 咨询消息路由 extension。C.3 规则:优先 consultationTaskId,fallback taskId。
+extension FleaMarketPurchaseRequestConsultationRoute on PurchaseRequest {
+  int? get consultationMessageTaskId => consultationTaskId ?? taskId;
 }
 
 /// 创建跳蚤市场商品请求
