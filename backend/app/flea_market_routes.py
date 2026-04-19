@@ -33,6 +33,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
 from app.consultation import error_codes
+from app.consultation.helpers import create_placeholder_task
 from app.deps import get_async_db_dependency
 from app.async_routers import get_current_user_optional
 from app.error_handlers import raise_http_error_with_code
@@ -2451,8 +2452,12 @@ async def approve_purchase_request(
             existing_task.is_flexible = 1
             existing_task.images = json.dumps(images) if images else None
             existing_task.task_source = "flea_market"
+            existing_task.is_consultation_placeholder = False  # 从占位晋升为真实订单任务(与 task_source 原子变更)
             existing_task.accepted_at = get_utc_time()
             new_task = existing_task
+            # 和 SA/TA 对称:记录咨询 id 以便看历史(与晋升原子)
+            if not purchase_request.consultation_task_id:
+                purchase_request.consultation_task_id = existing_task.id
         else:
             # Original task creation (no pre-existing consultation task)
             new_task = models.Task(
@@ -4053,8 +4058,12 @@ async def create_flea_market_consultation(
         await db.flush()
 
         # 5. 创建占位 Task（status=consulting）
-        new_task = models.Task(
+        new_task = await create_placeholder_task(
+            db,
+            consultation_type="flea_market_consultation",
             title=f"咨询: {item.title}",
+            applicant_id=current_user.id,
+            taker_id=item.seller_id,
             description=f"跳蚤市场咨询: {item.title}",
             reward=item.price,
             base_reward=item.price,
@@ -4062,14 +4071,8 @@ async def create_flea_market_consultation(
             location=item.location or "online",
             task_type="flea_market",
             task_level="normal",
-            poster_id=current_user.id,
-            taker_id=item.seller_id,
-            status="consulting",
-            task_source="flea_market_consultation",
             is_flexible=1,
         )
-        db.add(new_task)
-        await db.flush()
 
         # 6. 关联 task_id
         new_request.task_id = new_task.id

@@ -1120,6 +1120,7 @@ async def get_user_applications(
                 result.append({
                     "id": app.id,
                     "task_id": app.task_id,
+                    "consultation_task_id": app.consultation_task_id,
                     "task_title": task.title,
                     "task_title_en": title_en,
                     "task_title_zh": title_zh,
@@ -1235,6 +1236,7 @@ def _format_application_item(app, user, unread_count: int = 0):
         "unread_count": unread_count,
         "poster_reply": app.poster_reply,
         "poster_reply_at": format_iso_utc(app.poster_reply_at) if app.poster_reply_at else None,
+        "consultation_task_id": app.consultation_task_id,
     }
 
 

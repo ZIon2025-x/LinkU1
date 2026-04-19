@@ -55,7 +55,10 @@ def update_user_statistics(db: Session, user_id: str):
     同时同步更新 TaskExpert 与 FeaturedTaskExpert（如存在）。"""
     from app.models import Review, Task
 
-    posted_tasks = db.query(Task).filter(Task.poster_id == user_id).count()
+    posted_tasks = db.query(Task).filter(
+        Task.poster_id == user_id,
+        Task.is_consultation_placeholder == False,
+    ).count()
     taken_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
     total_tasks = posted_tasks + taken_tasks
 
@@ -63,7 +66,9 @@ def update_user_statistics(db: Session, user_id: str):
         Task.taker_id == user_id, Task.status == "completed"
     ).count()
     completed_posted_tasks = db.query(Task).filter(
-        Task.poster_id == user_id, Task.status == "completed"
+        Task.poster_id == user_id,
+        Task.status == "completed",
+        Task.is_consultation_placeholder == False,
     ).count()
     completed_tasks = completed_taken_tasks + completed_posted_tasks
 

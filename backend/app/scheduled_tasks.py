@@ -938,13 +938,15 @@ def close_stale_consultations(db: Session, inactive_days: int | None = None):
             .subquery()
         )
 
-        # 主查询: consulting 状态 + consultation 来源 + 不活跃
+        # 主查询: consulting 状态 + 占位标记 + 不活跃
+        # 用 is_consultation_placeholder=True 过滤，覆盖全部 3 种子类型
+        # (consultation / task_consultation / flea_market_consultation) — fix B3
         stale_tasks = (
             db.query(models.Task)
             .outerjoin(last_msg_subq, models.Task.id == last_msg_subq.c.task_id)
             .filter(
+                models.Task.is_consultation_placeholder == True,  # noqa: E712
                 models.Task.status == "consulting",
-                models.Task.task_source.in_(["consultation", "flea_market_consultation"]),
                 func.coalesce(last_msg_subq.c.last_msg_at, models.Task.created_at) < cutoff,
             )
             .all()
@@ -974,8 +976,9 @@ def close_stale_consultations(db: Session, inactive_days: int | None = None):
             )
             db.add(system_msg)
 
-            # 同步关闭关联的 ServiceApplication
+            # task_source 决定关闭哪张关联申请表
             if task.task_source == "consultation":
+                # 同步关闭关联的 ServiceApplication
                 app = db.execute(
                     select(models.ServiceApplication).where(
                         models.ServiceApplication.task_id == task.id
@@ -984,8 +987,18 @@ def close_stale_consultations(db: Session, inactive_days: int | None = None):
                 if app and app.status in ("consulting", "negotiating"):
                     app.status = "cancelled"
 
-            # 同步关闭关联的 FleaMarketPurchaseRequest
+            elif task.task_source == "task_consultation":
+                # 同步关闭关联的 TaskApplication (修 B3: 新增分支)
+                ta = db.execute(
+                    select(models.TaskApplication).where(
+                        models.TaskApplication.task_id == task.id
+                    )
+                ).scalar_one_or_none()
+                if ta and ta.status in ("consulting", "negotiating", "price_agreed"):
+                    ta.status = "cancelled"
+
             elif task.task_source == "flea_market_consultation":
+                # 同步关闭关联的 FleaMarketPurchaseRequest
                 pr = db.execute(
                     select(models.FleaMarketPurchaseRequest).where(
                         models.FleaMarketPurchaseRequest.task_id == task.id
@@ -993,6 +1006,12 @@ def close_stale_consultations(db: Session, inactive_days: int | None = None):
                 ).scalar_one_or_none()
                 if pr and pr.status in ("consulting", "negotiating"):
                     pr.status = "cancelled"
+
+            else:
+                logger.error(
+                    "Placeholder task with unexpected task_source skipped",
+                    extra={"task_id": task.id, "task_source": task.task_source},
+                )
 
             closed_count += 1
 

@@ -398,25 +398,23 @@ async def create_team_consultation(
     owner_row = owner_result.first()
     taker_user_id = owner_row[0] if owner_row else None
 
-    consulting_task = models.Task(
+    consulting_task = await create_placeholder_task(
+        db,
+        consultation_type="consultation",
         title=f"团队咨询: {team_name}",
+        applicant_id=current_user.id,
+        taker_id=taker_user_id,
+        description=f"团队咨询: {team_name}",
         title_zh=f"团队咨询: {team_name}",
         title_en=f"Team Consultation: {team_name_en}",
-        description=f"团队咨询: {team_name}",
         reward=0,
         base_reward=0,
         reward_to_be_quoted=True,
         currency="GBP",
         location="",
         task_type="expert_service",
-        task_source="consultation",
-        poster_id=current_user.id,
-        taker_id=taker_user_id,
-        status="consulting",
         task_level="expert",
     )
-    db.add(consulting_task)
-    await db.flush()
 
     # 创建 application（service_id=NULL 表示团队咨询）
     application = models.ServiceApplication(
@@ -1022,6 +1020,9 @@ async def _approve_team_service_application(
     # 12. 更新 application
     application.status = "approved"
     application.final_price = price
+    # 备份咨询占位 id,保留 team 成员访问历史消息的路径(防御性兜底,双层防护)
+    if application.task_id and not application.consultation_task_id:
+        application.consultation_task_id = application.task_id
     application.task_id = new_task.id
     application.approved_at = get_utc_time()
     application.updated_at = get_utc_time()
@@ -1291,6 +1292,7 @@ async def list_expert_applications(
             "final_price": float(row.ServiceApplication.final_price) if row.ServiceApplication.final_price else None,
             "currency": row.ServiceApplication.currency or "GBP",
             "task_id": row.ServiceApplication.task_id,
+            "consultation_task_id": row.ServiceApplication.consultation_task_id,
             "created_at": row.ServiceApplication.created_at.isoformat() if row.ServiceApplication.created_at else None,
         }
         for row in rows
@@ -1372,6 +1374,7 @@ async def list_my_service_applications(
                 "final_price": float(a.final_price) if a.final_price else None,
                 "currency": a.currency or (svc.currency if svc else "GBP"),
                 "task_id": a.task_id,
+                "consultation_task_id": a.consultation_task_id,
                 "owner_reply": a.owner_reply,
                 "owner_reply_at": a.owner_reply_at.isoformat() if a.owner_reply_at else None,
                 "created_at": a.created_at.isoformat() if a.created_at else None,

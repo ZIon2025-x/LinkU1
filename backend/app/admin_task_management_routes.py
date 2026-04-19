@@ -32,6 +32,7 @@ def admin_get_tasks(
     task_type: str = None,
     location: str = None,
     keyword: str = None,
+    include_placeholders: bool = Query(False, description="包含咨询占位 task；客服专用，默认隐藏"),
     current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -40,6 +41,10 @@ def admin_get_tasks(
 
     # 构建查询
     query = db.query(Task)
+
+    # 默认排除占位 task；客服显式需要时加 ?include_placeholders=true
+    if not include_placeholders:
+        query = query.filter(Task.is_consultation_placeholder == False)  # noqa: E712
 
     # 添加状态筛选
     if status and status.strip():

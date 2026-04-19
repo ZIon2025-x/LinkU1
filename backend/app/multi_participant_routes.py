@@ -29,6 +29,9 @@ from app.deps import get_current_user_secure_sync_csrf
 from app.separate_auth_deps import get_current_admin, get_current_user_optional
 from app.utils.time_utils import get_utc_time
 from app.models import TaskExpertService, TaskExpert
+import logging
+
+logger = logging.getLogger(__name__)
 
 def _payment_method_types_for_currency(currency: str) -> list:
     """根据货币动态返回 Stripe 支持的支付方式列表"""
@@ -1145,6 +1148,7 @@ def complete_participant_task(
 def distribute_rewards_equal(
     task_id: str,
     request: TaskRewardDistributeEqualRequest,
+    http_request: Request,
     current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -1152,11 +1156,22 @@ def distribute_rewards_equal(
     管理员确认完成并平均分配奖励
     """
     parsed_task_id = parse_task_id(task_id)
-    
+
     db_task = db.query(Task).filter(Task.id == parsed_task_id).with_for_update().first()
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
+    # 不拦,但记录客服对占位 task 的操作便于事后审计
+    if db_task.is_consultation_placeholder:
+        logger.warning(
+            "Admin operation on consultation placeholder task",
+            extra={
+                "task_id": db_task.id,
+                "admin_user": current_admin.id,
+                "endpoint": http_request.url.path,
+            },
+        )
+
     if not db_task.is_multi_participant:
         raise HTTPException(status_code=400, detail="This is not a multi-participant task")
     
@@ -2905,6 +2920,7 @@ def expert_reject_exit(
 def distribute_rewards_custom(
     task_id: str,
     request: TaskRewardDistributeCustomRequest,
+    http_request: Request,
     current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -2912,11 +2928,22 @@ def distribute_rewards_custom(
     管理员确认完成并自定义分配奖励
     """
     parsed_task_id = parse_task_id(task_id)
-    
+
     db_task = db.query(Task).filter(Task.id == parsed_task_id).with_for_update().first()
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
+    # 不拦,但记录客服对占位 task 的操作便于事后审计
+    if db_task.is_consultation_placeholder:
+        logger.warning(
+            "Admin operation on consultation placeholder task",
+            extra={
+                "task_id": db_task.id,
+                "admin_user": current_admin.id,
+                "endpoint": http_request.url.path,
+            },
+        )
+
     if not db_task.is_multi_participant:
         raise HTTPException(status_code=400, detail="This is not a multi-participant task")
     

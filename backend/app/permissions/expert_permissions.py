@@ -15,6 +15,7 @@ from typing import Literal, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app import models
 from app.consultation import error_codes
@@ -124,6 +125,53 @@ async def require_team_role(
     - minimum='member' 所有活跃成员通过
     """
     role = await get_team_role(db, expert_id, user_id)
+    if role is None:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error_code": error_codes.NOT_TEAM_MEMBER,
+                "message": "您不是该团队成员",
+            },
+        )
+    if _ROLE_HIERARCHY[role] < _ROLE_HIERARCHY[minimum]:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error_code": error_codes.INSUFFICIENT_TEAM_ROLE,
+                "message": "角色权限不足",
+                "required_role": minimum,
+            },
+        )
+    return role
+
+
+def require_team_role_sync(
+    db: Session,
+    expert_id: str,
+    user_id: str,
+    *,
+    minimum: TeamRole,
+) -> TeamRole:
+    """同步版 require_team_role,供 sync 路由(使用 sqlalchemy.orm.Session)调用。
+
+    逻辑与 async 版完全一致:
+    - minimum='owner'  仅 owner 通过
+    - minimum='admin'  owner + admin 通过
+    - minimum='member' 所有活跃成员通过
+
+    注意:此函数绕过 async 版的 request-scoped ContextVar 缓存,直接查 DB。
+    sync 路由本身不跑在 async event loop 内,因此不共享同一缓存字典。
+    """
+    member = (
+        db.query(models.ExpertMember)
+        .filter(
+            models.ExpertMember.expert_id == expert_id,
+            models.ExpertMember.user_id == user_id,
+            models.ExpertMember.status == "active",
+        )
+        .first()
+    )
+    role = _normalize_role(member)
     if role is None:
         raise HTTPException(
             status_code=403,

@@ -268,6 +268,9 @@ class Task(Base):
     counter_offer_price = Column(DECIMAL(12, 2), nullable=True)
     counter_offer_status = Column(String(20), nullable=True)   # None / 'pending' / 'accepted' / 'rejected'
     counter_offer_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    is_consultation_placeholder = Column(
+        Boolean, nullable=False, default=False, server_default='false'
+    )
 
     # 关系
     poster = relationship(
@@ -782,6 +785,9 @@ class TaskApplication(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    consultation_task_id = Column(
+        Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(20), default="pending")  # consulting, negotiating, price_agreed, pending, chatting, approved, rejected, cancelled
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
@@ -792,7 +798,7 @@ class TaskApplication(Base):
     poster_reply_at = Column(DateTime(timezone=True), nullable=True)  # 回复时间
 
     # 关系
-    task = relationship("Task", backref="applications")  # 任务关系
+    task = relationship("Task", backref="applications", foreign_keys=[task_id])  # 任务关系
     applicant = relationship("User", foreign_keys=[applicant_id])  # 申请者关系
     
     # 确保同一用户不能重复申请同一任务
@@ -1762,6 +1768,9 @@ class ServiceApplication(Base):
     status = Column(String(20), default="pending")  # consulting, negotiating, price_agreed, pending, approved, rejected, cancelled
     final_price = Column(DECIMAL(12, 2), nullable=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    consultation_task_id = Column(
+        Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
     deadline = Column(DateTime(timezone=True), nullable=True)  # 任务截至日期（如果is_flexible为False）
     is_flexible = Column(Integer, default=0)  # 是否灵活（1=灵活，无截至日期；0=有截至日期）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
@@ -1776,7 +1785,7 @@ class ServiceApplication(Base):
     service = relationship("TaskExpertService", back_populates="applications")
     applicant = relationship("User", foreign_keys=[applicant_id], backref="service_applications")
     expert = relationship("TaskExpert", foreign_keys=[expert_id])
-    task = relationship("Task", backref="service_application")
+    task = relationship("Task", backref="service_application", foreign_keys=[task_id])
     time_slot = relationship("ServiceTimeSlot", back_populates="applications", foreign_keys=[time_slot_id])
     
     __table_args__ = (
@@ -1902,6 +1911,9 @@ class FleaMarketPurchaseRequest(Base):
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    consultation_task_id = Column(
+        Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
     final_price = Column(DECIMAL(12, 2), nullable=True)
 
     # 关系

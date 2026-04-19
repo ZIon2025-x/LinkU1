@@ -571,7 +571,8 @@ async def owner_approve_application(
         existing_task.is_paid = 0
         existing_task.payment_expires_at = get_utc_time() + timedelta(minutes=30)
         existing_task.accepted_at = get_utc_time()
-        existing_task.task_source = "consultation"
+        existing_task.task_source = "personal_service"
+        existing_task.is_consultation_placeholder = False  # 从占位晋升为真实订单任务(与 task_source 原子变更)
         existing_task.location = service.location or "线上"
         existing_task.task_type = service.category or "其他"
         existing_task.task_level = "expert" if hasattr(service, 'expert_id') and service.expert_id else task_level
@@ -678,6 +679,9 @@ async def owner_approve_application(
     # 更新申请记录
     application.status = "approved"
     application.final_price = price
+    # 备份咨询占位 id(与 team 分支对称,防御性兜底)
+    if application.task_id and not application.consultation_task_id:
+        application.consultation_task_id = application.task_id
     application.task_id = new_task.id
     application.approved_at = get_utc_time()
     application.updated_at = get_utc_time()
