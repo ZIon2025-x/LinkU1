@@ -36,6 +36,7 @@ from app.coupon_points_crud import (
 from app import models
 from app.rate_limiting import rate_limit
 from app.wallet_service import get_or_create_wallet
+from app.utils.task_guards import load_real_task_or_404_sync
 
 logger = logging.getLogger(__name__)
 
@@ -531,14 +532,14 @@ def create_task_payment(
     
     # 使用 SELECT FOR UPDATE 锁定任务，防止并发重复支付
     from sqlalchemy import select
-    
+
     task_query = select(models.Task).where(models.Task.id == task_id).with_for_update()
     task_result = db.execute(task_query)
     task = task_result.scalar_one_or_none()
-    
-    if not task:
+
+    if not task or task.is_consultation_placeholder:
         raise HTTPException(status_code=404, detail="任务不存在")
-    
+
     if task.poster_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权访问此任务")
     
@@ -2222,10 +2223,8 @@ def get_task_payment_status(
     import logging
     logger = logging.getLogger(__name__)
     
-    task = crud.get_task(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
-    
+    task = load_real_task_or_404_sync(db, task_id)
+
     # 权限检查：只有任务发布者或接受者可以查看支付状态
     if task.poster_id != current_user.id and task.taker_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权查看此任务的支付状态")
