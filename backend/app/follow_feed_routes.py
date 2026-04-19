@@ -410,7 +410,7 @@ async def _fetch_followed_services(
 
     展示信息：
     - 团队服务：展示 Expert.name / Expert.avatar
-    - 个人服务：展示 User.name / User.avatar（FeaturedTaskExpert 优先作为达人展示名）
+    - 个人服务：展示 User.name / User.avatar（Expert 团队名/头像优先作为达人展示名）
     """
     from sqlalchemy import and_, or_
     from sqlalchemy.orm import aliased
@@ -418,7 +418,6 @@ async def _fetch_followed_services(
     if not following_ids and not following_expert_ids:
         return []
 
-    FTE = aliased(models.FeaturedTaskExpert)
     ExpertAlias = aliased(Expert)
 
     # 构建匹配条件
@@ -461,8 +460,6 @@ async def _fetch_followed_services(
             models.TaskExpertService.created_at,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
-            FTE.name.label("fte_name"),
-            FTE.avatar.label("fte_avatar"),
             ExpertAlias.name.label("expert_name"),
             ExpertAlias.avatar.label("expert_avatar"),
         )
@@ -472,13 +469,6 @@ async def _fetch_followed_services(
             and_(
                 models.TaskExpertService.owner_type == "user",
                 models.TaskExpertService.owner_id == models.User.id,
-            ),
-        )
-        .outerjoin(
-            FTE,
-            and_(
-                models.TaskExpertService.owner_type == "user",
-                models.TaskExpertService.owner_id == FTE.id,
             ),
         )
         # Expert JOIN 只在 owner_type='expert' 时命中
@@ -508,9 +498,9 @@ async def _fetch_followed_services(
             display_name = row.expert_name
             display_avatar = row.expert_avatar
         else:
-            # 个人达人：FeaturedTaskExpert 展示名优先，回退 User
-            display_name = row.fte_name or row.user_name
-            display_avatar = row.fte_avatar or row.user_avatar
+            # 个人达人：直接使用 User 展示名（FeaturedTaskExpert 已弃用）
+            display_name = row.user_name
+            display_avatar = row.user_avatar
         items.append({
             "feed_type": "service",
             "id": f"service_{row.id}",
@@ -566,7 +556,6 @@ async def _fetch_followed_activities(
         return []
 
     now = get_utc_time()
-    FTE = aliased(models.FeaturedTaskExpert)
     ExpertAlias = aliased(Expert)
 
     participant_count = (
@@ -626,8 +615,6 @@ async def _fetch_followed_activities(
             participant_count,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
-            FTE.name.label("fte_name"),
-            FTE.avatar.label("fte_avatar"),
             ExpertAlias.name.label("expert_name"),
             ExpertAlias.avatar.label("expert_avatar"),
         )
@@ -636,13 +623,6 @@ async def _fetch_followed_activities(
             and_(
                 models.Activity.owner_type == "user",
                 models.Activity.owner_id == models.User.id,
-            ),
-        )
-        .outerjoin(
-            FTE,
-            and_(
-                models.Activity.owner_type == "user",
-                models.Activity.owner_id == FTE.id,
             ),
         )
         .outerjoin(
@@ -682,8 +662,9 @@ async def _fetch_followed_activities(
             display_name = row.expert_name
             display_avatar = row.expert_avatar
         else:
-            display_name = row.fte_name or row.user_name
-            display_avatar = row.fte_avatar or row.user_avatar
+            # 个人达人：直接使用 User 展示名（FeaturedTaskExpert 已弃用）
+            display_name = row.user_name
+            display_avatar = row.user_avatar
         items.append({
             "feed_type": "activity",
             "id": f"activity_{row.id}",
