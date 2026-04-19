@@ -2333,6 +2333,72 @@ async def create_purchase_request(
         )
 
 
+async def _close_sibling_consultation_fmprs(
+    db: AsyncSession,
+    item: "models.FleaMarketItem",
+    approved_request_id: int,
+) -> None:
+    """
+    After a sale FMPR is approved/accepted, cancel all sibling FMPRs that are
+    still in a consultation/negotiation state for the same item.
+
+    Only runs for sale items (listing_type == 'sale').  Rental items are skipped
+    by the caller's guard, but we also enforce it defensively here.
+
+    For each sibling FMPR:
+    - Set status = 'cancelled'
+    - If it has a placeholder task (task_id), cancel that task too
+    - Notify the sibling buyer that the item has been sold
+    """
+    if item.listing_type != "sale":
+        return
+
+    sibling_result = await db.execute(
+        select(models.FleaMarketPurchaseRequest)
+        .where(
+            and_(
+                models.FleaMarketPurchaseRequest.item_id == item.id,
+                models.FleaMarketPurchaseRequest.status.in_(
+                    ["consulting", "negotiating", "price_agreed"]
+                ),
+                models.FleaMarketPurchaseRequest.id != approved_request_id,
+            )
+        )
+    )
+    siblings = sibling_result.scalars().all()
+
+    if not siblings:
+        return
+
+    for sibling in siblings:
+        sibling.status = "cancelled"
+        sibling.updated_at = get_utc_time()
+
+        # Cancel the placeholder task atomically (same transaction)
+        if sibling.task_id:
+            placeholder_task = await db.get(models.Task, sibling.task_id)
+            if placeholder_task:
+                placeholder_task.status = "cancelled"
+
+    # Notify each sibling buyer (after objects are mutated, before commit)
+    try:
+        from app import async_crud
+        for sibling in siblings:
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=sibling.buyer_id,
+                notification_type="flea_market_consultation",
+                title="商品已售出",
+                content=f"您咨询的商品「{item.title}」已被其他买家购买。",
+                related_id=str(sibling.task_id) if sibling.task_id else None,
+                title_en="Item Sold",
+                content_en=f'The item "{item.title}" you were inquiring about has been purchased by another buyer.',
+                related_type="task_id",
+            )
+    except Exception as e:
+        logger.warning(f"Failed to notify sibling buyers of item sold: {e}")
+
+
 # ==================== 卖家同意议价API ====================
 
 @flea_market_router.post("/purchase-requests/{request_id}/approve", response_model=dict)
@@ -2588,9 +2654,13 @@ async def approve_purchase_request(
             )
             .values(status="rejected")
         )
-        
+
+        # Close sibling consultation/negotiation FMPRs (sale items only)
+        if item.listing_type == "sale":
+            await _close_sibling_consultation_fmprs(db, item, db_request_id)
+
         await db.commit()
-        
+
         if not is_free_purchase:
             try:
                 from app.utils.stripe_utils import get_or_create_stripe_customer
@@ -2891,9 +2961,13 @@ async def accept_purchase_request(
             )
             .values(status="rejected")
         )
-        
+
+        # Close sibling consultation/negotiation FMPRs (sale items only)
+        if item.listing_type == "sale":
+            await _close_sibling_consultation_fmprs(db, item, accept_data.purchase_request_id)
+
         await db.commit()
-        
+
         if not is_free_purchase:
             try:
                 from app.utils.stripe_utils import get_or_create_stripe_customer
