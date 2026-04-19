@@ -2344,25 +2344,16 @@ def complete_task(
 
     # 权限检查: 单人任务只有 taker 能完成；
     # 团队任务 (taker_expert_id 非空) 允许 owner/admin 任意一人完成。
-    is_authorized = db_task.taker_id == current_user.id
-    if not is_authorized and db_task.taker_expert_id:
-        from app.models_expert import ExpertMember
-        member = (
-            db.query(ExpertMember)
-            .filter(
-                ExpertMember.expert_id == db_task.taker_expert_id,
-                ExpertMember.user_id == current_user.id,
-                ExpertMember.status == "active",
-                ExpertMember.role.in_(["owner", "admin"]),
+    if db_task.taker_id != current_user.id:
+        if db_task.taker_expert_id:
+            from app.permissions.expert_permissions import require_team_role_sync
+            require_team_role_sync(
+                db, db_task.taker_expert_id, current_user.id, minimum="admin"
             )
-            .first()
-        )
-        if member:
-            is_authorized = True
-    if not is_authorized:
-        raise HTTPException(
-            status_code=403, detail="Only the task taker can complete the task"
-        )
+        else:
+            raise HTTPException(
+                status_code=403, detail="Only the task taker can complete the task"
+            )
 
     # ⚠️ 安全修复：检查支付状态，确保只有已支付的任务才能完成
     if not db_task.is_paid:
