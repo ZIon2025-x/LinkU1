@@ -571,7 +571,8 @@ async def owner_approve_application(
         existing_task.is_paid = 0
         existing_task.payment_expires_at = get_utc_time() + timedelta(minutes=30)
         existing_task.accepted_at = get_utc_time()
-        existing_task.task_source = "consultation"
+        existing_task.task_source = "personal_service"
+        existing_task.is_consultation_placeholder = False  # 从占位晋升为真实订单任务(与 task_source 原子变更)
         existing_task.location = service.location or "线上"
         existing_task.task_type = service.category or "其他"
         existing_task.task_level = "expert" if hasattr(service, 'expert_id') and service.expert_id else task_level
