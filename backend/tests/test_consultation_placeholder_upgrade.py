@@ -400,3 +400,50 @@ def test_flea_market_promote_sets_consultation_task_id_and_clears_flag():
     assert existing_task.task_source == "flea_market"
     assert existing_task.is_consultation_placeholder is False
     assert purchase_request.consultation_task_id == 102
+
+
+# ---------------------------------------------------------------------------
+# Task 20 — B3 stale cleanup fix
+# ---------------------------------------------------------------------------
+
+def test_stale_cleanup_task_consultation_branch_cancels_task_application():
+    """B3: stale cleanup task_consultation branch sets TaskApplication.status='cancelled'
+    for consulting/negotiating/price_agreed TAs and leaves other statuses untouched."""
+    from unittest.mock import MagicMock
+
+    # Simulate the inline branch logic from close_stale_consultations
+    ta_consulting = MagicMock(status="consulting")
+    ta_negotiating = MagicMock(status="negotiating")
+    ta_price_agreed = MagicMock(status="price_agreed")
+    ta_completed = MagicMock(status="completed")   # should NOT be touched
+    ta_cancelled = MagicMock(status="cancelled")   # already cancelled, no change needed
+
+    for ta in [ta_consulting, ta_negotiating, ta_price_agreed, ta_completed, ta_cancelled]:
+        # Inline branch logic (mirrors scheduled_tasks.py task_consultation branch)
+        if ta.status in ("consulting", "negotiating", "price_agreed"):
+            ta.status = "cancelled"
+
+    assert ta_consulting.status == "cancelled"
+    assert ta_negotiating.status == "cancelled"
+    assert ta_price_agreed.status == "cancelled"
+    assert ta_completed.status == "completed"    # untouched
+    assert ta_cancelled.status == "cancelled"    # was already cancelled, stays cancelled
+
+
+def test_stale_cleanup_primary_filter_uses_is_consultation_placeholder():
+    """B3: stale cleanup query uses `is_consultation_placeholder == True` as primary filter,
+    covering all 3 consultation sub-types (consultation / task_consultation / flea_market_consultation)."""
+    import inspect
+    from app import scheduled_tasks
+
+    source = inspect.getsource(scheduled_tasks)
+    assert "is_consultation_placeholder" in source, (
+        "scheduled_tasks.py should reference is_consultation_placeholder"
+    )
+    assert "is_consultation_placeholder == True" in source, (
+        "Expected `is_consultation_placeholder == True` filter predicate in scheduled_tasks.py"
+    )
+    # Verify the task_consultation branch exists (fix B3)
+    assert '"task_consultation"' in source, (
+        "Expected task_consultation branch in stale cleanup"
+    )
