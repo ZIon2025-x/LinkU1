@@ -4778,17 +4778,8 @@ def get_my_profile(
         #   2. 新的团队模型 (expert_members 表) —— 团队 owner / admin / member
         # 任一存在即返回 True,这样 Flutter profile 页面的"达人管理"入口对
         # 通过 admin_expert_routes 新审批的团队 owner 也可见(spec §0.1)。
-        from app.models import TaskExpert
-        from app.models_expert import ExpertMember
-        task_expert = db.query(TaskExpert).filter(
-            TaskExpert.id == current_user.id,
-            TaskExpert.status == "active"
-        ).first()
-        expert_member = db.query(ExpertMember).filter(
-            ExpertMember.user_id == current_user.id,
-            ExpertMember.status == "active"
-        ).first()
-        is_expert = (task_expert is not None) or (expert_member is not None)
+        from app.utils.expert_helpers import is_user_expert_sync
+        is_expert = is_user_expert_sync(db, current_user.id)
 
         # 检查用户是否通过学生认证
         from app.models import StudentVerification
@@ -5069,17 +5060,8 @@ def user_profile(
 
     # 检查用户是否是任务达人:老的 task_experts 或新的 expert_members 任一即可
     # 详见 get_my_profile 同名注释
-    from app.models import TaskExpert
-    from app.models_expert import ExpertMember
-    task_expert = db.query(TaskExpert).filter(
-        TaskExpert.id == user_id,
-        TaskExpert.status == "active"
-    ).first()
-    expert_member = db.query(ExpertMember).filter(
-        ExpertMember.user_id == user_id,
-        ExpertMember.status == "active"
-    ).first()
-    is_expert = (task_expert is not None) or (expert_member is not None)
+    from app.utils.expert_helpers import is_user_expert_sync
+    is_expert = is_user_expert_sync(db, user_id)
 
     # 检查用户是否通过学生认证（在student_verifications表中有verified状态的记录）
     from app.models import StudentVerification

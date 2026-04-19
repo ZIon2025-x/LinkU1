@@ -28,7 +28,7 @@ from app.utils.task_id_utils import parse_task_id, format_task_id
 from app.deps import get_current_user_secure_sync_csrf
 from app.separate_auth_deps import get_current_admin, get_current_user_optional
 from app.utils.time_utils import get_utc_time
-from app.models import TaskExpertService, TaskExpert
+from app.models import TaskExpertService  # TaskExpert 已移除,is_expert 判断改走 utils.expert_helpers
 import logging
 
 logger = logging.getLogger(__name__)
@@ -1616,13 +1616,13 @@ def delete_expert_activity(
     - 如果活动已开始，不允许删除
     - 删除活动时，会取消关联的未开始任务
     """
-    from app.models import TaskExpert, Task, TaskAuditLog
+    from app.models import Task, TaskAuditLog
+    from app.utils.expert_helpers import is_user_expert_sync
     import logging
     logger = logging.getLogger(__name__)
-    
+
     # 验证用户是否为任务达人
-    expert = db.query(TaskExpert).filter(TaskExpert.id == current_user.id).first()
-    if not expert or expert.status != "active":
+    if not is_user_expert_sync(db, current_user.id):
         raise HTTPException(status_code=403, detail="User is not an active task expert")
     
     # 查询活动
@@ -1884,8 +1884,8 @@ def create_expert_activity(
     import logging
     logger = logging.getLogger(__name__)
     # 验证用户是否为任务达人
-    expert = db.query(TaskExpert).filter(TaskExpert.id == current_user.id).first()
-    if not expert or expert.status != "active":
+    from app.utils.expert_helpers import is_user_expert_sync
+    if not is_user_expert_sync(db, current_user.id):
         raise HTTPException(status_code=403, detail="User is not an active task expert")
     
     # 验证服务是否属于该任务达人（必须关联服务）

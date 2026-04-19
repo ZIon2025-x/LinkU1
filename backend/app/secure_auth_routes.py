@@ -54,20 +54,9 @@ logger = logging.getLogger(__name__)
 
 
 def _check_is_expert(db: Session, user_id: str) -> bool:
-    """Check if user is an expert (legacy TaskExpert or new ExpertMember)."""
-    from app.models import TaskExpert
-    from app.models_expert import ExpertMember
-    task_expert = db.query(TaskExpert).filter(
-        TaskExpert.id == user_id,
-        TaskExpert.status == "active"
-    ).first()
-    if task_expert:
-        return True
-    expert_member = db.query(ExpertMember).filter(
-        ExpertMember.user_id == user_id,
-        ExpertMember.status == "active"
-    ).first()
-    return expert_member is not None
+    """Check if user is an expert (active ExpertMember of any team)."""
+    from app.utils.expert_helpers import is_user_expert_sync
+    return is_user_expert_sync(db, user_id)
 
 
 # 从 validators 导入手机号标准化函数
