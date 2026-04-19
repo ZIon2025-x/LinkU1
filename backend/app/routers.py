@@ -2336,6 +2336,8 @@ def complete_task(
     
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
+    if db_task.is_consultation_placeholder:
+        raise HTTPException(status_code=404, detail="任务不存在")  # 防探测:同 404 遮掩占位 task 存在
 
     if db_task.status != "in_progress":
         raise HTTPException(status_code=400, detail="Task is not in progress")
@@ -2550,7 +2552,7 @@ def create_task_dispute(
     """任务发布者提交争议（未正确完成）"""
     task = load_real_task_or_404_sync(db, task_id)
     if task.poster_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only task poster can submit a dispute")
+        raise HTTPException(status_code=404, detail="任务不存在")  # combined 404 preserves 防探测
     if task.status != "pending_confirmation":
         raise HTTPException(status_code=400, detail="Task is not pending confirmation")
     
@@ -2689,7 +2691,9 @@ def create_refund_request(
     
     if not task or task.poster_id != current_user.id:
         raise HTTPException(status_code=404, detail="Task not found or no permission")
-    
+    if task.is_consultation_placeholder:
+        raise HTTPException(status_code=404, detail="任务不存在")  # 防探测:同 404 遮掩占位 task 存在
+
     # 检查任务状态：必须是 pending_confirmation
     if task.status != "pending_confirmation":
         raise HTTPException(
@@ -6714,7 +6718,7 @@ def create_payment(
 ):
     task = load_real_task_or_404_sync(db, task_id)
     if task.poster_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only task poster can pay for the task.")
+        raise HTTPException(status_code=404, detail="任务不存在")  # combined 404 preserves 防探测
     if task.is_paid:
         return {"message": "Task already paid."}
     # 计算任务金额和平台服务费（用于 metadata 交叉校验）
