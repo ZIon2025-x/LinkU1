@@ -2452,8 +2452,12 @@ async def approve_purchase_request(
             existing_task.is_flexible = 1
             existing_task.images = json.dumps(images) if images else None
             existing_task.task_source = "flea_market"
+            existing_task.is_consultation_placeholder = False  # 从占位晋升为真实订单任务(与 task_source 原子变更)
             existing_task.accepted_at = get_utc_time()
             new_task = existing_task
+            # 和 SA/TA 对称:记录咨询 id 以便看历史(与晋升原子)
+            if not purchase_request.consultation_task_id:
+                purchase_request.consultation_task_id = existing_task.id
         else:
             # Original task creation (no pre-existing consultation task)
             new_task = models.Task(

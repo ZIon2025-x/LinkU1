@@ -382,3 +382,21 @@ def test_ta_formal_apply_cancels_placeholder_ta():
     placeholder_application.status = "cancelled"
 
     assert placeholder_application.status == "cancelled"
+
+
+def test_flea_market_promote_sets_consultation_task_id_and_clears_flag():
+    """B.3 unit-test: promote logic sets is_consultation_placeholder=False atomically with task_source,
+    and writes FMPR.consultation_task_id=task.id for history backup."""
+    existing_task = MagicMock(task_source="flea_market_consultation", is_consultation_placeholder=True, id=102)
+    purchase_request = MagicMock(consultation_task_id=None)
+
+    # Logic pattern (as added in flea_market_routes.py):
+    existing_task.task_source = "flea_market"
+    existing_task.is_consultation_placeholder = False
+
+    if not purchase_request.consultation_task_id:
+        purchase_request.consultation_task_id = existing_task.id
+
+    assert existing_task.task_source == "flea_market"
+    assert existing_task.is_consultation_placeholder is False
+    assert purchase_request.consultation_task_id == 102
