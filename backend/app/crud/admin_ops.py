@@ -54,7 +54,7 @@ def get_admin_users_for_admin(
 
 
 def delete_admin_user_by_super_admin(db: Session, admin_id: str):
-    """超级管理员删除管理员账号。不可删自己；若有关联 JobPosition/FeaturedTaskExpert/AdminReward 则不可删。"""
+    """超级管理员删除管理员账号。不可删自己；若有关联 JobPosition/FeaturedExpertV2/AdminReward 则不可删。"""
     admin = (
         db.query(models.AdminUser)
         .filter(models.AdminUser.id == admin_id)
@@ -69,9 +69,10 @@ def delete_admin_user_by_super_admin(db: Session, admin_id: str):
         .filter(models.JobPosition.created_by == admin_id)
         .count()
     )
+    from app.models_expert import FeaturedExpertV2
     expert_count = (
-        db.query(models.FeaturedTaskExpert)
-        .filter(models.FeaturedTaskExpert.created_by == admin_id)
+        db.query(FeaturedExpertV2)
+        .filter(FeaturedExpertV2.created_by == admin_id)
         .count()
     )
     reward_count = (
