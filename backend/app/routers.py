@@ -38,6 +38,7 @@ from app.task_recommendation import get_task_recommendations, calculate_task_mat
 from app.user_behavior_tracker import UserBehaviorTracker, record_task_view, record_task_click
 from app.recommendation_monitor import get_recommendation_metrics, RecommendationMonitor
 from app.utils.translation_metrics import TranslationTimer
+from app.utils.task_guards import load_real_task_or_404_sync
 
 logger = logging.getLogger(__name__)
 import os
@@ -1878,10 +1879,7 @@ def accept_task(
         if False:  # 普通用户不再有客服权限
             raise HTTPException(status_code=403, detail="客服账号不能接受任务")
 
-        db_task = crud.get_task(db, task_id)
-        if not db_task:
-            raise HTTPException(status_code=404, detail="Task not found")
-
+        db_task = load_real_task_or_404_sync(db, task_id)
 
         if db_task.status != "open":
             raise HTTPException(
@@ -2075,9 +2073,7 @@ def reject_task_taker(
     db: Session = Depends(get_db),
 ):
     """任务发布者拒绝接受者，任务重新变为open状态"""
-    db_task = crud.get_task(db, task_id)
-    if not db_task:
-        raise HTTPException(status_code=404, detail="Task not found")
+    db_task = load_real_task_or_404_sync(db, task_id)
 
     # 检查权限：只有任务发布者可以拒绝
     if db_task.poster_id != current_user.id:
@@ -2552,9 +2548,9 @@ def create_task_dispute(
     db: Session = Depends(get_db),
 ):
     """任务发布者提交争议（未正确完成）"""
-    task = crud.get_task(db, task_id)
-    if not task or task.poster_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Task not found or no permission")
+    task = load_real_task_or_404_sync(db, task_id)
+    if task.poster_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only task poster can submit a dispute")
     if task.status != "pending_confirmation":
         raise HTTPException(status_code=400, detail="Task is not pending confirmation")
     
@@ -4486,9 +4482,7 @@ def cancel_task(
     db: Session = Depends(get_db),
 ):
     """取消任务 - 如果任务已被接受，需要客服审核"""
-    task = crud.get_task(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+    task = load_real_task_or_404_sync(db, task_id)
 
     # 检查权限：只有任务发布者或接受者可以取消任务
     if task.poster_id != current_user.id and task.taker_id != current_user.id:
@@ -6718,9 +6712,9 @@ def send_announcement_api(
 def create_payment(
     task_id: int, current_user=Depends(check_user_status), db: Session = Depends(get_db)
 ):
-    task = crud.get_task(db, task_id)
-    if not task or task.poster_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Task not found or no permission.")
+    task = load_real_task_or_404_sync(db, task_id)
+    if task.poster_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only task poster can pay for the task.")
     if task.is_paid:
         return {"message": "Task already paid."}
     # 计算任务金额和平台服务费（用于 metadata 交叉校验）

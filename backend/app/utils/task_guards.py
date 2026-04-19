@@ -1,8 +1,22 @@
 """Task 级 API 的通用守卫:拒绝对咨询占位 task 的业务操作。"""
 
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from app import models
+
+
+def load_real_task_or_404_sync(db: Session, task_id: int) -> models.Task:
+    """同步版本:加载 Task,并确保它不是咨询占位。
+
+    与 load_real_task_or_404 语义完全相同,供使用同步 Session 的端点使用。
+    """
+    task = db.get(models.Task, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="任务不存在")
+    if task.is_consultation_placeholder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="任务不存在")
+    return task
 
 
 async def load_real_task_or_404(db: AsyncSession, task_id: int) -> models.Task:
