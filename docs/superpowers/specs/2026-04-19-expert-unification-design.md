@@ -167,6 +167,9 @@ BEGIN
         OR fte.success_rate    IS DISTINCT FROM e.success_rate);
 
     -- 4. 画像字段补刷 (补 migration 188 漏项; COALESCE 保留 Expert 已有值)
+    --    注意: 此 UPDATE 的 WHERE 仅按 id 匹配,没有 IS DISTINCT FROM 过滤 —
+    --    重跑会 touch 所有映射行的 updated_at (非幂等但也非破坏). 写 IS DISTINCT FROM
+    --    过滤子句会很长(~12 个字段),接受此折衷.
     UPDATE experts e
     SET bio_en             = COALESCE(e.bio_en, fte.bio_en),
         expertise_areas    = COALESCE(e.expertise_areas,
@@ -280,6 +283,10 @@ def is_user_expert_sync(db: Session, user_id: str) -> bool:
 
 
 async def is_user_expert_async(db: AsyncSession, user_id: str) -> bool:
+    """Async 版本 — Phase A 当前**无调用点**（multi_participant / routers / secure_auth 全是 sync）。
+    预留给未来 async 路由。若 writing-plans 阶段确认 Phase A 无 async caller,
+    可从 helper 里删除,等真正需要时再加。
+    """
     result = await db.execute(
         select(ExpertMember).where(
             ExpertMember.user_id == user_id,
@@ -491,6 +498,7 @@ Phase A 重点覆盖：
 | T-1 | PR 进入 review | — |
 | T+0 | Staging Railway deploy：migration 209 自动跑 (ALTER + DO block) + backend 代码部署 | DO 块失败 → 整块数据变更回滚；ALTER 幂等，IF NOT EXISTS 保护下次重跑；人工修数据后重启 |
 | T+0.1 | **强制**检查 staging backend 启动日志，确认 migration 209 产生 `209 complete: orphans=0, ...` NOTICE。若看到 `RAISE EXCEPTION` 则立刻人工介入修复数据（不 revert code） | — |
+| T+0.2 | 监控 celery worker logs 30s，搜 `column experts.success_rate does not exist`。若出现，说明 worker 启动快于 backend 跑完 migration — 重启 worker 或等 Celery 内置重试（默认 3 次 60s 间隔）自动恢复 | — |
 | T+0.5 | Staging smoke test（§8.2 5 流程） | — |
 | T+1 | Prod Railway deploy：migration 209 自动跑 + backend 代码 | 同 T+0 |
 | T+1.1 | 同 T+0.1 — 强制看 prod logs 确认 migration 209 成功 | — |
@@ -511,6 +519,8 @@ Phase A 重点覆盖：
 | R9 | 大 PR 审查疲劳（§7 audit 显示实际改动 25+ 点 / 15 文件，含 AI 工具层 4 个 tool 大改） | 中-高 | PR 按 §7.2.1-7.2.7 的 7 个功能组分 commit，每个 commit 单一 scope；reviewer 可分组审 |
 | R10 | Migration 209 的 DO block 失败（e.g., orphan），但 ALTER TABLE 已成功且 backend 启动继续，代码读到 `Expert.success_rate = 0.0` default 值而非真实值 | 中 | §6.4 注明 DO block 是原子单元；§9 发布流程**必须**部署后看 migration logs 确认 `209 complete: ...` NOTICE 出现，若出现 RAISE EXCEPTION 立即人工修复（不是 revert code —— 数据修好再重启） |
 | R11 | `setup_official_account` 单写 Expert 后，对"已是其他团队 owner"的用户会**再创建一个新团队**（既有行为，Phase A 前就存在）。同一用户变成 2+ 团队 owner，`get_official_account` 的 `Expert.is_official=True` 也可能匹配多行 | 低-中（取决于官方账号是否复用已有团队） | **Phase A 不修**（既有行为保留），但 §8.2 流程 2 冒烟测试**必须**用"从未是 TaskExpert 且无 ExpertMember 记录"的干净用户测试；writing-plans 阶段 flag 此 edge case，由业务决定是否 Phase B 补修 |
+| R12 | Celery worker / beat service 与 backend service **独立启动**（Railway 三个 service），部署 Phase A 时可能 worker 启动快于 backend 跑完 migration 209 ALTER；worker 写 `Expert.success_rate` 时该列尚未创建 → 500 / crash loop | 中 | 1) Celery 任务自身有重试（默认 3 次，间隔 60s）能 cover backend migration 的秒级延迟；2) `update_all_featured_task_experts_response_time` 每天 UTC 3:00 调度，部署时间若避开此窗口无影响；3) §9 发布流程新增 T+0.2 步骤：部署后监控 celery worker logs 30 秒，若有 `column experts.success_rate does not exist` 错误视为 backend migration 未完成——人工重启 worker 或等待 migration 完成 |
+| R13 | Migration 209 的 step 4（画像字段）和 step 5（FeaturedExpertV2）无 `IS DISTINCT FROM` 过滤，重跑会 touch 所有映射行的 `updated_at` | 低（幂等但非零 IO） | 接受此折衷（替代方案是写 ~15 字段的 IS DISTINCT FROM 条件串，可读性差）；非正确性问题 |
 
 ## 11. Open Questions 决议
 
@@ -543,6 +553,12 @@ Phase A 重点覆盖：
 ## 修订历史
 
 - **2026-04-19 v1.0** 初始 spec，§7 代码改造列 "11 处 TaskExpert + 10 处 FeaturedTaskExpert"（基于早期 Explore agent audit）
+- **2026-04-19 v1.10** 第十轮核验，部署架构协调：
+  - 发现 Railway 三个独立 service（backend + celery worker + celery beat），`start_celery.sh` 根据 `CELERY_TYPE` 区分；三个 service 跑同一份代码但独立启动。Spec §9 发布流程**完全没说 celery worker 部署时序**—新增 R12 风险（worker 启动快于 backend migration → `column experts.success_rate does not exist`）+ T+0.2 监控步骤
+  - 发现 Migration 209 step 4（画像字段）+ step 5（FV2）的 WHERE 只按 id 匹配，**无 `IS DISTINCT FROM` 过滤** → 重跑会 touch 所有行的 updated_at。不是正确性问题但非零 IO。新增 R13 记录此折衷（接受，替代方案是 ~15 字段 IS DISTINCT FROM 条件串）
+- **2026-04-19 v1.9** 第九轮核验，async helper 调用点 + greenlet 陷阱：
+  - 经 grep 确认 `multi_participant_routes.py` 26 个 handler 全是 **sync def**；所有 Phase A 的 is_expert 判断调用点（routers / secure_auth / multi_participant）都在 sync 函数里。**Async helper `is_user_expert_async` 当前 Phase A 零调用点**，是预写 dead code。§7.1 添加注释说明该函数为"预留"，writing-plans 阶段可删
+  - 审查 §7.2.4 `get_official_account` 和 §7.3 `setup_official_account` 的 async 改造代码：直接访问 column 字段、无 relationship lazy-load、无 Pydantic `model_validate(orm)`，**不触发** memory 记录的 "Pydantic v2 + async lazy-load" greenlet 陷阱 ✓
 - **2026-04-19 v1.8** 第八轮核验，legacy/新列并存的精确改造：
   - 发现 `ServiceApplication` 有 `expert_id` (FK→task_experts, legacy, L1759) + `new_expert_id` (FK→experts, L1761) 两列并存；`TaskExpertService` 有 `expert_id` (FK→task_experts) + `owner_type`/`owner_id` 并存；`Activity` 有 `expert_id` (FK→users，user_id 语义) + `owner_type`/`owner_id` 并存
   - Spec v1.7 §7.2.7 AI 工具层改造仅说"通过 owner_id 查"过粗，没明确三处各自该用哪个新列。重写为具体列名对照：`ServiceApplication.new_expert_id`、`TaskExpertService.owner_type+owner_id`、`Activity.owner_type+owner_id`
