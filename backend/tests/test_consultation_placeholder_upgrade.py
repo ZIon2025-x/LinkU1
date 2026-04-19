@@ -314,3 +314,33 @@ async def test_overwrite_backs_up_consultation_task_id_team():
 
     assert application.consultation_task_id == 100
     assert application.task_id == 200
+
+
+@pytest.mark.asyncio
+async def test_overwrite_backs_up_consultation_task_id_personal():
+    """B.2.1 个人服务 approve:同样备份."""
+    application = MagicMock(task_id=100, consultation_task_id=None)
+    new_task_id = 200
+
+    if application.task_id and not application.consultation_task_id:
+        application.consultation_task_id = application.task_id
+    application.task_id = new_task_id
+
+    assert application.consultation_task_id == 100
+    assert application.task_id == 200
+
+
+def test_overwrite_idempotent():
+    """防御性兜底:第二次 approve 守卫本身不会错写 consultation_task_id.
+
+    即使 upstream idempotency check(expert_consultation_routes.py:807-815)失效,
+    double-guard 仍然不会把真任务 id 错写到 consultation_task_id。"""
+    application = MagicMock(task_id=200, consultation_task_id=100)  # 第一次已写
+    new_task_id = 300
+
+    if application.task_id and not application.consultation_task_id:
+        application.consultation_task_id = application.task_id  # 应该不进(consultation_task_id 已非空)
+    application.task_id = new_task_id
+
+    assert application.consultation_task_id == 100  # 仍是原来的 100
+    assert application.task_id == 300

@@ -678,6 +678,9 @@ async def owner_approve_application(
     # 更新申请记录
     application.status = "approved"
     application.final_price = price
+    # 备份咨询占位 id(与 team 分支对称,防御性兜底)
+    if application.task_id and not application.consultation_task_id:
+        application.consultation_task_id = application.task_id
     application.task_id = new_task.id
     application.approved_at = get_utc_time()
     application.updated_at = get_utc_time()
