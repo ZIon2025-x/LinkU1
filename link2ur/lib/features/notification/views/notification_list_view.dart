@@ -327,14 +327,23 @@ class _NotificationListViewContentState
       context.push('/expert-dashboard');
       return;
     }
-    // 服务申请 / 议价类：related_id 是 service_id
-    if (type == 'service_application_rejected' ||
-        type == 'service_application_cancelled' ||
-        type == 'counter_offer' ||
-        type == 'counter_offer_accepted' ||
+    // 议价/申请结果：按收件人角色分发到申请列表页
+    // 申请人视角：看自己发出的服务申请
+    if (type == 'counter_offer' ||
         type == 'counter_offer_accepted_to_applicant' ||
+        type == 'service_application_rejected') {
+      context.push('/my-service-applications');
+      return;
+    }
+    // 服务所有者视角：看自己收到的服务申请
+    if (type == 'counter_offer_accepted' ||
         type == 'counter_offer_rejected' ||
-        type == 'service_owner_reply') {
+        type == 'service_application_cancelled') {
+      context.push('/services/my/applications');
+      return;
+    }
+    // 服务公开回复：确实是服务页上的公开回复，保留跳服务详情
+    if (type == 'service_owner_reply') {
       if (relatedId != null) context.safePush('/service/$relatedId');
       return;
     }
