@@ -5396,6 +5396,7 @@ async def consult_formal_apply(
                 negotiated_price=application.negotiated_price,
                 message=body.message or application.message,
                 created_at=current_time,
+                consultation_task_id=task_id,  # 回链占位 task id(B.2.3)
             )
             db.add(orig_application)
             await db.flush()
@@ -5423,7 +5424,8 @@ async def consult_formal_apply(
             db.add(orig_sys_msg)
 
         # 更新申请
-        application.status = "pending"
+        # 占位 TA 已被 orig_application 取代,标记为 cancelled 以避免 "pending" 歧义
+        application.status = "cancelled"
         if body.message:
             application.message = body.message
         if body.proposed_price is not None:

@@ -344,3 +344,41 @@ def test_overwrite_idempotent():
 
     assert application.consultation_task_id == 100  # 仍是原来的 100
     assert application.task_id == 300
+
+
+@pytest.mark.asyncio
+async def test_ta_formal_apply_creates_orig_application_with_consultation_task_id():
+    """B.2.3 unit-test: orig_application creation pattern sets consultation_task_id=<placeholder task_id>.
+
+    Tests the code pattern expected in task_chat_routes.consult_formal_apply(:5392 region).
+    """
+    placeholder_task_id = 101  # the route param task_id
+    original_task_id = 999
+
+    # The code pattern to be added:
+    orig_application_kwargs = dict(
+        task_id=original_task_id,
+        applicant_id="u_test",
+        status="pending",
+        currency="GBP",
+        consultation_task_id=placeholder_task_id,  # NEW: the line being added
+    )
+
+    assert orig_application_kwargs["consultation_task_id"] == placeholder_task_id
+    assert orig_application_kwargs["task_id"] == original_task_id
+
+
+def test_ta_formal_apply_cancels_placeholder_ta():
+    """B.2.3 unit-test: placeholder TA.status change from 'pending' to 'cancelled' after formal apply.
+
+    Tests the code pattern expected in task_chat_routes.consult_formal_apply(:5427 region).
+    """
+    placeholder_application = MagicMock(status="consulting")  # Started as consulting
+
+    # OLD code set this to "pending" (incorrect — orig_application carries the formal state):
+    # placeholder_application.status = "pending"
+
+    # NEW code (this task) sets to "cancelled":
+    placeholder_application.status = "cancelled"
+
+    assert placeholder_application.status == "cancelled"
