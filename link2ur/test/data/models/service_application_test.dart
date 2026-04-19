@@ -349,4 +349,147 @@ void main() {
       expect(restored.priceAgreedAt, app.priceAgreedAt);
     });
   });
+
+  group('ServiceApplication.consultationTaskId', () {
+    test('fromJson parses consultation_task_id=100', () {
+      final json = <String, dynamic>{
+        'id': 1,
+        'status': 'consulting',
+        'service_id': 1,
+        'task_id': 100,
+        'consultation_task_id': 100,
+        'currency': 'GBP',
+        'created_at': '2026-01-01T00:00:00Z',
+      };
+      final sa = ServiceApplication.fromJson(json);
+      expect(sa.consultationTaskId, 100);
+    });
+
+    test('fromJson returns null when consultation_task_id is missing', () {
+      final json = <String, dynamic>{
+        'id': 1,
+        'status': 'consulting',
+        'service_id': 1,
+        'task_id': 100,
+        'currency': 'GBP',
+        'created_at': '2026-01-01T00:00:00Z',
+      };
+      final sa = ServiceApplication.fromJson(json);
+      expect(sa.consultationTaskId, isNull);
+    });
+
+    test('fromJson returns null when consultation_task_id is explicitly null',
+        () {
+      final json = <String, dynamic>{
+        'id': 1,
+        'status': 'consulting',
+        'service_id': 1,
+        'task_id': 100,
+        'consultation_task_id': null,
+        'currency': 'GBP',
+        'created_at': '2026-01-01T00:00:00Z',
+      };
+      final sa = ServiceApplication.fromJson(json);
+      expect(sa.consultationTaskId, isNull);
+    });
+
+    test('toJson includes consultation_task_id key', () {
+      final json = <String, dynamic>{
+        'id': 1,
+        'status': 'consulting',
+        'service_id': 1,
+        'task_id': 100,
+        'consultation_task_id': 55,
+        'currency': 'GBP',
+        'created_at': '2026-01-01T00:00:00Z',
+      };
+      final sa = ServiceApplication.fromJson(json);
+      expect(sa.toJson()['consultation_task_id'], 55);
+    });
+
+    test('copyWith preserves consultationTaskId when not overridden', () {
+      final sa = ServiceApplication(
+        id: 1,
+        status: ServiceApplicationStatus.approved,
+        serviceId: 1,
+        currency: 'GBP',
+        createdAt: DateTime.parse('2026-01-01T00:00:00Z'),
+        taskId: 200,
+        consultationTaskId: 100,
+      );
+      final updated = sa.copyWith(taskId: 300);
+      expect(updated.consultationTaskId, 100);
+      expect(updated.taskId, 300);
+    });
+
+    test('copyWith can update consultationTaskId', () {
+      final sa = ServiceApplication(
+        id: 1,
+        status: ServiceApplicationStatus.consulting,
+        serviceId: 1,
+        currency: 'GBP',
+        createdAt: DateTime.parse('2026-01-01T00:00:00Z'),
+        taskId: 100,
+      );
+      final updated = sa.copyWith(consultationTaskId: 100);
+      expect(updated.consultationTaskId, 100);
+    });
+
+    test('Equatable props includes consultationTaskId', () {
+      final base = ServiceApplication(
+        id: 1,
+        status: ServiceApplicationStatus.consulting,
+        serviceId: 1,
+        currency: 'GBP',
+        createdAt: DateTime.parse('2026-01-01T00:00:00Z'),
+        taskId: 100,
+        consultationTaskId: 50,
+      );
+      final different = base.copyWith(consultationTaskId: 99);
+      expect(base, isNot(equals(different)));
+    });
+  });
+
+  group('ServiceApplicationConsultationRoute.consultationMessageTaskId', () {
+    test('approve 前 fallback to taskId (占位)', () {
+      // SA approve 前: consultation_task_id=null, task_id=占位
+      final json = <String, dynamic>{
+        'id': 1,
+        'status': 'consulting',
+        'service_id': 1,
+        'task_id': 100,
+        'consultation_task_id': null,
+        'currency': 'GBP',
+        'created_at': '2026-01-01T00:00:00Z',
+      };
+      final sa = ServiceApplication.fromJson(json);
+      expect(sa.consultationMessageTaskId, 100);
+    });
+
+    test('approve 后 consultationTaskId takes precedence over taskId', () {
+      // SA approve 后: consultation_task_id=占位, task_id=真任务
+      final json = <String, dynamic>{
+        'id': 1,
+        'status': 'approved',
+        'service_id': 1,
+        'task_id': 200,
+        'consultation_task_id': 100,
+        'currency': 'GBP',
+        'created_at': '2026-01-01T00:00:00Z',
+      };
+      final sa = ServiceApplication.fromJson(json);
+      expect(sa.consultationMessageTaskId, 100);
+    });
+
+    test('returns null when both taskId and consultationTaskId are null', () {
+      final sa = ServiceApplication(
+        id: 1,
+        status: ServiceApplicationStatus.pending,
+        serviceId: 1,
+        currency: 'GBP',
+        createdAt: DateTime.parse('2026-01-01T00:00:00Z'),
+      );
+      expect(sa.consultationMessageTaskId, isNull);
+    });
+  });
 }

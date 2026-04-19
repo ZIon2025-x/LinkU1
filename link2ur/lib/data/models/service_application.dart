@@ -74,6 +74,11 @@ class ServiceApplication extends Equatable {
   final double? finalPrice;
   final String currency;
   final int? taskId;
+
+  /// 咨询占位 task id。approve 前为 null;approve 时从 [taskId] 备份过来,
+  /// 之后永久保留,用于回溯 approve 前的咨询对话消息。
+  final int? consultationTaskId;
+
   final DateTime createdAt;
   final DateTime? approvedAt;
   final DateTime? priceAgreedAt;
@@ -97,6 +102,7 @@ class ServiceApplication extends Equatable {
     this.expertCounterPrice,
     this.finalPrice,
     this.taskId,
+    this.consultationTaskId,
     this.approvedAt,
     this.priceAgreedAt,
   });
@@ -121,6 +127,7 @@ class ServiceApplication extends Equatable {
       finalPrice: _parseDoubleOrNull(json['final_price']),
       currency: (json['currency'] as String?) ?? 'GBP',
       taskId: _parseIntOrNull(json['task_id']),
+      consultationTaskId: _parseIntOrNull(json['consultation_task_id']),
       createdAt: () {
         final raw = json['created_at'] as String?;
         if (raw == null) {
@@ -153,6 +160,7 @@ class ServiceApplication extends Equatable {
         'final_price': finalPrice,
         'currency': currency,
         'task_id': taskId,
+        'consultation_task_id': consultationTaskId,
         'created_at': createdAt.toIso8601String(),
         'approved_at': approvedAt?.toIso8601String(),
         'price_agreed_at': priceAgreedAt?.toIso8601String(),
@@ -176,6 +184,7 @@ class ServiceApplication extends Equatable {
     double? finalPrice,
     String? currency,
     int? taskId,
+    int? consultationTaskId,
     DateTime? createdAt,
     DateTime? approvedAt,
     DateTime? priceAgreedAt,
@@ -198,6 +207,7 @@ class ServiceApplication extends Equatable {
       finalPrice: finalPrice ?? this.finalPrice,
       currency: currency ?? this.currency,
       taskId: taskId ?? this.taskId,
+      consultationTaskId: consultationTaskId ?? this.consultationTaskId,
       createdAt: createdAt ?? this.createdAt,
       approvedAt: approvedAt ?? this.approvedAt,
       priceAgreedAt: priceAgreedAt ?? this.priceAgreedAt,
@@ -223,6 +233,7 @@ class ServiceApplication extends Equatable {
         finalPrice,
         currency,
         taskId,
+        consultationTaskId,
         createdAt,
         approvedAt,
         priceAgreedAt,
@@ -254,6 +265,13 @@ DateTime? _parseDateOrNull(dynamic v) {
   if (v == null) return null;
   if (v is String) return DateTime.tryParse(v);
   return null;
+}
+
+/// 咨询消息路由 extension。C.3 规则:优先 consultationTaskId,fallback taskId。
+extension ServiceApplicationConsultationRoute on ServiceApplication {
+  /// 咨询消息路由 id。approve 前 fallback 到 taskId(此时 taskId 就是占位);
+  /// approve 后优先用 consultationTaskId。
+  int? get consultationMessageTaskId => consultationTaskId ?? taskId;
 }
 
 /// Business rules mapping status (+ other fields) to allowed user actions.
