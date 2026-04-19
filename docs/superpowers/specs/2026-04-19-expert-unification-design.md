@@ -372,22 +372,38 @@ def get_user_primary_expert_sync(db: Session, user_id: str) -> Optional[Expert]:
 |------|------|------|
 | `cleanup_tasks.py` | 1158, 1162-1163, 1421, 1424-1425 | 图片清理遍历 `TaskExpert.id` → 遍历 `ExpertMember where role='owner'` 的 user_id（语义等价） |
 
-### 7.5 Schema 变更与向后兼容（Q-B 决策）
+### 7.5 JSON 返回字段语义变更（Q-B 决策 — 修正版）
 
-新加字段 `expert_team_id`（Pydantic schema 层）：
+**澄清**：原 Q-B 讨论的 `expert_user_id` **仅是 `discovery_routes.py:777` 内部 SQL label**，不是返回给客户端的 JSON key。真正返回客户端的 JSON key 是 `user_id` 和 `expert_id`（见 `discovery_routes.py:820, 823`）。
 
-```python
-# schemas.py - 受影响的 Out schema (discovery/expert services 列表 + 详情)
-class ExpertServiceListItemOut(BaseModel):
-    ...
-    expert_user_id: Optional[str] = None  # 保留 — 现在填 team id (值相同但语义变)
-    expert_team_id: Optional[str] = None  # 新增 — 未来首选字段
-    ...
-```
+#### 语义变化对照
 
-读路径改造时：
-- `expert_user_id` 和 `expert_team_id` 都返回团队 id（字符串相同）
-- Phase D 在 Flutter/Web 切换到 `expert_team_id` 后，Phase D 末尾 PR 移除 `expert_user_id`
+| JSON key | Phase A 前值 | Phase A 后值 |
+|----------|-------------|-------------|
+| `user_id` (expert 服务) | `TaskExpert.id` = user_id (8 位) | `Expert.id` = team_id (8 位) |
+| `expert_id` (expert 服务) | `TaskExpert.id` = user_id (8 位) | `Expert.id` = team_id (8 位) |
+| `user_id` (personal 服务) | User.id = user_id | **不变**（personal 路径不经 Expert） |
+
+#### 客户端影响分析
+
+| 客户端 | 使用方式 | Phase A 影响 |
+|-------|---------|-------------|
+| Flutter `DiscoveryFeedItem.expertId` | 跳 `/task-experts/{expertId}` → `ExpertTeamDetailView` → `/api/experts/{expertId}` | **Phase A 修复了现有 bug**：原来 expert_id 是 user_id，`/api/experts/{user_id}` 404；新值是 team_id，正常命中 |
+| Flutter `DiscoveryFeedItem.userId` (expert 服务) | 仅当 expertId 为空时用 (`home_discovery_cards.dart:1005`)，但 expert 服务里 expertId 永不空，永走 expert 分支 | 不影响 |
+| Flutter `DiscoveryFeedItem.userId` (personal 服务) | 跳 `/user/{userId}` | 不变 |
+| Web frontend | 经 audit 零引用 discovery 的这两个字段 | 无影响 |
+
+#### Q-B 决议（修正）
+
+**不再需要新加 `expert_team_id` 字段** — 原方案（保留 `expert_user_id` + 新加 `expert_team_id`）基于错误假设（假设有 `expert_user_id` JSON key，实际没有）。
+
+**真实的兼容策略**：
+1. 保持 `user_id` / `expert_id` 两个 JSON key 不变（字符串长度相同，都是 8 位）
+2. 文档化语义变化到 `docs/api/discovery.md` 或 CHANGELOG（writing-plans 阶段决定具体位置）
+3. Flutter 现有代码对 expert 服务恰好用 `expertId` 而非 `userId`，天然兼容
+4. Phase A 不需要 Pydantic schema 扩展字段，schema 保持不变
+
+若 writing-plans 阶段发现某处客户端代码确实假设这两个值是 user_id，再评估是否添加兼容字段。
 
 ### 7.6 Phase A **不改**的引用（Phase B/C 范围）
 
@@ -485,7 +501,7 @@ Phase A 重点覆盖：
 | R4 | `task_expert_services.owner_id=NULL` 导致服务搜索漏项 | 中 | migration 209 检查 `service_type='expert' AND owner_id IS NULL` 为 0 |
 | R5 | `crud/user.py` 多查 `_expert_id_migration_map` 性能损耗 | 低 | 无需额外索引 — `old_id` 是 PRIMARY KEY 已有索引；查询模式 `WHERE old_id = :uid` 直接走 PK 索引 |
 | R6 | `admin_task_expert_routes.py` 仍能写 TaskExpert 表 | 中 | **Q-A 决策：接受分叉**，写入不影响读（读全切 Expert） |
-| R7 | `expert_user_id` 字段值从 user_id 变 team_id 破坏客户端 | 高 | **Q-B 决策：同时返回 `expert_user_id` + `expert_team_id`**；Phase D 再删前者 |
+| R7 | discovery 返回的 `user_id` / `expert_id` JSON key 值语义从 user_id 变 team_id，破坏客户端跳转 | 中（实际经 audit 可能反而修 bug，见 §7.5） | Flutter 代码对 expert 服务走 `expertId` 分支跳 `/task-experts/`，新值修复现有 `/api/experts/{user_id}` 404 bug；personal 服务的 `user_id` 语义不变。Staging smoke test 流程 3 重点验证此跳转 |
 | R8 | ALTER TABLE 锁表 | 低 | `ADD COLUMN ... DEFAULT 0.0` Postgres 11+ fast default |
 | R9 | 大 PR 审查疲劳（§7 audit 显示实际改动 25+ 点 / 15 文件，含 AI 工具层 4 个 tool 大改） | 中-高 | PR 按 §7.2.1-7.2.7 的 7 个功能组分 commit，每个 commit 单一 scope；reviewer 可分组审 |
 | R10 | Migration 209 的 DO block 失败（e.g., orphan），但 ALTER TABLE 已成功且 backend 启动继续，代码读到 `Expert.success_rate = 0.0` default 值而非真实值 | 中 | §6.4 注明 DO block 是原子单元；§9 发布流程**必须**部署后看 migration logs 确认 `209 complete: ...` NOTICE 出现，若出现 RAISE EXCEPTION 立即人工修复（不是 revert code —— 数据修好再重启） |
@@ -495,7 +511,7 @@ Phase A 重点覆盖：
 | # | 问题 | 决议 |
 |---|------|------|
 | Q-A | Phase A → Phase B 过渡期策略 | **(1) 接受数据分叉** — 老 admin 面板改的画像不生效（读路径全切 Expert），影响 1-2 周；不禁用老 admin 写入 |
-| Q-B | `expert_user_id` 字段语义迁移 | **(2) 保留 `expert_user_id` + 新加 `expert_team_id`** — 零破坏，Phase D 再删前者 |
+| Q-B | ~~`expert_user_id` 字段语义迁移~~ → **问题澄清为 `user_id` / `expert_id` JSON key 值语义变更** | 原决议基于错误假设（§7.5 修正版）。修正决议：**保持 JSON key 不变，不新加字段**。Flutter 用法天然兼容（对 expert 服务用 expertId 跳团队详情，值语义变化正好修复现有 404 bug） |
 | Q-C | migration 209 执行时机 | **(2) 随 Phase A PR deploy 时自动跑** — Railway startup hook |
 
 ## 12. 遗留到 Phase B/C/D 的事项
@@ -513,15 +529,24 @@ Phase A 重点覆盖：
 
 **Phase D**:
 - Flutter `task_expert_model.dart` → `expert_model.dart`
-- Flutter cache key / route 路径命名清理
+- Flutter cache key / route 路径命名清理（如 `/task-experts/:id` → `/experts/:id`）
 - Web `api.ts` 中 `getExpertByUser` 等残留命名
-- Phase A 里 `expert_user_id` 字段的客户端切换到 `expert_team_id`，Phase D 末删除 `expert_user_id`
 
 ---
 
 ## 修订历史
 
 - **2026-04-19 v1.0** 初始 spec，§7 代码改造列 "11 处 TaskExpert + 10 处 FeaturedTaskExpert"（基于早期 Explore agent audit）
+- **2026-04-19 v1.5** 第五轮核验，转向客户端 API 兼容层：
+  - 发现 Q-B 决议（保留 `expert_user_id` + 新加 `expert_team_id`）基于**错误假设**—`expert_user_id` 只是 `discovery_routes.py:777` 的 SQL 内部 label，不是返回给客户端的 JSON key。真正返回的 key 是 `user_id` 和 `expert_id`
+  - 经 audit `link2ur/lib/data/models/discovery_feed.dart:169,172` 和 `home_discovery_cards.dart:993-1012`:
+    - Flutter 对 expert 服务用 `expertId` 跳 `/task-experts/{expertId}` → `ExpertTeamDetailView` → `/api/experts/{expertId}`，后端 `_get_expert_or_404` 只接受 team_id
+    - **Phase A 前 discovery 返回 expert_id = user_id，跳转后 /api/experts/{user_id} 会 404 — 现有 bug**
+    - Phase A 后 discovery 返回 expert_id = team_id，跳转命中 — Phase A 反而修复此 bug
+  - §7.5 整段重写：从 "保留 expert_user_id + 新加 expert_team_id" 改为 "保持 JSON key 不变，文档化语义变化；Flutter 天然兼容"
+  - Q-B 决议修正为"不新加字段"
+  - R7 严重性从"高"降为"中"，缓解改为"staging 流程 3 重点验证跳转"
+  - §12 Phase D 去掉"删除 expert_user_id" 待办
 - **2026-04-19 v1.4** 第四轮核验，转向部署/执行机制层：
   - 发现 backend `execute_sql_file` (`db_migrations.py:193-256`) 按 statement 拆分 + 逐条 commit，**不是原子事务**；`BEGIN/COMMIT` 被当独立语句。Spec v1.3 声称的"失败即中止"不成立
   - 重构 migration 209：ALTER TABLE / CREATE INDEX 保留在外部（幂等 IF NOT EXISTS），所有 UPDATE + 验证打包进**一个大 DO block**，作为单 statement。DO 内 `RAISE EXCEPTION` 回滚整个 DO 块；ALTER 不回滚但重跑无副作用
