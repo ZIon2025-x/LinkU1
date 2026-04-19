@@ -435,11 +435,18 @@ class PushNotificationService with WidgetsBindingObserver {
   /// 处理通知点击（从原生端传来）
   void _handleNotificationTapped(Map<String, dynamic> data) {
     AppLogger.info('Notification tapped from native');
-    if (data.containsKey('type')) {
-      _navigateByNotificationType(data['type'] as String, data);
-    } else {
-      _router?.push('/notifications');
-    }
+    // Defer to next frame: notification tap often arrives during app resume,
+    // when MaterialApp.router may be rebuilding. Pushing synchronously can
+    // cause GlobalKey collision (Multiple widgets used the same GlobalKey)
+    // as old Navigator and new Navigator briefly coexist in element tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_router == null) return;
+      if (data.containsKey('type')) {
+        _navigateByNotificationType(data['type'] as String, data);
+      } else {
+        _router?.push('/notifications');
+      }
+    });
   }
 
   static String _channelForType(String? type) {
