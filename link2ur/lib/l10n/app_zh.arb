@@ -4395,6 +4395,7 @@
   "expertApplicationCounterMessageHint": "添加议价说明…",
   "expertApplicationConfirmApprove": "确认同意",
   "expertApplicationConfirmApproveMessage": "确定同意此申请吗？将会创建任务并生成支付。",
+  "approveNeedsPriceHint": "请先通过报价并等待对方接受,确认价格后再同意申请",
   "expertApplicationConfirmReject": "确认拒绝",
   "expertApplicationConfirmRejectMessage": "确定拒绝此申请吗？",
   "expertApplicationStatusPending": "待处理",

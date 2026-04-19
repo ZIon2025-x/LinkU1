@@ -515,7 +515,10 @@ async def get_expert_reviews(
 
     result = await db.execute(
         select(models.Review)
-        .where(models.Review.expert_id == expert_id)
+        .where(
+            models.Review.expert_id == expert_id,
+            models.Review.is_deleted.is_(False),
+        )
         .order_by(models.Review.created_at.desc())
         .offset(offset).limit(limit)
     )

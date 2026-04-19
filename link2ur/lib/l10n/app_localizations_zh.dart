@@ -9430,6 +9430,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertApplicationConfirmApproveMessage => '确定同意此申请吗？将会创建任务并生成支付。';
 
   @override
+  String get approveNeedsPriceHint => '请先通过报价并等待对方接受,确认价格后再同意申请';
+
+  @override
   String get expertApplicationConfirmReject => '确认拒绝';
 
   @override
@@ -22574,6 +22577,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertApplicationConfirmApproveMessage => '確定同意此申請嗎？將會創建任務並生成支付。';
+
+  @override
+  String get approveNeedsPriceHint => '請先通過報價並等待對方接受,確認價格後再同意申請';
 
   @override
   String get expertApplicationConfirmReject => '確認拒絕';

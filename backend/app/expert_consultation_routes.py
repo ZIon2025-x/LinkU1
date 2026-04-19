@@ -1586,6 +1586,32 @@ async def get_application_status(
     if not is_applicant and not is_owner_admin and not is_team_member:
         raise HTTPException(status_code=403, detail="无权查看该申请")
 
+    # 计算 can_approve: approve 前置条件(与 _approve_team_service_application
+    # / finalize_personal_service_application 里价格护栏逻辑对齐)。
+    # 让前端据此 disable approve 按钮,避免点击后必然触发 400
+    # (approval_price_not_set_negotiable)。
+    has_price = (
+        application.final_price is not None
+        or application.negotiated_price is not None
+        or application.expert_counter_price is not None
+    )
+    can_approve = has_price
+    if not can_approve:
+        # 无价格时,仅 fixed 服务(有 base_price) 能走 approve 的 base_price 兜底
+        service = None
+        if application.service_id:
+            svc_res = await db.execute(
+                select(models.TaskExpertService).where(
+                    models.TaskExpertService.id == application.service_id
+                )
+            )
+            service = svc_res.scalar_one_or_none()
+        if service is not None:
+            is_negotiable = (getattr(service, "pricing_type", None) or "fixed") == "negotiable"
+            base_price = getattr(service, "base_price", None)
+            if not is_negotiable and base_price is not None:
+                can_approve = True
+
     return {
         "id": application.id,
         "service_id": application.service_id,
@@ -1596,6 +1622,7 @@ async def get_application_status(
         "expert_counter_price": float(application.expert_counter_price) if application.expert_counter_price else None,
         "final_price": float(application.final_price) if application.final_price else None,
         "can_quote": is_owner_admin and not is_applicant,
+        "can_approve": can_approve,
         "created_at": application.created_at.isoformat() if application.created_at else None,
     }
 

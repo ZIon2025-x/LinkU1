@@ -4726,7 +4726,7 @@ def get_my_profile(
         from sqlalchemy import func as sa_func
         rating_row = db.query(
             sa_func.avg(Review.rating), sa_func.count(Review.id)
-        ).filter(Review.user_id == current_user.id).first()
+        ).filter(Review.user_id == current_user.id, Review.is_deleted.is_(False)).first()
         avg_rating = round(float(rating_row[0]), 1) if rating_row and rating_row[0] else 0.0
         
         # 获取并清理字符串字段（去除首尾空格）
@@ -5054,7 +5054,9 @@ def user_profile(
     from app.models import Review, User
 
     avg_rating_result = (
-        db.query(func.avg(Review.rating)).filter(Review.user_id == user_id).scalar()
+        db.query(func.avg(Review.rating))
+        .filter(Review.user_id == user_id, Review.is_deleted.is_(False))
+        .scalar()
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 

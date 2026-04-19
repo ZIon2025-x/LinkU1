@@ -271,6 +271,11 @@ class Task(Base):
     is_consultation_placeholder = Column(
         Boolean, nullable=False, default=False, server_default='false'
     )
+    # 对 task_consultation 占位任务,指向原始任务(migration 213)。
+    # 替代老方案:description="original_task_id:{id}" 字符串。
+    original_task_id = Column(
+        Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
 
     # 关系
     poster = relationship(
@@ -291,6 +296,10 @@ class Task(Base):
 
 class Review(Base):
     __tablename__ = "reviews"
+    # Partial UNIQUE index 在 migration 212 中创建:
+    #   - uq_reviews_task_user_active   (task_id, user_id) WHERE is_deleted=FALSE AND task_id IS NOT NULL
+    #   - uq_reviews_package_user_active(package_id, user_id) WHERE is_deleted=FALSE AND package_id IS NOT NULL
+    # SQLAlchemy 的 UniqueConstraint 不支持 WHERE 条件,故仅依赖 DB 层 + 应用层双重检查。
     __table_args__ = (
         Index("ix_reviews_task_id_anonymous", "task_id", "is_anonymous"),
     )
@@ -307,6 +316,9 @@ class Review(Base):
     reply_at = Column(DateTime(timezone=True), nullable=True)
     reply_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)
+    # 软删除(migration 212):留出"改评"逃生阀。查询默认过滤 is_deleted=False。
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default="false")
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     # 关系
     task = relationship("Task", back_populates="reviews")
     user = relationship("User", back_populates="reviews", foreign_keys=[user_id])

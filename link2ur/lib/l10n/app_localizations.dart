@@ -18077,6 +18077,12 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to approve this application? A task and payment will be created.'**
   String get expertApplicationConfirmApproveMessage;
 
+  /// No description provided for @approveNeedsPriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please quote and wait for the price to be accepted before approving'**
+  String get approveNeedsPriceHint;
+
   /// No description provided for @expertApplicationConfirmReject.
   ///
   /// In en, this message translates to:

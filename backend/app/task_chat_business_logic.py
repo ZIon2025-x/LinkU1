@@ -230,10 +230,14 @@ class AcceptApplicationLogic:
             other_app.status = "rejected"
 
         # Close task_consultation placeholder tasks that reference this task
+        # 优先走 original_task_id 外键,兼容历史 description 字符串数据。
         consult_tasks_query = select(models.Task).where(
             and_(
                 models.Task.task_source == "task_consultation",
-                models.Task.description == f"original_task_id:{task_id}",
+                (
+                    (models.Task.original_task_id == task_id)
+                    | (models.Task.description == f"original_task_id:{task_id}")
+                ),
                 models.Task.status.in_(["consulting", "negotiating", "price_agreed"]),
             )
         )

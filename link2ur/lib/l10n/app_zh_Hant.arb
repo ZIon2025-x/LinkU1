@@ -4334,6 +4334,7 @@
   "expertApplicationCounterMessageHint": "添加議價說明…",
   "expertApplicationConfirmApprove": "確認同意",
   "expertApplicationConfirmApproveMessage": "確定同意此申請嗎？將會創建任務並生成支付。",
+  "approveNeedsPriceHint": "請先通過報價並等待對方接受,確認價格後再同意申請",
   "expertApplicationConfirmReject": "確認拒絕",
   "expertApplicationConfirmRejectMessage": "確定拒絕此申請嗎？",
   "expertApplicationStatusPending": "待處理",

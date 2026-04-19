@@ -9820,6 +9820,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to approve this application? A task and payment will be created.';
 
   @override
+  String get approveNeedsPriceHint =>
+      'Please quote and wait for the price to be accepted before approving';
+
+  @override
   String get expertApplicationConfirmReject => 'Confirm Reject';
 
   @override

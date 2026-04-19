@@ -2,6 +2,7 @@
 from html import escape
 
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -11,7 +12,7 @@ from app.crud.user import update_user_statistics
 def get_user_reviews(db: Session, user_id: str, limit: int = 5):
     return (
         db.query(models.Review)
-        .filter(models.Review.user_id == user_id)
+        .filter(models.Review.user_id == user_id, models.Review.is_deleted.is_(False))
         .order_by(models.Review.created_at.desc())
         .limit(limit)
         .all()
@@ -26,6 +27,7 @@ def get_reviews_received_by_user(db: Session, user_id: str, limit: int = 5):
         .join(models.Task, models.Review.task_id == models.Task.id)
         .join(models.User, models.Review.user_id == models.User.id)
         .filter(
+            models.Review.is_deleted.is_(False),
             ((models.Task.poster_id == user_id) & (models.Review.user_id == models.Task.taker_id))
             | ((models.Task.taker_id == user_id) & (models.Review.user_id == models.Task.poster_id))
         )
@@ -42,6 +44,7 @@ def get_user_reviews_with_reviewer_info(db: Session, user_id: str, limit: int = 
         .join(models.User, models.Review.user_id == models.User.id)
         .join(models.Task, models.Review.task_id == models.Task.id)
         .filter(
+            models.Review.is_deleted.is_(False),
             ((models.Task.poster_id == user_id) & (models.Review.user_id == models.Task.taker_id))
             | ((models.Task.taker_id == user_id) & (models.Review.user_id == models.Task.poster_id))
         )
@@ -88,7 +91,7 @@ def update_expert_team_statistics(db: Session, expert_id: str):
     # 1) 平均评分: 仅取这条团队收到的评价
     avg_rating_result = (
         db.query(func.avg(Review.rating))
-        .filter(Review.expert_id == expert_id)
+        .filter(Review.expert_id == expert_id, Review.is_deleted.is_(False))
         .scalar()
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
@@ -140,7 +143,10 @@ async def update_expert_team_statistics_async(db, expert_id: str):
 
     # 1) 平均评分
     avg_result = await db.execute(
-        select(func.avg(Review.rating)).where(Review.expert_id == expert_id)
+        select(func.avg(Review.rating)).where(
+            Review.expert_id == expert_id,
+            Review.is_deleted.is_(False),
+        )
     )
     avg_rating_val = avg_result.scalar()
     avg_rating = float(avg_rating_val) if avg_rating_val is not None else 0.0
@@ -181,7 +187,7 @@ def calculate_user_avg_rating(db: Session, user_id: str):
     """计算并更新用户的平均评分"""
     result = (
         db.query(func.avg(models.Review.rating))
-        .filter(models.Review.user_id == user_id)
+        .filter(models.Review.user_id == user_id, models.Review.is_deleted.is_(False))
         .scalar()
     )
     avg_rating = float(result) if result is not None else 0.0
@@ -226,9 +232,16 @@ def create_review(
     if not is_participant:
         return "not_participant"
 
+    # 仅检查"未删除"的评价 —— 软删除的历史记录不阻塞新评价,
+    # 这为未来"改评"功能预留通道(先 soft-delete 旧记录再创建新记录)。
+    # DB 层有 partial UNIQUE 约束兜底(见 migration 212)。
     existing_review = (
         db.query(Review)
-        .filter(Review.task_id == task_id, Review.user_id == user_id)
+        .filter(
+            Review.task_id == task_id,
+            Review.user_id == user_id,
+            Review.is_deleted.is_(False),
+        )
         .first()
     )
     if existing_review:
@@ -255,7 +268,12 @@ def create_review(
         expert_id=review_expert_id,
     )
     db.add(db_review)
-    db.commit()
+    # DB 层 partial UNIQUE 兜底:应用层检查失败时(并发),IntegrityError 捕获后返回业务错误码
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return "already_reviewed"
     db.refresh(db_review)
 
     reviewed_user_id = None
@@ -296,7 +314,10 @@ def create_review(
 
 def get_task_reviews(db: Session, task_id: int, current_user_id: str | None = None):
     """获取任务评价 - 返回非匿名评价 + 当前用户自己的匿名评价"""
-    query = db.query(models.Review).filter(models.Review.task_id == task_id)
+    query = db.query(models.Review).filter(
+        models.Review.task_id == task_id,
+        models.Review.is_deleted.is_(False),
+    )
     if current_user_id:
         query = query.filter(
             or_(
@@ -318,6 +339,7 @@ def get_user_received_reviews(db: Session, user_id: str):
             (models.Task.poster_id == user_id)
             | (models.Task.taker_id == user_id),
             models.Review.user_id != user_id,
+            models.Review.is_deleted.is_(False),
         )
         .all()
     )

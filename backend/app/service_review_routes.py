@@ -40,7 +40,8 @@ async def get_service_reviews(
     # Count total reviews
     count_result = await db.execute(
         select(func.count(models.Review.id)).where(
-            models.Review.task_id.in_(task_ids)
+            models.Review.task_id.in_(task_ids),
+            models.Review.is_deleted.is_(False),
         )
     )
     total = count_result.scalar() or 0
@@ -48,7 +49,10 @@ async def get_service_reviews(
     # Fetch reviews with pagination
     reviews_result = await db.execute(
         select(models.Review)
-        .where(models.Review.task_id.in_(task_ids))
+        .where(
+            models.Review.task_id.in_(task_ids),
+            models.Review.is_deleted.is_(False),
+        )
         .order_by(models.Review.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -104,7 +108,10 @@ async def get_service_review_summary(
         select(
             func.avg(models.Review.rating),
             func.count(models.Review.id),
-        ).where(models.Review.task_id.in_(task_ids))
+        ).where(
+            models.Review.task_id.in_(task_ids),
+            models.Review.is_deleted.is_(False),
+        )
     )
     row = result.one()
     avg_rating = float(row[0]) if row[0] else 0

@@ -414,6 +414,7 @@ async def get_service_reviews(
         models.Task.expert_service_id == service_id,
         models.Task.status == "completed",
         models.Review.is_anonymous == 0,
+        models.Review.is_deleted.is_(False),
     )
 
     count_query = (
@@ -476,6 +477,7 @@ async def get_expert_reviews(
     base_where = and_(
         models.Task.status == "completed",
         models.Review.is_anonymous == 0,
+        models.Review.is_deleted.is_(False),
         (
             (models.Review.expert_id == expert_id)
             | (

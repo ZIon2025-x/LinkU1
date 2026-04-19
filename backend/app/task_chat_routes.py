@@ -860,10 +860,53 @@ async def get_task_messages(
                     detail="无权限查看该申请的消息"
                 )
 
+        # 合并咨询历史: 若当前 task 是 approve 后的正式订单 task,
+        # 对应申请的 consultation_task_id 指向原咨询占位 Task。把占位 Task 的
+        # 消息也纳入对话,解决"完成订单后看不到议价历史"的 UX 割裂(C3)。
+        # 仅主聊天(application_id=None)时合并;申请频道私聊(application_id 不为 None)不变。
+        merged_task_ids: List[int] = [task_id]
+        if not application_id:
+            async def _collect_consultation_ids(field_task_id, field_consult_id):
+                res = await db.execute(
+                    select(field_consult_id).where(
+                        field_task_id == task_id,
+                        field_consult_id.isnot(None),
+                    )
+                )
+                return [row for row in res.scalars().all() if row and row != task_id]
+
+            # ServiceApplication
+            merged_task_ids.extend(
+                await _collect_consultation_ids(
+                    models.ServiceApplication.task_id,
+                    models.ServiceApplication.consultation_task_id,
+                )
+            )
+            # TaskApplication (consult-formal-apply 后 TA.task_id=原任务, consultation_task_id=占位)
+            merged_task_ids.extend(
+                await _collect_consultation_ids(
+                    models.TaskApplication.task_id,
+                    models.TaskApplication.consultation_task_id,
+                )
+            )
+            # FleaMarketPurchaseRequest
+            merged_task_ids.extend(
+                await _collect_consultation_ids(
+                    models.FleaMarketPurchaseRequest.task_id,
+                    models.FleaMarketPurchaseRequest.consultation_task_id,
+                )
+            )
+            merged_task_ids = list(dict.fromkeys(merged_task_ids))  # 去重保序
+
         # 构建消息查询
+        task_id_filter = (
+            models.Message.task_id == task_id
+            if len(merged_task_ids) == 1
+            else models.Message.task_id.in_(merged_task_ids)
+        )
         messages_query = select(models.Message).where(
             and_(
-                models.Message.task_id == task_id,
+                task_id_filter,
                 models.Message.conversation_type == 'task'
             )
         )
@@ -4827,12 +4870,16 @@ async def create_task_consultation(
             )
 
         # 3. 查找是否已有此用户对该原始任务的咨询占位任务
+        #    优先匹配 original_task_id 外键(migration 213 后);同时兼容旧数据的字符串 description。
         existing_placeholder_result = await db.execute(
             select(models.Task.id).where(
                 models.Task.task_source == "task_consultation",
                 models.Task.poster_id == current_user.id,
                 models.Task.taker_id == task.poster_id,
-                models.Task.description == f"original_task_id:{task_id}",
+                (
+                    (models.Task.original_task_id == task_id)
+                    | (models.Task.description == f"original_task_id:{task_id}")
+                ),
             )
         )
         placeholder_ids = [row[0] for row in existing_placeholder_result.fetchall()]
@@ -4912,13 +4959,15 @@ async def create_task_consultation(
         task_title_zh = getattr(task, "title_zh", None) or task_title
         task_title_en = getattr(task, "title_en", None) or task_title
 
+        # 占位 Task description 直接用原任务 description(migration 213 后),
+        # 不再把字符串 hack 进 description。original_task_id 外键负责引用关系。
         consulting_task = await create_placeholder_task(
             db,
             consultation_type="task_consultation",
             title=f"咨询: {task_title}",
             applicant_id=current_user.id,
             taker_id=task.poster_id,
-            description=f"original_task_id:{task_id}",
+            description=task.description or "",
             title_zh=f"咨询: {task_title_zh}",
             title_en=f"Consultation: {task_title_en}",
             reward=task.base_reward or 0,
@@ -4928,6 +4977,7 @@ async def create_task_consultation(
             location=task.location or "",
             task_type=task.task_type or "other",
             task_level=getattr(task, "task_level", "normal"),
+            original_task_id=task_id,
         )
 
         # 6. 创建 TaskApplication 指向占位任务
@@ -5397,11 +5447,14 @@ async def consult_formal_apply(
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
 
         # For task_consultation: create formal application on the ORIGINAL task
+        # 优先读 task.original_task_id(migration 213 后的新字段);兼容历史
+        # description="original_task_id:{id}" 字符串数据。
         original_task_id = None
         orig_task = None
-        if getattr(task, 'task_source', None) == 'task_consultation' and task.description:
-            # Parse original_task_id from description
-            if task.description.startswith("original_task_id:"):
+        if getattr(task, 'task_source', None) == 'task_consultation':
+            if getattr(task, 'original_task_id', None):
+                original_task_id = task.original_task_id
+            elif task.description and task.description.startswith("original_task_id:"):
                 try:
                     original_task_id = int(task.description.split(":")[1])
                 except (ValueError, IndexError):

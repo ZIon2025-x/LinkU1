@@ -217,14 +217,35 @@ class ServiceConsultationActions extends ConsultationActions {
               const SizedBox(width: 8),
             ],
             if (appStatus == 'pending' && canQuote) ...[
-              ActionPill(
-                icon: Icons.check_circle,
-                label: context.l10n.expertApplicationConfirmApprove,
-                color: AppColors.success,
-                onTap: isSubmitting
-                    ? null
-                    : () => showApproveConfirmation(context, consultationApp: consultationApp),
-              ),
+              // Approve 按钮: 后端 can_approve=false 时(议价服务无价),disable 并提示去报价。
+              // 避免用户点击后必然触发 400 approval_price_not_set_negotiable。
+              Builder(builder: (ctx) {
+                final canApprove = consultationApp?['can_approve'] != false;
+                return ActionPill(
+                  icon: Icons.check_circle,
+                  label: context.l10n.expertApplicationConfirmApprove,
+                  color: canApprove
+                      ? AppColors.success
+                      : AppColors.success.withValues(alpha: 0.4),
+                  onTap: isSubmitting
+                      ? null
+                      : () {
+                          if (!canApprove) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(
+                                content: Text(context.l10n.approveNeedsPriceHint),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+                          showApproveConfirmation(
+                            context,
+                            consultationApp: consultationApp,
+                          );
+                        },
+                );
+              }),
               const SizedBox(width: 8),
             ],
             if (isConsulting || isNegotiating) ...[
