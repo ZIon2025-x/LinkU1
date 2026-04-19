@@ -1292,6 +1292,7 @@ async def list_expert_applications(
             "final_price": float(row.ServiceApplication.final_price) if row.ServiceApplication.final_price else None,
             "currency": row.ServiceApplication.currency or "GBP",
             "task_id": row.ServiceApplication.task_id,
+            "consultation_task_id": row.ServiceApplication.consultation_task_id,
             "created_at": row.ServiceApplication.created_at.isoformat() if row.ServiceApplication.created_at else None,
         }
         for row in rows
@@ -1373,6 +1374,7 @@ async def list_my_service_applications(
                 "final_price": float(a.final_price) if a.final_price else None,
                 "currency": a.currency or (svc.currency if svc else "GBP"),
                 "task_id": a.task_id,
+                "consultation_task_id": a.consultation_task_id,
                 "owner_reply": a.owner_reply,
                 "owner_reply_at": a.owner_reply_at.isoformat() if a.owner_reply_at else None,
                 "created_at": a.created_at.isoformat() if a.created_at else None,

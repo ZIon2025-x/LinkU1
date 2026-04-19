@@ -2818,6 +2818,7 @@ class ServiceApplicationOut(BaseModel):
     created_at: datetime.datetime
     approved_at: Optional[datetime.datetime]
     price_agreed_at: Optional[datetime.datetime]
+    consultation_task_id: Optional[int] = None  # 咨询占位 task id (approve 后可用于消息路由)
     # ⚠️ 优化：添加支付相关字段（如果需要支付）
     payment_intent_id: Optional[str] = None
     client_secret: Optional[str] = None
@@ -3053,6 +3054,7 @@ class FleaMarketPurchaseRequestResponse(BaseModel):
     status: Literal["pending", "accepted", "rejected"]
     created_at: str
     updated_at: str
+    consultation_task_id: Optional[int] = None  # 咨询占位 task id (approve 后可用于消息路由)
 
     class Config:
         from_attributes = True
