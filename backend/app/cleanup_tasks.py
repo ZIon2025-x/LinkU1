@@ -1154,16 +1154,15 @@ class CleanupTasks:
                                 continue
                 
                 # 5. 清理不存在的服务图片文件夹
-                # 目录名是 user_id（上传时 resource_id=user_id），需同时匹配
-                # TaskExpert.id（达人服务）和 User.id（个人服务）
+                # 目录名是 user_id（上传时 resource_id=user_id）
+                # TaskExpert.id 是 FK→users.id, 所以 TaskExpert.id 集合 ⊂ User.id 集合;
+                # Phase A 移除冗余的 TaskExpert 查询, 只保留 User.id 即可。
                 service_images_dir = base_upload_dir / "public" / "images" / "service_images"
                 if service_images_dir.exists():
                     from sqlalchemy import select
-                    experts_result = db.execute(select(models.TaskExpert.id))
-                    existing_expert_ids = {expert_id for expert_id, in experts_result.all()}
                     users_result = db.execute(select(models.User.id))
                     existing_user_ids = {uid for uid, in users_result.all()}
-                    valid_ids = existing_expert_ids | existing_user_ids
+                    valid_ids = existing_user_ids
 
                     for service_dir in service_images_dir.iterdir():
                         if cleaned_count >= max_dirs_per_run:
@@ -1417,15 +1416,13 @@ class CleanupTasks:
                             logger.info(f"删除不存在用户 {user_dir_name} 的头像文件夹（云存储）: {dir_path}")
             
             # 5. 清理不存在的服务图片文件夹
-            # 目录名是 user_id（上传时 resource_id=user_id），需同时匹配
-            # TaskExpert.id（达人服务）和 User.id（个人服务）
+            # 目录名是 user_id（上传时 resource_id=user_id）
+            # TaskExpert.id 是 FK→users.id, Phase A 移除冗余 TaskExpert 查询
             service_images_prefix = "public/images/service_images/"
             if cleaned_count < max_dirs_per_run:
-                experts_result = db.execute(select(models.TaskExpert.id))
-                existing_expert_ids = {str(expert_id) for expert_id, in experts_result.all()}
                 users_result = db.execute(select(models.User.id))
                 existing_user_ids = {str(uid) for uid, in users_result.all()}
-                valid_ids = existing_expert_ids | existing_user_ids
+                valid_ids = existing_user_ids
 
                 all_files = storage.list_files(service_images_prefix)
                 service_dirs = set()
