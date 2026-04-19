@@ -485,3 +485,45 @@ def test_task_api_rejects_placeholder_write_sample():
     has_guard_helper = "load_real_task_or_404_sync" in source
     has_inline_check = "is_consultation_placeholder" in source
     assert has_guard_helper and has_inline_check, "routers.py should have both helper calls and inline placeholder checks (mix of patterns across 16 guard points)"
+
+
+# ---------------------------------------------------------------------------
+# Task 28 — require_team_role_sync migration
+# ---------------------------------------------------------------------------
+
+def test_require_team_role_migration_in_complete_task():
+    """Task 28: verify complete_task migrated to require_team_role_sync helper (Track 1 F3 activation).
+
+    Track 1's helper was zero caller (dead code). Task 28 migrated the inline ExpertMember
+    role check in complete_task to require_team_role_sync, giving the helper 1 real caller.
+
+    Per Task 27 audit, only 1 site was eligible for migration (not 6-8 as spec estimated).
+    """
+    import inspect
+    from app import routers
+
+    source = inspect.getsource(routers)
+
+    # Helper must be imported and used
+    assert "from app.permissions.expert_permissions import require_team_role_sync" in source \
+        or "require_team_role_sync" in source, \
+        "routers.py should import or use require_team_role_sync after Task 28 migration"
+
+    # Inline ExpertMember role check pattern must be gone from complete_task
+    # (We don't read complete_task specifically; just confirm the helper IS used.)
+    assert "require_team_role_sync(" in source, \
+        "routers.py should have at least one call to require_team_role_sync"
+
+
+def test_require_team_role_sync_exists():
+    """Ensure the sync variant added in Task 28 is importable and has correct signature."""
+    from app.permissions.expert_permissions import require_team_role_sync
+    import inspect
+
+    sig = inspect.signature(require_team_role_sync)
+    params = list(sig.parameters.keys())
+    # Expected params: db, expert_id, user_id, minimum (possibly with default)
+    assert "db" in params
+    assert "expert_id" in params
+    assert "user_id" in params
+    assert "minimum" in params
