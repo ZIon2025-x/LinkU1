@@ -70,6 +70,7 @@ class Task extends Equatable {
     this.pricingType = 'fixed',
     this.taskMode = 'online',
     this.requiredSkills = const [],
+    this.isConsultationPlaceholder = false,
   });
 
   final int id;
@@ -148,6 +149,9 @@ class Task extends Equatable {
   final String pricingType;
   final String taskMode;
   final List<String> requiredSkills;
+
+  /// 是否为咨询占位任务（后端 is_consultation_placeholder，spec §F.1.2）
+  final bool isConsultationPlaceholder;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -454,6 +458,7 @@ class Task extends Equatable {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      isConsultationPlaceholder: json['is_consultation_placeholder'] as bool? ?? false,
     );
   }
 
@@ -515,6 +520,7 @@ class Task extends Equatable {
       'pricing_type': pricingType,
       'task_mode': taskMode,
       'required_skills': requiredSkills,
+      'is_consultation_placeholder': isConsultationPlaceholder,
     };
   }
 
@@ -578,6 +584,7 @@ class Task extends Equatable {
     String? pricingType,
     String? taskMode,
     List<String>? requiredSkills,
+    bool? isConsultationPlaceholder,
   }) {
     return Task(
       id: id ?? this.id,
@@ -639,6 +646,7 @@ class Task extends Equatable {
       pricingType: pricingType ?? this.pricingType,
       taskMode: taskMode ?? this.taskMode,
       requiredSkills: requiredSkills ?? this.requiredSkills,
+      isConsultationPlaceholder: isConsultationPlaceholder ?? this.isConsultationPlaceholder,
     );
   }
 
@@ -649,6 +657,7 @@ class Task extends Equatable {
         counterOfferPrice, counterOfferStatus, counterOfferUserId,
         isPublic, takerPublic,
         pricingType, taskMode, requiredSkills,
+        isConsultationPlaceholder,
       ];
 }
 
