@@ -370,7 +370,7 @@ def get_user_primary_expert_sync(db: Session, user_id: str) -> Optional[Expert]:
 
 | 文件 | 行号 | 改造 |
 |------|------|------|
-| `cleanup_tasks.py` | 1158, 1162-1163, 1421, 1424-1425 | 图片清理遍历 `TaskExpert.id` → 遍历 `ExpertMember where role='owner'` 的 user_id（语义等价） |
+| `cleanup_tasks.py` | 1158, 1162-1163, 1421, 1424-1425 | **化简而非等价替换**：`TaskExpert.id` 定义是 `ForeignKey("users.id")`，所以 `existing_expert_ids ⊂ existing_user_ids`，原代码 `valid_ids = existing_expert_ids \| existing_user_ids == existing_user_ids`。Phase A 直接**删除 `experts_result = db.execute(select(TaskExpert.id))` 和 `existing_expert_ids` 两行**，只保留 `existing_user_ids` — 行为完全等价但 1) 少一次 DB query，2) 不再依赖 TaskExpert 模型。注释同步更新 |
 
 ### 7.5 JSON 返回字段语义变更（Q-B 决策 — 修正版）
 
@@ -505,6 +505,7 @@ Phase A 重点覆盖：
 | R8 | ALTER TABLE 锁表 | 低 | `ADD COLUMN ... DEFAULT 0.0` Postgres 11+ fast default |
 | R9 | 大 PR 审查疲劳（§7 audit 显示实际改动 25+ 点 / 15 文件，含 AI 工具层 4 个 tool 大改） | 中-高 | PR 按 §7.2.1-7.2.7 的 7 个功能组分 commit，每个 commit 单一 scope；reviewer 可分组审 |
 | R10 | Migration 209 的 DO block 失败（e.g., orphan），但 ALTER TABLE 已成功且 backend 启动继续，代码读到 `Expert.success_rate = 0.0` default 值而非真实值 | 中 | §6.4 注明 DO block 是原子单元；§9 发布流程**必须**部署后看 migration logs 确认 `209 complete: ...` NOTICE 出现，若出现 RAISE EXCEPTION 立即人工修复（不是 revert code —— 数据修好再重启） |
+| R11 | `setup_official_account` 单写 Expert 后，对"已是其他团队 owner"的用户会**再创建一个新团队**（既有行为，Phase A 前就存在）。同一用户变成 2+ 团队 owner，`get_official_account` 的 `Expert.is_official=True` 也可能匹配多行 | 低-中（取决于官方账号是否复用已有团队） | **Phase A 不修**（既有行为保留），但 §8.2 流程 2 冒烟测试**必须**用"从未是 TaskExpert 且无 ExpertMember 记录"的干净用户测试；writing-plans 阶段 flag 此 edge case，由业务决定是否 Phase B 补修 |
 
 ## 11. Open Questions 决议
 
@@ -537,6 +538,9 @@ Phase A 重点覆盖：
 ## 修订历史
 
 - **2026-04-19 v1.0** 初始 spec，§7 代码改造列 "11 处 TaskExpert + 10 处 FeaturedTaskExpert"（基于早期 Explore agent audit）
+- **2026-04-19 v1.6** 第六轮核验，代码细节等价性 + 业务边界：
+  - 发现 `cleanup_tasks.py` 原代码 `valid_ids = existing_expert_ids | existing_user_ids` 是**冗余计算**：`TaskExpert.id` 定义是 `ForeignKey("users.id")`，TaskExpert.id 集合 ⊂ User.id 集合。Spec v1.5 的 "改为遍历 ExpertMember owner user_id" 完全不必要——直接**删除两行 TaskExpert 查询**就行，行为等价且少一次 DB query。§7.4 改为"化简而非替换"
+  - 发现 `setup_official_account` 单写 Expert 后对"已是其他团队 owner 的用户"会**再创新团队**（既有行为，Phase A 前就存在，不是 Phase A 引入）。新增 R11 风险记录，Phase A 不修；§8.2 流程 2 补说明"用干净用户测试"
 - **2026-04-19 v1.5** 第五轮核验，转向客户端 API 兼容层：
   - 发现 Q-B 决议（保留 `expert_user_id` + 新加 `expert_team_id`）基于**错误假设**—`expert_user_id` 只是 `discovery_routes.py:777` 的 SQL 内部 label，不是返回给客户端的 JSON key。真正返回的 key 是 `user_id` 和 `expert_id`
   - 经 audit `link2ur/lib/data/models/discovery_feed.dart:169,172` 和 `home_discovery_cards.dart:993-1012`:
