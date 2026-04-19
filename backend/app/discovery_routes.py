@@ -750,11 +750,15 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
     - TaskExpertService 用 service_name 而非 name
     - TaskExpertService 用 images (JSONB) 而非 cover_image
     - TaskExpertService 用 status == 'active' 而非 is_active == True
-    - TaskExpert 用 rating 而非 average_rating
-    - service_type='expert' 通过 expert_id JOIN TaskExpert → User
-    - service_type='personal' 通过 user_id 直接 JOIN User（无 TaskExpert）
+    - Expert 用 rating 而非 average_rating
+    - service_type='expert' 通过 owner_type='expert' + owner_id JOIN Expert (团队)
+    - service_type='personal' 通过 user_id 直接 JOIN User (无 Expert)
+    - 返回 JSON key expert_id/user_id 对 expert 服务现填 team_id (Phase A 语义迁移,
+      修复现有 /api/experts/{id} 404 bug; 详见 spec §7.5)
     """
-    # 给个人服务 owner 用户起别名，避免与达人用户表冲突
+    from app.models_expert import Expert
+
+    # 给个人服务 owner 用户起别名，避免与达人团队可能的 User JOIN 冲突（本实现无此 JOIN,保留别名兼容原结构)
     PersonalOwner = aliased(models.User, name="personal_owner")
 
     query = (
@@ -774,17 +778,20 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             models.TaskExpertService.currency,
             models.TaskExpertService.user_id.label("personal_owner_id"),
             models.TaskExpertService.created_at,
-            models.TaskExpert.id.label("expert_user_id"),
-            models.TaskExpert.expert_name.label("expert_display_name"),
-            models.TaskExpert.avatar.label("expert_avatar_url"),
-            models.TaskExpert.rating.label("expert_rating"),
-            models.User.name.label("user_name"),
-            models.User.avatar.label("user_avatar_url"),
+            Expert.id.label("expert_team_id"),
+            Expert.name.label("expert_display_name"),
+            Expert.avatar.label("expert_avatar_url"),
+            Expert.rating.label("expert_rating"),
             PersonalOwner.name.label("personal_owner_name"),
             PersonalOwner.avatar.label("personal_owner_avatar"),
         )
-        .outerjoin(models.TaskExpert, models.TaskExpertService.expert_id == models.TaskExpert.id)
-        .outerjoin(models.User, models.TaskExpert.id == models.User.id)
+        .outerjoin(
+            Expert,
+            and_(
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == Expert.id,
+            ),
+        )
         .outerjoin(PersonalOwner, models.TaskExpertService.user_id == PersonalOwner.id)
         .where(models.TaskExpertService.status == "active")
         .order_by(desc(models.TaskExpertService.created_at))
@@ -802,9 +809,10 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             owner_id = str(row.personal_owner_id) if row.personal_owner_id else None
             expert_id_val = None
         else:
-            display_name = row.expert_display_name or row.user_name
-            display_avatar = row.expert_avatar_url or row.user_avatar_url
-            owner_id = str(row.expert_user_id) if row.expert_user_id else None
+            # Expert 服务: team_id 作为 expert_id / user_id JSON 值 (spec §7.5)
+            display_name = row.expert_display_name
+            display_avatar = row.expert_avatar_url
+            owner_id = str(row.expert_team_id) if row.expert_team_id else None
             expert_id_val = owner_id
 
         items.append({
