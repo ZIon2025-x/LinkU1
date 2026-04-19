@@ -709,14 +709,18 @@ async def get_task_chat_unread_count(
         # ⚠️ 修复：排除已取消的任务，与前端/聊天列表逻辑一致
         task_ids_set = set()
         
-        # 1. 作为发布者或接受者的任务（排除已取消的任务）
+        # 1. 作为发布者或接受者的任务（排除已取消的任务；排除已关闭的咨询占位任务）
         tasks_query_1 = select(models.Task.id).where(
             and_(
                 or_(
                     models.Task.poster_id == current_user.id,
                     models.Task.taker_id == current_user.id
                 ),
-                models.Task.status != 'cancelled'
+                models.Task.status != 'cancelled',
+                ~and_(
+                    models.Task.is_consultation_placeholder == True,
+                    models.Task.status == 'closed'
+                )
             )
         )
         result_1 = await db.execute(tasks_query_1)
@@ -757,7 +761,39 @@ async def get_task_chat_unread_count(
             )
             result_2 = await db.execute(multi_participant_query)
             task_ids_set.update([row[0] for row in result_2.all()])
-        
+
+        # 3. 作为团队成员的 consultation 任务
+        # 排除已取消的任务；排除已关闭的咨询占位任务（与 sub-query 1 保持一致）
+        from app.models_expert import ExpertMember
+        sa_team_query = (
+            select(models.ServiceApplication.task_id)
+            .join(
+                ExpertMember,
+                and_(
+                    ExpertMember.expert_id == models.ServiceApplication.new_expert_id,
+                    ExpertMember.user_id == current_user.id,
+                    ExpertMember.status == "active",
+                ),
+            )
+            .join(
+                models.Task,
+                models.Task.id == models.ServiceApplication.task_id,
+            )
+            .where(
+                and_(
+                    models.ServiceApplication.new_expert_id.isnot(None),
+                    models.ServiceApplication.task_id.isnot(None),
+                    models.Task.status != 'cancelled',
+                    ~and_(
+                        models.Task.is_consultation_placeholder == True,
+                        models.Task.status == 'closed'
+                    )
+                )
+            )
+        )
+        sa_team_result = await db.execute(sa_team_query)
+        task_ids_set.update([row[0] for row in sa_team_result.all()])
+
         if not task_ids_set:
             return {"unread_count": 0}
         
