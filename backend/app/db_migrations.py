@@ -226,13 +226,22 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
 
                     for stmt in statements:
                         if stmt.strip():
+                            # CREATE INDEX CONCURRENTLY / REINDEX CONCURRENTLY 不能在事务块内执行。
+                            # psycopg2 默认对每个 execute 隐式开事务,必须临时切 autocommit。
+                            needs_autocommit = "concurrently" in stmt.lower()
+                            prev_autocommit = raw_conn.autocommit
+                            if needs_autocommit:
+                                raw_conn.commit()  # 结掉任何隐式事务
+                                raw_conn.autocommit = True
                             try:
                                 cursor.execute(stmt)
-                                # 每个语句执行后立即提交，避免事务中止影响后续语句
-                                raw_conn.commit()
+                                if not needs_autocommit:
+                                    # 每个语句执行后立即提交，避免事务中止影响后续语句
+                                    raw_conn.commit()
                             except Exception as stmt_error:
                                 # 回滚失败的事务，避免"transaction is aborted"错误
-                                raw_conn.rollback()
+                                if not needs_autocommit:
+                                    raw_conn.rollback()
 
                                 # 记录错误但继续执行（某些语句可能因为已存在而失败）
                                 error_msg = str(stmt_error).lower()
@@ -244,6 +253,9 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                                 else:
                                     logger.warning(f"执行语句时出错（继续执行）: {stmt_error}")
                                     logger.debug(f"问题语句: {stmt[:200]}...")
+                            finally:
+                                if needs_autocommit:
+                                    raw_conn.autocommit = prev_autocommit
 
                     # 最后确保提交（如果还有未提交的）
                     try:
