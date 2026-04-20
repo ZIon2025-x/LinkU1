@@ -1694,6 +1694,31 @@ if CELERY_AVAILABLE:
             db.close()
             release_redis_distributed_lock(lock_key)
 
+    # ── 孤儿咨询占位清理 (每 10 分钟) ──
+    # 原任务已进 in_progress/cancelled/completed 但咨询占位还挂着 consulting/等。
+    # 主路径(webhook / cancel_task 端点) 已即时归档,此任务是 admin / 定时 /
+    # 纠纷退款等其他终态入口的兜底。
+    @celery_app.task(name='app.celery_tasks.cleanup_orphan_consultations_task', bind=True, max_retries=2, default_retry_delay=60)
+    def cleanup_orphan_consultations_task(self):
+        task_name = 'cleanup_orphan_consultations_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=300):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import cleanup_orphan_consultations
+            count = cleanup_orphan_consultations(db)
+            return {"status": "success", "closed": count}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"孤儿咨询清理失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
     # ── 不活跃咨询自动关闭 (每小时) ──
     @celery_app.task(name='app.celery_tasks.close_stale_consultations_task', bind=True, max_retries=2, default_retry_delay=60)
     def close_stale_consultations_task(self):

@@ -202,6 +202,12 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.close_stale_consultations_task',
         'schedule': 3600.0,  # 1小时
     },
+
+    # 孤儿咨询占位清理 - 每10分钟(原任务已终结但咨询占位未关闭的兜底)
+    'cleanup-orphan-consultations': {
+        'task': 'app.celery_tasks.cleanup_orphan_consultations_task',
+        'schedule': 600.0,  # 10分钟
+    },
     
     # ========== 学生认证过期提醒任务 ==========
     
