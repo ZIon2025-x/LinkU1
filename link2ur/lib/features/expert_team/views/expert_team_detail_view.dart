@@ -810,7 +810,7 @@ class _BioSectionState extends State<_BioSection> {
                   icon: Icons.check_circle_outline,
                   label: context.l10n.taskExpertCompletionRate,
                   value:
-                      '${(widget.team.completionRate * 100).toStringAsFixed(0)}%',
+                      '${widget.team.completionRate.toStringAsFixed(0)}%',
                 ),
               ],
             ),

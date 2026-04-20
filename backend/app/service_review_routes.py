@@ -77,7 +77,7 @@ async def get_service_reviews(
             "task_id": r.task_id,
             "reviewer_id": r.user_id,
             "reviewer_name": reviewer.name if reviewer else "Unknown",
-            "reviewer_avatar": reviewer.avatar_url if reviewer else None,
+            "reviewer_avatar": reviewer.avatar if reviewer else None,
             "rating": r.rating,
             "comment": r.comment,
             "created_at": r.created_at.isoformat() if r.created_at else None,
