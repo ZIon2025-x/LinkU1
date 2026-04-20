@@ -808,7 +808,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               if (!widget.readOnly &&
                   widget.isConsultation &&
                   isChatActive &&
-                  (isConsultingOrNeg || appStatus == 'price_agreed' || appStatus == 'pending'))
+                  (isConsultingOrNeg || appStatus == 'price_agreed' || appStatus == 'price_locked' || appStatus == 'pending'))
                 _consultationActions!.buildActions(
                   context: context,
                   appStatus: appStatus,
