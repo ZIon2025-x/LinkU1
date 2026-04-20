@@ -402,16 +402,19 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         throw Exception('upload_returned_empty_url');
       }
 
+      // 后端 SendMessageRequest.content 有 min_length=1,空串会 422。
+      // 对齐普通任务聊天 ChatBloc._onSendImage:content='[图片]' 作为占位,
+      // 前端按 messageType=='image' 分支渲染时读 imageUrl/attachments,不显示这串占位。
       final response = await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.taskChatSend(widget.taskId),
         data: {
-          'content': '',
+          'content': '[图片]',
           'message_type': 'image',
           'attachments': [
             {
               'attachment_type': 'image',
               'url': imageUrl,
-              'meta': {'filename': filename},
+              'meta': {'original_filename': filename},
             }
           ],
           if (_consultationActions?.needsApplicationIdInMessages ?? true)
