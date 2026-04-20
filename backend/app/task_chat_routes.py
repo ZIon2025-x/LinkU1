@@ -531,17 +531,15 @@ async def get_task_chat_list(
             real_candidate_ids = [tid for tid in task_consult_ids if tid not in placeholder_task_ids_set]
 
             if placeholder_candidate_ids:
-                # price_locked: consult-approve 锁定期间,需继续路由到咨询 UI 显示"等待支付中"
+                # 占位任务 = 咨询,TA 不论何种状态都返回 id,前端按
+                # is_consultation_placeholder 统一路由到咨询 UI。
+                # 以 id DESC 降序保证多条 TA 情况下取到最新一条。
                 ta_query = select(
                     models.TaskApplication.task_id,
                     models.TaskApplication.id
                 ).where(
                     models.TaskApplication.task_id.in_(placeholder_candidate_ids),
-                    models.TaskApplication.status.in_([
-                        "consulting", "negotiating", "price_agreed",
-                        "price_locked", "cancelled",
-                    ]),
-                )
+                ).order_by(models.TaskApplication.id.desc())
                 ta_result = await db.execute(ta_query)
                 for row in ta_result.all():
                     task_app_map.setdefault(row[0], row[1])
@@ -661,6 +659,9 @@ async def get_task_chat_list(
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
                 "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
                 "task_source": getattr(task, 'task_source', 'normal'),  # 任务来源
+                # 占位任务标记 — 前端据此决定路由到咨询 UI 还是普通任务聊天,
+                # 不再用 task_source 启发式 + appId 判空的脆弱组合
+                "is_consultation_placeholder": bool(getattr(task, 'is_consultation_placeholder', False)),
                 "service_application_id": service_app_map.get(task.id) or flea_app_map.get(task.id) or task_app_map.get(task.id),  # consultation/task consultation 任务对应的申请ID
                 # 参与者信息（排除当前用户自己）
                 "participants": _build_participants(

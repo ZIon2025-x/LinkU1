@@ -153,21 +153,24 @@ class _TaskChatListViewContent extends StatelessWidget {
               chat: chat,
               isPinned: isPinned,
               onTap: () {
-                // Consultation tasks → ApplicationChatView
-                if (chat.isConsultation && chat.serviceApplicationId != null) {
-                  final type = chat.consultationTypeParam;
-                  context.push('/tasks/${chat.taskId}/applications/${chat.serviceApplicationId}/chat?consultation=true&type=$type').then((_) {
-                    if (context.mounted && chat.unreadCount > 0) {
-                      context.read<MessageBloc>().add(MessageMarkTaskChatRead(chat.taskId));
-                    }
-                  });
-                } else {
-                  context.push('/task-chat/${chat.taskId}').then((_) {
-                    if (context.mounted && chat.unreadCount > 0) {
-                      context.read<MessageBloc>().add(MessageMarkTaskChatRead(chat.taskId));
-                    }
-                  });
-                }
+                // 占位任务 = 咨询 → 永远走 ApplicationChatView(带 consultation=true)。
+                // 非占位 → 普通任务聊天。老数据 fallback:没 isConsultationPlaceholder
+                // 标记但 taskSource 是 consultation 类型的历史聊天也当咨询处理。
+                final routeToConsultation =
+                    chat.isConsultation && chat.serviceApplicationId != null;
+                final future = routeToConsultation
+                    ? context.push(
+                        '/tasks/${chat.taskId}/applications/${chat.serviceApplicationId}/chat'
+                        '?consultation=true&type=${chat.consultationTypeParam}',
+                      )
+                    : context.push('/task-chat/${chat.taskId}');
+                future.then((_) {
+                  if (context.mounted && chat.unreadCount > 0) {
+                    context
+                        .read<MessageBloc>()
+                        .add(MessageMarkTaskChatRead(chat.taskId));
+                  }
+                });
               },
             ),
           );

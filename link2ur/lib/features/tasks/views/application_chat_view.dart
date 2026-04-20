@@ -26,6 +26,8 @@ import '../../../data/services/api_service.dart';
 import '../../../data/services/websocket_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/router/page_transitions.dart';
+import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../chat/widgets/image_send_confirm_dialog.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -1017,6 +1019,12 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           return _buildSystemMessage(message);
         }
 
+        // Image messages (message_type=image or has image attachments).
+        // 占位 content='[图片]' 由发送端对齐后端 min_length=1 写入,此分支忽略之,直接渲染附件。
+        if (message.isImage || message.hasImageAttachments) {
+          return _buildImageBubble(message, isMe);
+        }
+
         // Normal message bubble using existing grouping
         return _buildMessageBubble(message, isMe);
       },
@@ -1084,6 +1092,55 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               child: Text(
                 message.content,
                 style: TextStyle(fontSize: 15, color: textColor),
+              ),
+            ),
+          ),
+          if (isMe) const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageBubble(Message message, bool isMe) {
+    final urls = message.allImageUrls;
+    if (urls.isEmpty) {
+      return _buildMessageBubble(message, isMe);
+    }
+    final displayUrl = urls.first;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: Row(
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isMe) ...[
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+              child: Text(
+                (message.senderName?.isNotEmpty == true
+                        ? message.senderName!
+                        : '?')
+                    .characters
+                    .first,
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.primary),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          GestureDetector(
+            onTap: () => FullScreenImageView.show(
+              context,
+              images: urls,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              child: AsyncImageView(
+                imageUrl: displayUrl,
+                width: 200,
+                height: 200,
               ),
             ),
           ),

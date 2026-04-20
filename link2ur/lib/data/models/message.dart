@@ -301,6 +301,7 @@ class TaskChat extends Equatable {
     this.lastMessageTime,
     this.unreadCount = 0,
     this.serviceApplicationId,
+    this.isConsultationPlaceholder = false,
   });
 
   final int taskId;
@@ -321,9 +322,13 @@ class TaskChat extends Equatable {
   final DateTime? lastMessageTime;
   final int unreadCount;
   final int? serviceApplicationId;
+  /// 占位任务标记 — 后端 is_consultation_placeholder。**这是路由到咨询 UI 的权威判定**,
+  /// taskSource 启发式只作为历史数据 fallback。
+  final bool isConsultationPlaceholder;
 
-  /// 是否是咨询类任务
+  /// 是否是咨询类任务(用于路由) — 优先占位标记,老数据 fallback 到 taskSource/serviceApplicationId
   bool get isConsultation =>
+      isConsultationPlaceholder ||
       taskSource == 'consultation' ||
       taskSource == 'flea_market_consultation' ||
       taskSource == 'task_consultation' ||
@@ -395,6 +400,7 @@ class TaskChat extends Equatable {
       lastMessageTime: lastMessageTime,
       unreadCount: json['unread_count'] as int? ?? 0,
       serviceApplicationId: json['service_application_id'] as int?,
+      isConsultationPlaceholder: parseBool(json['is_consultation_placeholder']),
     );
   }
 
@@ -421,6 +427,7 @@ class TaskChat extends Equatable {
       lastMessageTime: lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
       serviceApplicationId: serviceApplicationId,
+      isConsultationPlaceholder: isConsultationPlaceholder,
     );
   }
 
