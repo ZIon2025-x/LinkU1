@@ -5491,6 +5491,81 @@ async def consult_respond(
             notif_title_en = _notif["title_en"]
             notif_body = _notif["body_zh"]
             notif_body_en = _notif["body_en"]
+
+            # 同步议价结果到原任务的 pending 申请:
+            # 场景:发布者代理发起的咨询(或申请者先申请再咨询),applicant 在原 task 上
+            # 已有 pending 申请。咨询里双方达成新价格后,必须把新 negotiated_price 回写
+            # 到原申请,否则发布者回任务详情页批准时仍按旧价格结算,议价无效。
+            # 对"申请者先咨询再 formal-apply"场景无影响(原任务无 pending 申请,跳过)。
+            if task.is_consultation_placeholder and application.negotiated_price is not None:
+                original_task_id_sync = getattr(task, "original_task_id", None)
+                if original_task_id_sync is None and task.description and task.description.startswith("original_task_id:"):
+                    try:
+                        original_task_id_sync = int(task.description.split(":")[1])
+                    except (ValueError, IndexError):
+                        original_task_id_sync = None
+                if original_task_id_sync:
+                    orig_app_result = await db.execute(
+                        select(models.TaskApplication).where(
+                            models.TaskApplication.task_id == original_task_id_sync,
+                            models.TaskApplication.applicant_id == application.applicant_id,
+                            models.TaskApplication.status.in_(["pending", "chatting", "negotiating"]),
+                        )
+                        .with_for_update()
+                    )
+                    orig_app = orig_app_result.scalar_one_or_none()
+                    if orig_app:
+                        orig_app.negotiated_price = application.negotiated_price
+                        orig_app.currency = application.currency or orig_app.currency
+                        # 链接占位 task 以便未来追溯(兼容字段可能未来再用)
+                        if not getattr(orig_app, "consultation_task_id", None):
+                            orig_app.consultation_task_id = task_id
+                        # 在原任务聊天里发系统卡片:发布者能看到价格已更新
+                        try:
+                            orig_task_result = await db.execute(
+                                select(models.Task).where(models.Task.id == original_task_id_sync)
+                            )
+                            orig_task = orig_task_result.scalar_one_or_none()
+                            sync_content_zh = f"咨询议价已确认:{currency} {float(application.negotiated_price):.2f},申请价格已同步"
+                            sync_content_en = f"Consultation price agreed: {currency} {float(application.negotiated_price):.2f}, application price synced"
+                            sync_msg = models.Message(
+                                sender_id=None,
+                                receiver_id=None,
+                                content=sync_content_zh,
+                                task_id=original_task_id_sync,
+                                application_id=orig_app.id,
+                                message_type="system",
+                                conversation_type="task",
+                                meta=json.dumps({
+                                    "system_action": "consultation_price_synced",
+                                    "content_en": sync_content_en,
+                                    "from_consultation_task_id": task_id,
+                                    "price": float(application.negotiated_price),
+                                    "currency": currency,
+                                }),
+                                created_at=current_time,
+                            )
+                            db.add(sync_msg)
+                            # 通知发布者价格已更新
+                            if orig_task:
+                                try:
+                                    from app import async_crud
+                                    await async_crud.async_notification_crud.create_notification(
+                                        db,
+                                        str(orig_task.poster_id),
+                                        "consultation_update",
+                                        "咨询议价已确认",
+                                        f'咨询价格 {currency} {float(application.negotiated_price):.2f} 已同步到申请,请审批',
+                                        related_id=str(original_task_id_sync),
+                                        title_en="Consultation Price Confirmed",
+                                        content_en=f'Consultation price {currency} {float(application.negotiated_price):.2f} synced to application, please review',
+                                        related_type="task_id",
+                                        related_secondary_id=orig_app.id,
+                                    )
+                                except Exception as e:
+                                    logger.warning(f"通知发布者议价同步失败: {e}")
+                        except Exception as e:
+                            logger.warning(f"写入议价同步系统消息失败: {e}")
         elif action == "reject":
             application.status = "consulting"
             message_type = "negotiation_rejected"
