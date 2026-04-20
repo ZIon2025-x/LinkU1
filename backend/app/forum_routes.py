@@ -3314,6 +3314,9 @@ async def create_post(
     post_linked_type = post.linked_item_type if hasattr(post, 'linked_item_type') else None
     post_linked_id = post.linked_item_id if hasattr(post, 'linked_item_id') else None
     
+    # 达人板块帖子：挂到团队身份，让 follow feed / 列表展示团队名/头像
+    post_expert_id = expert_id if is_expert else None
+
     if admin_user:
         # 管理员发帖：使用 admin_author_id
         db_post = models.ForumPost(
@@ -3326,6 +3329,7 @@ async def create_post(
             category_id=post.category_id,
             admin_author_id=admin_user.id,
             author_id=None,
+            expert_id=post_expert_id,
             images=post_images,
             attachments=post_attachments,
             linked_item_type=post_linked_type,
@@ -3343,6 +3347,7 @@ async def create_post(
             category_id=post.category_id,
             author_id=current_user.id,
             admin_author_id=None,
+            expert_id=post_expert_id,
             images=post_images,
             attachments=post_attachments,
             linked_item_type=post_linked_type,

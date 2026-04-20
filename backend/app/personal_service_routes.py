@@ -141,6 +141,8 @@ async def create_personal_service(
         service_type="personal",
         user_id=current_user.id,
         expert_id=None,
+        owner_type="user",
+        owner_id=current_user.id,
         service_name=data.service_name,
         service_name_en=service_name_en,
         service_name_zh=service_name_zh,
