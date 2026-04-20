@@ -5307,6 +5307,8 @@
   "negotiatePrice": "議價",
   "quotePrice": "報價",
   "formalApply": "正式申請",
+  "consultApproveAndPay": "批准並支付",
+  "consultAwaitingPayment": "等待支付中",
   "closeConsultation": "關閉諮詢",
   "closeConsultationConfirm": "確定關閉諮詢嗎？",
   "negotiatePriceHint": "輸入您的期望價格",

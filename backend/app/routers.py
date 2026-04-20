@@ -7583,6 +7583,25 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             # 消息写入失败不应阻断主流程
                             logger.warning(f"⚠️ [WEBHOOK] 写入 deal_closed 系统消息失败: {deal_msg_exc}")
 
+                        # 咨询合并批准(consult-approve 路径):归档 T2 / 关闭 TA2
+                        _consult_t2_id = metadata.get("consultation_task_id")
+                        _consult_ta2_id = metadata.get("consultation_application_id")
+                        if _consult_t2_id and _consult_ta2_id:
+                            try:
+                                from app.consultation.approval import (
+                                    finalize_consultation_on_payment_success,
+                                )
+                                finalize_consultation_on_payment_success(
+                                    db,
+                                    consultation_task_id=int(_consult_t2_id),
+                                    consultation_application_id=int(_consult_ta2_id),
+                                )
+                            except Exception as _cf_err:
+                                logger.warning(
+                                    f"⚠️ [WEBHOOK] 咨询归档失败(不阻断主流程): "
+                                    f"T2={_consult_t2_id} TA2={_consult_ta2_id} err={_cf_err}"
+                                )
+
                         # 写入操作日志
                         from app.utils.time_utils import get_utc_time
                         log_entry = models.NegotiationResponseLog(
@@ -8276,7 +8295,29 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         logger.warning(f"  - Application ID: {application_id_str}")
         logger.warning(f"  - 错误信息: {error_message}")
         logger.warning(f"  - 完整错误: {json.dumps(payment_intent.get('last_payment_error', {}), ensure_ascii=False)}")
-        
+
+        # 咨询合并批准(consult-approve)路径:TA2 从 price_locked 回到 price_agreed
+        _failed_metadata_consult = payment_intent.get("metadata", {})
+        _consult_t2_fail = _failed_metadata_consult.get("consultation_task_id")
+        _consult_ta2_fail = _failed_metadata_consult.get("consultation_application_id")
+        if _consult_t2_fail and _consult_ta2_fail:
+            try:
+                from app.consultation.approval import (
+                    unlock_consultation_on_payment_failure,
+                )
+                unlock_consultation_on_payment_failure(
+                    db,
+                    consultation_task_id=int(_consult_t2_fail),
+                    consultation_application_id=int(_consult_ta2_fail),
+                )
+                db.commit()
+            except Exception as _cu_err:
+                logger.warning(
+                    f"⚠️ [WEBHOOK] 咨询解锁失败(失败路径): T2={_consult_t2_fail} "
+                    f"TA2={_consult_ta2_fail} err={_cu_err}"
+                )
+                db.rollback()
+
         # 更新支付历史记录状态为失败
         if payment_intent_id:
             try:
@@ -8739,6 +8780,28 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         payment_intent_id = payment_intent.get("id")
         task_id = _safe_int_metadata(payment_intent, "task_id")
         logger.warning(f"⚠️ [WEBHOOK] Payment intent canceled: payment_intent_id={payment_intent_id}, task_id={task_id}")
+
+        # 咨询合并批准(consult-approve)路径:TA2 从 price_locked 回到 price_agreed
+        _canceled_consult_metadata = payment_intent.get("metadata", {})
+        _consult_t2_cancel = _canceled_consult_metadata.get("consultation_task_id")
+        _consult_ta2_cancel = _canceled_consult_metadata.get("consultation_application_id")
+        if _consult_t2_cancel and _consult_ta2_cancel:
+            try:
+                from app.consultation.approval import (
+                    unlock_consultation_on_payment_failure,
+                )
+                unlock_consultation_on_payment_failure(
+                    db,
+                    consultation_task_id=int(_consult_t2_cancel),
+                    consultation_application_id=int(_consult_ta2_cancel),
+                )
+                db.commit()
+            except Exception as _cu_err:
+                logger.warning(
+                    f"⚠️ [WEBHOOK] 咨询解锁失败(取消路径): T2={_consult_t2_cancel} "
+                    f"TA2={_consult_ta2_cancel} err={_cu_err}"
+                )
+                db.rollback()
 
         # ==================== 钱包混合支付：退还钱包扣款 ====================
         _canceled_metadata = payment_intent.get("metadata", {})

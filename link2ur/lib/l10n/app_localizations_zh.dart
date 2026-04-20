@@ -11847,6 +11847,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get formalApply => '正式申请';
 
   @override
+  String get consultApproveAndPay => '批准并支付';
+
+  @override
+  String get consultAwaitingPayment => '等待支付中';
+
+  @override
   String get closeConsultation => '关闭咨询';
 
   @override
@@ -24994,6 +25000,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get formalApply => '正式申請';
+
+  @override
+  String get consultApproveAndPay => '批准並支付';
+
+  @override
+  String get consultAwaitingPayment => '等待支付中';
 
   @override
   String get closeConsultation => '關閉諮詢';

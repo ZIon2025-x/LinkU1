@@ -22775,6 +22775,18 @@ abstract class AppLocalizations {
   /// **'Formal Apply'**
   String get formalApply;
 
+  /// No description provided for @consultApproveAndPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve & Pay'**
+  String get consultApproveAndPay;
+
+  /// No description provided for @consultAwaitingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Payment'**
+  String get consultAwaitingPayment;
+
   /// No description provided for @closeConsultation.
   ///
   /// In en, this message translates to:

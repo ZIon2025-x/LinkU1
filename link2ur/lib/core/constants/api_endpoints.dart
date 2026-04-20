@@ -358,6 +358,8 @@ class ApiEndpoints {
       '/api/tasks/$taskId/applications/$applicationId/consult-respond';
   static String taskConsultFormalApply(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/consult-formal-apply';
+  static String taskConsultApprove(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/consult-approve';
   static String taskConsultClose(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/consult-close';
   static String taskConsultStatus(int taskId, int applicationId) =>

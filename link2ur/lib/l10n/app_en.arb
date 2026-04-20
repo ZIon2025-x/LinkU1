@@ -5478,6 +5478,8 @@
   "negotiatePrice": "Negotiate",
   "quotePrice": "Quote",
   "formalApply": "Formal Apply",
+  "consultApproveAndPay": "Approve & Pay",
+  "consultAwaitingPayment": "Awaiting Payment",
   "closeConsultation": "Close Consultation",
   "closeConsultationConfirm": "Close this consultation?",
   "negotiatePriceHint": "Enter your desired price",

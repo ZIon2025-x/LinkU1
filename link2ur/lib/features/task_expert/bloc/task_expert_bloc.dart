@@ -348,6 +348,16 @@ class TaskExpertCloseTaskConsultation extends TaskExpertEvent {
   List<Object?> get props => [taskId, applicationId];
 }
 
+/// 发布者在咨询里"批准并支付":合并 formal-apply + approve,返回值用 payAndFinalizeData
+/// 承接,供 UI 跳支付页。
+class TaskExpertApproveTaskConsultation extends TaskExpertEvent {
+  const TaskExpertApproveTaskConsultation(this.taskId, this.applicationId);
+  final int taskId;
+  final int applicationId;
+  @override
+  List<Object?> get props => [taskId, applicationId];
+}
+
 // ── Flea market consultation events ───────────────
 class TaskExpertStartFleaMarketConsultation extends TaskExpertEvent {
   const TaskExpertStartFleaMarketConsultation(this.itemId);
@@ -768,6 +778,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertTaskNegotiateResponse>(_onTaskNegotiateResponse);
     on<TaskExpertTaskFormalApply>(_onTaskFormalApply);
     on<TaskExpertCloseTaskConsultation>(_onCloseTaskConsultation);
+    on<TaskExpertApproveTaskConsultation>(_onApproveTaskConsultation);
     // Flea market consultation
     on<TaskExpertStartFleaMarketConsultation>(_onStartFleaMarketConsultation);
     on<TaskExpertFleaMarketNegotiate>(_onFleaMarketNegotiate);
@@ -1964,6 +1975,42 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
+        errorMessage: e.toString(),
+        clearErrorCode: true,
+      ));
+    }
+  }
+
+  Future<void> _onApproveTaskConsultation(
+    TaskExpertApproveTaskConsultation event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      final result = await _taskExpertRepository.approveTaskConsultation(
+        event.taskId,
+        event.applicationId,
+      );
+      // 后端返回 shape 与 payAndFinalize 一致(client_secret/customer_id/
+      // ephemeral_key_secret/amount/amount_display/currency 等)。复用
+      // payAndFinalizeData 字段,UI 监听该字段跳转支付页。
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'order_created_pending_payment',
+        payAndFinalizeData: result,
+        clearErrorCode: true,
+      ));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
         errorMessage: e.toString(),
         clearErrorCode: true,
       ));

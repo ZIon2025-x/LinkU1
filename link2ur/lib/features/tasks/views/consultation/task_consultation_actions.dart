@@ -99,6 +99,14 @@ class TaskConsultationActions extends ConsultationActions {
     context.read<TaskDetailBloc>().add(TaskDetailAcceptApplicant(applicationId));
   }
 
+  /// 发布者在 price_agreed 下直接"批准并支付" — 走新端点,返回支付信息由
+  /// application_chat_view 的 payAndFinalizeData listener 接管,跳 ApprovalPaymentPage。
+  void onApproveAndPay(BuildContext context) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertApproveTaskConsultation(taskId, applicationId),
+    );
+  }
+
   @override
   void onClose(BuildContext context) {
     context.read<TaskExpertBloc>().add(
@@ -119,6 +127,8 @@ class TaskConsultationActions extends ConsultationActions {
     final isConsulting = appStatus == 'consulting';
     final isNegotiating = appStatus == 'negotiating';
     final isPriceAgreed = appStatus == 'price_agreed';
+    // 后端 consult-approve 成功后 TA2 被锁;双方 UI 都显示"等待支付中"禁用态
+    final isPriceLocked = appStatus == 'price_locked';
     // 后端 consult-status 返回 can_formal_apply=false 时,表示 applicant
     // 在原任务上已有活跃申请(发布者代理发起的咨询就是这种情况),
     // 按"正式申请"会被后端拒,UI 应隐藏按钮。
@@ -171,6 +181,24 @@ class TaskConsultationActions extends ConsultationActions {
                 onTap: isSubmitting
                     ? null
                     : () => showFormalApplyDialog(context, getCurrencySymbol),
+              ),
+              const SizedBox(width: 8),
+            ],
+            // price_agreed: 发布方可直接"批准并支付",跳过返回申请列表
+            if (isPriceAgreed && !isApplicant) ...[
+              ActionPill(
+                icon: Icons.payments,
+                label: context.l10n.consultApproveAndPay,
+                color: AppColors.success,
+                onTap: isSubmitting ? null : () => onApproveAndPay(context),
+              ),
+              const SizedBox(width: 8),
+            ],
+            // price_locked: 双方都只读,显示禁用提示
+            if (isPriceLocked) ...[
+              ActionPill(
+                icon: Icons.lock_clock,
+                label: context.l10n.consultAwaitingPayment,
               ),
               const SizedBox(width: 8),
             ],

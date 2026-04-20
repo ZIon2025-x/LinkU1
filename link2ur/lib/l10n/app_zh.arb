@@ -5370,6 +5370,8 @@
   "negotiatePrice": "议价",
   "quotePrice": "报价",
   "formalApply": "正式申请",
+  "consultApproveAndPay": "批准并支付",
+  "consultAwaitingPayment": "等待支付中",
   "closeConsultation": "关闭咨询",
   "closeConsultationConfirm": "确定关闭咨询吗？",
   "negotiatePriceHint": "输入您的期望价格",

@@ -508,7 +508,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     payData['ephemeral_key_secret']?.toString() ?? '',
                 amountDisplay: payData['amount_display']?.toString(),
                 paymentExpiresAt: payData['payment_expires_at']?.toString(),
-                taskSource: 'expert_service',
+                // 任务咨询 consult-approve 返回原任务 task_source;服务咨询
+                // pay-and-finalize 不返回此字段,回落 'expert_service'。
+                taskSource: payData['task_source']?.toString() ?? 'expert_service',
                 currency: (payData['currency'] as String?) ?? 'GBP',
               );
               // 捕获 router/navigator,避免付款页返回后 context 失效

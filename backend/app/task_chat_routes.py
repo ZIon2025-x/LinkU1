@@ -40,6 +40,10 @@ from app.error_handlers import raise_http_error_with_code
 from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 from app.push_notification_service import send_push_notification_async_safe
 from app.consultation.helpers import create_placeholder_task
+from app.consultation.approval import (
+    prepare_task_consultation_approval,
+    CONSULTATION_STATUS_PRICE_AGREED,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -5725,30 +5729,40 @@ async def consult_formal_apply(
                     error_codes.INVALID_STATUS_TRANSITION,
                 )
 
-            # Check if user already has an application on original task
-            existing_orig_app = await db.execute(
+            # 查原任务上是否已有 active TA(发布者从申请列表发起咨询的场景)
+            # 已有 → 就地更新议价价格/留言/回链,TA 的 status 保持不动(待发布者批准)。
+            # 没有 → 新建一条 pending TA。
+            existing_orig_app_result = await db.execute(
                 select(models.TaskApplication).where(
                     models.TaskApplication.task_id == original_task_id,
                     models.TaskApplication.applicant_id == current_user.id,
                     models.TaskApplication.status.notin_(["cancelled", "rejected"]),
                 )
             )
-            if existing_orig_app.scalar_one_or_none():
-                raise HTTPException(status_code=400, detail="您已有该任务的申请")
-
-            # Create application on original task
-            orig_application = models.TaskApplication(
-                task_id=original_task_id,
-                applicant_id=current_user.id,
-                status="pending",
-                currency=application.currency or orig_task.currency or "GBP",
-                negotiated_price=application.negotiated_price,
-                message=body.message or application.message,
-                created_at=current_time,
-                consultation_task_id=task_id,  # 回链占位 task id(B.2.3)
-            )
-            db.add(orig_application)
-            await db.flush()
+            existing_orig_app = existing_orig_app_result.scalar_one_or_none()
+            if existing_orig_app is not None:
+                existing_orig_app.negotiated_price = application.negotiated_price
+                existing_orig_app.consultation_task_id = task_id
+                if body.message or application.message:
+                    existing_orig_app.message = body.message or application.message
+                orig_application = existing_orig_app
+                logger.info(
+                    f"[consult-formal-apply] 更新原任务 {original_task_id} 现有 TA "
+                    f"{existing_orig_app.id} 议价={application.negotiated_price}"
+                )
+            else:
+                orig_application = models.TaskApplication(
+                    task_id=original_task_id,
+                    applicant_id=current_user.id,
+                    status="pending",
+                    currency=application.currency or orig_task.currency or "GBP",
+                    negotiated_price=application.negotiated_price,
+                    message=body.message or application.message,
+                    created_at=current_time,
+                    consultation_task_id=task_id,  # 回链占位 task id(B.2.3)
+                )
+                db.add(orig_application)
+                await db.flush()
 
             # Send system message on original task too
             price_info = ""
@@ -5833,6 +5847,194 @@ async def consult_formal_apply(
     except Exception as e:
         logger.error(f"Error in consult-formal-apply for task {task_id}, app {application_id}: {e}")
         raise HTTPException(status_code=500, detail=f"转为正式申请失败: {str(e)}")
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-approve")
+async def consult_approve(
+    task_id: int,
+    application_id: int,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """发布者在咨询会话里直接"批准并支付"(跳过回申请列表再批准)。
+
+    task_id = T2(咨询占位),application_id = TA2(咨询申请)。
+    前置:TA2.status = 'price_agreed',T2.is_consultation_placeholder=True。
+    只有原任务发布者可调用;调用后:
+    - 在原任务 T 上 find-or-create 活跃 TA(即 TA1 或新建)
+    - TA2 锁到 price_locked
+    - 创建 Stripe PaymentIntent(metadata 里带 consultation_task_id/consultation_application_id)
+    - T/TA1 不变,等 Stripe webhook 成功才真正批准并归档咨询
+
+    响应和 accept_application 同 shape,方便前端复用支付页。
+    """
+    try:
+        # 1. 锁定咨询占位 task 与咨询申请
+        t2_q = select(models.Task).where(models.Task.id == task_id).with_for_update()
+        t2 = (await db.execute(t2_q)).scalar_one_or_none()
+        if not t2:
+            raise_http_error_with_code("咨询任务不存在", 404, error_codes.TASK_NOT_FOUND)
+        if not t2.is_consultation_placeholder:
+            raise HTTPException(status_code=400, detail="此任务不是咨询占位任务")
+        if t2.task_source != "task_consultation":
+            raise HTTPException(
+                status_code=400,
+                detail=f"consult-approve 仅支持 task_consultation,当前 {t2.task_source}",
+            )
+
+        ta2_q = (
+            select(models.TaskApplication)
+            .where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+            .with_for_update()
+        )
+        ta2 = (await db.execute(ta2_q)).scalar_one_or_none()
+        if not ta2:
+            raise_http_error_with_code(
+                "咨询申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND
+            )
+        if ta2.status != CONSULTATION_STATUS_PRICE_AGREED:
+            raise HTTPException(
+                status_code=400,
+                detail=f"咨询申请当前状态 {ta2.status},需议价同意后才能批准支付",
+            )
+        if ta2.negotiated_price is None:
+            raise HTTPException(status_code=400, detail="议价价格缺失")
+
+        # 2. 权限:原任务发布者。T2.taker_id 就是原任务发布者 id
+        # (poster_start_consultation 造 T2 时 taker_id=task.poster_id;
+        # 申请者主动发起时 taker_id 也是原任务发布者)
+        if str(t2.taker_id or "") != str(current_user.id):
+            raise HTTPException(
+                status_code=403, detail="只有原任务发布者可以批准咨询"
+            )
+
+        # 3. 通过 helper 做原任务侧 TA 的 find-or-create + 锁定 TA2
+        target_ta, original_task_id = await prepare_task_consultation_approval(
+            db,
+            placeholder_task=t2,
+            placeholder_application=ta2,
+            negotiated_price=ta2.negotiated_price,
+            currency=ta2.currency,
+        )
+
+        # 4. 拉原任务(helper 里已经锁了;这里直接查用于建 PI 的字段)
+        orig_task = await db.get(models.Task, original_task_id)
+        # helper 已校验存在且状态允许,此处不再重查
+
+        # 5. 拉申请者
+        applicant = await db.get(models.User, target_ta.applicant_id)
+        if not applicant:
+            raise HTTPException(status_code=404, detail="申请人不存在")
+
+        # 6. 构建 Stripe PaymentIntent(参考 accept_application:2221-2266)
+        import stripe
+        task_amount = float(ta2.negotiated_price)
+        if task_amount <= 0:
+            raise HTTPException(
+                status_code=400, detail="议价金额必须大于 0"
+            )
+        charge_pence = round(task_amount * 100)
+        from app.utils.fee_calculator import calculate_application_fee_pence
+        application_fee_pence = calculate_application_fee_pence(
+            charge_pence,
+            getattr(orig_task, "task_source", None),
+            getattr(orig_task, "task_type", None),
+        )
+        task_title_short = (
+            orig_task.title[:50] if orig_task.title else f"Task #{orig_task.id}"
+        )
+        payment_description = (
+            f"任务 #{orig_task.id}: {task_title_short} - 咨询批准 #{target_ta.id}"
+        )
+        pi_metadata = {
+            "task_id": str(orig_task.id),
+            "task_title": orig_task.title[:200] if orig_task.title else "",
+            "application_id": str(target_ta.id),
+            "poster_id": str(current_user.id),
+            "poster_name": current_user.name or f"User {current_user.id}",
+            "taker_id": str(target_ta.applicant_id),
+            "taker_name": applicant.name or f"User {target_ta.applicant_id}",
+            "application_fee": str(application_fee_pence),
+            "task_amount": str(charge_pence),
+            "task_amount_display": f"{task_amount:.2f}",
+            "negotiated_price": str(ta2.negotiated_price),
+            "pending_approval": "true",
+            "platform": "Link\u00b2Ur",
+            "payment_type": "application_approval",
+            # 咨询合并批准特有:webhook 成功后据此归档 T2/TA2
+            "consultation_task_id": str(t2.id),
+            "consultation_application_id": str(ta2.id),
+        }
+        pi_currency = (getattr(orig_task, "currency", None) or "GBP").lower()
+        pi_pm_types = _payment_method_types_for_currency(pi_currency)
+        from app.secure_auth import get_wechat_pay_payment_method_options
+        payment_method_options = (
+            get_wechat_pay_payment_method_options(request)
+            if "wechat_pay" in pi_pm_types
+            else {}
+        )
+        create_pi_kw = {
+            "amount": charge_pence,
+            "currency": pi_currency,
+            "payment_method_types": pi_pm_types,
+            "description": payment_description,
+            "metadata": pi_metadata,
+        }
+        if payment_method_options:
+            create_pi_kw["payment_method_options"] = payment_method_options
+        payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+
+        customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(
+            stripe_module=stripe,
+            user_obj=current_user,
+            db_session=db,
+        )
+
+        # 7. 把 PI id 绑到原任务(和 accept_application 一致),原任务其他字段不变
+        orig_task.payment_intent_id = payment_intent.id
+        if target_ta.negotiated_price is not None:
+            orig_task.agreed_reward = target_ta.negotiated_price
+
+        await db.commit()
+
+        logger.info(
+            f"✅ [consult-approve] 已创建 PI: T2={t2.id} TA2={ta2.id} -> "
+            f"T={orig_task.id} TA={target_ta.id} pi={payment_intent.id} "
+            f"amount={charge_pence/100:.2f} {pi_currency.upper()}"
+        )
+
+        return {
+            "message": "请完成支付以确认批准议价",
+            "application_id": target_ta.id,
+            "task_id": orig_task.id,
+            "consultation_task_id": t2.id,
+            "consultation_application_id": ta2.id,
+            "payment_intent_id": payment_intent.id,
+            "client_secret": payment_intent.client_secret,
+            "amount": charge_pence,
+            "amount_display": f"{charge_pence / 100:.2f}",
+            "currency": (getattr(orig_task, "currency", None) or "GBP"),
+            "customer_id": customer_id,
+            "ephemeral_key_secret": ephemeral_key_secret,
+            # 原任务来源(normal / expert_activity / flea_market 等)给前端 AcceptPaymentData 用
+            "task_source": getattr(orig_task, "task_source", None) or "normal",
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        # helper 抛出的业务校验错误
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(
+            f"Error in consult-approve for task {task_id}, app {application_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail=f"咨询批准失败: {str(e)}")
 
 
 @task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-close")

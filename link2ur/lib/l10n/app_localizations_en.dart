@@ -12349,6 +12349,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formalApply => 'Formal Apply';
 
   @override
+  String get consultApproveAndPay => 'Approve & Pay';
+
+  @override
+  String get consultAwaitingPayment => 'Awaiting Payment';
+
+  @override
   String get closeConsultation => 'Close Consultation';
 
   @override

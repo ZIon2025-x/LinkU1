@@ -1063,6 +1063,23 @@ class TaskExpertRepository {
     return response.data!;
   }
 
+  /// 发布者在咨询中直接"批准并支付"(合并 formal-apply + approve,返回 Stripe 支付信息)
+  Future<Map<String, dynamic>> approveTaskConsultation(
+    int taskId,
+    int applicationId,
+  ) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.taskConsultApprove(taskId, applicationId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(
+        response.errorCode ?? response.message ?? '咨询批准失败',
+        errorCode: response.errorCode,
+      );
+    }
+    return response.data!;
+  }
+
   /// 关闭任务咨询
   Future<void> closeTaskConsultation(int taskId, int applicationId) async {
     final response = await _apiService.post(
