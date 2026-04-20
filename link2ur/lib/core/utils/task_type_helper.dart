@@ -79,6 +79,59 @@ class TaskTypeHelper {
     return _iconMap[taskType] ?? _iconMap[taskType.toLowerCase()] ?? Icons.task_alt;
   }
 
+  /// 根据 taskType 获取占位图渐变色（用于首页发现 Feed 任务卡片无图时）
+  static List<Color> getGradient(String? taskType) {
+    if (taskType == null) return _fallbackGradient;
+    return _gradientMap[taskType] ??
+        _gradientMap[taskType.toLowerCase()] ??
+        _fallbackGradient;
+  }
+
+  static const List<Color> _fallbackGradient = [
+    Color(0xFFB8C6DB), Color(0xFF7C8DB5),
+  ];
+  static const Map<String, List<Color>> _gradientMap = {
+    // 新格式
+    'delivery':       [Color(0xFFFFB88C), Color(0xFFFF7E5F)],
+    'shopping':       [Color(0xFFFAC5E8), Color(0xFFE879B4)],
+    'tutoring':       [Color(0xFF89B4FF), Color(0xFF5776D1)],
+    'translation':    [Color(0xFF7FD8E0), Color(0xFF4BB5BE)],
+    'design':         [Color(0xFFFAB5C9), Color(0xFFE879A3)],
+    'programming':    [Color(0xFFB590F0), Color(0xFF7E5BDB)],
+    'writing':        [Color(0xFFFDCE7A), Color(0xFFE8A54D)],
+    'photography':    [Color(0xFFFFB088), Color(0xFFE87A5C)],
+    'moving':         [Color(0xFFA79E95), Color(0xFF7E746B)],
+    'cleaning':       [Color(0xFF8ECF9B), Color(0xFF5EA870)],
+    'repair':         [Color(0xFFF0A85B), Color(0xFFCF7E39)],
+    'pet_care':       [Color(0xFFFF9E9E), Color(0xFFE06565)],
+    'errand':         [Color(0xFFFFB88C), Color(0xFFFF7E5F)],
+    'pickup_dropoff': [Color(0xFF89B4FF), Color(0xFF5776D1)],
+    'cooking':        [Color(0xFFFFAB66), Color(0xFFE8783D)],
+    'language_help':  [Color(0xFF7FD8E0), Color(0xFF4BB5BE)],
+    'government':     [Color(0xFFA0B8D0), Color(0xFF6E86A3)],
+    'accompany':      [Color(0xFFBAA7E0), Color(0xFF8B73C7)],
+    'digital':        [Color(0xFFA0D7E8), Color(0xFF6DACC0)],
+    'rental_housing': [Color(0xFFC5B89C), Color(0xFF998770)],
+    'campus_life':    [Color(0xFF89B4FF), Color(0xFF5776D1)],
+    'second_hand':    [Color(0xFFFAC5E8), Color(0xFFE879B4)],
+    'other':          [Color(0xFFB8C6DB), Color(0xFF7C8DB5)],
+    // 老格式
+    'Housekeeping':         [Color(0xFF8ECF9B), Color(0xFF5EA870)],
+    'Campus Life':          [Color(0xFF89B4FF), Color(0xFF5776D1)],
+    'Second-hand & Rental': [Color(0xFFFAC5E8), Color(0xFFE879B4)],
+    'Errand Running':       [Color(0xFFFFB88C), Color(0xFFFF7E5F)],
+    'Skill Service':        [Color(0xFFB590F0), Color(0xFF7E5BDB)],
+    'Social Help':          [Color(0xFF7FD8E0), Color(0xFF4BB5BE)],
+    'Transportation':       [Color(0xFFA79E95), Color(0xFF7E746B)],
+    'Pet Care':             [Color(0xFFFF9E9E), Color(0xFFE06565)],
+    'Life Convenience':     [Color(0xFFFDCE7A), Color(0xFFE8A54D)],
+    'Other':                [Color(0xFFB8C6DB), Color(0xFF7C8DB5)],
+    // 中文/咨询
+    '其他':           [Color(0xFFB8C6DB), Color(0xFF7C8DB5)],
+    'expert_service': [Color(0xFFB590F0), Color(0xFF7E5BDB)],
+    'flea_market':    [Color(0xFFFAC5E8), Color(0xFFE879B4)],
+  };
+
   /// 所有 taskType → IconData 的映射
   /// 同时包含后端老格式（展示名）和新格式（小写标识符）
   static const Map<String, IconData> _iconMap = {
