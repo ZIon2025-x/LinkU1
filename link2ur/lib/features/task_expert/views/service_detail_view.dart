@@ -301,16 +301,18 @@ class _ServiceDetailContent extends StatelessWidget {
                     ),
                   ),
 
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: _BottomApplyBar(
-                      service: service,
-                      serviceId: serviceId,
-                      isDark: isDark,
+                  // 键盘弹出时隐藏底部操作栏,避免随键盘上浮遮挡问答输入框。
+                  if (MediaQuery.of(context).viewInsets.bottom == 0)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: _BottomApplyBar(
+                        service: service,
+                        serviceId: serviceId,
+                        isDark: isDark,
+                      ),
                     ),
-                  ),
                 ],
               );
             },

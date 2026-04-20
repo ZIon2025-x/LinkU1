@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/expert_constants.dart';
 import '../../../../core/utils/service_category_helper.dart';
 import '../../../../core/utils/helpers.dart';
 import '../../../../core/widgets/currency_selector.dart';
+import '../../../../core/widgets/cross_platform_image.dart';
+import '../../../../core/widgets/image_remove_button.dart';
 import '../../../../core/widgets/location_picker.dart';
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_radius.dart';
@@ -17,6 +21,7 @@ import '../../../../core/utils/localized_string.dart';
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../../core/utils/sheet_adaptation.dart';
 import '../../../../core/widgets/error_state_view.dart';
+import '../../../../data/services/api_service.dart';
 import '../../bloc/expert_dashboard_bloc.dart';
 import '../../bloc/selected_expert_cubit.dart';
 
@@ -454,8 +459,15 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
   int? _serviceRadiusKm;
   bool _showEnglish = false;
 
+  // Image upload state
+  final List<XFile> _newImages = [];
+  final List<String> _existingImageUrls = [];
+  final _imagePicker = ImagePicker();
+  bool _isUploadingImages = false;
+
   static const _nameMaxLength = 100;
   static const _descMaxLength = 2000;
+  static const _maxImages = 6;
 
   @override
   void initState() {
@@ -482,6 +494,14 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     _latitude = (s?['latitude'] as num?)?.toDouble();
     _longitude = (s?['longitude'] as num?)?.toDouble();
     _serviceRadiusKm = s?['service_radius_km'] as int?;
+
+    // Restore existing images when editing
+    final existingImages = s?['images'];
+    if (existingImages is List) {
+      _existingImageUrls.addAll(
+        existingImages.whereType<String>().where((u) => u.isNotEmpty),
+      );
+    }
 
     // Auto-expand English section if editing and has English content
     if (_nameEnController.text.isNotEmpty ||
@@ -567,8 +587,78 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     );
   }
 
-  void _submit() {
+  Future<void> _pickImages() async {
+    final remaining = _maxImages - _existingImageUrls.length - _newImages.length;
+    if (remaining <= 0) return;
+    try {
+      final picked = await _imagePicker.pickMultiImage(
+        maxWidth: 1024,
+        imageQuality: 85,
+      );
+      if (!mounted || picked.isEmpty) return;
+      setState(() {
+        for (final file in picked) {
+          if (_existingImageUrls.length + _newImages.length < _maxImages) {
+            _newImages.add(file);
+          }
+        }
+      });
+    } on PlatformException catch (_) {
+      // Permission denied or picker error — silently ignore
+    }
+  }
+
+  void _removeNewImage(int index) {
+    setState(() => _newImages.removeAt(index));
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() => _existingImageUrls.removeAt(index));
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Upload new images first
+    final List<String> uploadedUrls = [];
+    if (_newImages.isNotEmpty) {
+      setState(() => _isUploadingImages = true);
+      try {
+        final apiService = context.read<ApiService>();
+        for (int i = 0; i < _newImages.length; i++) {
+          if (!mounted) return;
+          final file = _newImages[i];
+          final bytes = await file.readAsBytes();
+          final name =
+              file.name.isNotEmpty ? file.name : 'service_${i + 1}.jpg';
+          final response =
+              await apiService.uploadFileBytes<Map<String, dynamic>>(
+            '${ApiEndpoints.uploadPublicImage}?category=service_image',
+            bytes: bytes,
+            filename: name,
+            fieldName: 'image',
+          );
+          final url = response.data?['url'] as String?;
+          if (url != null && url.isNotEmpty) uploadedUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isUploadingImages = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(context.l10n.commonImageUploadFailed(e.toString())),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+      if (mounted) setState(() => _isUploadingImages = false);
+    }
+
+    final allImages = [..._existingImageUrls, ...uploadedUrls];
 
     final data = <String, dynamic>{
       'service_name': _nameController.text.trim(),
@@ -577,6 +667,10 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
       'currency': _selectedCurrency,
       'location_type': _locationType,
     };
+
+    if (allImages.isNotEmpty || _isEditing) {
+      data['images'] = allImages;
+    }
 
     if (_pricingType != 'negotiable') {
       data['base_price'] = double.parse(_priceController.text.trim());
@@ -603,8 +697,64 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     final descEn = _descEnController.text.trim();
     if (descEn.isNotEmpty) data['description_en'] = descEn;
 
+    if (!mounted) return;
     widget.onSubmit(data);
     Navigator.of(context).pop();
+  }
+
+  Widget _buildImagePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final totalCount = _existingImageUrls.length + _newImages.length;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ..._existingImageUrls.asMap().entries.map((entry) {
+          return _ImageTile(
+            child: Image.network(entry.value,
+                width: 80, height: 80, fit: BoxFit.cover),
+            onRemove: () => _removeExistingImage(entry.key),
+          );
+        }),
+        ..._newImages.asMap().entries.map((entry) {
+          return _ImageTile(
+            child:
+                CrossPlatformImage(xFile: entry.value, width: 80, height: 80),
+            onRemove: () => _removeNewImage(entry.key),
+          );
+        }),
+        if (totalCount < _maxImages)
+          GestureDetector(
+            onTap: _isUploadingImages ? null : _pickImages,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : AppColors.skeletonBase,
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(
+                    color: AppColors.textTertiaryLight.withValues(alpha: 0.5)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_photo_alternate_outlined,
+                      size: 28, color: AppColors.textTertiaryLight),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.l10n.commonImageCount(totalCount, _maxImages),
+                    style: const TextStyle(
+                        fontSize: 10, color: AppColors.textTertiaryLight),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -821,6 +971,12 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                   setState(() => _selectedCategory = value);
                 },
               ),
+              const SizedBox(height: 20),
+
+              // ── Images ──
+              _SectionLabel(label: context.l10n.expertServiceImages),
+              const SizedBox(height: 8),
+              _buildImagePicker(),
               const SizedBox(height: 20),
 
               // ── Pricing type ──
@@ -1157,6 +1313,31 @@ class _TipItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ImageTile extends StatelessWidget {
+  const _ImageTile({required this.child, required this.onRemove});
+
+  final Widget child;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(
+          borderRadius: AppRadius.allSmall,
+          child: SizedBox(width: 80, height: 80, child: child),
+        ),
+        Positioned(
+          top: -8,
+          right: -8,
+          child: ImageRemoveButton(onTap: onRemove),
+        ),
+      ],
     );
   }
 }

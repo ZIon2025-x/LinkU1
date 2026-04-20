@@ -2299,8 +2299,9 @@ class TaskExpertServiceCreate(BaseModel):
     description_zh: Optional[str] = None
     category: Optional[str] = None
     images: Optional[List[str]] = None
-    base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # bundle 可空,其他类型由 validator 强制 > 0
+    base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # bundle/议价 可空,其他类型由 validator 强制 > 0
     currency: Literal["GBP", "EUR"] = "GBP"  # 统一为Literal类型
+    pricing_type: Optional[Literal["fixed", "negotiable"]] = "fixed"
     display_order: int = 0
     # 位置相关字段
     location_type: Optional[str] = None  # online / in_person / both
@@ -2339,11 +2340,14 @@ class TaskExpertServiceCreate(BaseModel):
         # base_price 可空条件:
         #   - bundle 套餐永远可空（没有"单价"概念）
         #   - multi 套餐且带 linked_service_id：可空（后端从关联服务继承）
-        #   - 普通单次服务 / 未关联 multi 套餐：必须 > 0
+        #   - pricing_type='negotiable'：议价服务由达人与用户协商,不要求填价
+        #   - 普通单次服务 / 未关联 multi 套餐 且 fixed 定价：必须 > 0
         if self.base_price is None:
             if self.package_type == "bundle":
                 pass
             elif self.package_type == "multi" and self.linked_service_id is not None:
+                pass
+            elif self.pricing_type == "negotiable":
                 pass
             else:
                 raise ValueError("非 bundle / 未关联的 multi 服务必须指定 base_price")
