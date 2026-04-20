@@ -411,6 +411,364 @@ async def list_experts(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+# ==================== 服务列表(跨团队) — Phase B ====================
+
+@admin_expert_router.get("/services")
+async def get_all_expert_services_admin(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    expert_id: Optional[str] = Query(None, description="按团队 ID 筛选"),
+    status_filter: Optional[str] = Query(
+        None, description="按状态筛选: active / deleted / inactive"
+    ),
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """跨团队列出所有团队服务(管理员视角),用于内容审核。"""
+    base = select(models.TaskExpertService).where(
+        models.TaskExpertService.owner_type == "expert"
+    )
+    if expert_id:
+        base = base.where(models.TaskExpertService.owner_id == expert_id)
+    if status_filter:
+        base = base.where(models.TaskExpertService.status == status_filter)
+
+    count_q = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    offset = (page - 1) * limit
+    list_q = base.order_by(
+        models.TaskExpertService.created_at.desc()
+    ).offset(offset).limit(limit)
+    services = (await db.execute(list_q)).scalars().all()
+
+    # 一次性把涉及到的 expert 名字捞出来,避免 N+1
+    expert_ids = list({s.owner_id for s in services if s.owner_id})
+    name_map: dict = {}
+    if expert_ids:
+        rows = await db.execute(
+            select(Expert.id, Expert.name).where(Expert.id.in_(expert_ids))
+        )
+        name_map = {r.id: r.name for r in rows.all()}
+
+    items = []
+    for s in services:
+        desc = (str(s.description)[:200] if s.description else "")
+        items.append({
+            "id": s.id,
+            "expert_id": s.owner_id,
+            "expert_name": name_map.get(s.owner_id) or s.owner_id or "",
+            "service_name": s.service_name or "",
+            "service_name_en": s.service_name_en,
+            "service_name_zh": s.service_name_zh,
+            "description": desc,
+            "description_en": (s.description_en or "")[:200] if s.description_en else None,
+            "description_zh": (s.description_zh or "")[:200] if s.description_zh else None,
+            "images": s.images,
+            "base_price": float(s.base_price) if s.base_price is not None else 0,
+            "currency": s.currency or "GBP",
+            "status": s.status or "active",
+            "package_type": s.package_type,
+            "view_count": s.view_count or 0,
+            "application_count": s.application_count or 0,
+            "has_time_slots": getattr(s, "has_time_slots", False) or False,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        })
+    return {"items": items, "total": total, "page": page, "limit": limit}
+
+
+# ==================== 服务下架/恢复 — Phase B ====================
+
+@admin_expert_router.post("/services/{service_id}/review")
+async def review_expert_service(
+    service_id: int,
+    review_data: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员审核团队服务。
+
+    新模型下,达人创建服务无需审核(默认 active),此端点用于内容审核场景:
+      - approve → active   (恢复一个被下架的服务)
+      - reject  → deleted  (软删除/下架,与团队侧的删除一致)
+    """
+    action = review_data.get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action 必须是 approve 或 reject")
+
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            and_(
+                models.TaskExpertService.id == service_id,
+                models.TaskExpertService.owner_type == "expert",
+            )
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+
+    new_status = "active" if action == "approve" else "deleted"
+    if service.status != new_status:
+        service.status = new_status
+        await db.commit()
+
+    return {
+        "message": f"服务已{'恢复' if action == 'approve' else '下架'}",
+        "status": service.status,
+    }
+
+
+# ==================== 单个服务 编辑 + 删除 — Phase B ====================
+
+@admin_expert_router.put("/services/{service_id}")
+async def update_expert_service_admin(
+    service_id: int,
+    body: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员编辑团队服务字段。
+
+    只动安全可改字段;价格走 Decimal 转换。
+    与团队侧 expert_service_routes.update_service 不同,本端点是管理员越权编辑路径,
+    不做 owner 校验,仅限 owner_type='expert' (团队服务)。
+    """
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            and_(
+                models.TaskExpertService.id == service_id,
+                models.TaskExpertService.owner_type == "expert",
+            )
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+
+    allowed = {
+        "service_name", "service_name_en", "service_name_zh",
+        "description", "description_en", "description_zh",
+        "base_price", "currency", "status", "display_order",
+        "category", "pricing_type", "location_type", "location",
+        "skills", "images",
+    }
+    for key, value in (body or {}).items():
+        if key not in allowed or not hasattr(service, key):
+            continue
+        if key == "base_price" and value is not None:
+            from decimal import Decimal
+            setattr(service, key, Decimal(str(value)))
+        else:
+            setattr(service, key, value)
+
+    service.updated_at = get_utc_time()
+    await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 编辑团队服务 {service_id} (owner={service.owner_id})"
+    )
+    return {"message": "服务更新成功", "service_id": service_id}
+
+
+@admin_expert_router.delete("/services/{service_id}")
+async def delete_expert_service_admin(
+    service_id: int,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员软删除团队服务 (status='deleted'),与 review reject 行为一致。
+
+    不做硬删: 历史 ServiceApplication 仍需保留;如需恢复,用 review approve。
+    """
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            and_(
+                models.TaskExpertService.id == service_id,
+                models.TaskExpertService.owner_type == "expert",
+            )
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+    if service.status != "deleted":
+        service.status = "deleted"
+        service.updated_at = get_utc_time()
+        await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 软删除团队服务 {service_id} (owner={service.owner_id})"
+    )
+    return {"message": "服务已删除", "service_id": service_id}
+
+
+# ==================== 活动列表(跨团队) — Phase B ====================
+
+@admin_expert_router.get("/activities")
+async def get_all_expert_activities_admin(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    expert_id: Optional[str] = Query(None, description="按团队 ID 筛选"),
+    status_filter: Optional[str] = Query(None, description="按状态筛选"),
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """跨团队列出所有团队活动(管理员视角)。"""
+    base = select(models.Activity).where(
+        and_(
+            models.Activity.activity_type == "standard",
+            models.Activity.owner_type == "expert",
+        )
+    )
+    if expert_id:
+        base = base.where(models.Activity.owner_id == expert_id)
+    if status_filter:
+        base = base.where(models.Activity.status == status_filter)
+
+    count_q = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    offset = (page - 1) * limit
+    list_q = base.order_by(models.Activity.created_at.desc()).offset(offset).limit(limit)
+    activities = (await db.execute(list_q)).scalars().all()
+
+    expert_ids = list({a.owner_id for a in activities if a.owner_id})
+    name_map: dict = {}
+    if expert_ids:
+        rows = await db.execute(
+            select(Expert.id, Expert.name).where(Expert.id.in_(expert_ids))
+        )
+        name_map = {r.id: r.name for r in rows.all()}
+
+    items = []
+    for a in activities:
+        desc = (str(a.description)[:200] if a.description else "")
+        items.append({
+            "id": a.id,
+            "expert_id": a.owner_id,
+            "expert_name": name_map.get(a.owner_id) or a.owner_id or "",
+            "title": a.title or "",
+            "description": desc,
+            "expert_service_id": a.expert_service_id,
+            "location": a.location or "",
+            "task_type": a.task_type or "",
+            "status": a.status or "open",
+            "max_participants": a.max_participants or 1,
+            "currency": a.currency or "GBP",
+            "discounted_price_per_participant": (
+                float(a.discounted_price_per_participant)
+                if a.discounted_price_per_participant is not None
+                else None
+            ),
+            "deadline": a.deadline.isoformat() if a.deadline else None,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+        })
+    return {"items": items, "total": total, "page": page, "limit": limit}
+
+
+# ==================== 活动下架/恢复 — Phase B ====================
+
+@admin_expert_router.post("/activities/{activity_id}/review")
+async def review_expert_activity(
+    activity_id: int,
+    review_data: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员审核团队活动:approve → open, reject → cancelled"""
+    action = review_data.get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action 必须是 approve 或 reject")
+
+    result = await db.execute(
+        select(models.Activity).where(
+            and_(
+                models.Activity.id == activity_id,
+                models.Activity.owner_type == "expert",
+            )
+        )
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="活动不存在")
+
+    activity.status = "open" if action == "approve" else "cancelled"
+    await db.commit()
+    return {
+        "message": f"活动已{'恢复' if action == 'approve' else '下架'}",
+        "status": activity.status,
+    }
+
+
+# ==================== 单个活动 编辑 + 删除 — Phase B ====================
+
+@admin_expert_router.put("/activities/{activity_id}")
+async def update_expert_activity_admin(
+    activity_id: int,
+    body: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员编辑团队活动安全字段 (不动定价/上限/截止时间,避免影响订单)。"""
+    result = await db.execute(
+        select(models.Activity).where(
+            and_(
+                models.Activity.id == activity_id,
+                models.Activity.owner_type == "expert",
+            )
+        )
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="活动不存在")
+
+    allowed = {
+        "title", "description", "status", "location",
+        "task_type", "is_public", "visibility",
+    }
+    for key, value in (body or {}).items():
+        if key not in allowed or not hasattr(activity, key):
+            continue
+        setattr(activity, key, value)
+    activity.updated_at = get_utc_time()
+    await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 编辑团队活动 {activity_id} (owner={activity.owner_id})"
+    )
+    return {"message": "活动更新成功", "activity_id": activity_id}
+
+
+@admin_expert_router.delete("/activities/{activity_id}")
+async def delete_expert_activity_admin(
+    activity_id: int,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员取消团队活动 (status='cancelled'),与 review reject 行为一致。
+
+    不做硬删 + cascade: 已支付的子任务 PI 仍在跑,误删会丢退款链路。
+    需要彻底清理 (含买家退款) 的场景走 multi_participant_routes.delete_expert_activity。
+    """
+    result = await db.execute(
+        select(models.Activity).where(
+            and_(
+                models.Activity.id == activity_id,
+                models.Activity.owner_type == "expert",
+            )
+        )
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="活动不存在")
+    if activity.status != "cancelled":
+        activity.status = "cancelled"
+        activity.updated_at = get_utc_time()
+        await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 取消团队活动 {activity_id} (owner={activity.owner_id})"
+    )
+    return {"message": "活动已取消", "activity_id": activity_id}
+
+
 # ==================== 达人详情/编辑/注销 ====================
 
 @admin_expert_router.get("/{expert_id}")
