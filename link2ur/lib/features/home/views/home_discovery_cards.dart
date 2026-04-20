@@ -627,23 +627,30 @@ class _ServiceReviewCard extends StatelessWidget {
 // =============================================================================
 
 /// 类别 → 渐变色映射（封面 cover_image 为空时的兜底）
+/// Key 与 `service_category_helper.dart` 对齐，真正的后端 category 取值
+const List<Color> _kExpertCategoryGradientFallback = [
+  Color(0xFFE5E7EB), Color(0xFFCBD5E1),
+];
 const Map<String, List<Color>> _kExpertCategoryGradient = {
-  'cooking':       [Color(0xFFFFD6A5), Color(0xFFFF9F68)],
-  'tutoring':      [Color(0xFFBEE3DB), Color(0xFF7FD1B9)],
-  'beauty':        [Color(0xFFFBC2EB), Color(0xFFA18CD1)],
-  'moving':        [Color(0xFFD1E4FF), Color(0xFF89B4FF)],
-  'photography':   [Color(0xFFFFE29F), Color(0xFFFFA99F)],
-  'music':         [Color(0xFFC7CEEA), Color(0xFF8E9AEA)],
-  'cleaning':      [Color(0xFFB5EAD7), Color(0xFF7FD1B9)],
-  'repair':        [Color(0xFFE2D1F9), Color(0xFFB8A1D9)],
-  'translation':   [Color(0xFFFFE8D6), Color(0xFFFFB5A7)],
-  'others':        [Color(0xFFE5E7EB), Color(0xFFCBD5E1)],
+  'programming':           [Color(0xFFC7CEEA), Color(0xFF8E9AEA)],
+  'translation':           [Color(0xFFFFE8D6), Color(0xFFFFB5A7)],
+  'tutoring':              [Color(0xFFBEE3DB), Color(0xFF7FD1B9)],
+  'food':                  [Color(0xFFFFD6A5), Color(0xFFFF9F68)],
+  'beverage':              [Color(0xFFFEE2E2), Color(0xFFFCA5A5)],
+  'cake':                  [Color(0xFFFCE7F3), Color(0xFFF9A8D4)],
+  'errand_transport':      [Color(0xFFD1E4FF), Color(0xFF89B4FF)],
+  'social_entertainment':  [Color(0xFFEDE9FE), Color(0xFFA78BFA)],
+  'beauty_skincare':       [Color(0xFFFBC2EB), Color(0xFFA18CD1)],
+  'handicraft':            [Color(0xFFE2D1F9), Color(0xFFB8A1D9)],
+  'gaming':                [Color(0xFFCFFAFE), Color(0xFF67E8F9)],
+  'photography':           [Color(0xFFFFE29F), Color(0xFFFFA99F)],
+  'housekeeping':          [Color(0xFFB5EAD7), Color(0xFF7FD1B9)],
 };
 
 List<Color> _expertGradientFor(String? category) {
-  if (category == null || category.isEmpty) return _kExpertCategoryGradient['others']!;
+  if (category == null || category.isEmpty) return _kExpertCategoryGradientFallback;
   return _kExpertCategoryGradient[category.toLowerCase()] ??
-      _kExpertCategoryGradient['others']!;
+      _kExpertCategoryGradientFallback;
 }
 
 class _ExpertCard extends StatelessWidget {
@@ -753,31 +760,27 @@ class _ExpertCard extends StatelessWidget {
                           ),
                         ),
                         // 左下角头像
-                        if (avatar != null && avatar.isNotEmpty)
-                          Positioned(
-                            left: 8,
-                            bottom: 8,
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
-                                    blurRadius: 3,
-                                  ),
-                                ],
-                              ),
-                              clipBehavior: Clip.hardEdge,
-                              child: AsyncImageView(
-                                imageUrl: Helpers.getImageUrl(avatar),
-                                width: 40,
-                                height: 40,
-                              ),
+                        Positioned(
+                          left: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 3,
+                                ),
+                              ],
+                            ),
+                            child: AvatarView(
+                              imageUrl: avatar,
+                              name: name,
                             ),
                           ),
+                        ),
                       ],
                     ),
                   );
@@ -801,11 +804,13 @@ class _ExpertCard extends StatelessWidget {
                             : AppColors.textPrimaryLight,
                       ),
                     ),
-                    if (category != null || (location != null && location.isNotEmpty)) ...[
+                    if ((category != null && category.isNotEmpty) ||
+                        (location != null && location.isNotEmpty)) ...[
                       const SizedBox(height: 3),
                       Text(
                         [
-                          if (category != null && category.isNotEmpty) category,
+                          if (category != null && category.isNotEmpty)
+                            ServiceCategoryHelper.getLocalizedLabel(category, l10n),
                           if (location != null && location.isNotEmpty) location,
                         ].join(' · '),
                         maxLines: 1,
