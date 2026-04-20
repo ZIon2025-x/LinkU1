@@ -31,6 +31,7 @@ class ImageCategory(Enum):
     LEADERBOARD_COVER = "public/images/leaderboard_covers"  # 榜单封面
     LEADERBOARD_ITEM = "public/images/leaderboard_items"  # 竞品图片
     EXPERT_AVATAR = "public/images/expert_avatars"  # 任务达人头像
+    EXPERT_COVER = "public/images/expert_covers"  # 达人团队封面图（推荐卡片用）
     SERVICE_IMAGE = "public/images/service_images"  # 服务图片
     
     # 论坛帖子
@@ -96,6 +97,12 @@ CATEGORY_CONFIGS: Dict[ImageCategory, UploadConfig] = {
     ImageCategory.EXPERT_AVATAR: UploadConfig(
         max_size=2 * 1024 * 1024,
         store_original=True,
+    ),
+    ImageCategory.EXPERT_COVER: UploadConfig(
+        max_size=5 * 1024 * 1024,
+        store_original=True,
+        generate_thumbnails=True,
+        thumbnail_presets=('medium',),
     ),
     ImageCategory.SERVICE_IMAGE: UploadConfig(
         max_size=5 * 1024 * 1024,

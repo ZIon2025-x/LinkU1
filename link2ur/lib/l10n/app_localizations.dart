@@ -24156,6 +24156,24 @@ abstract class AppLocalizations {
   /// **'Team Bio'**
   String get expertTeamBio;
 
+  /// No description provided for @expertTeamCoverImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Cover'**
+  String get expertTeamCoverImage;
+
+  /// No description provided for @expertTeamCoverImageAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add cover'**
+  String get expertTeamCoverImageAdd;
+
+  /// No description provided for @expertTeamCoverImageReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get expertTeamCoverImageReplace;
+
   /// No description provided for @expertInfo.
   ///
   /// In en, this message translates to:

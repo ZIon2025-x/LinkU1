@@ -1576,6 +1576,7 @@ async def update_expert_profile(
         "new_name": "name",
         "new_bio": "bio",
         "new_avatar": "avatar",
+        "new_cover_image": "cover_image",
     }
     for key, value in update_data.items():
         target = field_map.get(key)
@@ -1590,6 +1591,7 @@ async def update_expert_profile(
         "name": expert.name,
         "bio": expert.bio,
         "avatar": expert.avatar,
+        "cover_image": expert.cover_image,
     }
 
 

@@ -43,6 +43,7 @@ class Expert(Base):
     bio_en = Column(Text, nullable=True)
     bio_zh = Column(Text, nullable=True)
     avatar = Column(Text, nullable=True)
+    cover_image = Column(Text, nullable=True)  # 团队封面图（首页推荐卡片展示；未设置时前端按 category 渐变兜底）
     status = Column(String(20), nullable=False, default="active")
     allow_applications = Column(Boolean, nullable=False, default=False)
     max_members = Column(Integer, nullable=False, default=20)

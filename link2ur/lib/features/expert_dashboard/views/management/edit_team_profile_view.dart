@@ -53,6 +53,11 @@ class _EditBodyState extends State<_EditBody> {
   String? _newAvatarUrl;
   bool _uploadingAvatar = false;
 
+  // Cover image state (16:9)
+  Uint8List? _coverBytes;
+  String? _newCoverUrl;
+  bool _uploadingCover = false;
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -143,6 +148,100 @@ class _EditBodyState extends State<_EditBody> {
     }
   }
 
+  Future<void> _pickCover({required ImageSource source}) async {
+    final l10n = context.l10n;
+    final repo = context.read<ExpertTeamRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final file = await _imagePicker.pickImage(source: source);
+    if (file == null || !mounted) return;
+
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: file.path,
+      aspectRatio: const CropAspectRatio(ratioX: 16, ratioY: 9),
+      maxWidth: 1600,
+      maxHeight: 900,
+      compressQuality: 85,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: l10n.expertTeamCoverImage,
+          toolbarColor: AppColors.primary,
+          toolbarWidgetColor: Colors.white,
+          activeControlsWidgetColor: AppColors.primary,
+          lockAspectRatio: true,
+          hideBottomControls: true,
+        ),
+        IOSUiSettings(
+          title: l10n.expertTeamCoverImage,
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+    if (croppedFile == null || !mounted) return;
+
+    final bytes = await croppedFile.readAsBytes();
+    final filename = croppedFile.path.split('/').last;
+
+    setState(() {
+      _coverBytes = bytes;
+      _uploadingCover = true;
+    });
+
+    try {
+      final url = await repo.uploadCover(bytes, filename);
+      if (!mounted) return;
+      setState(() {
+        _newCoverUrl = url;
+        _uploadingCover = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _coverBytes = null;
+        _uploadingCover = false;
+      });
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
+    }
+  }
+
+  void _showCoverSourceSheet() {
+    final l10n = context.l10n;
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.profileAvatarFromGallery),
+              onTap: () {
+                Navigator.pop(context);
+                _pickCover(source: ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: Text(l10n.profileAvatarFromCamera),
+              onTap: () {
+                Navigator.pop(context);
+                _pickCover(source: ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(l10n.commonCancel),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showImageSourceSheet() {
     final l10n = context.l10n;
     showModalBottomSheet(
@@ -209,6 +308,14 @@ class _EditBodyState extends State<_EditBody> {
                     key: _formKey,
                     child: ListView(
                       children: [
+                        // Cover image (16:9)
+                        _CoverSection(
+                          existingUrl: team.coverImage,
+                          pickedBytes: _coverBytes,
+                          uploading: _uploadingCover,
+                          onTap: _uploadingCover ? null : _showCoverSourceSheet,
+                        ),
+                        const SizedBox(height: 16),
                         // Avatar
                         Center(
                           child: GestureDetector(
@@ -330,7 +437,7 @@ class _EditBodyState extends State<_EditBody> {
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
-                            onPressed: state.status == ExpertTeamStatus.loading || _uploadingAvatar
+                            onPressed: state.status == ExpertTeamStatus.loading || _uploadingAvatar || _uploadingCover
                                 ? null
                                 : () async {
                                     if (!_formKey.currentState!.validate()) return;
@@ -345,7 +452,7 @@ class _EditBodyState extends State<_EditBody> {
                                         _longitude != team.longitude ||
                                         _serviceRadiusKm != team.serviceRadiusKm;
 
-                                    if (newName == null && newBio == null && _newAvatarUrl == null && !locationChanged) {
+                                    if (newName == null && newBio == null && _newAvatarUrl == null && _newCoverUrl == null && !locationChanged) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                           content: Text(
@@ -363,14 +470,15 @@ class _EditBodyState extends State<_EditBody> {
                                     final savedMsg = context.l10n.commonSaved;
                                     final failedPrefix = context.l10n.expertTeamEditProfileSubmitFailed;
 
-                                    // Profile update (name/bio/avatar) — direct save, no review
-                                    if (newName != null || newBio != null || _newAvatarUrl != null) {
+                                    // Profile update (name/bio/avatar/cover) — direct save, no review
+                                    if (newName != null || newBio != null || _newAvatarUrl != null || _newCoverUrl != null) {
                                       try {
                                         await repo.updateProfile(
                                           widget.expertId,
                                           newName: newName,
                                           newBio: newBio,
                                           newAvatar: _newAvatarUrl,
+                                          newCoverImage: _newCoverUrl,
                                         );
                                       } catch (e) {
                                         final detail = context.mounted
@@ -425,6 +533,110 @@ class _EditBodyState extends State<_EditBody> {
                 ),
         );
       },
+    );
+  }
+}
+
+/// 封面图编辑区：16:9，空态显示"添加封面"占位
+class _CoverSection extends StatelessWidget {
+  const _CoverSection({
+    required this.existingUrl,
+    required this.pickedBytes,
+    required this.uploading,
+    required this.onTap,
+  });
+
+  final String? existingUrl;
+  final Uint8List? pickedBytes;
+  final bool uploading;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final hasImage = pickedBytes != null || (existingUrl != null && existingUrl!.isNotEmpty);
+
+    Widget background;
+    if (pickedBytes != null) {
+      background = Image.memory(pickedBytes!, fit: BoxFit.cover);
+    } else if (existingUrl != null && existingUrl!.isNotEmpty) {
+      background = Image.network(
+        Helpers.getImageUrl(existingUrl!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const ColoredBox(color: Color(0xFFE5E7EB)),
+      );
+    } else {
+      background = const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFE5E7EB), Color(0xFFF3F4F6)],
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: background,
+            ),
+            if (!hasImage && !uploading)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.add_photo_alternate_outlined,
+                        size: 36, color: Colors.black54),
+                    const SizedBox(height: 6),
+                    Text(l10n.expertTeamCoverImageAdd,
+                        style: const TextStyle(color: Colors.black54)),
+                  ],
+                ),
+              ),
+            if (hasImage && !uploading)
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(l10n.expertTeamCoverImageReplace,
+                          style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            if (uploading)
+              const ColoredBox(
+                color: Color(0x66000000),
+                child: Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

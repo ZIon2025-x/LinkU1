@@ -12567,6 +12567,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTeamBio => '团队简介';
 
   @override
+  String get expertTeamCoverImage => '团队封面';
+
+  @override
+  String get expertTeamCoverImageAdd => '添加封面';
+
+  @override
+  String get expertTeamCoverImageReplace => '更换';
+
+  @override
   String get expertInfo => '达人信息';
 
   @override
@@ -25720,6 +25729,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTeamBio => '團隊簡介';
+
+  @override
+  String get expertTeamCoverImage => '團隊封面';
+
+  @override
+  String get expertTeamCoverImageAdd => '新增封面';
+
+  @override
+  String get expertTeamCoverImageReplace => '更換';
 
   @override
   String get expertInfo => '達人資訊';

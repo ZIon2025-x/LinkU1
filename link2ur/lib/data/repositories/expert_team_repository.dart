@@ -156,16 +156,32 @@ class ExpertTeamRepository {
     return response.data!['url'] as String? ?? '';
   }
 
+  /// 上传团队封面图（16:9，推荐卡片用），返回图片 URL
+  Future<String> uploadCover(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
+      '${ApiEndpoints.uploadPublicImage}?category=expert_cover',
+      bytes: bytes,
+      filename: filename,
+      fieldName: 'image',
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw AppException(response.errorCode ?? response.message ?? 'upload_cover_failed');
+    }
+    return response.data!['url'] as String? ?? '';
+  }
+
   /// 直接更新团队资料（Owner only，即时生效，无需审核）
   Future<void> updateProfile(String expertId, {
     String? newName,
     String? newBio,
     String? newAvatar,
+    String? newCoverImage,
   }) async {
     await _apiService.put(ApiEndpoints.expertTeamProfileUpdate(expertId), data: {
       if (newName != null) 'new_name': newName,
       if (newBio != null) 'new_bio': newBio,
       if (newAvatar != null) 'new_avatar': newAvatar,
+      if (newCoverImage != null) 'new_cover_image': newCoverImage,
     });
   }
 

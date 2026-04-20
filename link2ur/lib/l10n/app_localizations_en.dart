@@ -13123,6 +13123,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTeamBio => 'Team Bio';
 
   @override
+  String get expertTeamCoverImage => 'Team Cover';
+
+  @override
+  String get expertTeamCoverImageAdd => 'Add cover';
+
+  @override
+  String get expertTeamCoverImageReplace => 'Change';
+
+  @override
   String get expertInfo => 'Expert Info';
 
   @override

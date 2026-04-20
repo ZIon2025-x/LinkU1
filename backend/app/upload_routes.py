@@ -48,6 +48,7 @@ CATEGORY_MAP = {
     "banner": ImageCategory.BANNER,
     "activity": ImageCategory.ACTIVITY,
     "expert_avatar": ImageCategory.EXPERT_AVATAR,
+    "expert_cover": ImageCategory.EXPERT_COVER,
     "service_image": ImageCategory.SERVICE_IMAGE,
     "leaderboard_item": ImageCategory.LEADERBOARD_ITEM,
     "leaderboard_cover": ImageCategory.LEADERBOARD_COVER,
@@ -108,18 +109,18 @@ async def upload_image_v2(
             is_temp = True
             resource_id = None  # 使用 user_id 构建临时目录
         
-        # 对于头像和服务图片，使用用户ID作为资源ID
-        if category in ("expert_avatar", "service_image") and not resource_id:
+        # 对于头像/封面和服务图片，使用用户ID作为资源ID
+        if category in ("expert_avatar", "expert_cover", "service_image") and not resource_id:
             # 管理员上传时必须传 resource_id（达人 user_id），否则会存到 expert_avatars/{管理员id}/，孤儿清理会误删（管理员不在 users 表）
             from app.admin_auth import validate_admin_session
             if validate_admin_session(request):
                 raise HTTPException(
                     status_code=400,
-                    detail="管理员上传达人头像或服务图片时请在 URL 中提供 resource_id（达人 user_id），例如 ?category=expert_avatar&resource_id=xxx",
+                    detail="管理员上传达人头像/封面或服务图片时请在 URL 中提供 resource_id（达人 user_id），例如 ?category=expert_avatar&resource_id=xxx",
                 )
             resource_id = user_id
             is_temp = False
-        
+
         # 读取文件内容
         content = await image.read()
         
@@ -202,13 +203,13 @@ async def upload_images_batch(
         if is_temp:
             resource_id = None
         
-        # 对于头像和服务图片，使用用户ID
-        if category in ("expert_avatar", "service_image") and not resource_id:
+        # 对于头像/封面和服务图片，使用用户ID
+        if category in ("expert_avatar", "expert_cover", "service_image") and not resource_id:
             from app.admin_auth import validate_admin_session
             if validate_admin_session(request):
                 raise HTTPException(
                     status_code=400,
-                    detail="管理员上传达人头像或服务图片时请在 URL 中提供 resource_id（达人 user_id）",
+                    detail="管理员上传达人头像/封面或服务图片时请在 URL 中提供 resource_id（达人 user_id）",
                 )
             resource_id = user_id
             is_temp = False
@@ -363,8 +364,8 @@ async def delete_image(
             raise HTTPException(status_code=400, detail="无效的图片类型")
         
         # 安全校验：验证当前用户是否有权删除该资源的图片
-        if category in ("expert_avatar", "service_image"):
-            # 头像/服务图片：resource_id 必须是当前用户自己
+        if category in ("expert_avatar", "expert_cover", "service_image"):
+            # 头像/封面/服务图片：resource_id 必须是当前用户自己
             if resource_id != user_id:
                 raise HTTPException(status_code=403, detail="无权删除他人的图片")
         elif category == "task":

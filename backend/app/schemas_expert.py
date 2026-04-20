@@ -15,6 +15,7 @@ class ExpertOut(BaseModel):
     bio_en: Optional[str] = None
     bio_zh: Optional[str] = None
     avatar: Optional[str] = None
+    cover_image: Optional[str] = None
     status: str
     allow_applications: bool
     member_count: int
@@ -203,10 +204,11 @@ class ExpertProfileUpdateCreate(BaseModel):
     new_name: Optional[str] = Field(None, max_length=100)
     new_bio: Optional[str] = None
     new_avatar: Optional[str] = None
+    new_cover_image: Optional[str] = None
 
     @model_validator(mode='after')
     def check_at_least_one_field(self):
-        if not any([self.new_name, self.new_bio, self.new_avatar]):
+        if not any([self.new_name, self.new_bio, self.new_avatar, self.new_cover_image]):
             raise ValueError("至少需要修改一个字段")
         return self
 
