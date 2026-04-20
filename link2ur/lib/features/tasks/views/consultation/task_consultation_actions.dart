@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/router/go_router_extensions.dart';
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../task_expert/bloc/task_expert_bloc.dart';
 import '../../bloc/task_detail_bloc.dart';
@@ -99,12 +100,13 @@ class TaskConsultationActions extends ConsultationActions {
     context.read<TaskDetailBloc>().add(TaskDetailAcceptApplicant(applicationId));
   }
 
-  /// 发布者在 price_agreed 下直接"批准并支付" — 走新端点,返回支付信息由
-  /// application_chat_view 的 payAndFinalizeData listener 接管,跳 ApprovalPaymentPage。
-  void onApproveAndPay(BuildContext context) {
-    context.read<TaskExpertBloc>().add(
-      TaskExpertApproveTaskConsultation(taskId, applicationId),
-    );
+  /// 发布者"批准并支付" — 直接跳原任务详情页走标准审批流程。
+  /// 咨询议价达成时后端已把 negotiated_price find-or-create 到原任务 TA 上
+  /// (task_chat_routes.py consult-respond accept 分支),所以这里只需要跳转。
+  void onApproveAndPay(BuildContext context, {int? originalTaskId}) {
+    if (originalTaskId != null && originalTaskId > 0) {
+      context.goToTaskDetail(originalTaskId);
+    }
   }
 
   @override
@@ -167,7 +169,15 @@ class TaskConsultationActions extends ConsultationActions {
                 icon: Icons.payments,
                 label: context.l10n.consultApproveAndPay,
                 color: AppColors.success,
-                onTap: isSubmitting ? null : () => onApproveAndPay(context),
+                onTap: isSubmitting
+                    ? null
+                    : () {
+                        final origId = consultationApp?['original_task_id'];
+                        final origTaskId = origId is int
+                            ? origId
+                            : int.tryParse(origId?.toString() ?? '');
+                        onApproveAndPay(context, originalTaskId: origTaskId);
+                      },
               ),
               const SizedBox(width: 8),
             ],

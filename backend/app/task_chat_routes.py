@@ -5501,11 +5501,12 @@ async def consult_respond(
             notif_body = _notif["body_zh"]
             notif_body_en = _notif["body_en"]
 
-            # 同步议价结果到原任务的 pending 申请:
-            # 场景:发布者代理发起的咨询(或申请者先申请再咨询),applicant 在原 task 上
-            # 已有 pending 申请。咨询里双方达成新价格后,必须把新 negotiated_price 回写
-            # 到原申请,否则发布者回任务详情页批准时仍按旧价格结算,议价无效。
-            # 对"申请者先咨询再 formal-apply"场景无影响(原任务无 pending 申请,跳过)。
+            # 同步议价结果到原任务的申请(find-or-create):
+            # - 已有活跃(pending/chatting/negotiating)申请 -> 更新 negotiated_price
+            # - 已有终态(rejected/cancelled)申请 -> 重开为 pending 带新价
+            # - 无申请 -> 新建 pending 申请带议价价格
+            # 前端"批准并支付"按钮会跳原任务详情页走标准审批流程,无此同步则发布者
+            # 批准时按旧价/无价结算,议价无效。
             if task.is_consultation_placeholder and application.negotiated_price is not None:
                 original_task_id_sync = getattr(task, "original_task_id", None)
                 if original_task_id_sync is None and task.description and task.description.startswith("original_task_id:"):
@@ -5518,18 +5519,39 @@ async def consult_respond(
                         select(models.TaskApplication).where(
                             models.TaskApplication.task_id == original_task_id_sync,
                             models.TaskApplication.applicant_id == application.applicant_id,
-                            models.TaskApplication.status.in_(["pending", "chatting", "negotiating"]),
                         )
                         .with_for_update()
                     )
                     orig_app = orig_app_result.scalar_one_or_none()
-                    if orig_app:
+                    if orig_app is None:
+                        # 无申请 -> 新建 pending
+                        orig_app = models.TaskApplication(
+                            task_id=original_task_id_sync,
+                            applicant_id=application.applicant_id,
+                            status="pending",
+                            negotiated_price=application.negotiated_price,
+                            currency=application.currency or currency,
+                            consultation_task_id=task_id,
+                            message=f"通过咨询议价达成 {currency} {float(application.negotiated_price):.2f}",
+                        )
+                        db.add(orig_app)
+                        await db.flush()  # 取 id 给下面系统消息 + 通知用
+                    elif orig_app.status in ("rejected", "cancelled"):
+                        # 终态 -> 重开为 pending 带新价
+                        orig_app.status = "pending"
+                        orig_app.negotiated_price = application.negotiated_price
+                        orig_app.currency = application.currency or orig_app.currency or currency
+                        orig_app.consultation_task_id = task_id
+                    elif orig_app.status in ("pending", "chatting", "negotiating"):
+                        # 活跃 -> 更新价格
                         orig_app.negotiated_price = application.negotiated_price
                         orig_app.currency = application.currency or orig_app.currency
-                        # 链接占位 task 以便未来追溯(兼容字段可能未来再用)
                         if not getattr(orig_app, "consultation_task_id", None):
                             orig_app.consultation_task_id = task_id
-                        # 在原任务聊天里发系统卡片:发布者能看到价格已更新
+                    # approved -> 已锁定,不动(batch webhook 里处理)
+
+                    # 在原任务聊天里发系统卡片 + 通知发布者(approved 状态跳过)
+                    if orig_app.status != "approved":
                         try:
                             orig_task_result = await db.execute(
                                 select(models.Task).where(models.Task.id == original_task_id_sync)
@@ -6212,6 +6234,7 @@ async def consult_status(
             "poster_id": str(task.poster_id),
             "created_at": format_iso_utc(application.created_at) if application.created_at else None,
             "can_formal_apply": can_formal_apply,
+            "original_task_id": original_task_id,
         }
 
     except HTTPException:
