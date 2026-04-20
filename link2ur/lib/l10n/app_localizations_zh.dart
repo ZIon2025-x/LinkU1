@@ -7491,12 +7491,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoveryExpertReasonFeatured => '本周精选';
 
   @override
+  String get discoveryExpertReasonNewNearby => '同城新上线';
+
+  @override
+  String get discoveryExpertRatingNew => '新';
+
+  @override
   String discoveryExpertCompletedTasks(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: '完成 $count 单',
-      zero: '新达人',
+      zero: '刚开业',
     );
     return '$_temp0';
   }
@@ -20687,12 +20693,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get discoveryExpertReasonFeatured => '本週精選';
 
   @override
+  String get discoveryExpertReasonNewNearby => '同城新上線';
+
+  @override
+  String get discoveryExpertRatingNew => '新';
+
+  @override
   String discoveryExpertCompletedTasks(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: '完成 $count 單',
-      zero: '新達人',
+      zero: '剛開業',
     );
     return '$_temp0';
   }

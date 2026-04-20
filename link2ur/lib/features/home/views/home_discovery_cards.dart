@@ -734,6 +734,13 @@ class _ExpertCard extends StatelessWidget {
                             ],
                           ),
                         ),
+                        // 右上角：营业中/休息中（null 表示未设置营业时间，不显示）
+                        if (item.expertIsOpen != null)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: _ExpertOpenStatusPill(isOpen: item.expertIsOpen!),
+                          ),
                         // 左下角头像
                         Positioned(
                           left: 8,
@@ -766,6 +773,29 @@ class _ExpertCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 标签 + 类型（模仿帖子卡片）
+                    Row(
+                      children: [
+                        const _FeedTypeBadge(feedType: 'expert'),
+                        if (category != null && category.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              ServiceCategoryHelper.getLocalizedLabel(category, l10n),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     // 名称
                     Text(
                       name,
@@ -779,15 +809,11 @@ class _ExpertCard extends StatelessWidget {
                             : AppColors.textPrimaryLight,
                       ),
                     ),
-                    if ((category != null && category.isNotEmpty) ||
-                        (location != null && location.isNotEmpty)) ...[
+                    // 副标题：地址（城市/地点）
+                    if (location != null && location.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
-                        [
-                          if (category != null && category.isNotEmpty)
-                            ServiceCategoryHelper.getLocalizedLabel(category, l10n),
-                          if (location != null && location.isNotEmpty) location,
-                        ].join(' · '),
+                        location,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -821,39 +847,20 @@ class _ExpertCard extends StatelessWidget {
                         )).toList(),
                       ),
                     ],
-                    // 评分 · 完单数
+                    // 评分 · 完单数（新达人：★ 新 + 刚开业）
                     const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        if (rating != null && rating > 0) ...[
-                          const Icon(Icons.star_rounded,
-                              size: 14, color: Color(0xFFFFB300)),
-                          const SizedBox(width: 2),
-                          Text(
-                            rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFFFB300),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        Text(
-                          l10n.discoveryExpertCompletedTasks(completed),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
-                          ),
-                        ),
-                      ],
+                    _ExpertRatingRow(
+                      rating: rating,
+                      completed: completed,
+                      isDark: isDark,
                     ),
                     // 推荐理由
                     if (item.expertReasonCode != null) ...[
                       const SizedBox(height: 8),
-                      _ExpertReasonStrip(code: item.expertReasonCode!),
+                      _ExpertReasonStrip(
+                        code: item.expertReasonCode!,
+                        isNew: completed == 0,
+                      ),
                     ],
                   ],
                 ),
@@ -901,9 +908,100 @@ class _ExpertBadge extends StatelessWidget {
   }
 }
 
+/// 封面右上角的营业状态小胶囊
+class _ExpertOpenStatusPill extends StatelessWidget {
+  const _ExpertOpenStatusPill({required this.isOpen});
+  final bool isOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final bg = isOpen ? const Color(0xE6FFFFFF) : const Color(0xCC1F2937);
+    final fg = isOpen ? const Color(0xFF059669) : Colors.white;
+    final dotColor = isOpen ? const Color(0xFF10B981) : const Color(0xFF9CA3AF);
+    final label = isOpen
+        ? l10n.expertTeamStatusActive
+        : l10n.expertTeamStatusResting;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: dotColor,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 评分 + 完单数。新达人（completed==0）显示 "★ 新 / 刚开业"
+class _ExpertRatingRow extends StatelessWidget {
+  const _ExpertRatingRow({
+    required this.rating,
+    required this.completed,
+    required this.isDark,
+  });
+  final double? rating;
+  final int completed;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isNew = completed == 0;
+    final tertiary = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+
+    return Row(
+      children: [
+        const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFB300)),
+        const SizedBox(width: 2),
+        Text(
+          isNew || rating == null || rating! <= 0
+              ? l10n.discoveryExpertRatingNew
+              : rating!.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFFFFB300),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          l10n.discoveryExpertCompletedTasks(completed),
+          style: TextStyle(fontSize: 11, color: tertiary),
+        ),
+      ],
+    );
+  }
+}
+
 class _ExpertReasonStrip extends StatelessWidget {
-  const _ExpertReasonStrip({required this.code});
+  const _ExpertReasonStrip({required this.code, this.isNew = false});
   final String code;
+  /// 新达人（completed==0）时，same_city 场景替换为"同城新上线"文案
+  final bool isNew;
 
   @override
   Widget build(BuildContext context) {
@@ -913,7 +1011,9 @@ class _ExpertReasonStrip extends StatelessWidget {
     Color fg;
     switch (code) {
       case 'same_city':
-        label = '📍 ${l10n.discoveryExpertReasonSameCity}';
+        label = isNew
+            ? '📍 ${l10n.discoveryExpertReasonNewNearby}'
+            : '📍 ${l10n.discoveryExpertReasonSameCity}';
         bg = const Color(0xFFDCFCE7);
         fg = const Color(0xFF166534);
         break;

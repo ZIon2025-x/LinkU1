@@ -3654,7 +3654,9 @@
   "discoveryExpertReasonSameCity": "Nearby in your city",
   "discoveryExpertReasonCategoryMatch": "Matches your interests",
   "discoveryExpertReasonFeatured": "Featured this week",
-  "discoveryExpertCompletedTasks": "{count, plural, =0{New} one{1 completed} other{{count} completed}}",
+  "discoveryExpertReasonNewNearby": "New · Nearby",
+  "discoveryExpertRatingNew": "New",
+  "discoveryExpertCompletedTasks": "{count, plural, =0{Just opened} one{1 completed} other{{count} completed}}",
   "@discoveryExpertCompletedTasks": {
     "placeholders": {"count": {"type": "int"}}
   },

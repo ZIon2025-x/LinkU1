@@ -7821,13 +7821,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoveryExpertReasonFeatured => 'Featured this week';
 
   @override
+  String get discoveryExpertReasonNewNearby => 'New · Nearby';
+
+  @override
+  String get discoveryExpertRatingNew => 'New';
+
+  @override
   String discoveryExpertCompletedTasks(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: '$count completed',
       one: '1 completed',
-      zero: 'New',
+      zero: 'Just opened',
     );
     return '$_temp0';
   }

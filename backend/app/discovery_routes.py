@@ -630,39 +630,16 @@ async def _fetch_experts(db: AsyncSession, limit: int) -> list:
     """获取推荐达人团队（首页发现 Feed 卡片）
 
     卡片元数据：封面图 cover_image、团队头像、名字、分类、位置、评分、完单数、
-    featured_skills、徽章（精选/认证/官方）。封面为空时前端按 category 渐变兜底。
+    featured_skills、徽章（精选/认证/官方）、营业状态。封面为空时前端按 category 渐变兜底。
 
     排序由 _compute_score_with_prefs 统一处理（同城 × 类别匹配 × 兴趣匹配），
     这里只负责拉取候选集，多取一些让 shuffle 有得挑。
     """
     from app.models_expert import Expert, FeaturedExpertV2
+    from app.expert_routes import _compute_is_open_batch
 
     query = (
-        select(
-            Expert.id,
-            Expert.name,
-            Expert.name_en,
-            Expert.name_zh,
-            Expert.bio,
-            Expert.bio_en,
-            Expert.bio_zh,
-            Expert.avatar,
-            Expert.cover_image,
-            Expert.category,
-            Expert.location,
-            Expert.latitude,
-            Expert.longitude,
-            Expert.rating,
-            Expert.completed_tasks,
-            Expert.featured_skills,
-            Expert.featured_skills_en,
-            Expert.is_official,
-            Expert.official_badge,
-            Expert.is_verified,
-            Expert.user_level,
-            Expert.created_at,
-            FeaturedExpertV2.is_featured.label("is_featured"),
-        )
+        select(Expert, FeaturedExpertV2.is_featured.label("is_featured"))
         .outerjoin(FeaturedExpertV2, FeaturedExpertV2.expert_id == Expert.id)
         .where(Expert.status == "active")
         .order_by(
@@ -675,52 +652,58 @@ async def _fetch_experts(db: AsyncSession, limit: int) -> list:
     )
     result = await db.execute(query)
     rows = result.all()
+    experts = [row.Expert for row in rows]
+
+    # 批量计算 is_open (business_hours + today's closed_dates)
+    is_open_map = await _compute_is_open_batch(db, experts)
 
     items = []
     for row in rows:
-        cover = row.cover_image
+        e = row.Expert
+        cover = e.cover_image
         images = [cover] if cover else None
 
-        bio = (row.bio or "")[:100]
-        bio_zh = (row.bio_zh or "")[:100] if row.bio_zh else None
-        bio_en = (row.bio_en or "")[:100] if row.bio_en else None
+        bio = (e.bio or "")[:100]
+        bio_zh = (e.bio_zh or "")[:100] if e.bio_zh else None
+        bio_en = (e.bio_en or "")[:100] if e.bio_en else None
 
         extra = {
-            "category": row.category,
-            "location": row.location,
-            "latitude": float(row.latitude) if row.latitude is not None else None,
-            "longitude": float(row.longitude) if row.longitude is not None else None,
-            "completed_tasks": int(row.completed_tasks or 0),
-            "featured_skills": row.featured_skills or [],
-            "featured_skills_en": row.featured_skills_en or [],
-            "is_official": bool(row.is_official),
-            "official_badge": row.official_badge,
-            "is_verified": bool(row.is_verified),
+            "category": e.category,
+            "location": e.location,
+            "latitude": float(e.latitude) if e.latitude is not None else None,
+            "longitude": float(e.longitude) if e.longitude is not None else None,
+            "completed_tasks": int(e.completed_tasks or 0),
+            "featured_skills": e.featured_skills or [],
+            "featured_skills_en": e.featured_skills_en or [],
+            "is_official": bool(e.is_official),
+            "official_badge": e.official_badge,
+            "is_verified": bool(e.is_verified),
             "is_featured": bool(row.is_featured),
-            "user_level": row.user_level,
+            "user_level": e.user_level,
+            "is_open": is_open_map.get(e.id),  # None = 未设置营业时间
             # 默认兜底 reason：精选会覆盖兜底，个性化信号（同城/匹配类别）在 shuffle 阶段再覆盖
             "reason_code": "featured" if row.is_featured else None,
         }
 
         items.append({
             "feed_type": "expert",
-            "id": f"expert_{row.id}",
-            "title": row.name,
-            "title_zh": row.name_zh,
-            "title_en": row.name_en,
+            "id": f"expert_{e.id}",
+            "title": e.name,
+            "title_zh": e.name_zh,
+            "title_en": e.name_en,
             "description": bio,
             "description_zh": bio_zh,
             "description_en": bio_en,
             "images": images,
             "user_id": None,
-            "user_name": row.name,
-            "user_avatar": row.avatar,
-            "expert_id": row.id,
+            "user_name": e.name,
+            "user_avatar": e.avatar,
+            "expert_id": e.id,
             "price": None,
             "original_price": None,
             "discount_percentage": None,
             "currency": None,
-            "rating": float(row.rating) if row.rating is not None else None,
+            "rating": float(e.rating) if e.rating is not None else None,
             "like_count": None,
             "comment_count": None,
             "upvote_count": None,
@@ -732,7 +715,7 @@ async def _fetch_experts(db: AsyncSession, limit: int) -> list:
             "is_favorited": None,
             "user_vote_type": None,
             "extra_data": extra,
-            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
         })
     return items
 

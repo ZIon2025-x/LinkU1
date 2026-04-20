@@ -3571,7 +3571,9 @@
   "discoveryExpertReasonSameCity": "同城達人",
   "discoveryExpertReasonCategoryMatch": "符合你感興趣的類型",
   "discoveryExpertReasonFeatured": "本週精選",
-  "discoveryExpertCompletedTasks": "{count, plural, =0{新達人} other{完成 {count} 單}}",
+  "discoveryExpertReasonNewNearby": "同城新上線",
+  "discoveryExpertRatingNew": "新",
+  "discoveryExpertCompletedTasks": "{count, plural, =0{剛開業} other{完成 {count} 單}}",
   "@discoveryExpertCompletedTasks": {
     "placeholders": {"count": {"type": "int"}}
   },

@@ -14351,10 +14351,22 @@ abstract class AppLocalizations {
   /// **'Featured this week'**
   String get discoveryExpertReasonFeatured;
 
+  /// No description provided for @discoveryExpertReasonNewNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'New · Nearby'**
+  String get discoveryExpertReasonNewNearby;
+
+  /// No description provided for @discoveryExpertRatingNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get discoveryExpertRatingNew;
+
   /// No description provided for @discoveryExpertCompletedTasks.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =0{New} one{1 completed} other{{count} completed}}'**
+  /// **'{count, plural, =0{Just opened} one{1 completed} other{{count} completed}}'**
   String discoveryExpertCompletedTasks(int count);
 
   /// No description provided for @discoveryFeedTypeService.

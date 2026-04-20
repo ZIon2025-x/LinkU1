@@ -107,6 +107,8 @@ class DiscoveryFeedItem extends Equatable {
   bool get expertIsOfficial => extraData?['is_official'] == true;
   bool get expertIsVerified => extraData?['is_verified'] == true;
   bool get expertIsFeatured => extraData?['is_featured'] == true;
+  /// 当前是否营业。null 表示未设置营业时间（前端不显示状态条）
+  bool? get expertIsOpen => extraData?['is_open'] as bool?;
   /// 推荐理由码：same_city / category_match / featured / null
   String? get expertReasonCode => extraData?['reason_code'] as String?;
 
