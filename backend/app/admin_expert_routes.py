@@ -810,6 +810,7 @@ async def get_expert_detail_admin(
         "bio_en": expert.bio_en,
         "bio_zh": expert.bio_zh,
         "avatar": expert.avatar,
+        "cover_image": expert.cover_image,
         "status": expert.status,
         "rating": float(expert.rating) if expert.rating else 0,
         "completion_rate": float(expert.completion_rate) if expert.completion_rate else 0,
@@ -861,7 +862,7 @@ async def update_expert_admin(
     # 允许更新的字段 — migration 188 加了 11 个画像字段
     allowed_fields = [
         'name', 'name_en', 'name_zh', 'bio', 'bio_en', 'bio_zh',
-        'avatar', 'status', 'is_official', 'official_badge',
+        'avatar', 'cover_image', 'status', 'is_official', 'official_badge',
         'allow_applications',
         # migration 188:
         'category', 'location', 'display_order', 'is_verified',

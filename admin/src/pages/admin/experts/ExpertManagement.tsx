@@ -54,6 +54,7 @@ interface ExpertEditForm {
   bio_en: string;
   bio_zh: string;
   avatar: string;
+  cover_image: string;
   status: 'active' | 'inactive' | 'suspended' | 'dissolved';
   is_official: boolean;
   official_badge: string;
@@ -106,6 +107,7 @@ const initialEditForm: ExpertEditForm = {
   bio_en: '',
   bio_zh: '',
   avatar: '',
+  cover_image: '',
   status: 'active',
   is_official: false,
   official_badge: '',
@@ -129,6 +131,7 @@ const initialEditForm: ExpertEditForm = {
 
 const CATEGORY_COMPRESS_OPTIONS: Record<string, { maxSizeMB: number; maxWidthOrHeight: number }> = {
   expert_avatar: { maxSizeMB: 1.8, maxWidthOrHeight: 512 },
+  expert_cover: { maxSizeMB: 3, maxWidthOrHeight: 1920 },
   service_image: { maxSizeMB: 4, maxWidthOrHeight: 1920 },
   activity: { maxSizeMB: 8, maxWidthOrHeight: 1920 },
 };
@@ -166,6 +169,7 @@ const ExpertManagement: React.FC = () => {
   const [subTab, setSubTab] = useState<SubTab>('list');
   const [detailExpert, setDetailExpert] = useState<any>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
   const [serviceImageUploading, setServiceImageUploading] = useState<number | null>(null);
 
   // ==================== 新建达人团队 Modal ====================
@@ -418,6 +422,7 @@ const ExpertManagement: React.FC = () => {
         bio_en: values.bio_en || undefined,
         bio_zh: values.bio_zh || undefined,
         avatar: values.avatar || undefined,
+        cover_image: values.cover_image || null,
         status: values.status,
         is_official: values.is_official,
         official_badge: values.official_badge || undefined,
@@ -483,6 +488,7 @@ const ExpertManagement: React.FC = () => {
       bio_en: detail.bio_en || '',
       bio_zh: detail.bio_zh || '',
       avatar: detail.avatar || '',
+      cover_image: detail.cover_image || '',
       status,
       is_official: !!detail.is_official,
       official_badge: detail.official_badge || '',
@@ -1259,6 +1265,78 @@ const ExpertManagement: React.FC = () => {
               )}
             </div>
           </div>
+          {/* 封面图（16:9，首页发现卡片 + 达人详情页顶部 banner 用） */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>
+              团队封面（16:9，未设置时前端按类别渐变兜底）
+            </label>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              {editModal.formData.cover_image ? (
+                <img
+                  src={editModal.formData.cover_image}
+                  alt="封面"
+                  style={{ width: 192, height: 108, objectFit: 'cover', border: '1px solid #ddd', borderRadius: 6 }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 192, height: 108,
+                    border: '1px dashed #ccc', borderRadius: 6,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#999', fontSize: 12, background: '#fafafa',
+                  }}
+                >
+                  无封面
+                </div>
+              )}
+              <div style={{ flex: 1 }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={coverUploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const expertId = editModal.formData.id;
+                    if (!expertId) {
+                      message.error('请先保存达人基本信息后再上传封面');
+                      return;
+                    }
+                    setCoverUploading(true);
+                    try {
+                      const url = await uploadImageWithCategory(file, 'expert_cover', expertId);
+                      editModal.updateField('cover_image', url);
+                      message.success('封面上传成功');
+                    } catch (err: any) {
+                      message.error(getErrorMessage(err));
+                    } finally {
+                      setCoverUploading(false);
+                      e.target.value = '';
+                    }
+                  }}
+                  style={{ fontSize: '12px', width: '100%' }}
+                />
+                {coverUploading && <span style={{ fontSize: '12px', color: '#999' }}>上传中...</span>}
+                {editModal.formData.cover_image && (
+                  <>
+                    <input
+                      type="text"
+                      value={editModal.formData.cover_image}
+                      readOnly
+                      style={{ width: '100%', padding: '4px 8px', border: '1px solid #eee', borderRadius: '4px', boxSizing: 'border-box', fontSize: '11px', color: '#999', marginTop: '6px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => editModal.updateField('cover_image', '')}
+                      style={{ marginTop: 6, padding: '4px 10px', border: '1px solid #ddd', background: '#fff', borderRadius: 4, fontSize: 12, cursor: 'pointer', color: '#d4380d' }}
+                    >
+                      清除封面
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: '15px' }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>名称(中文)</label>
@@ -1735,6 +1813,13 @@ const ExpertManagement: React.FC = () => {
       >
         {detailExpert && (
           <div style={{ padding: '10px 0' }}>
+            {detailExpert.cover_image && (
+              <img
+                src={detailExpert.cover_image}
+                alt="封面"
+                style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 8, marginBottom: 12, border: '1px solid #eee' }}
+              />
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               {detailExpert.avatar ? (
                 <img src={detailExpert.avatar} alt="头像" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ddd' }} />
