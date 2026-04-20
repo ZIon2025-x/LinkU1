@@ -505,6 +505,8 @@ class TaskOut(TaskBase):
     # Phase 8: unified taker display info (replaces direct taker_id/taker_expert_id consumption on the client)
     # spec §4.6 (U2 scheme). Team task: {type:'expert', entity_id, name, avatar}. Individual: {type:'user', ...}. Unclaimed: None.
     taker_display: Optional[Dict[str, Any]] = None
+    # 咨询占位任务标记(spec §F.1.2)。前端据此在详情页切到"返回咨询聊天"按钮,而不是普通申请按钮。
+    is_consultation_placeholder: Optional[bool] = False
 
     @field_validator('required_skills', mode='before')
     @classmethod
@@ -1082,6 +1084,10 @@ class NotificationOut(NotificationBase):
     is_read: int
     created_at: datetime.datetime
     task_id: Optional[int] = None  # 对于 application_message 和 negotiation_offer 类型，存储 task_id
+    # 咨询任务判定(enrich 期写入)。当 related_type='application_id' 但对应 task 是咨询占位时,仍视作咨询通知。
+    is_consultation_task: Optional[bool] = False
+    # 咨询路由 type 参数(service / task / flea_market),从 task.task_source 派生;非咨询为 None。
+    consultation_type: Optional[str] = None
     variables: Optional[Dict[str, Any]] = None  # 动态变量（用于前端格式化翻译键）
 
     class Config:

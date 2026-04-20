@@ -21,6 +21,8 @@ class AppNotification extends Equatable {
     this.relatedType,
     this.isRead = false,
     this.taskId,
+    this.isConsultationTask = false,
+    this.backendConsultationType,
     this.variables,
     this.createdAt,
   });
@@ -38,17 +40,23 @@ class AppNotification extends Equatable {
   final String? relatedType; // task_id / application_id / service_consultation / task_consultation / flea_market_consultation
   final bool isRead;
   final int? taskId;
+  // 后端 enrich 标记:related_type='application_id' 但对应 task 是咨询占位时为 true。
+  final bool isConsultationTask;
+  // 后端派生的咨询 type 参数(service/task/flea_market)。优先于 relatedType 映射。
+  final String? backendConsultationType;
   final Map<String, dynamic>? variables;
   final DateTime? createdAt;
 
-  /// 是否是咨询类通知(按 related_type 判断)
+  /// 是否是咨询类通知(按 related_type 或后端 enrich 标记判断)
   bool get isConsultationNotification =>
+      isConsultationTask ||
       relatedType == 'service_consultation' ||
       relatedType == 'task_consultation' ||
       relatedType == 'flea_market_consultation';
 
   /// 咨询路由用的 type 参数(service/task/flea_market,跟 task_chat_list_view 对齐)
   String? get consultationType {
+    if (backendConsultationType != null) return backendConsultationType;
     switch (relatedType) {
       case 'service_consultation':
         return 'service';
@@ -59,6 +67,12 @@ class AppNotification extends Equatable {
     }
     return null;
   }
+
+  /// 咨询场景下的 application_id:新数据放在 relatedSecondaryId,
+  /// relatedType='application_id' 的旧形态则直接在 relatedId。
+  int? get consultationApplicationId =>
+      relatedSecondaryId ??
+      (relatedType == 'application_id' ? relatedId : null);
 
   /// 显示标题（根据 locale 选择 zh/en，title 为默认/中文）
   String displayTitle(Locale locale) =>
@@ -109,6 +123,8 @@ class AppNotification extends Equatable {
       relatedType: json['related_type'] as String?,
       isRead: parseBool(json['is_read']),
       taskId: json['task_id'] as int?,
+      isConsultationTask: parseBool(json['is_consultation_task']),
+      backendConsultationType: json['consultation_type'] as String?,
       variables: json['variables'] as Map<String, dynamic>?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
@@ -130,6 +146,8 @@ class AppNotification extends Equatable {
       'related_type': relatedType,
       'is_read': isRead ? 1 : 0,
       'task_id': taskId,
+      'is_consultation_task': isConsultationTask,
+      'consultation_type': backendConsultationType,
       'variables': variables,
       'created_at': createdAt?.toIso8601String(),
     };
@@ -149,6 +167,8 @@ class AppNotification extends Equatable {
       relatedType: relatedType,
       isRead: isRead ?? this.isRead,
       taskId: taskId,
+      isConsultationTask: isConsultationTask,
+      backendConsultationType: backendConsultationType,
       variables: variables,
       createdAt: createdAt,
     );

@@ -1271,9 +1271,10 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     }
   }
 
-  /// Check if a message is the last negotiation-type message in the list
+  /// Check if a message is the last negotiation-type message in the list.
+  /// _messages is stored newest→oldest, so iterate forward to find the newest.
   bool _isLatestNegotiationMessage(Message message) {
-    for (int i = _messages.length - 1; i >= 0; i--) {
+    for (int i = 0; i < _messages.length; i++) {
       final m = _messages[i];
       if (m.isNegotiation || m.isQuote || m.isCounterOffer) {
         return m.id == message.id;

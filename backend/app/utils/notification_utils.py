@@ -15,6 +15,31 @@ from app.utils.notification_variables import extract_notification_variables
 logger = logging.getLogger(__name__)
 
 
+# task_source → 咨询路由 type 参数(与 task_detail_view._buildConsultationReturnBar 对齐)
+_CONSULTATION_TYPE_BY_TASK_SOURCE = {
+    "consultation": "service",
+    "task_consultation": "task",
+    "flea_market_consultation": "flea_market",
+}
+
+# related_type 直接标明咨询类型的场景(migration 214)
+_CONSULTATION_TYPE_BY_RELATED_TYPE = {
+    "service_consultation": "service",
+    "task_consultation": "task",
+    "flea_market_consultation": "flea_market",
+}
+
+
+def _apply_consultation_from_task_source(
+    notification_dict: Dict[str, Any], task_source: Optional[str]
+) -> None:
+    """若 task_source 指示咨询占位,标记通知为咨询并派生 consultation_type。"""
+    ctype = _CONSULTATION_TYPE_BY_TASK_SOURCE.get(task_source or "")
+    if ctype:
+        notification_dict["is_consultation_task"] = True
+        notification_dict["consultation_type"] = ctype
+
+
 def enrich_notification_dict_with_task_id_sync(
     notification: models.Notification,
     notification_dict: Dict[str, Any],
@@ -49,17 +74,31 @@ def enrich_notification_dict_with_task_id_sync(
     )
     if notification.related_type in _task_id_related_types and notification.related_id:
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+        ctype = _CONSULTATION_TYPE_BY_RELATED_TYPE.get(notification.related_type or "")
+        if ctype:
+            notification_dict["is_consultation_task"] = True
+            notification_dict["consultation_type"] = ctype
         return notification_dict
-    
+
     if notification.related_type == "application_id" and notification.related_id:
         # related_id 是 application_id，需要通过 TaskApplication 表查询 task_id
+        # 同时检查对应 task 是否为咨询占位,若是则标记 is_consultation_task + consultation_type
         try:
-            application = db.query(models.TaskApplication).filter(
+            row = db.query(
+                models.TaskApplication.task_id,
+                models.Task.task_source,
+                models.Task.is_consultation_placeholder,
+            ).join(
+                models.Task, models.Task.id == models.TaskApplication.task_id
+            ).filter(
                 models.TaskApplication.id == notification.related_id
             ).first()
-            
-            if application:
-                notification_dict["task_id"] = application.task_id
+
+            if row:
+                task_id, task_source, is_placeholder = row
+                notification_dict["task_id"] = task_id
+                if is_placeholder:
+                    _apply_consultation_from_task_source(notification_dict, task_source)
             else:
                 logger.warning(
                     f"Application not found for notification {notification.id}, "
@@ -155,19 +194,33 @@ async def enrich_notification_dict_with_task_id_async(
     )
     if notification.related_type in _task_id_related_types and notification.related_id:
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+        ctype = _CONSULTATION_TYPE_BY_RELATED_TYPE.get(notification.related_type or "")
+        if ctype:
+            notification_dict["is_consultation_task"] = True
+            notification_dict["consultation_type"] = ctype
         return notification_dict
-    
+
     if notification.related_type == "application_id" and notification.related_id:
         # related_id 是 application_id，需要通过 TaskApplication 表查询 task_id
+        # 同时检查对应 task 是否为咨询占位,若是则标记 is_consultation_task + consultation_type
         try:
-            application_query = select(models.TaskApplication).where(
+            q = select(
+                models.TaskApplication.task_id,
+                models.Task.task_source,
+                models.Task.is_consultation_placeholder,
+            ).join(
+                models.Task, models.Task.id == models.TaskApplication.task_id
+            ).where(
                 models.TaskApplication.id == notification.related_id
             )
-            application_result = await db.execute(application_query)
-            application = application_result.scalar_one_or_none()
-            
-            if application:
-                notification_dict["task_id"] = application.task_id
+            result = await db.execute(q)
+            row = result.first()
+
+            if row:
+                task_id, task_source, is_placeholder = row
+                notification_dict["task_id"] = task_id
+                if is_placeholder:
+                    _apply_consultation_from_task_source(notification_dict, task_source)
             else:
                 logger.warning(
                     f"Application not found for notification {notification.id}, "
@@ -270,19 +323,24 @@ def enrich_notifications_with_task_id_sync(
                 notification_indices[application_id] = []
             notification_indices[application_id].append(idx)
     
-    # 批量查询所有需要的 application -> task_id 映射
-    application_task_map = {}
+    # 批量查询所有需要的 application -> (task_id, task_source, is_placeholder) 映射
+    # JOIN Task 一次取齐，避免后续为了判定咨询占位再追加 N+1 查询
+    application_task_map: Dict[int, tuple] = {}
     if application_ids:
         try:
-            applications = db.query(
+            rows = db.query(
                 models.TaskApplication.id,
-                models.TaskApplication.task_id
+                models.TaskApplication.task_id,
+                models.Task.task_source,
+                models.Task.is_consultation_placeholder,
+            ).join(
+                models.Task, models.Task.id == models.TaskApplication.task_id
             ).filter(
                 models.TaskApplication.id.in_(application_ids)
             ).all()
-            
-            for app_id, task_id in applications:
-                application_task_map[app_id] = task_id
+
+            for app_id, task_id, task_source, is_placeholder in rows:
+                application_task_map[app_id] = (task_id, task_source, bool(is_placeholder))
         except Exception as e:
             logger.warning(f"Failed to batch query task_ids for applications: {e}")
     
@@ -302,32 +360,40 @@ def enrich_notifications_with_task_id_sync(
         )
         if notification.related_type in _task_id_related_types_batch and notification.related_id:
             notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+            ctype = _CONSULTATION_TYPE_BY_RELATED_TYPE.get(notification.related_type or "")
+            if ctype:
+                notification_dict["is_consultation_task"] = True
+                notification_dict["consultation_type"] = ctype
 
         elif notification.related_type == "application_id" and notification.related_id:
             # related_id 是 application_id，使用批量查询的结果
-            task_id = application_task_map.get(notification.related_id)
-            if task_id:
+            entry = application_task_map.get(notification.related_id)
+            if entry:
+                task_id, task_source, is_placeholder = entry
                 notification_dict["task_id"] = task_id
+                if is_placeholder:
+                    _apply_consultation_from_task_source(notification_dict, task_source)
             elif notification.related_id in application_ids:
-                # 查询失败或不存在，记录警告
                 logger.warning(
                     f"Application not found for notification {notification.id}, "
                     f"related_id: {notification.related_id}"
                 )
-        
+
         # 旧数据兼容：如果没有 related_type，根据通知类型推断
         elif notification.related_type is None:
             # task_application 类型：related_id 直接就是 task_id
             if notification.type == "task_application" and notification.related_id:
                 notification_dict["task_id"] = notification.related_id
-            
+
             # application_message, negotiation_offer, application_rejected, application_withdrawn, negotiation_rejected 类型：使用批量查询的结果
             elif notification.type in ["application_message", "negotiation_offer", "application_rejected", "application_withdrawn", "negotiation_rejected"] and notification.related_id:
-                task_id = application_task_map.get(notification.related_id)
-                if task_id:
+                entry = application_task_map.get(notification.related_id)
+                if entry:
+                    task_id, task_source, is_placeholder = entry
                     notification_dict["task_id"] = task_id
+                    if is_placeholder:
+                        _apply_consultation_from_task_source(notification_dict, task_source)
                 elif notification.related_id in application_ids:
-                    # 查询失败或不存在，记录警告
                     logger.warning(
                         f"Application not found for notification {notification.id}, "
                         f"related_id: {notification.related_id}"
@@ -395,21 +461,26 @@ async def enrich_notifications_with_task_id_async(
                 notification_indices[application_id] = []
             notification_indices[application_id].append(idx)
     
-    # 批量查询所有需要的 application -> task_id 映射
-    application_task_map = {}
+    # 批量查询所有需要的 application -> (task_id, task_source, is_placeholder) 映射
+    # JOIN Task 一次取齐，避免后续为了判定咨询占位再追加 N+1 查询
+    application_task_map: Dict[int, tuple] = {}
     if application_ids:
         try:
             application_query = select(
                 models.TaskApplication.id,
-                models.TaskApplication.task_id
+                models.TaskApplication.task_id,
+                models.Task.task_source,
+                models.Task.is_consultation_placeholder,
+            ).join(
+                models.Task, models.Task.id == models.TaskApplication.task_id
             ).where(
                 models.TaskApplication.id.in_(application_ids)
             )
             application_result = await db.execute(application_query)
-            applications = application_result.all()
-            
-            for app_id, task_id in applications:
-                application_task_map[app_id] = task_id
+            rows = application_result.all()
+
+            for app_id, task_id, task_source, is_placeholder in rows:
+                application_task_map[app_id] = (task_id, task_source, bool(is_placeholder))
         except Exception as e:
             logger.warning(f"Failed to batch query task_ids for applications: {e}")
     
@@ -429,32 +500,40 @@ async def enrich_notifications_with_task_id_async(
         )
         if notification.related_type in _task_id_related_types_batch and notification.related_id:
             notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+            ctype = _CONSULTATION_TYPE_BY_RELATED_TYPE.get(notification.related_type or "")
+            if ctype:
+                notification_dict["is_consultation_task"] = True
+                notification_dict["consultation_type"] = ctype
 
         elif notification.related_type == "application_id" and notification.related_id:
             # related_id 是 application_id，使用批量查询的结果
-            task_id = application_task_map.get(notification.related_id)
-            if task_id:
+            entry = application_task_map.get(notification.related_id)
+            if entry:
+                task_id, task_source, is_placeholder = entry
                 notification_dict["task_id"] = task_id
+                if is_placeholder:
+                    _apply_consultation_from_task_source(notification_dict, task_source)
             elif notification.related_id in application_ids:
-                # 查询失败或不存在，记录警告
                 logger.warning(
                     f"Application not found for notification {notification.id}, "
                     f"related_id: {notification.related_id}"
                 )
-        
+
         # 旧数据兼容：如果没有 related_type，根据通知类型推断
         elif notification.related_type is None:
             # task_application 类型：related_id 直接就是 task_id
             if notification.type == "task_application" and notification.related_id:
                 notification_dict["task_id"] = notification.related_id
-            
+
             # application_message, negotiation_offer, application_rejected, application_withdrawn, negotiation_rejected 类型：使用批量查询的结果
             elif notification.type in ["application_message", "negotiation_offer", "application_rejected", "application_withdrawn", "negotiation_rejected"] and notification.related_id:
-                task_id = application_task_map.get(notification.related_id)
-                if task_id:
+                entry = application_task_map.get(notification.related_id)
+                if entry:
+                    task_id, task_source, is_placeholder = entry
                     notification_dict["task_id"] = task_id
+                    if is_placeholder:
+                        _apply_consultation_from_task_source(notification_dict, task_source)
                 elif notification.related_id in application_ids:
-                    # 查询失败或不存在，记录警告
                     logger.warning(
                         f"Application not found for notification {notification.id}, "
                         f"related_id: {notification.related_id}"

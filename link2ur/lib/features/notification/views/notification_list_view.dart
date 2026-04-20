@@ -194,13 +194,15 @@ class _NotificationListViewContentState
     final taskId = notification.taskId;
 
     // ==================== 咨询类通知(优先级最高) ====================
-    // 后端 migration 214 后,咨询通知的 related_type 是
-    // service_consultation/task_consultation/flea_market_consultation,
-    // related_id=task_id, related_secondary_id=application_id。
+    // 两路判定:
+    // (1) migration 214 后咨询通知的 related_type 是 service_/task_/flea_market_consultation,
+    //     related_id=task_id, related_secondary_id=application_id。
+    // (2) 历史形态(report quote 等): related_type='application_id', 后端 enrich 时检测到
+    //     对应 task 为咨询占位,置 is_consultation_task=true + consultation_type。
     // 路由要带 consultation=true 和 type 参数,才能进正确的 ConsultationActions UI。
     if (notification.isConsultationNotification) {
       final consultTaskId = taskId ?? relatedId;
-      final appId = notification.relatedSecondaryId;
+      final appId = notification.consultationApplicationId;
       final consultType = notification.consultationType;
       if (consultTaskId != null && appId != null && consultType != null) {
         context.safePush(
@@ -209,7 +211,7 @@ class _NotificationListViewContentState
         );
         return;
       }
-      // 缺 secondary_id(极少数历史通知):回退到普通 task-chat,避免空白
+      // 缺 app_id/type(极少数历史通知):回退到普通 task-chat,避免空白
       if (consultTaskId != null) {
         context.safePush('/task-chat/$consultTaskId');
         return;
