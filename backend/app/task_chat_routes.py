@@ -531,12 +531,16 @@ async def get_task_chat_list(
             real_candidate_ids = [tid for tid in task_consult_ids if tid not in placeholder_task_ids_set]
 
             if placeholder_candidate_ids:
+                # price_locked: consult-approve 锁定期间,需继续路由到咨询 UI 显示"等待支付中"
                 ta_query = select(
                     models.TaskApplication.task_id,
                     models.TaskApplication.id
                 ).where(
                     models.TaskApplication.task_id.in_(placeholder_candidate_ids),
-                    models.TaskApplication.status.in_(["consulting", "negotiating", "price_agreed", "cancelled"]),
+                    models.TaskApplication.status.in_([
+                        "consulting", "negotiating", "price_agreed",
+                        "price_locked", "cancelled",
+                    ]),
                 )
                 ta_result = await db.execute(ta_query)
                 for row in ta_result.all():
