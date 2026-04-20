@@ -3,12 +3,21 @@
 支持多个翻译服务提供商，自动降级和故障切换
 """
 import os
+import re
 import logging
 import time
 from typing import Optional, List, Tuple, Callable
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+
+_API_KEY_URL_PATTERN = re.compile(r'([?&])key=[^&\s]+')
+
+
+def _sanitize(msg: object) -> str:
+    """脱掉 ?key=... / &key=... 片段,避免 Google API key 被打进日志。"""
+    return _API_KEY_URL_PATTERN.sub(r'\1key=***', str(msg))
 
 
 class TranslationService(Enum):
@@ -107,13 +116,14 @@ class TranslationManager:
                                                     logger.error(f"Google Translation API返回格式错误: {result}")
                                                     raise Exception(f"API返回格式错误: {result}")
                                             except requests.exceptions.RequestException as e:
-                                                logger.error(f"Google Translation API请求失败: {e}")
+                                                # 脱敏: requests 的异常字符串里会带完整 URL (含 ?key=xxx)
+                                                logger.error(f"Google Translation API请求失败: {_sanitize(e)}")
                                                 if hasattr(e, 'response') and e.response is not None:
                                                     try:
                                                         error_detail = e.response.json()
                                                         logger.error(f"API错误详情: {error_detail}")
                                                     except (json.JSONDecodeError, ValueError):
-                                                        logger.error(f"API错误响应: {e.response.text}")
+                                                        logger.error(f"API错误响应: {_sanitize(e.response.text)}")
                                                 raise
                                     
                                     return GoogleCloudRESTTranslator(api_key)
@@ -642,7 +652,7 @@ class TranslationManager:
                             logger.warning(
                                 f"{service.value}翻译失败（尝试 {attempt + 1}/{max_retries}，"
                                 f"错误类型: {error_info['error_type']}，"
-                                f"{retry_delay}秒后重试）: {e}"
+                                f"{retry_delay}秒后重试）: {_sanitize(e)}"
                             )
                             # 智能延迟重试（使用time.sleep，因为这是同步函数）
                             if retry_delay > 0:
@@ -652,7 +662,7 @@ class TranslationManager:
                             # 所有重试都失败或不应该重试
                             logger.error(
                                 f"{service.value}翻译失败（已重试{attempt + 1}次，"
-                                f"错误类型: {error_info['error_type']}）: {e}"
+                                f"错误类型: {error_info['error_type']}）: {_sanitize(e)}"
                             )
                             if service not in self.service_stats:
                                 self.service_stats[service] = {'success': 0, 'failure': 0}
@@ -665,7 +675,7 @@ class TranslationManager:
                             break
                 
             except Exception as e:
-                logger.error(f"使用{service.value}翻译服务时出错: {e}")
+                logger.error(f"使用{service.value}翻译服务时出错: {_sanitize(e)}")
                 self.failed_services.add(service)
                 continue
         

@@ -30,8 +30,18 @@ class TranslationErrorHandler:
     def classify_error(self, error: Exception) -> TranslationErrorType:
         """分类错误类型"""
         error_str = str(error).lower()
-        
-        if 'rate limit' in error_str or 'quota' in error_str:
+
+        # Google Translation API 的 rate limit 会以 403 + userRateLimitExceeded
+        # 或 429 + rateLimitExceeded 回来,关键词里不一定直接出现 "rate limit"。
+        # 早先没覆盖导致 403 被归为 unknown 继续重试 + 浪费 2s 退避。
+        if (
+            'rate limit' in error_str
+            or 'quota' in error_str
+            or 'ratelimitexceeded' in error_str
+            or 'userratelimitexceeded' in error_str
+            or '429' in error_str
+            or ('403' in error_str and 'forbidden' in error_str)
+        ):
             return TranslationErrorType.RATE_LIMIT
         elif 'timeout' in error_str or 'timed out' in error_str:
             return TranslationErrorType.TIMEOUT
