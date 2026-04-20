@@ -302,71 +302,71 @@ class _HeroBanner extends StatelessWidget {
     final teamName = team.displayName(langCode);
 
     final topPadding = MediaQuery.of(context).padding.top;
+    final hasCover = team.coverImage != null && team.coverImage!.isNotEmpty;
     return SizedBox(
       height: 170 + topPadding,
       child: Stack(
         children: [
-          // Gradient background
+          // 背景：优先 cover_image，空则类别渐变兜底（与发现卡片一致）
+          Positioned.fill(
+            child: hasCover
+                ? AsyncImageView(
+                    imageUrl: Helpers.getImageUrl(team.coverImage!),
+                    fallbackUrl: Helpers.getImageUrl(team.coverImage!),
+                  )
+                : DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: ServiceCategoryHelper.getGradient(team.category),
+                      ),
+                    ),
+                  ),
+          ),
+          // Bottom gradient overlay — 保证底部文字在任意背景上都清晰
           Positioned.fill(
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFF007AFF),
-                    Color(0xFF5856D6),
-                    Color(0xFFAF52DE),
+                    Colors.black.withAlpha(hasCover ? 40 : 0),
+                    Colors.black.withAlpha(hasCover ? 150 : 115),
                   ],
+                  stops: const [0.4, 1.0],
                 ),
-              ),
-              child: Stack(
-                children: [
-                  // Bottom gradient overlay
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withAlpha(115),
-                          ],
-                          stops: const [0.4, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Decorative circles
-                  Positioned(
-                    top: -50,
-                    right: -30,
-                    child: Container(
-                      width: 180,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withAlpha(15),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 20,
-                    left: -20,
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withAlpha(15),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ),
+          // Decorative circles（仅渐变背景上显示，cover 上太花）
+          if (!hasCover) ...[
+            Positioned(
+              top: -50,
+              right: -30,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withAlpha(15),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 20,
+              left: -20,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withAlpha(15),
+                ),
+              ),
+            ),
+          ],
           // Hero content
           Positioned(
             left: 20,
