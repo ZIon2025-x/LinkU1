@@ -129,10 +129,6 @@ class TaskConsultationActions extends ConsultationActions {
     final isPriceAgreed = appStatus == 'price_agreed';
     // 后端 consult-approve 成功后 TA2 被锁;双方 UI 都显示"等待支付中"禁用态
     final isPriceLocked = appStatus == 'price_locked';
-    // 后端 consult-status 返回 can_formal_apply=false 时,表示 applicant
-    // 在原任务上已有活跃申请(发布者代理发起的咨询就是这种情况),
-    // 按"正式申请"会被后端拒,UI 应隐藏按钮。
-    final canFormalApply = consultationApp?['can_formal_apply'] != false;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -151,18 +147,9 @@ class TaskConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            // 申请方：正式申请（仅 consulting，negotiating 时不允许；
-            // 已在原任务 pending 的发布者代理场景下 canFormalApply=false,隐藏）
-            if (isApplicant && isConsulting && canFormalApply) ...[
-              ActionPill(
-                icon: Icons.assignment,
-                label: context.l10n.formalApply,
-                onTap: isSubmitting
-                    ? null
-                    : () => showFormalApplyDialog(context, getCurrencySymbol),
-              ),
-              const SizedBox(width: 8),
-            ],
+            // 任务咨询不再暴露申请者"正式申请"按钮 — 发布者直接走"批准并支付"(consult-approve)
+            // 覆盖所有场景,避免申请者误操作提前关闭占位 task。/consult-formal-apply 端点保留
+            // 作为兼容,但 UI 不再入口化。
             if (!isApplicant && (isConsulting || isNegotiating)) ...[
               ActionPill(
                 icon: Icons.request_quote,
@@ -173,17 +160,7 @@ class TaskConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            // price_agreed: 申请方可正式申请(同样受 canFormalApply 约束)
-            if (isPriceAgreed && isApplicant && canFormalApply) ...[
-              ActionPill(
-                icon: Icons.assignment,
-                label: context.l10n.formalApply,
-                onTap: isSubmitting
-                    ? null
-                    : () => showFormalApplyDialog(context, getCurrencySymbol),
-              ),
-              const SizedBox(width: 8),
-            ],
+            // price_agreed 申请方不再显示按钮 — 只能等发布方"批准并支付",或继续用文字/图片沟通
             // price_agreed: 发布方可直接"批准并支付",跳过返回申请列表
             if (isPriceAgreed && !isApplicant) ...[
               ActionPill(
