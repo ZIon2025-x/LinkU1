@@ -101,8 +101,15 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     PaymentService.instance.isApplePaySupported().then((v) {
       if (mounted) setState(() => _applePaySupported = v);
     });
-    // 提前检查 Stripe 初始化状态，如果 publishableKey 为空则立即显示错误
-    if (Stripe.publishableKey.isEmpty) {
+    // 提前检查 Stripe 初始化状态，如果 publishableKey 为空/未配置则立即显示错误
+    // 注意：Stripe.publishableKey getter 在未初始化时会抛 StripeConfigException，必须 try/catch
+    bool stripeReady = false;
+    try {
+      stripeReady = Stripe.publishableKey.isNotEmpty;
+    } catch (_) {
+      stripeReady = false;
+    }
+    if (!stripeReady) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         AppLogger.error('Payment page opened but Stripe publishableKey is empty. '
