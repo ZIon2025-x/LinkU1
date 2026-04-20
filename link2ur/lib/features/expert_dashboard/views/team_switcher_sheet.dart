@@ -29,47 +29,58 @@ class TeamSwitcherSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<SelectedExpertCubit, SelectedExpertState>(
       builder: (context, state) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.75;
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: Text(
-                    context.l10n.expertDashboardSwitchTeam,
-                    style: Theme.of(context).textTheme.titleMedium,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Text(
+                      context.l10n.expertDashboardSwitchTeam,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
-                ),
-                ...state.myTeams.map((team) => _TeamTile(
-                      team: team,
-                      isSelected: team.id == state.currentExpertId,
-                    )),
-                const Divider(height: 24),
-                _ActionTile(
-                  icon: Icons.add_circle_outline,
-                  iconColor: AppColors.primary,
-                  label: context.l10n.expertDashboardApplyNewTeam,
-                  onTap: () {
-                    final router = GoRouter.of(context);
-                    Navigator.of(context).pop();
-                    router.push(AppRoutes.expertTeamCreate);
-                  },
-                ),
-                _ActionTile(
-                  icon: Icons.mail_outline,
-                  label: context.l10n.expertDashboardMyInvitations,
-                  onTap: () {
-                    final router = GoRouter.of(context);
-                    Navigator.of(context).pop();
-                    router.push(AppRoutes.expertTeamInvitations);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: state.myTeams
+                          .map((team) => _TeamTile(
+                                team: team,
+                                isSelected: team.id == state.currentExpertId,
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  _ActionTile(
+                    icon: Icons.add_circle_outline,
+                    iconColor: AppColors.primary,
+                    label: context.l10n.expertDashboardApplyNewTeam,
+                    onTap: () {
+                      final router = GoRouter.of(context);
+                      Navigator.of(context).pop();
+                      router.push(AppRoutes.expertTeamCreate);
+                    },
+                  ),
+                  _ActionTile(
+                    icon: Icons.mail_outline,
+                    label: context.l10n.expertDashboardMyInvitations,
+                    onTap: () {
+                      final router = GoRouter.of(context);
+                      Navigator.of(context).pop();
+                      router.push(AppRoutes.expertTeamInvitations);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
             ),
           ),
         );
