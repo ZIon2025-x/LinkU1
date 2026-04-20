@@ -754,6 +754,71 @@ def send_expiry_notifications(db: Session):
         raise
 
 
+def cleanup_orphan_consultations(db: Session) -> int:
+    """兜底扫描:原任务已不 open 但对应 task_consultation 占位还挂着的,统一归档。
+
+    覆盖所有进入终态(in_progress / cancelled / completed / 过期)的场景——
+    即便 webhook / cancel 端点漏调了 close_placeholders_for_task,定时任务也能追回。
+
+    返回归档的占位数量。
+    """
+    try:
+        # 子查询:原任务状态还在"可接新申请"状态的才算活;其他都算"已终态"
+        open_task_ids_subq = (
+            db.query(models.Task.id)
+            .filter(
+                models.Task.status.in_(["open", "chatting", "pending_acceptance"])
+            )
+            .subquery()
+        )
+
+        orphans = (
+            db.query(models.Task)
+            .filter(
+                models.Task.is_consultation_placeholder == True,  # noqa: E712
+                models.Task.original_task_id.isnot(None),
+                models.Task.status.notin_(["closed", "cancelled"]),
+                models.Task.original_task_id.notin_(
+                    open_task_ids_subq.select()
+                ),
+            )
+            .limit(200)  # 单次最多处理 200 个,避免长事务
+            .all()
+        )
+
+        if not orphans:
+            return 0
+
+        from app.consultation.approval import close_placeholders_for_task
+
+        # 按 original_task_id 分组,每组走一次 helper(helper 内部会查同一原任务的所有占位)
+        seen_original_ids = set()
+        total = 0
+        for t2 in orphans:
+            if t2.original_task_id in seen_original_ids:
+                continue
+            seen_original_ids.add(t2.original_task_id)
+            total += close_placeholders_for_task(
+                db,
+                original_task_id=t2.original_task_id,
+                reason_zh="任务已终结,咨询自动关闭",
+                reason_en="Task is no longer open. Consultation auto-closed.",
+                system_action="consultation_auto_closed_on_cleanup",
+            )
+
+        db.commit()
+        if total > 0:
+            logger.info(f"孤儿咨询清理: 归档了 {total} 个占位")
+        return total
+    except Exception as e:
+        logger.error(f"孤儿咨询清理失败: {e}", exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return 0
+
+
 def check_expired_payment_tasks(db: Session):
     """检查并取消支付过期的任务"""
     try:
@@ -1760,6 +1825,12 @@ def run_scheduled_tasks():
                 logger.info(f"支付过期任务检查: 取消了 {cancelled_count} 个任务")
         except Exception as e:
             logger.error(f"支付过期任务检查失败: {e}", exc_info=True)
+
+        # 兜底:清理原任务已终态但咨询占位还挂着的孤儿
+        try:
+            cleanup_orphan_consultations(db)
+        except Exception as e:
+            logger.error(f"孤儿咨询清理失败: {e}", exc_info=True)
         
         # 发送支付提醒（12小时前、6小时前、1小时前）
         try:

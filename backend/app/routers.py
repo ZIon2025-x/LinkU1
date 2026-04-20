@@ -4569,6 +4569,23 @@ def cancel_task(
         # 3) 任务标记为 cancelled
         task.status = "cancelled"
         task.cancelled_at = get_utc_time()
+
+        # 原任务取消 → 所有指向它的咨询占位一并归档
+        try:
+            from app.consultation.approval import close_placeholders_for_task
+            close_placeholders_for_task(
+                db,
+                original_task_id=task_id,
+                reason_zh="任务已被取消,咨询自动关闭",
+                reason_en="Task cancelled. Consultation auto-closed.",
+                system_action="consultation_auto_closed_on_task_cancelled",
+            )
+        except Exception as _cp_err:
+            logger.warning(
+                f"⚠️ [cancel-task] 批量归档咨询占位失败(不阻断主流程): "
+                f"task_id={task_id} err={_cp_err}"
+            )
+
         db.commit()
 
         # 4) 通知双方
