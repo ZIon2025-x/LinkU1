@@ -4976,7 +4976,8 @@ async def create_task_consultation(
                 related_id=str(consulting_task.id),
                 title_en="New Task Consultation",
                 content_en=f'{user_name} wants to consult about your task "{task_title}"',
-                related_type="task_id",
+                related_type="task_consultation",
+                related_secondary_id=new_application.id,
             )
         except Exception as e:
             logger.warning(f"Failed to notify task poster about consultation: {e}")
@@ -4998,6 +4999,220 @@ async def create_task_consultation(
     except Exception as e:
         logger.error(f"Error creating consultation for task {task_id}: {e}")
         raise HTTPException(status_code=500, detail=f"创建咨询失败: {str(e)}")
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/start-consultation")
+async def poster_start_consultation(
+    task_id: int,
+    application_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """发布者对 pending 申请者发起咨询会话。
+
+    场景:申请者直接申请未先咨询,发布者想跟他聊聊/议价。
+    通过**代理创建咨询占位 task**(applicant_id=原申请者,taker_id=发布者)
+    让双方进入和申请者自发咨询完全一致的 ConsultationActions UI。
+    幂等:已有咨询占位则直接返回。
+    """
+    try:
+        # 1. 验证原始任务存在,权限只开放给发布者
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
+        if str(task.poster_id) != str(current_user.id):
+            raise HTTPException(status_code=403, detail="只有任务发布者可以发起咨询")
+        if task.status not in ("open", "chatting", "pending_acceptance"):
+            raise_http_error_with_code(
+                "任务当前状态不允许发起咨询", 400, error_codes.INVALID_STATUS_TRANSITION
+            )
+
+        # 2. 找到目标申请(校验 application_id 属于该 task,拿 applicant_id)
+        app_result = await db.execute(
+            select(models.TaskApplication).where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+        )
+        target_app = app_result.scalar_one_or_none()
+        if not target_app:
+            raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
+        applicant_id = target_app.applicant_id
+        if not applicant_id:
+            raise HTTPException(status_code=400, detail="申请缺少申请者信息")
+        if str(applicant_id) == str(current_user.id):
+            # 申请者是自己 — 不合理(发布者不可能申请自己的任务)
+            raise HTTPException(status_code=400, detail="无法对自己发起咨询")
+
+        # 3. 查申请者对该 task 是否已有咨询占位(复用 create_task_consultation 的查询模式)
+        existing_placeholder_result = await db.execute(
+            select(models.Task.id).where(
+                models.Task.task_source == "task_consultation",
+                models.Task.poster_id == applicant_id,
+                models.Task.taker_id == task.poster_id,
+                (
+                    (models.Task.original_task_id == task_id)
+                    | (models.Task.description == f"original_task_id:{task_id}")
+                ),
+            )
+        )
+        placeholder_ids = [row[0] for row in existing_placeholder_result.fetchall()]
+
+        existing_consult_app = None
+        existing_placeholder_id = None
+        if placeholder_ids:
+            ca_result = await db.execute(
+                select(models.TaskApplication).where(
+                    models.TaskApplication.task_id.in_(placeholder_ids),
+                    models.TaskApplication.applicant_id == applicant_id,
+                )
+            )
+            existing_consult_app = ca_result.scalar_one_or_none()
+            if existing_consult_app:
+                existing_placeholder_id = existing_consult_app.task_id
+
+        # 3a. 已有活跃咨询 -> 直接返回
+        if existing_consult_app and existing_consult_app.status in (
+            "consulting", "negotiating", "price_agreed"
+        ):
+            return {
+                "application_id": existing_consult_app.id,
+                "task_id": existing_placeholder_id,
+                "original_task_id": task_id,
+                "status": existing_consult_app.status,
+                "is_existing": True,
+            }
+
+        # 3b. 已有 cancelled 咨询 -> 重新打开(和 create_task_consultation 同逻辑)
+        if existing_consult_app and existing_consult_app.status == "cancelled":
+            existing_consult_app.status = "consulting"
+            existing_consult_app.negotiated_price = None
+            existing_consult_app.message = None
+            placeholder_result = await db.execute(
+                select(models.Task).where(models.Task.id == existing_placeholder_id)
+            )
+            placeholder_task = placeholder_result.scalar_one_or_none()
+            if placeholder_task and placeholder_task.status in ("closed", "cancelled"):
+                placeholder_task.status = "consulting"
+            current_time = get_utc_time()
+            user_name = current_user.name if hasattr(current_user, "name") else "发布者"
+            task_title = task.title or ""
+            system_message = models.Message(
+                sender_id=None,
+                receiver_id=None,
+                content=f"发布者 {user_name} 重新发起了咨询",
+                task_id=existing_placeholder_id,
+                application_id=existing_consult_app.id,
+                message_type="system",
+                conversation_type="task",
+                meta=json.dumps({
+                    "system_action": "consultation_reopened_by_poster",
+                    "content_en": f"Poster {user_name} reopened the consultation",
+                }),
+                created_at=current_time,
+            )
+            db.add(system_message)
+            await db.commit()
+            return {
+                "application_id": existing_consult_app.id,
+                "task_id": existing_placeholder_id,
+                "original_task_id": task_id,
+                "status": "consulting",
+                "is_existing": False,
+            }
+
+        # 3c. 已有其它状态(approved 等)-> 正常不该发生,按冲突处理
+        if existing_consult_app:
+            raise HTTPException(status_code=400, detail="该申请者已有咨询会话")
+
+        # 4. 代理申请者创建咨询占位任务 + TaskApplication
+        current_time = get_utc_time()
+        task_title = task.title or ""
+        task_title_zh = getattr(task, "title_zh", None) or task_title
+        task_title_en = getattr(task, "title_en", None) or task_title
+        consulting_task = await create_placeholder_task(
+            db,
+            consultation_type="task_consultation",
+            title=f"咨询: {task_title}",
+            applicant_id=applicant_id,  # 关键:仍然以申请者身份创建(保持 consult-* 端点权限链)
+            taker_id=task.poster_id,
+            description=task.description or "",
+            title_zh=f"咨询: {task_title_zh}",
+            title_en=f"Consultation: {task_title_en}",
+            reward=task.base_reward or 0,
+            base_reward=task.base_reward or 0,
+            reward_to_be_quoted=getattr(task, "reward_to_be_quoted", False),
+            currency=task.currency or "GBP",
+            location=task.location or "",
+            task_type=task.task_type or "other",
+            task_level=getattr(task, "task_level", "normal"),
+            original_task_id=task_id,
+        )
+        new_application = models.TaskApplication(
+            task_id=consulting_task.id,
+            applicant_id=applicant_id,
+            status="consulting",
+            currency=task.currency or "GBP",
+            created_at=current_time,
+        )
+        db.add(new_application)
+        await db.flush()
+
+        # 5. 系统消息:发布者主动发起(与申请者发起的文案区分)
+        poster_name = current_user.name if hasattr(current_user, "name") else "发布者"
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            content=f"发布者 {poster_name} 想和您聊聊「{task_title}」",
+            task_id=consulting_task.id,
+            application_id=new_application.id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({
+                "system_action": "consultation_started_by_poster",
+                "content_en": f'Poster {poster_name} wants to chat about "{task_title}"',
+            }),
+            created_at=current_time,
+        )
+        db.add(system_message)
+
+        # 6. 通知申请者(接收方)
+        try:
+            from app import async_crud
+            await async_crud.async_notification_crud.create_notification(
+                db, str(applicant_id), "task_consultation_received",
+                "发布者邀请您咨询",
+                f'发布者 {poster_name} 想就任务「{task_title}」和您聊聊',
+                related_id=str(consulting_task.id),
+                title_en="Poster Invited Consultation",
+                content_en=f'Poster {poster_name} wants to chat about task "{task_title}"',
+                related_type="task_consultation",
+                related_secondary_id=new_application.id,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to notify applicant about poster-started consultation: {e}")
+
+        await db.commit()
+
+        return {
+            "application_id": new_application.id,
+            "task_id": consulting_task.id,
+            "original_task_id": task_id,
+            "status": new_application.status,
+            "is_existing": False,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error in poster-start-consultation task={task_id} app={application_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail=f"发起咨询失败: {str(e)}")
 
 
 @task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-negotiate")
@@ -5082,7 +5297,8 @@ async def consult_negotiate(
                 "收到新报价", f'{user_name} 对任务「{task.title}」提出了报价 {currency} {float(proposed_price):.2f}',
                 related_id=str(task_id), title_en="New Price Proposal",
                 content_en=f'{user_name} proposed {currency} {float(proposed_price):.2f} for task "{task.title}"',
-                related_type="task_id",
+                related_type="task_consultation",
+                related_secondary_id=application_id,
             )
         except Exception as e:
             logger.warning(f"Failed to create notification for consult-negotiate: {e}")
@@ -5184,7 +5400,8 @@ async def consult_quote(
                 "收到报价", f'{poster_name} 对任务「{task.title}」报价 {currency} {float(quoted_price):.2f}',
                 related_id=str(task_id), title_en="New Quote",
                 content_en=f'{poster_name} quoted {currency} {float(quoted_price):.2f} for task "{task.title}"',
-                related_type="task_id",
+                related_type="task_consultation",
+                related_secondary_id=application_id,
             )
         except Exception as e:
             logger.warning(f"Failed to create notification for consult-quote: {e}")
@@ -5337,7 +5554,8 @@ async def consult_respond(
                 notif_title, notif_body,
                 related_id=str(task_id), title_en=notif_title_en,
                 content_en=notif_body_en,
-                related_type="task_id",
+                related_type="task_consultation",
+                related_secondary_id=application_id,
             )
         except Exception as e:
             logger.warning(f"Failed to create notification for consult-respond: {e}")
@@ -5627,7 +5845,8 @@ async def consult_close(
                 related_id=str(task_id),
                 title_en="Consultation Closed",
                 content_en=f'{user_name} closed the consultation',
-                related_type="task_id",
+                related_type="task_consultation",
+                related_secondary_id=application_id,
             )
         except Exception as e:
             logger.warning(f"Failed to notify other party about consultation closure: {e}")
@@ -5680,6 +5899,27 @@ async def consult_status(
         if not is_poster and not is_taker and not is_applicant:
             raise HTTPException(status_code=403, detail="无权查看此申请")
 
+        # can_formal_apply: applicant 在**原任务**上是否已有活跃申请(pending/chatting/...)
+        # 有则 formal-apply 端点会拒("您已有该任务的申请"),UI 应隐藏按钮。
+        # 对发布者代理创建的咨询(applicant 原本就 pending)会返回 False。
+        can_formal_apply = True
+        original_task_id = getattr(task, "original_task_id", None)
+        if original_task_id is None and task.description and task.description.startswith("original_task_id:"):
+            try:
+                original_task_id = int(task.description.split(":")[1])
+            except (ValueError, IndexError):
+                original_task_id = None
+        if original_task_id:
+            existing_orig_result = await db.execute(
+                select(models.TaskApplication.id).where(
+                    models.TaskApplication.task_id == original_task_id,
+                    models.TaskApplication.applicant_id == application.applicant_id,
+                    models.TaskApplication.status.notin_(["cancelled", "rejected"]),
+                )
+            )
+            if existing_orig_result.scalar_one_or_none() is not None:
+                can_formal_apply = False
+
         return {
             "id": application.id,
             "task_id": application.task_id,
@@ -5689,6 +5929,7 @@ async def consult_status(
             "currency": application.currency,
             "poster_id": str(task.poster_id),
             "created_at": format_iso_utc(application.created_at) if application.created_at else None,
+            "can_formal_apply": can_formal_apply,
         }
 
     except HTTPException:

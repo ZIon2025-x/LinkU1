@@ -17,6 +17,7 @@ class AppNotification extends Equatable {
     this.titleEn,
     this.contentEn,
     this.relatedId,
+    this.relatedSecondaryId,
     this.relatedType,
     this.isRead = false,
     this.taskId,
@@ -32,11 +33,32 @@ class AppNotification extends Equatable {
   final String? titleEn;
   final String? contentEn;
   final int? relatedId;
-  final String? relatedType; // task_id, application_id
+  // 辅助 id(migration 214):咨询类通知带 application_id,与 relatedId(task_id) 组合使用
+  final int? relatedSecondaryId;
+  final String? relatedType; // task_id / application_id / service_consultation / task_consultation / flea_market_consultation
   final bool isRead;
   final int? taskId;
   final Map<String, dynamic>? variables;
   final DateTime? createdAt;
+
+  /// 是否是咨询类通知(按 related_type 判断)
+  bool get isConsultationNotification =>
+      relatedType == 'service_consultation' ||
+      relatedType == 'task_consultation' ||
+      relatedType == 'flea_market_consultation';
+
+  /// 咨询路由用的 type 参数(service/task/flea_market,跟 task_chat_list_view 对齐)
+  String? get consultationType {
+    switch (relatedType) {
+      case 'service_consultation':
+        return 'service';
+      case 'task_consultation':
+        return 'task';
+      case 'flea_market_consultation':
+        return 'flea_market';
+    }
+    return null;
+  }
 
   /// 显示标题（根据 locale 选择 zh/en，title 为默认/中文）
   String displayTitle(Locale locale) =>
@@ -83,6 +105,7 @@ class AppNotification extends Equatable {
       titleEn: json['title_en'] as String?,
       contentEn: json['content_en'] as String?,
       relatedId: json['related_id'] as int?,
+      relatedSecondaryId: json['related_secondary_id'] as int?,
       relatedType: json['related_type'] as String?,
       isRead: parseBool(json['is_read']),
       taskId: json['task_id'] as int?,
@@ -103,6 +126,7 @@ class AppNotification extends Equatable {
       'title_en': titleEn,
       'content_en': contentEn,
       'related_id': relatedId,
+      'related_secondary_id': relatedSecondaryId,
       'related_type': relatedType,
       'is_read': isRead ? 1 : 0,
       'task_id': taskId,
@@ -121,6 +145,7 @@ class AppNotification extends Equatable {
       titleEn: titleEn,
       contentEn: contentEn,
       relatedId: relatedId,
+      relatedSecondaryId: relatedSecondaryId,
       relatedType: relatedType,
       isRead: isRead ?? this.isRead,
       taskId: taskId,

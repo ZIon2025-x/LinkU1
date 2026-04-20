@@ -497,9 +497,12 @@ class Notification(Base):
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     type = Column(
         String(32), nullable=False
-    )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement', 'application_message', 'application_message_reply', 'task_reward_paid'
+    )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement', 'application_message', 'application_message_reply', 'task_reward_paid', 'consultation_update', 'task_consultation_received'
     related_id = Column(Integer, nullable=True)  # application_id 或 task_id（根据 type 而定）
-    related_type = Column(String(20), nullable=True)  # 'task_id' 或 'application_id'，用于明确标识 related_id 的类型
+    # 咨询/议价类通知:related_secondary_id=application_id,related_id=task_id
+    # (migration 214 新增,解决同 task 多个申请者议价时通知互相覆盖的问题)
+    related_secondary_id = Column(Integer, nullable=True)
+    related_type = Column(String(32), nullable=True)  # 'task_id' / 'application_id' / 'service_consultation' / 'task_consultation' / 'flea_market_consultation'
     content = Column(Text, nullable=False)  # JSON 格式存储通知数据
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     read_at = Column(DateTime(timezone=True), nullable=True)  # 已读时间（可为空）
@@ -509,7 +512,13 @@ class Notification(Base):
     content_en = Column(Text, nullable=True)  # 英文内容（可选）
     is_read = Column(Integer, default=0)  # 0=unread, 1=read (保留向后兼容，新系统使用 read_at)
     __table_args__ = (
-        UniqueConstraint("user_id", "type", "related_id", name="uix_user_type_related"),
+        # migration 214: 唯一约束加入 related_secondary_id。Postgres NULL != NULL,
+        # 历史通知(related_secondary_id=NULL) 与老约束行为等价;新通知若带
+        # secondary_id(如 application_id),同 task 不同申请者的通知将独立不合并。
+        UniqueConstraint(
+            "user_id", "type", "related_id", "related_secondary_id",
+            name="uix_user_type_related_secondary",
+        ),
         Index("ix_notifications_user", user_id, created_at),  # 查询时使用 ORDER BY created_at DESC
         Index("ix_notifications_type", type, related_id),
     )

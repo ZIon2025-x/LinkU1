@@ -395,6 +395,23 @@ class TaskRepository {
     return response.data;
   }
 
+  /// 发布者对 pending 申请者发起咨询会话。
+  /// 后端代理申请者创建咨询占位 task,返回 {task_id(占位), application_id(新), status, ...}。
+  /// 前端据此跳到咨询聊天路由,双方通过 ConsultationActions UI 议价/对话。
+  Future<Map<String, dynamic>> posterStartConsultation(
+      int taskId, int applicationId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.posterStartConsultation(taskId, applicationId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(
+        response.errorCode ?? response.message ?? 'Failed to start consultation',
+        code: response.errorCode,
+      );
+    }
+    return response.data!;
+  }
+
   /// 提议价格（chat-before-payment 流程）
   Future<Map<String, dynamic>?> proposePrice(
       int taskId, int applicationId, double price) async {

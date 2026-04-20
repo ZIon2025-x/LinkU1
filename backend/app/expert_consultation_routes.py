@@ -48,8 +48,15 @@ async def _notify_team_admins_new_application(
     notification_type: str = "service_application_received",
     title_zh: str = "新服务申请",
     title_en: str = "New Service Application",
+    task_id: Optional[int] = None,
+    related_type: str = "service_application",
 ) -> None:
-    """通知团队所有 active owner+admin 收到新的服务申请/咨询。Best-effort,失败不阻塞主流程。"""
+    """通知团队所有 active owner+admin 收到新的服务申请/咨询。Best-effort,失败不阻塞主流程。
+
+    task_id + related_type="service_consultation" 组合:用于咨询类通知,
+    让 Flutter 点击后能跳到咨询聊天(需要同时有 task_id 和 application_id)。
+    不传 task_id 时保留老语义(related_id=application_id)。
+    """
     try:
         from app.async_crud import AsyncNotificationCRUD
         managers_result = await db.execute(
@@ -69,6 +76,14 @@ async def _notify_team_admins_new_application(
         )
         content_zh = _msg["content_zh"] + ",请前往达人后台处理"
         content_en = _msg["content_en"]
+        # 咨询类通知:related_id=task_id,related_secondary_id=application_id
+        # 非咨询路径:related_id=application_id,related_secondary_id=None(保持向后兼容)
+        if task_id is not None:
+            related_id_str = str(task_id)
+            secondary_id = application_id
+        else:
+            related_id_str = str(application_id)
+            secondary_id = None
         for mid in manager_ids:
             await AsyncNotificationCRUD.create_notification(
                 db=db,
@@ -78,8 +93,9 @@ async def _notify_team_admins_new_application(
                 content=content_zh,
                 title_en=title_en,
                 content_en=content_en,
-                related_id=str(application_id),
-                related_type="service_application",
+                related_id=related_id_str,
+                related_type=related_type,
+                related_secondary_id=secondary_id,
             )
     except Exception as e:
         logger.warning(f"通知团队成员新申请失败: {e}")
@@ -313,6 +329,8 @@ async def create_consultation(
             notification_type="service_consultation_received",
             title_zh="新服务咨询",
             title_en="New Consultation Request",
+            task_id=consulting_task.id,
+            related_type="service_consultation",
         )
     elif service.owner_type == "user" and taker_user_id:
         # 个人服务：通知服务提供者
@@ -324,10 +342,11 @@ async def create_consultation(
                 db, taker_user_id, "service_consultation_received",
                 "新服务咨询",
                 f'{applicant_name} 想咨询您的服务「{svc_name}」',
-                related_id=str(application.id),
+                related_id=str(consulting_task.id),
                 title_en="New Consultation Request",
                 content_en=f'{applicant_name} wants to consult about your service "{svc_name}"',
-                related_type="application_id",
+                related_type="service_consultation",
+                related_secondary_id=application.id,
             )
         except Exception as e:
             logger.warning(f"Failed to notify personal service owner: {e}")
@@ -446,6 +465,8 @@ async def create_team_consultation(
         notification_type="team_consultation_received",
         title_zh="新团队咨询",
         title_en="New Team Consultation",
+        task_id=consulting_task.id,
+        related_type="service_consultation",
     )
 
     return {

@@ -1696,71 +1696,122 @@ class AsyncNotificationCRUD:
         title_en: Optional[str] = None,
         content_en: Optional[str] = None,
         related_type: Optional[str] = None,
+        related_secondary_id: Optional[int] = None,
     ) -> models.Notification:
-        """创建通知（如果已存在则更新）"""
+        """创建通知(如果已存在则更新)。
+
+        实现策略:SELECT 查重优先 + IntegrityError 作为并发 race 兜底。
+        以前的"先 INSERT 再 IntegrityError 回滚"方式在 async session 里会:
+          1) INSERT commit 触发 IntegrityError
+          2) await db.rollback() 尝试清理 transaction
+          3) 后续 await db.execute(select(...)) + commit 在 session 的
+             残留 error state 下可能触发 `greenlet_spawn has not been called`,
+             污染整个外层请求 session(例如 consult-negotiate 第二次议价 500)。
+        现在改为先 SELECT 再 INSERT/UPDATE,正常路径不走 IntegrityError 分支。
+
+        related_secondary_id(migration 214):用于区分"同 user + 同 type +
+        同 related_id 但不同子实体"的通知。典型场景:同一 task 下多个申请者
+        各自议价,related_id=task_id 相同,用 related_secondary_id=application_id
+        避免互相覆盖。不传(默认 None)时行为与老逻辑等价。
+        """
         from sqlalchemy.exc import IntegrityError
         from app.utils.time_utils import get_utc_time
-        
+
+        # related_id 字符串转整数(数据库字段是 Integer)
+        related_id_int: Optional[int] = None
+        if related_id is not None:
+            try:
+                related_id_int = int(related_id)
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid related_id format: {related_id}, setting to None")
+                related_id_int = None
+
+        # 1) SELECT 查重:匹配 uix_user_type_related_secondary 唯一键(4 列)
+        #    Postgres 里 NULL != NULL,所以用 IS / == None 分别匹配。
+        secondary_filter = (
+            models.Notification.related_secondary_id.is_(None)
+            if related_secondary_id is None
+            else models.Notification.related_secondary_id == related_secondary_id
+        )
+        existing_result = await db.execute(
+            select(models.Notification)
+            .where(models.Notification.user_id == user_id)
+            .where(models.Notification.type == notification_type)
+            .where(models.Notification.related_id == related_id_int)
+            .where(secondary_filter)
+        )
+        existing = existing_result.scalar_one_or_none()
+
+        if existing is not None:
+            # UPDATE 路径
+            existing.content = content
+            existing.title = title
+            if title_en is not None:
+                existing.title_en = title_en
+            if content_en is not None:
+                existing.content_en = content_en
+            if related_type is not None:
+                existing.related_type = related_type
+            existing.created_at = get_utc_time()
+            existing.is_read = 0
+            existing.read_at = None
+            await db.commit()
+            await db.refresh(existing)
+            return existing
+
+        # 2) INSERT 路径 + 并发 race 兜底
+        db_notification = models.Notification(
+            user_id=user_id,
+            type=notification_type,
+            title=title,
+            content=content,
+            related_id=related_id_int,
+            related_secondary_id=related_secondary_id,
+            title_en=title_en,
+            content_en=content_en,
+            related_type=related_type,
+        )
+        db.add(db_notification)
         try:
-            # ⚠️ 将related_id从字符串转换为整数（数据库字段是Integer类型）
-            related_id_int = None
-            if related_id is not None:
-                try:
-                    related_id_int = int(related_id)
-                except (ValueError, TypeError):
-                    logger.warning(f"Invalid related_id format: {related_id}, setting to None")
-                    related_id_int = None
-            
-            db_notification = models.Notification(
-                user_id=user_id,
-                type=notification_type,
-                title=title,
-                content=content,
-                related_id=related_id_int,
-                title_en=title_en,
-                content_en=content_en,
-                related_type=related_type,
-            )
-            db.add(db_notification)
             await db.commit()
             await db.refresh(db_notification)
             return db_notification
         except IntegrityError:
-            # 如果违反唯一约束（uix_user_type_related），更新现有通知
+            # 极少数情况:两个并发请求都查到空,第二个 INSERT 时撞唯一键。
+            # 重新查(应能拿到另一个 request 刚 INSERT 的记录)并退回到 UPDATE。
             await db.rollback()
-            
-            # 查询现有通知
-            existing_result = await db.execute(
+            retry_result = await db.execute(
                 select(models.Notification)
                 .where(models.Notification.user_id == user_id)
                 .where(models.Notification.type == notification_type)
-                .where(models.Notification.related_id == (int(related_id) if related_id else None))
+                .where(models.Notification.related_id == related_id_int)
+                .where(secondary_filter)
             )
-            existing_notification = existing_result.scalar_one_or_none()
-            
-            if existing_notification:
-                # 更新现有通知的内容和时间
-                existing_notification.content = content
-                existing_notification.title = title
-                if title_en is not None:
-                    existing_notification.title_en = title_en
-                if content_en is not None:
-                    existing_notification.content_en = content_en
-                if related_type is not None:
-                    existing_notification.related_type = related_type
-                existing_notification.created_at = get_utc_time()
-                existing_notification.is_read = 0  # 重置为未读
-                existing_notification.read_at = None  # 清除已读时间
-                await db.commit()
-                await db.refresh(existing_notification)
-                return existing_notification
-            else:
-                # 如果找不到现有通知，重新抛出异常
-                logger.error(f"IntegrityError but existing notification not found: user_id={user_id}, type={notification_type}, related_id={related_id}")
+            retry_existing = retry_result.scalar_one_or_none()
+            if retry_existing is None:
+                logger.error(
+                    "并发 race 兜底失败:IntegrityError 后仍找不到现有通知 "
+                    "user=%s type=%s related_id=%s secondary=%s",
+                    user_id, notification_type, related_id, related_secondary_id,
+                )
                 raise
+            retry_existing.content = content
+            retry_existing.title = title
+            if title_en is not None:
+                retry_existing.title_en = title_en
+            if content_en is not None:
+                retry_existing.content_en = content_en
+            if related_type is not None:
+                retry_existing.related_type = related_type
+            retry_existing.created_at = get_utc_time()
+            retry_existing.is_read = 0
+            retry_existing.read_at = None
+            await db.commit()
+            await db.refresh(retry_existing)
+            return retry_existing
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error creating notification: {e}")
+            logger.error(f"Error creating notification: {e}", exc_info=True)
             raise
 
     @staticmethod

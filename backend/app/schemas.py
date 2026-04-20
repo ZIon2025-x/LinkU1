@@ -1068,7 +1068,8 @@ class NotificationBase(BaseModel):
     title_en: Optional[str] = None  # 英文标题（可选）
     content_en: Optional[str] = None  # 英文内容（可选）
     related_id: Optional[int] = None
-    related_type: Optional[str] = None  # 'task_id' 或 'application_id'，用于明确标识 related_id 的类型
+    related_secondary_id: Optional[int] = None  # 辅助 id(migration 214),咨询类通知带 application_id
+    related_type: Optional[str] = None  # 'task_id' / 'application_id' / 'service_consultation' / 'task_consultation' / 'flea_market_consultation'
 
 
 class NotificationCreate(NotificationBase):

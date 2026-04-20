@@ -764,6 +764,11 @@ class _TaskDetailContent extends StatelessWidget {
     final task = state.task!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // 咨询占位任务:底部栏专用于返回咨询聊天,屏蔽其它按钮(接单/咨询/报名等均不适用)
+    if (task.isConsultationPlaceholder) {
+      return _buildConsultationReturnBar(context, state, currentUserId, isDark);
+    }
+
     // 聊天按钮仅在用户与任务相关，且任务在进行中/待确认/待支付状态时显示
     final isRelated = isPoster || isTaker;
     final showChat = isRelated &&
@@ -882,6 +887,93 @@ class _TaskDetailContent extends StatelessWidget {
                     context, state, isPoster, isTaker, currentUserId),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 咨询占位任务的底部栏:单个"返回咨询聊天"按钮。
+  /// 咨询占位 task 本身不是可接单任务,详情页其它按钮(接任务/咨询/报名等)均不适用。
+  Widget _buildConsultationReturnBar(
+    BuildContext context,
+    TaskDetailState state,
+    String? currentUserId,
+    bool isDark,
+  ) {
+    final task = state.task!;
+    // 根据 task_source 映射咨询路由的 type 参数
+    String? consultType;
+    switch (task.taskSource) {
+      case 'task_consultation':
+        consultType = 'task';
+        break;
+      case 'consultation':
+        consultType = 'service';
+        break;
+      case 'flea_market_consultation':
+        consultType = 'flea_market';
+        break;
+    }
+    // 从已加载的申请列表找当前用户的 application_id
+    // (Task 咨询场景覆盖率最高;Service/FleaMarket 咨询前端 state.applications
+    // 可能为空,此时 fallback 到 /task-chat/$taskId)
+    int? appId;
+    if (currentUserId != null) {
+      for (final app in state.applications) {
+        if (app.applicantId == currentUserId) {
+          appId = app.id;
+          break;
+        }
+      }
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: (isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight)
+            .withValues(alpha: 0.95),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: () {
+                if (consultType != null && appId != null) {
+                  context.safePush(
+                    '/tasks/${task.id}/applications/$appId/chat'
+                    '?consultation=true&type=$consultType',
+                  );
+                } else {
+                  // 回退:无法构造完整咨询路由(如 Service 咨询前端未加载 ServiceApplication),
+                  // 退到普通任务聊天,至少保留消息可达性。
+                  context.safePush('/task-chat/${task.id}');
+                }
+              },
+              icon: const Icon(Icons.chat_bubble_outline, size: 18),
+              label: Text(
+                context.l10n.continueConsultation,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
         ),
       ),

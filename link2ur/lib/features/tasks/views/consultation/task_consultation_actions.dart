@@ -119,6 +119,10 @@ class TaskConsultationActions extends ConsultationActions {
     final isConsulting = appStatus == 'consulting';
     final isNegotiating = appStatus == 'negotiating';
     final isPriceAgreed = appStatus == 'price_agreed';
+    // 后端 consult-status 返回 can_formal_apply=false 时,表示 applicant
+    // 在原任务上已有活跃申请(发布者代理发起的咨询就是这种情况),
+    // 按"正式申请"会被后端拒,UI 应隐藏按钮。
+    final canFormalApply = consultationApp?['can_formal_apply'] != false;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -137,8 +141,9 @@ class TaskConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            // 申请方：正式申请（仅 consulting，negotiating 时不允许）
-            if (isApplicant && isConsulting) ...[
+            // 申请方：正式申请（仅 consulting，negotiating 时不允许；
+            // 已在原任务 pending 的发布者代理场景下 canFormalApply=false,隐藏）
+            if (isApplicant && isConsulting && canFormalApply) ...[
               ActionPill(
                 icon: Icons.assignment,
                 label: context.l10n.formalApply,
@@ -158,8 +163,8 @@ class TaskConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            // price_agreed: 申请方可正式申请
-            if (isPriceAgreed && isApplicant) ...[
+            // price_agreed: 申请方可正式申请(同样受 canFormalApply 约束)
+            if (isPriceAgreed && isApplicant && canFormalApply) ...[
               ActionPill(
                 icon: Icons.assignment,
                 label: context.l10n.formalApply,

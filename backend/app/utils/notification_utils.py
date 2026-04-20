@@ -39,7 +39,15 @@ def enrich_notification_dict_with_task_id_sync(
     )
     
     # 使用 related_type 字段来判断 related_id 的类型（新数据）
-    if notification.related_type == "task_id" and notification.related_id:
+    # 咨询类 related_type("service_consultation"/"task_consultation"/"flea_market_consultation"):
+    # related_id=task_id,related_secondary_id=application_id(migration 214)
+    _task_id_related_types = (
+        "task_id",
+        "service_consultation",
+        "task_consultation",
+        "flea_market_consultation",
+    )
+    if notification.related_type in _task_id_related_types and notification.related_id:
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         return notification_dict
     
@@ -137,7 +145,15 @@ async def enrich_notification_dict_with_task_id_async(
     )
     
     # 使用 related_type 字段来判断 related_id 的类型（新数据）
-    if notification.related_type == "task_id" and notification.related_id:
+    # 咨询类 related_type("service_consultation"/"task_consultation"/"flea_market_consultation"):
+    # related_id=task_id,related_secondary_id=application_id(migration 214)
+    _task_id_related_types = (
+        "task_id",
+        "service_consultation",
+        "task_consultation",
+        "flea_market_consultation",
+    )
+    if notification.related_type in _task_id_related_types and notification.related_id:
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         return notification_dict
     
@@ -276,9 +292,17 @@ def enrich_notifications_with_task_id_sync(
         notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
         
         # 新数据：使用 related_type 字段判断
-        if notification.related_type == "task_id" and notification.related_id:
+        # 咨询类 related_type(service_consultation/task_consultation/flea_market_consultation):
+        # related_id=task_id,related_secondary_id=application_id(migration 214)
+        _task_id_related_types_batch = (
+            "task_id",
+            "service_consultation",
+            "task_consultation",
+            "flea_market_consultation",
+        )
+        if notification.related_type in _task_id_related_types_batch and notification.related_id:
             notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
-        
+
         elif notification.related_type == "application_id" and notification.related_id:
             # related_id 是 application_id，使用批量查询的结果
             task_id = application_task_map.get(notification.related_id)
@@ -395,9 +419,17 @@ async def enrich_notifications_with_task_id_async(
         notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
         
         # 新数据：使用 related_type 字段判断
-        if notification.related_type == "task_id" and notification.related_id:
+        # 咨询类 related_type(service_consultation/task_consultation/flea_market_consultation):
+        # related_id=task_id,related_secondary_id=application_id(migration 214)
+        _task_id_related_types_batch = (
+            "task_id",
+            "service_consultation",
+            "task_consultation",
+            "flea_market_consultation",
+        )
+        if notification.related_type in _task_id_related_types_batch and notification.related_id:
             notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
-        
+
         elif notification.related_type == "application_id" and notification.related_id:
             # related_id 是 application_id，使用批量查询的结果
             task_id = application_task_map.get(notification.related_id)

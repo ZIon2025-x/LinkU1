@@ -1163,28 +1163,46 @@ class _ApplicationItem extends StatelessWidget {
                           );
                     },
                   ),
-                  // 咨询按钮：开启与申请者的聊天沟通（可议价）
+                  // 咨询按钮：代理申请者创建咨询占位,双方进 ConsultationActions UI
+                  // 后端 `/tasks/{id}/applications/{id}/start-consultation` 幂等,
+                  // 已有咨询占位则直接返回;否则创建。
                   _ActionCircleButton(
                     icon: Icons.chat_bubble_outline,
                     color: AppColors.primary,
                     label: context.l10n.taskDetailConsult,
                     onTap: () async {
                       AppHaptics.light();
-                      context.read<TaskDetailBloc>().add(
-                            TaskDetailStartChat(application.id),
-                          );
+                      final messenger = ScaffoldMessenger.of(context);
+                      final router = GoRouter.of(context);
+                      final repo = context.read<TaskRepository>();
                       final taskId = task.id;
                       final appId = application.id;
-                      await context.push(
-                        '/tasks/$taskId/applications/$appId/chat',
-                      );
-                      if (!context.mounted) return;
-                      context.read<TaskDetailBloc>()
-                        ..add(TaskDetailLoadRequested(taskId))
-                        ..add(TaskDetailLoadApplications(
-                          currentUserId:
-                              StorageService.instance.getUserId(),
-                        ));
+                      try {
+                        final result = await repo.posterStartConsultation(taskId, appId);
+                        final placeholderTaskId = result['task_id'] as int?;
+                        final newAppId = result['application_id'] as int?;
+                        if (placeholderTaskId == null || newAppId == null) {
+                          throw const TaskException('poster_start_consultation_invalid_response');
+                        }
+                        await router.push(
+                          '/tasks/$placeholderTaskId/applications/$newAppId/chat'
+                          '?consultation=true&type=task',
+                        );
+                        if (!context.mounted) return;
+                        context.read<TaskDetailBloc>()
+                          ..add(TaskDetailLoadRequested(taskId))
+                          ..add(TaskDetailLoadApplications(
+                            currentUserId: StorageService.instance.getUserId(),
+                          ));
+                      } on TaskException catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(context.localizeError(e.code ?? e.message))),
+                        );
+                      } catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(context.localizeError(e.toString()))),
+                        );
+                      }
                     },
                   ),
                   _ActionCircleButton(

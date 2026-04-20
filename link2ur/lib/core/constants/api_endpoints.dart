@@ -126,6 +126,9 @@ class ApiEndpoints {
       '/api/tasks/$taskId/applications/$applicationId/public-reply';
   static String startApplicationChat(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/start-chat';
+  /// 发布者对 pending 申请者发起咨询会话(代理创建咨询占位 task)
+  static String posterStartConsultation(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/start-consultation';
   static String proposePrice(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/propose-price';
   static String confirmAndPay(int taskId, int applicationId) =>
