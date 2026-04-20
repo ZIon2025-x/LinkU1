@@ -13086,7 +13086,7 @@ def delete_task_expert(
 
 
 # ==================== 管理员管理任务达人服务和活动 API ====================
-# 注：GET /api/admin/task-expert-services 与 GET /api/admin/task-expert-activities 已迁移至 admin_task_expert_routes.py
+# 注：GET /api/admin/experts/services 与 GET /api/admin/experts/activities 在 admin_expert_routes.py
 
 @router.get("/admin/task-expert/{expert_id}/services")
 def get_expert_services_admin(

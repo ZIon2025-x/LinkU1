@@ -431,7 +431,7 @@ app.include_router(admin_db_tools_router, tags=["管理员-数据库工具"])
 #   - service_public_routes.py: /api/services/* + /api/experts/{id}/reviews
 #   - expert_routes.py: /api/experts/{id}, /api/experts/apply, /api/experts/my-applications, /api/experts/by-user/{user_id}
 #   - expert_service_routes.py: /api/experts/{id}/services
-# admin/legacy 功能仍通过 admin_task_expert_routes.py 保留
+# admin 功能已迁移至 admin_expert_routes.py
 
 # 添加自定义排行榜路由
 from app.custom_leaderboard_routes import router as custom_leaderboard_router
@@ -451,9 +451,6 @@ app.include_router(service_review_router)
 # 服务浏览（公开）路由
 from app.service_browse_routes import service_browse_router
 app.include_router(service_browse_router)
-
-from app.admin_task_expert_routes import admin_task_expert_router
-app.include_router(admin_task_expert_router)
 
 # 跳蚤市场路由
 from app.flea_market_routes import flea_market_router
