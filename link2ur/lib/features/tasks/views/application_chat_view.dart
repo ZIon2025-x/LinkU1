@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -25,6 +27,7 @@ import '../../../data/services/websocket_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/loading_view.dart';
+import '../../chat/widgets/image_send_confirm_dialog.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/utils/helpers.dart';
 import '../../task_expert/bloc/task_expert_bloc.dart';
@@ -113,6 +116,9 @@ class _ApplicationChatContent extends StatefulWidget {
 class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  final _imagePicker = ImagePicker();
+  // 和普通任务聊天保持一致:相册一次最多 9 张
+  static const int _kMaxGalleryImages = 9;
 
   String? _currentUserId;
   List<Message> _messages = []; // 新→旧排序（配合 reverse ListView）
@@ -333,6 +339,98 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 content: Text(context.localizeError('task_send_message_failed'))),
           );
         }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSendingMessage = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.localizeError('task_send_message_failed'))),
+      );
+    }
+  }
+
+  /// 图片是否允许发送(price_locked 锁定期间禁用,避免支付中途干扰)
+  bool get _isImageDisabled {
+    if (_isSendingMessage) return true;
+    if (!widget.isConsultation) return false;
+    return _consultationApp?['status'] == 'price_locked';
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    if (_isImageDisabled) return;
+    final images = await _imagePicker.pickMultiImage(
+      imageQuality: 70,
+      maxWidth: 1200,
+      limit: _kMaxGalleryImages,
+    );
+    if (images.isEmpty || !mounted) return;
+    final toSend = images
+        .take(_kMaxGalleryImages)
+        .where((f) => f.path.isNotEmpty)
+        .toList();
+    for (final file in toSend) {
+      if (!mounted) break;
+      await _sendImage(await file.readAsBytes(), file.name);
+    }
+  }
+
+  Future<void> _pickCameraImage() async {
+    if (_isImageDisabled) return;
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70,
+      maxWidth: 1200,
+    );
+    if (image == null || !mounted) return;
+    final confirmed = await showImageSendConfirmDialog(context, image);
+    if (confirmed == true && mounted) {
+      await _sendImage(await image.readAsBytes(), image.name);
+    }
+  }
+
+  /// 上传图片到 `/api/upload/image`,再发送一条 message_type=image 的消息。
+  /// 与普通任务聊天 ChatBloc._onSendImage 对齐,额外带 application_id 进咨询上下文。
+  Future<void> _sendImage(Uint8List bytes, String filename) async {
+    if (!mounted) return;
+    setState(() => _isSendingMessage = true);
+    // 先从 context 拿依赖,再跨 await 使用,避免 widget dispose 后访问失效 context
+    final messageRepo = context.read<MessageRepository>();
+    final apiService = context.read<ApiService>();
+    try {
+      final imageUrl = await messageRepo.uploadImage(bytes, filename);
+      if (imageUrl.isEmpty) {
+        throw Exception('upload_returned_empty_url');
+      }
+
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.taskChatSend(widget.taskId),
+        data: {
+          'content': '',
+          'message_type': 'image',
+          'attachments': [
+            {
+              'attachment_type': 'image',
+              'url': imageUrl,
+              'meta': {'filename': filename},
+            }
+          ],
+          if (_consultationActions?.needsApplicationIdInMessages ?? true)
+            'application_id': widget.applicationId,
+        },
+      );
+
+      if (!mounted) return;
+      if (response.isSuccess && response.data != null) {
+        final message = Message.fromJson(response.data!);
+        setState(() {
+          _messages = [message, ..._messages];
+          _isSendingMessage = false;
+        });
+      } else {
+        setState(() => _isSendingMessage = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.localizeError('task_send_message_failed'))),
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -1098,6 +1196,18 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       child: SafeArea(
         child: Row(
           children: [
+            IconButton(
+              icon: const Icon(Icons.image_outlined),
+              tooltip: context.l10n.chatImageLabel,
+              onPressed: _isImageDisabled ? null : _pickImageFromGallery,
+              color: AppColors.primary,
+            ),
+            IconButton(
+              icon: const Icon(Icons.camera_alt_outlined),
+              tooltip: context.l10n.chatCameraLabel,
+              onPressed: _isImageDisabled ? null : _pickCameraImage,
+              color: AppColors.primary,
+            ),
             Expanded(
               child: TextField(
                 controller: _messageController,
