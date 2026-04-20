@@ -225,6 +225,88 @@ def finalize_consultation_on_payment_success(
 # ─────────────────────────────────────────────────────────────
 # 解锁阶段 — webhook 支付失败/取消回调 或 超时扫描
 # ─────────────────────────────────────────────────────────────
+def close_placeholders_for_task(
+    db: Session,
+    *,
+    original_task_id: int,
+    exclude_t2_id: Optional[int] = None,
+    reason_zh: str = "任务已被其他申请者接下,咨询自动关闭",
+    reason_en: str = "Task assigned to another applicant. Consultation auto-closed.",
+    system_action: str = "consultation_auto_closed_on_task_assigned",
+) -> int:
+    """
+    原任务 T 不再 open(被批准/取消/完成)时,把所有指向它的 task_consultation
+    占位任务一并归档:
+    - 找 Task.original_task_id == original_task_id AND is_consultation_placeholder=True
+    - 排除 exclude_t2_id(通常是刚走了 finalize 的那一个,避免重复)
+    - 只归档 status 还在 consulting/open 的占位;已 closed/cancelled 的跳过
+    - 每个占位:t2.status='closed' + 活跃 TA2 status='cancelled' + 系统消息
+
+    不 commit,调用方统一事务。返回归档的占位数量。
+    """
+    from sqlalchemy import update
+
+    placeholders_q = db.query(models.Task).filter(
+        models.Task.original_task_id == original_task_id,
+        models.Task.is_consultation_placeholder == True,  # noqa: E712
+        models.Task.status != "closed",
+    )
+    if exclude_t2_id is not None:
+        placeholders_q = placeholders_q.filter(models.Task.id != exclude_t2_id)
+    placeholders = placeholders_q.all()
+
+    if not placeholders:
+        return 0
+
+    current_time = get_utc_time()
+    closed_count = 0
+    for t2 in placeholders:
+        t2.status = "closed"
+        closed_count += 1
+
+        # 把该 T2 上还"活着"的 TA2 都 cancel 掉
+        db.query(models.TaskApplication).filter(
+            models.TaskApplication.task_id == t2.id,
+            models.TaskApplication.status.in_([
+                "consulting",
+                "negotiating",
+                "price_agreed",
+                CONSULTATION_STATUS_PRICE_LOCKED,
+                "pending",
+                "chatting",
+            ]),
+        ).update(
+            {"status": "cancelled"},
+            synchronize_session=False,
+        )
+
+        # 系统消息 — 让双方 UI 立刻看到"咨询关闭,任务已成交"
+        sys_msg = models.Message(
+            task_id=t2.id,
+            application_id=None,
+            sender_id=None,
+            receiver_id=None,
+            content=reason_zh,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps(
+                {
+                    "system_action": system_action,
+                    "content_en": reason_en,
+                    "original_task_id": original_task_id,
+                }
+            ),
+            created_at=current_time,
+        )
+        db.add(sys_msg)
+
+    logger.info(
+        f"[close-placeholders] 原任务 {original_task_id} 归档 {closed_count} 个咨询占位 "
+        f"(exclude={exclude_t2_id}, reason={system_action})"
+    )
+    return closed_count
+
+
 def unlock_consultation_on_payment_failure(
     db: Session,
     *,

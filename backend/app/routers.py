@@ -7602,6 +7602,26 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     f"T2={_consult_t2_id} TA2={_consult_ta2_id} err={_cf_err}"
                                 )
 
+                        # 原任务 T 已确定接单人,把其他指向 T 的咨询占位全部归档
+                        # (一个申请者被选中 → 其他申请者的咨询聊天自动关闭,避免挂着假状态)
+                        # 同时覆盖两条入口:consult-approve(上面已跳过刚归档的 T2) 和普通 accept_application
+                        try:
+                            from app.consultation.approval import (
+                                close_placeholders_for_task,
+                            )
+                            close_placeholders_for_task(
+                                db,
+                                original_task_id=task_id,
+                                exclude_t2_id=(
+                                    int(_consult_t2_id) if _consult_t2_id else None
+                                ),
+                            )
+                        except Exception as _cp_err:
+                            logger.warning(
+                                f"⚠️ [WEBHOOK] 批量归档其他咨询占位失败(不阻断主流程): "
+                                f"task_id={task_id} err={_cp_err}"
+                            )
+
                         # 写入操作日志
                         from app.utils.time_utils import get_utc_time
                         log_entry = models.NegotiationResponseLog(
