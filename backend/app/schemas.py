@@ -3846,7 +3846,9 @@ class CategoryInfo(BaseModel):
     """板块基本信息"""
     id: int
     name: str
-    
+    name_en: Optional[str] = None
+    name_zh: Optional[str] = None
+
     class Config:
         from_attributes = True
 

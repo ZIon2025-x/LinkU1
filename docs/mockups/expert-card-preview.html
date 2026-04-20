@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>首页 · 发现更多 · 达人卡片预览</title>
+<style>
+  :root {
+    --bg: #F5F6F8;
+    --card: #FFFFFF;
+    --text: #1C1C1E;
+    --muted: #6B7280;
+    --tertiary: #9CA3AF;
+    --primary: #2563EB;
+    --primary-soft: #DBEAFE;
+    --accent: #F97316;
+    --success: #10B981;
+    --warn: #F59E0B;
+    --line: #EEF0F3;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .phone {
+    max-width: 420px;
+    margin: 24px auto;
+    background: var(--bg);
+    padding: 16px 14px 40px;
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 18px 4px 12px;
+  }
+  .section-head h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .section-head .more {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* 个性化提示条 */
+  .reco-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    margin: 0 4px 12px;
+    background: linear-gradient(90deg, #EEF4FF 0%, #F3EEFF 100%);
+    border-radius: 10px;
+    font-size: 12px;
+    color: #4B5563;
+  }
+  .reco-hint .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--primary);
+  }
+
+  /* 瀑布流 */
+  .grid {
+    column-count: 2;
+    column-gap: 10px;
+  }
+  .grid > * {
+    break-inside: avoid;
+    margin-bottom: 10px;
+    display: inline-block;
+    width: 100%;
+  }
+
+  /* 达人卡片 */
+  .expert-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: transform .15s ease;
+  }
+  .expert-card:active { transform: scale(.985); }
+
+  .cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: linear-gradient(135deg, #A7C7FF 0%, #E0CBFF 100%);
+    overflow: hidden;
+  }
+  .cover.cook  { background: linear-gradient(135deg, #FFD6A5, #FF9F68); }
+  .cover.tutor { background: linear-gradient(135deg, #BEE3DB, #7FD1B9); }
+  .cover.beauty{ background: linear-gradient(135deg, #FBC2EB, #A18CD1); }
+  .cover.move  { background: linear-gradient(135deg, #D1E4FF, #89B4FF); }
+  .cover.photo { background: linear-gradient(135deg, #FFE29F, #FFA99F); }
+
+  .cover .avatar {
+    position: absolute;
+    left: 10px; bottom: 10px;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background: #fff center/cover no-repeat;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #fff;
+  }
+
+  .badges {
+    position: absolute;
+    top: 8px; left: 8px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 7px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    backdrop-filter: blur(6px);
+  }
+  .badge.verified { background: var(--success); }
+  .badge.official { background: var(--primary); }
+  .badge.featured { background: var(--accent); }
+
+  .open-status {
+    position: absolute;
+    top: 8px; right: 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 7px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.9);
+  }
+  .open-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  .open-status.closed .dot { background: var(--tertiary); }
+  .open-status.closed { color: var(--muted); }
+
+  .body {
+    padding: 10px 12px 12px;
+  }
+  .name-row {
+    display: flex; align-items: center; gap: 4px;
+    margin-bottom: 4px;
+  }
+  .name {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .name-row svg { flex-shrink: 0; }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .meta .sep { color: var(--tertiary); }
+  .meta .loc { display: inline-flex; align-items: center; gap: 2px; }
+
+  .tags {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 500;
+  }
+
+  .stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stats .rating {
+    color: var(--warn);
+    font-weight: 700;
+  }
+  .stats .rating svg { vertical-align: -2px; }
+
+  .reason {
+    margin-top: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: #FEF3C7;
+    color: #92400E;
+    font-size: 10.5px;
+    line-height: 1.3;
+    display: flex; align-items: flex-start; gap: 4px;
+  }
+  .reason.loc { background: #DCFCE7; color: #166534; }
+  .reason.cat { background: #E0E7FF; color: #3730A3; }
+  .reason.follow { background: #FCE7F3; color: #9D174D; }
+
+  .legend {
+    margin: 30px auto 0;
+    max-width: 420px;
+    padding: 14px 16px;
+    background: #fff;
+    border-radius: 12px;
+    font-size: 12.5px;
+    color: #374151;
+    line-height: 1.7;
+  }
+  .legend h3 { margin: 0 0 8px; font-size: 13px; }
+  .legend code { background: #F3F4F6; padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+</style>
+</head>
+<body>
+  <div class="phone">
+
+    <div class="section-head">
+      <h2>发现更多</h2>
+      <span class="more">查看全部 ›</span>
+    </div>
+
+    <div class="reco-hint">
+      <span class="dot"></span>
+      根据你关注的类型「家政 · 辅导」和位置「伯明翰」为你推荐
+    </div>
+
+    <div class="grid">
+
+      <!-- Card 1: 官方 + 同城推荐 -->
+      <div class="expert-card">
+        <div class="cover cook">
+          <div class="badges">
+            <span class="badge official">官方</span>
+            <span class="badge verified">✓ 认证</span>
+          </div>
+          <span class="open-status"><span class="dot"></span>营业中</span>
+          <div class="avatar" style="background-color:#FF7A59;">林</div>
+        </div>
+        <div class="body">
+          <div class="name-row">
+            <div class="name">林家厨房 · 地道中餐</div>
+          </div>
+          <div class="meta">
+            <span>家政 · 烹饪</span>
+            <span class="sep">·</span>
+            <span class="loc">📍 伯明翰 · 3.2km</span>
+          </div>
+          <div class="tags">
+            <span class="tag">川菜</span>
+            <span class="tag">年夜饭</span>
+            <span class="tag">到家服务</span>
+          </div>
+          <div class="stats">
+            <span class="rating">★ 4.9</span>
+            <span>完成 128 单</span>
+          </div>
+          <div class="reason loc">📍 距离你只有 3.2km</div>
+        </div>
+      </div>
+
+      <!-- Card 2: 类型匹配 -->
+      <div class="expert-card">
+        <div class="cover tutor">
+          <div class="badges">
+            <span class="badge verified">✓ 认证</span>
+          </div>
+          <span class="open-status"><span class="dot"></span>营业中</span>
+          <div class="avatar" style="background-color:#2D9B7F;">Li</div>
+        </div>
+        <div class="body">
+          <div class="name-row">
+            <div class="name">Liam 留学辅导工作室</div>
+          </div>
+          <div class="meta">
+            <span>教育 · 辅导</span>
+            <span class="sep">·</span>
+            <span class="loc">📍 伦敦</span>
+          </div>
+          <div class="tags">
+            <span class="tag">A-Level</span>
+            <span class="tag">数学</span>
+            <span class="tag">物理</span>
+          </div>
+          <div class="stats">
+            <span class="rating">★ 4.8</span>
+            <span>完成 74 单</span>
+          </div>
+          <div class="reason cat">🎯 你常浏览「辅导」类达人</div>
+        </div>
+      </div>
+
+      <!-- Card 3: 精选 featured -->
+      <div class="expert-card">
+        <div class="cover beauty">
+          <div class="badges">
+            <span class="badge featured">★ 精选</span>
+          </div>
+          <span class="open-status closed"><span class="dot"></span>打烊中</span>
+          <div class="avatar" style="background-color:#8E6ACB;">M</div>
+        </div>
+        <div class="body">
+          <div class="name-row">
+            <div class="name">Mia 造型 · 上门美甲</div>
+          </div>
+          <div class="meta">
+            <span>生活 · 美业</span>
+            <span class="sep">·</span>
+            <span class="loc">📍 曼彻斯特</span>
+          </div>
+          <div class="tags">
+            <span class="tag">美甲</span>
+            <span class="tag">新娘妆</span>
+          </div>
+          <div class="stats">
+            <span class="rating">★ 5.0</span>
+            <span>完成 42 单</span>
+          </div>
+          <div class="reason">✨ 本周人气上升</div>
+        </div>
+      </div>
+
+      <!-- Card 4: 同城 -->
+      <div class="expert-card">
+        <div class="cover move">
+          <div class="badges">
+            <span class="badge verified">✓ 认证</span>
+          </div>
+          <div class="avatar" style="background-color:#3B7DDE;">快</div>
+        </div>
+        <div class="body">
+          <div class="name-row">
+            <div class="name">快搬到家 · 留学生搬家</div>
+          </div>
+          <div class="meta">
+            <span>生活 · 搬运</span>
+            <span class="sep">·</span>
+            <span class="loc">📍 伯明翰 · 1.8km</span>
+          </div>
+          <div class="tags">
+            <span class="tag">宿舍搬家</span>
+            <span class="tag">回国打包</span>
+          </div>
+          <div class="stats">
+            <span class="rating">★ 4.7</span>
+            <span>完成 215 单</span>
+          </div>
+          <div class="reason loc">📍 同城达人 · 伯明翰</div>
+        </div>
+      </div>
+
+      <!-- Card 5: 我关注的类型 -->
+      <div class="expert-card">
+        <div class="cover photo">
+          <div class="badges">
+            <span class="badge verified">✓ 认证</span>
+            <span class="badge featured">★ 精选</span>
+          </div>
+          <span class="open-status"><span class="dot"></span>营业中</span>
+          <div class="avatar" style="background-color:#E07A5F;">摄</div>
+        </div>
+        <div class="body">
+          <div class="name-row">
+            <div class="name">镜界 Studio · 毕业写真</div>
+          </div>
+          <div class="meta">
+            <span>生活 · 摄影</span>
+            <span class="sep">·</span>
+            <span class="loc">📍 爱丁堡</span>
+          </div>
+          <div class="tags">
+            <span class="tag">毕业照</span>
+            <span class="tag">旅拍</span>
+            <span class="tag">约拍</span>
+          </div>
+          <div class="stats">
+            <span class="rating">★ 4.9</span>
+            <span>完成 58 单</span>
+          </div>
+          <div class="reason follow">👥 12 位你关注的人收藏了</div>
+        </div>
+      </div>
+
+      <!-- Card 6: 新达人 -->
+      <div class="expert-card">
+        <div class="cover">
+          <div class="badges">
+            <span class="badge" style="background: #6366F1;">新达人</span>
+          </div>
+          <div class="avatar" style="background-color:#6366F1;">音</div>
+        </div>
+        <div class="body">
+          <div class="name-row">
+            <div class="name">音悦琴行 · 一对一</div>
+          </div>
+          <div class="meta">
+            <span>教育 · 音乐</span>
+            <span class="sep">·</span>
+            <span class="loc">📍 伯明翰</span>
+          </div>
+          <div class="tags">
+            <span class="tag">钢琴</span>
+            <span class="tag">吉他</span>
+          </div>
+          <div class="stats">
+            <span class="rating">★ 新</span>
+            <span>刚开业</span>
+          </div>
+          <div class="reason loc">📍 同城新上线</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <h3>卡片信息层（按重要性）</h3>
+    <ol style="padding-left: 18px; margin: 0;">
+      <li>封面/主题色 + 头像 + <code>官方/认证/精选/新达人</code> 角标</li>
+      <li>实时 <code>营业中/打烊中</code>（由 <code>business_hours</code> 后端计算）</li>
+      <li>团队名（单行省略）</li>
+      <li>分类 · 位置（有经纬度时显示距离）</li>
+      <li>技能标签（最多 2–3 个，取 <code>featured_skills</code>）</li>
+      <li>评分 ★ · 完单数</li>
+      <li><b>推荐理由</b>（个性化文案，最多 1 行）</li>
+    </ol>
+    <h3 style="margin-top: 14px;">个性化信号</h3>
+    <ul style="padding-left: 18px; margin: 0;">
+      <li><b>位置</b>：同城 / 附近 km（<code>users.city</code> + <code>experts.latitude/longitude</code>）</li>
+      <li><b>类型</b>：基于用户近期浏览的 <code>expert.category</code> / <code>task_type</code></li>
+      <li><b>社交</b>：我关注的人收藏过（<code>ExpertFollow</code> + <code>UserFollow</code>）</li>
+      <li><b>热度</b>：近 7 天完单增速 / 收藏增速（兜底，冷启动用）</li>
+    </ul>
+  </div>
+</body>
+</html>

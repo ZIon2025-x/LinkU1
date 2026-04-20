@@ -387,11 +387,21 @@ class TranslationManager:
                 return translator_class_or_factory(appid=appid, secret=secret, source=source_lang, target=target_lang)
             elif service == TranslationService.DEEPL:
                 # DeepL翻译（需要API密钥）
+                # DeepL 只认 'zh'，不认 'zh-CN'/'zh-TW' 等区域子标签
+                def normalize_lang_for_deepl(lang: str) -> str:
+                    if not lang or lang == 'auto':
+                        return 'en'
+                    low = lang.lower()
+                    if low.startswith('zh'):
+                        return 'zh'
+                    # 去掉区域后缀（en-US -> en），DeepL 接受基础代码
+                    return low.split('-')[0]
+
                 api_key = getattr(settings, 'DEEPL_API_KEY', '')
                 if api_key:
                     return translator_class_or_factory(
-                        source=source_lang if source_lang != 'auto' else 'en',
-                        target=target_lang,
+                        source=normalize_lang_for_deepl(source_lang),
+                        target=normalize_lang_for_deepl(target_lang),
                         api_key=api_key
                     )
                 return None
