@@ -93,6 +93,23 @@ class DiscoveryFeedItem extends Equatable {
   /// 是否是排行榜
   bool get isRanking => feedType == 'ranking';
 
+  /// 是否是达人推荐卡
+  bool get isExpert => feedType == 'expert';
+
+  // Expert-specific getters (from extra_data)
+  String? get expertCategory => extraData?['category'] as String?;
+  String? get expertLocation => extraData?['location'] as String?;
+  int? get expertCompletedTasks => extraData?['completed_tasks'] as int?;
+  List<String> get expertFeaturedSkills =>
+      (extraData?['featured_skills'] as List?)?.cast<String>() ?? const [];
+  List<String> get expertFeaturedSkillsEn =>
+      (extraData?['featured_skills_en'] as List?)?.cast<String>() ?? const [];
+  bool get expertIsOfficial => extraData?['is_official'] == true;
+  bool get expertIsVerified => extraData?['is_verified'] == true;
+  bool get expertIsFeatured => extraData?['is_featured'] == true;
+  /// 推荐理由码：same_city / category_match / featured / null
+  String? get expertReasonCode => extraData?['reason_code'] as String?;
+
   /// 是否是达人服务
   bool get isService => feedType == 'service';
 

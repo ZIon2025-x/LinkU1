@@ -623,160 +623,343 @@ class _ServiceReviewCard extends StatelessWidget {
 }
 
 // =============================================================================
-// 卡片类型 5: 排行榜卡片
+// 卡片类型 5: 达人推荐卡片（取代排行榜）
 // =============================================================================
 
-class _RankingCard extends StatelessWidget {
-  const _RankingCard({required this.item});
+/// 类别 → 渐变色映射（封面 cover_image 为空时的兜底）
+const Map<String, List<Color>> _kExpertCategoryGradient = {
+  'cooking':       [Color(0xFFFFD6A5), Color(0xFFFF9F68)],
+  'tutoring':      [Color(0xFFBEE3DB), Color(0xFF7FD1B9)],
+  'beauty':        [Color(0xFFFBC2EB), Color(0xFFA18CD1)],
+  'moving':        [Color(0xFFD1E4FF), Color(0xFF89B4FF)],
+  'photography':   [Color(0xFFFFE29F), Color(0xFFFFA99F)],
+  'music':         [Color(0xFFC7CEEA), Color(0xFF8E9AEA)],
+  'cleaning':      [Color(0xFFB5EAD7), Color(0xFF7FD1B9)],
+  'repair':        [Color(0xFFE2D1F9), Color(0xFFB8A1D9)],
+  'translation':   [Color(0xFFFFE8D6), Color(0xFFFFB5A7)],
+  'others':        [Color(0xFFE5E7EB), Color(0xFFCBD5E1)],
+};
+
+List<Color> _expertGradientFor(String? category) {
+  if (category == null || category.isEmpty) return _kExpertCategoryGradient['others']!;
+  return _kExpertCategoryGradient[category.toLowerCase()] ??
+      _kExpertCategoryGradient['others']!;
+}
+
+class _ExpertCard extends StatelessWidget {
+  const _ExpertCard({required this.item});
   final DiscoveryFeedItem item;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
-    final top3 = item.top3;
+    final l10n = context.l10n;
+    final name = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final cover = item.firstImage;
+    final avatar = item.userAvatar;
+    final category = item.expertCategory;
+    final location = item.expertLocation;
+    final rating = item.rating;
+    final completed = item.expertCompletedTasks ?? 0;
+    final skills = locale.languageCode.startsWith('zh')
+        ? item.expertFeaturedSkills
+        : (item.expertFeaturedSkillsEn.isNotEmpty
+            ? item.expertFeaturedSkillsEn
+            : item.expertFeaturedSkills);
 
     return Semantics(
       button: true,
-      label: 'View ranking',
+      label: 'View expert',
       excludeSemantics: true,
       child: GestureDetector(
         onTap: () {
-          final id = item.id.replaceFirst('ranking_', '');
-          context.push('/leaderboard/$id');
+          final expertId = item.expertId ?? item.id.replaceFirst('expert_', '');
+          if (expertId.isNotEmpty) {
+            context.push('/expert-teams/$expertId');
+          }
         },
         child: Container(
           decoration: BoxDecoration(
-            gradient: isDark
-              ? null
-              : const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFF8F7FF), Color(0xFFFEFCE8)],
-                ),
-          color: isDark ? AppColors.cardBackgroundDark : null,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.hasImages)
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── 封面（cover_image 或 类别渐变兜底）──
               LayoutBuilder(
                 builder: (context, constraints) {
                   final w = constraints.maxWidth;
-                  final h = w * 9 / 16;
-                  return ClipRect(
-                    child: AsyncImageView(
-                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
-                      fallbackUrl: Helpers.getImageUrl(item.firstImage!),
-                      width: w,
-                      height: h,
-                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                  final h = w * 3 / 4;
+                  return SizedBox(
+                    width: w,
+                    height: h,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (cover != null && cover.isNotEmpty)
+                          AsyncImageView(
+                            imageUrl: Helpers.getThumbnailUrl(cover),
+                            fallbackUrl: Helpers.getImageUrl(cover),
+                            width: w,
+                            height: h,
+                            memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                          )
+                        else
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: _expertGradientFor(category),
+                              ),
+                            ),
+                          ),
+                        // 左上角徽章（官方/认证/精选）
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: [
+                              if (item.expertIsOfficial)
+                                _ExpertBadge(
+                                  label: l10n.discoveryExpertBadgeOfficial,
+                                  color: const Color(0xFF2563EB),
+                                ),
+                              if (item.expertIsVerified)
+                                _ExpertBadge(
+                                  label: l10n.discoveryExpertBadgeVerified,
+                                  color: const Color(0xFF10B981),
+                                  icon: Icons.verified,
+                                ),
+                              if (item.expertIsFeatured)
+                                _ExpertBadge(
+                                  label: l10n.discoveryExpertBadgeFeatured,
+                                  color: const Color(0xFFF97316),
+                                  icon: Icons.star,
+                                ),
+                            ],
+                          ),
+                        ),
+                        // 左下角头像
+                        if (avatar != null && avatar.isNotEmpty)
+                          Positioned(
+                            left: 8,
+                            bottom: 8,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 3,
+                                  ),
+                                ],
+                              ),
+                              clipBehavior: Clip.hardEdge,
+                              child: AsyncImageView(
+                                imageUrl: Helpers.getImageUrl(avatar),
+                                width: 40,
+                                height: 40,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   );
                 },
               ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _FeedTypeBadge(feedType: 'ranking'),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.emoji_events,
-                          size: 16, color: AppColors.warning),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          Helpers.normalizeContentNewlines(item.displayTitle(locale)),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
-                          ),
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 名称
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    if (category != null || (location != null && location.isNotEmpty)) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        [
+                          if (category != null && category.isNotEmpty) category,
+                          if (location != null && location.isNotEmpty) location,
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
                         ),
                       ),
                     ],
-                  ),
-                  if (top3 != null && top3.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ...top3.take(3).toList().asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final data = entry.value;
-                      final rankLabels = [
-                        context.l10n.leaderboardRankFirst,
-                        context.l10n.leaderboardRankSecond,
-                        context.l10n.leaderboardRankThird,
-                      ];
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (i > 0) Divider(height: 1, color: isDark ? AppColors.secondaryBackgroundDark : const Color(0xFFE5E7EB)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              children: [
-                                Text(
-                                  rankLabels[i],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2563EB),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    data['name']?.toString() ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? AppColors.textPrimaryDark
-                                          : AppColors.textPrimaryLight,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  context.l10n.leaderboardNetVotesCount(
-                                    ((data['rating'] as num?)?.round() ?? 0),
-                                  ),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isDark
-                                        ? AppColors.textTertiaryDark
-                                        : AppColors.textTertiaryLight,
-                                  ),
-                                ),
-                              ],
+                    // 技能标签
+                    if (skills.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 3,
+                        children: skills.take(3).map((s) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDBEAFE),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            s,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF2563EB),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
+                        )).toList(),
+                      ),
+                    ],
+                    // 评分 · 完单数
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        if (rating != null && rating > 0) ...[
+                          const Icon(Icons.star_rounded,
+                              size: 14, color: Color(0xFFFFB300)),
+                          const SizedBox(width: 2),
+                          Text(
+                            rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFFFB300),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                         ],
-                      );
-                    }),
+                        Text(
+                          l10n.discoveryExpertCompletedTasks(completed),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // 推荐理由
+                    if (item.expertReasonCode != null) ...[
+                      const SizedBox(height: 8),
+                      _ExpertReasonStrip(code: item.expertReasonCode!),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _ExpertBadge extends StatelessWidget {
+  const _ExpertBadge({required this.label, required this.color, this.icon});
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 10, color: Colors.white),
+            const SizedBox(width: 2),
+          ],
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExpertReasonStrip extends StatelessWidget {
+  const _ExpertReasonStrip({required this.code});
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    String? label;
+    Color bg;
+    Color fg;
+    switch (code) {
+      case 'same_city':
+        label = '📍 ${l10n.discoveryExpertReasonSameCity}';
+        bg = const Color(0xFFDCFCE7);
+        fg = const Color(0xFF166534);
+        break;
+      case 'category_match':
+        label = '🎯 ${l10n.discoveryExpertReasonCategoryMatch}';
+        bg = const Color(0xFFE0E7FF);
+        fg = const Color(0xFF3730A3);
+        break;
+      case 'featured':
+        label = '✨ ${l10n.discoveryExpertReasonFeatured}';
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFF92400E);
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10.5, color: fg, height: 1.3),
       ),
     );
   }

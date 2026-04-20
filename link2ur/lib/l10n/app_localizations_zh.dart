@@ -7470,6 +7470,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoveryFeedTypeRanking => '排行榜';
 
   @override
+  String get discoveryFeedTypeExpert => '达人';
+
+  @override
+  String get discoveryExpertBadgeOfficial => '官方';
+
+  @override
+  String get discoveryExpertBadgeVerified => '认证';
+
+  @override
+  String get discoveryExpertBadgeFeatured => '精选';
+
+  @override
+  String get discoveryExpertReasonSameCity => '同城达人';
+
+  @override
+  String get discoveryExpertReasonCategoryMatch => '匹配你感兴趣的类型';
+
+  @override
+  String get discoveryExpertReasonFeatured => '本周精选';
+
+  @override
+  String discoveryExpertCompletedTasks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '完成 $count 单',
+      zero: '新达人',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get discoveryFeedTypeService => '达人服务';
 
   @override
@@ -20632,6 +20664,38 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get discoveryFeedTypeRanking => '排行榜';
+
+  @override
+  String get discoveryFeedTypeExpert => '達人';
+
+  @override
+  String get discoveryExpertBadgeOfficial => '官方';
+
+  @override
+  String get discoveryExpertBadgeVerified => '認證';
+
+  @override
+  String get discoveryExpertBadgeFeatured => '精選';
+
+  @override
+  String get discoveryExpertReasonSameCity => '同城達人';
+
+  @override
+  String get discoveryExpertReasonCategoryMatch => '符合你感興趣的類型';
+
+  @override
+  String get discoveryExpertReasonFeatured => '本週精選';
+
+  @override
+  String discoveryExpertCompletedTasks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '完成 $count 單',
+      zero: '新達人',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoveryFeedTypeService => '達人服務';

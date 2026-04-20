@@ -14309,6 +14309,54 @@ abstract class AppLocalizations {
   /// **'Leaderboard'**
   String get discoveryFeedTypeRanking;
 
+  /// No description provided for @discoveryFeedTypeExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get discoveryFeedTypeExpert;
+
+  /// No description provided for @discoveryExpertBadgeOfficial.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get discoveryExpertBadgeOfficial;
+
+  /// No description provided for @discoveryExpertBadgeVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get discoveryExpertBadgeVerified;
+
+  /// No description provided for @discoveryExpertBadgeFeatured.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get discoveryExpertBadgeFeatured;
+
+  /// No description provided for @discoveryExpertReasonSameCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby in your city'**
+  String get discoveryExpertReasonSameCity;
+
+  /// No description provided for @discoveryExpertReasonCategoryMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches your interests'**
+  String get discoveryExpertReasonCategoryMatch;
+
+  /// No description provided for @discoveryExpertReasonFeatured.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured this week'**
+  String get discoveryExpertReasonFeatured;
+
+  /// No description provided for @discoveryExpertCompletedTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{New} one{1 completed} other{{count} completed}}'**
+  String discoveryExpertCompletedTasks(int count);
+
   /// No description provided for @discoveryFeedTypeService.
   ///
   /// In en, this message translates to:

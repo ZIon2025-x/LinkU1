@@ -143,7 +143,7 @@ async def get_discovery_feed(
         ("flea market items", lambda: _fetch_flea_market_items(db, fetch_limit, current_user=current_user)),
         ("competitor reviews", lambda: _fetch_competitor_reviews(db, fetch_limit, current_user=current_user)),
         ("service reviews", lambda: _fetch_service_reviews(db, fetch_limit, current_user=current_user)),
-        ("rankings", lambda: _fetch_rankings(db, fetch_limit)),
+        ("experts", lambda: _fetch_experts(db, fetch_limit)),
         ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
         ("tasks", lambda: _fetch_tasks(db, fetch_limit, current_user, recommendation_scores)),
         ("activities", lambda: _fetch_activities(db, fetch_limit, current_user)),
@@ -626,108 +626,101 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int, current_user=None
     return items
 
 
-async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
-    """获取热门排行榜（含 TOP 3）
-    注意:
-    - CustomLeaderboard 没有 is_deleted，用 status == 'active' 过滤
-    - LeaderboardItem 没有 image_url/average_rating/review_count/is_deleted
-    - 用 net_votes 排序替代 average_rating
-    - 用 LeaderboardItem.images 替代 image_url
-    - 用 status == 'approved' 过滤替代 is_deleted == False
+async def _fetch_experts(db: AsyncSession, limit: int) -> list:
+    """获取推荐达人团队（首页发现 Feed 卡片）
+
+    卡片元数据：封面图 cover_image、团队头像、名字、分类、位置、评分、完单数、
+    featured_skills、徽章（精选/认证/官方）。封面为空时前端按 category 渐变兜底。
+
+    排序由 _compute_score_with_prefs 统一处理（同城 × 类别匹配 × 兴趣匹配），
+    这里只负责拉取候选集，多取一些让 shuffle 有得挑。
     """
+    from app.models_expert import Expert, FeaturedExpertV2
+
     query = (
         select(
-            models.CustomLeaderboard.id,
-            models.CustomLeaderboard.name,
-            getattr(models.CustomLeaderboard, "name_zh", None).label("name_zh"),
-            getattr(models.CustomLeaderboard, "name_en", None).label("name_en"),
-            models.CustomLeaderboard.description,
-            getattr(models.CustomLeaderboard, "description_zh", None).label("description_zh"),
-            getattr(models.CustomLeaderboard, "description_en", None).label("description_en"),
-            models.CustomLeaderboard.cover_image,
-            models.CustomLeaderboard.location,
-            models.CustomLeaderboard.applicant_id,
-            models.CustomLeaderboard.created_at,
-            models.User.name.label("user_name"),
-            models.User.avatar.label("user_avatar"),
+            Expert.id,
+            Expert.name,
+            Expert.name_en,
+            Expert.name_zh,
+            Expert.bio,
+            Expert.bio_en,
+            Expert.bio_zh,
+            Expert.avatar,
+            Expert.cover_image,
+            Expert.category,
+            Expert.location,
+            Expert.latitude,
+            Expert.longitude,
+            Expert.rating,
+            Expert.completed_tasks,
+            Expert.featured_skills,
+            Expert.featured_skills_en,
+            Expert.is_official,
+            Expert.official_badge,
+            Expert.is_verified,
+            Expert.user_level,
+            Expert.created_at,
+            FeaturedExpertV2.is_featured.label("is_featured"),
         )
-        .join(models.User, models.CustomLeaderboard.applicant_id == models.User.id)
-        .where(models.CustomLeaderboard.status == "active")
-        .order_by(desc(models.CustomLeaderboard.created_at))
+        .outerjoin(FeaturedExpertV2, FeaturedExpertV2.expert_id == Expert.id)
+        .where(Expert.status == "active")
+        .order_by(
+            # 精选置顶，其次按评分和完单量
+            desc(FeaturedExpertV2.is_featured.is_(True)),
+            desc(Expert.rating),
+            desc(Expert.completed_tasks),
+        )
         .limit(limit)
     )
     result = await db.execute(query)
-    rows_list = result.all()
-
-    if not rows_list:
-        return []
-
-    # 批量获取所有排行榜的 approved items（按 net_votes 排序），避免 N+1
-    leaderboard_ids = [row.id for row in rows_list]
-    # 使用窗口函数 ROW_NUMBER 取每个排行榜的 TOP 3
-    row_num = func.row_number().over(
-        partition_by=models.LeaderboardItem.leaderboard_id,
-        order_by=desc(models.LeaderboardItem.net_votes),
-    ).label("rn")
-    sub = (
-        select(
-            models.LeaderboardItem.leaderboard_id,
-            models.LeaderboardItem.name,
-            models.LeaderboardItem.images,
-            models.LeaderboardItem.net_votes,
-            models.LeaderboardItem.upvotes,
-            row_num,
-        )
-        .where(
-            models.LeaderboardItem.leaderboard_id.in_(leaderboard_ids),
-            models.LeaderboardItem.status == "approved",
-        )
-        .subquery()
-    )
-    top3_result = await db.execute(
-        select(sub).where(sub.c.rn <= 3)
-    )
-    # 按 leaderboard_id 分组
-    top3_map: dict[int, list] = {}
-    for item in top3_result:
-        lb_id = item.leaderboard_id
-        if lb_id not in top3_map:
-            top3_map[lb_id] = []
-        top3_map[lb_id].append({
-            "name": item.name,
-            "image": _first_image(item.images),
-            "rating": float(item.net_votes) if item.net_votes else 0,
-            "review_count": item.upvotes or 0,
-        })
+    rows = result.all()
 
     items = []
-    for row in rows_list:
-        top3 = top3_map.get(row.id, [])
-        if not top3:
-            continue
+    for row in rows:
+        cover = row.cover_image
+        images = [cover] if cover else None
 
-        name_zh = getattr(row, "name_zh", None)
-        name_en = getattr(row, "name_en", None)
-        desc_zh = getattr(row, "description_zh", None)
-        desc_en = getattr(row, "description_en", None)
+        bio = (row.bio or "")[:100]
+        bio_zh = (row.bio_zh or "")[:100] if row.bio_zh else None
+        bio_en = (row.bio_en or "")[:100] if row.bio_en else None
+
+        extra = {
+            "category": row.category,
+            "location": row.location,
+            "latitude": float(row.latitude) if row.latitude is not None else None,
+            "longitude": float(row.longitude) if row.longitude is not None else None,
+            "completed_tasks": int(row.completed_tasks or 0),
+            "featured_skills": row.featured_skills or [],
+            "featured_skills_en": row.featured_skills_en or [],
+            "is_official": bool(row.is_official),
+            "official_badge": row.official_badge,
+            "is_verified": bool(row.is_verified),
+            "is_featured": bool(row.is_featured),
+            "user_level": row.user_level,
+            # 默认兜底 reason：精选会覆盖兜底，个性化信号（同城/匹配类别）在 shuffle 阶段再覆盖
+            "reason_code": "featured" if row.is_featured else None,
+        }
+
         items.append({
-            "feed_type": "ranking",
-            "id": f"ranking_{row.id}",
+            "feed_type": "expert",
+            "id": f"expert_{row.id}",
             "title": row.name,
-            "title_zh": name_zh,
-            "title_en": name_en,
-            "description": (row.description or "")[:80],
-            "description_zh": (desc_zh or "")[:80] if desc_zh else None,
-            "description_en": (desc_en or "")[:80] if desc_en else None,
-            "images": [row.cover_image] if row.cover_image else None,
-            "user_id": str(row.applicant_id) if row.applicant_id else None,
-            "user_name": row.user_name,
-            "user_avatar": row.user_avatar,
+            "title_zh": row.name_zh,
+            "title_en": row.name_en,
+            "description": bio,
+            "description_zh": bio_zh,
+            "description_en": bio_en,
+            "images": images,
+            "user_id": None,
+            "user_name": row.name,
+            "user_avatar": row.avatar,
+            "expert_id": row.id,
             "price": None,
             "original_price": None,
             "discount_percentage": None,
             "currency": None,
-            "rating": None,
+            "rating": float(row.rating) if row.rating is not None else None,
             "like_count": None,
             "comment_count": None,
             "upvote_count": None,
@@ -738,7 +731,7 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
             "is_experienced": None,
             "is_favorited": None,
             "user_vote_type": None,
-            "extra_data": {"top3": top3, "location": row.location},
+            "extra_data": extra,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items
@@ -1367,6 +1360,25 @@ def _compute_score_with_prefs(item: dict, user_prefs: set, city_variants: set = 
                 if pref.lower() in title or pref.lower() in desc:
                     pref_matched = True
                     break
+        elif ft == "expert":
+            category = (extra.get("category") or "").lower()
+            if category:
+                for pref in user_prefs:
+                    if pref.lower() == category or pref.lower() in category:
+                        pref_matched = True
+                        break
+            # featured_skills 兜底匹配
+            if not pref_matched:
+                skills = extra.get("featured_skills") or []
+                skills_en = extra.get("featured_skills_en") or []
+                blob = " ".join(s for s in (skills + skills_en) if s).lower()
+                if blob:
+                    for pref in user_prefs:
+                        if pref.lower() in blob:
+                            pref_matched = True
+                            break
+            if pref_matched:
+                extra["reason_code"] = extra.get("reason_code") or "category_match"
         if pref_matched:
             multiplier *= 1.5
 
@@ -1377,7 +1389,7 @@ def _compute_score_with_prefs(item: dict, user_prefs: set, city_variants: set = 
             activity_info = item.get("activity_info") or {}
             loc = activity_info.get("location") or ""
             city_matched = bool(loc) and any(v in loc.lower() for v in city_variants)
-        elif ft == "ranking":
+        elif ft == "expert":
             loc = extra.get("location") or ""
             city_matched = bool(loc) and any(v in loc.lower() for v in city_variants)
         elif ft == "service":
@@ -1393,6 +1405,8 @@ def _compute_score_with_prefs(item: dict, user_prefs: set, city_variants: set = 
 
         if city_matched:
             multiplier *= 1.3
+            # 给前端卡片一个"推荐理由"标记，用于展示「同城」绿色提示条
+            extra["reason_code"] = extra.get("reason_code") or "same_city"
 
     # --- 行为兴趣加分（历史申请/参加过的类型匹配）---
     # user_interest_types 已在调用方预计算为小写 set
@@ -1406,8 +1420,14 @@ def _compute_score_with_prefs(item: dict, user_prefs: set, city_variants: set = 
             category = (extra.get("category") or "").lower()
             if category and category in user_interest_types:
                 interest_matched = True
+        elif ft == "expert":
+            category = (extra.get("category") or "").lower()
+            if category and category in user_interest_types:
+                interest_matched = True
         if interest_matched:
             multiplier *= 1.4
+            if ft == "expert":
+                extra["reason_code"] = extra.get("reason_code") or "category_match"
 
     return base_score * multiplier
 
@@ -1469,7 +1489,7 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
         "product": 1.0,
         "competitor_review": 3.0,
         "service_review": 3.0,
-        "ranking": 2.5,
+        "expert": 2.5,      # 达人推荐（取代原 ranking）
         "service": 1.5,
         "task": 1.5,       # Tasks: medium frequency
         "activity": 2.0,    # Activities: low frequency, higher weight

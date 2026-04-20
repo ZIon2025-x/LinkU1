@@ -3564,6 +3564,17 @@
   "discoveryFeedTypeCompetitorReview": "競品評價",
   "discoveryFeedTypeServiceReview": "服務評價",
   "discoveryFeedTypeRanking": "排行榜",
+  "discoveryFeedTypeExpert": "達人",
+  "discoveryExpertBadgeOfficial": "官方",
+  "discoveryExpertBadgeVerified": "認證",
+  "discoveryExpertBadgeFeatured": "精選",
+  "discoveryExpertReasonSameCity": "同城達人",
+  "discoveryExpertReasonCategoryMatch": "符合你感興趣的類型",
+  "discoveryExpertReasonFeatured": "本週精選",
+  "discoveryExpertCompletedTasks": "{count, plural, =0{新達人} other{完成 {count} 單}}",
+  "@discoveryExpertCompletedTasks": {
+    "placeholders": {"count": {"type": "int"}}
+  },
   "discoveryFeedTypeService": "達人服務",
   "discoveryFeedTypePersonalSkill": "個人技能",
   "mainPublishFleaMarket": "發佈閒置",

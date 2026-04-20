@@ -267,8 +267,8 @@ class _DiscoveryFeedCard extends StatelessWidget {
         return _CompetitorReviewCard(item: item);
       case 'service_review':
         return _ServiceReviewCard(item: item);
-      case 'ranking':
-        return _RankingCard(item: item);
+      case 'expert':
+        return _ExpertCard(item: item);
       case 'service':
         return _ServiceCard(item: item);
       case 'task':
@@ -328,6 +328,8 @@ class _FeedTypeBadge extends StatelessWidget {
         return (_label(context, type), const Color(0xFFFCE7F3), const Color(0xFFDB2777));
       case 'ranking':
         return (_label(context, type), const Color(0xFFDBEAFE), const Color(0xFF2563EB));
+      case 'expert':
+        return (_label(context, type), const Color(0xFFF3E8FF), const Color(0xFF7E22CE));
       case 'service':
         return (_label(context, type), const Color(0xFFFFF7ED), const Color(0xFFEA580C));
       case 'personal_skill':
@@ -356,6 +358,8 @@ class _FeedTypeBadge extends StatelessWidget {
         return '💬 ${l10n.discoveryFeedTypeServiceReview}';
       case 'ranking':
         return '🏆 ${l10n.discoveryFeedTypeRanking}';
+      case 'expert':
+        return '⭐ ${l10n.discoveryFeedTypeExpert}';
       case 'service':
         return '🔧 ${l10n.discoveryFeedTypeService}';
       case 'personal_skill':

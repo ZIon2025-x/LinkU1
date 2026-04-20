@@ -7800,6 +7800,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoveryFeedTypeRanking => 'Leaderboard';
 
   @override
+  String get discoveryFeedTypeExpert => 'Expert';
+
+  @override
+  String get discoveryExpertBadgeOfficial => 'Official';
+
+  @override
+  String get discoveryExpertBadgeVerified => 'Verified';
+
+  @override
+  String get discoveryExpertBadgeFeatured => 'Featured';
+
+  @override
+  String get discoveryExpertReasonSameCity => 'Nearby in your city';
+
+  @override
+  String get discoveryExpertReasonCategoryMatch => 'Matches your interests';
+
+  @override
+  String get discoveryExpertReasonFeatured => 'Featured this week';
+
+  @override
+  String discoveryExpertCompletedTasks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count completed',
+      one: '1 completed',
+      zero: 'New',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get discoveryFeedTypeService => 'Expert Service';
 
   @override
