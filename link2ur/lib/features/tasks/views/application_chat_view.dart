@@ -577,8 +577,16 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   bool _isChatActiveForStatus(String? appStatus) {
     if (appStatus == null) return false;
-    return ['chatting', 'consulting', 'negotiating', 'price_agreed', 'pending']
-        .contains(appStatus);
+    // price_locked: consult-approve 锁定期间,聊天保持可用(文字/图片/等待支付提示),
+    // 不应该显示"此聊天通道已关闭"横幅
+    return [
+      'chatting',
+      'consulting',
+      'negotiating',
+      'price_agreed',
+      'price_locked',
+      'pending',
+    ].contains(appStatus);
   }
 
   @override
