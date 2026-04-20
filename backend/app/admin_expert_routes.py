@@ -107,6 +107,10 @@ async def _create_expert_team_with_owner(
     )
     db.add(member)
 
+    # 先 flush 确保 experts 行先于 forum_categories 落库
+    # （async SA + asyncpg 不保证列级 FK 的 insert 顺序，否则会触发 FK 违反）
+    await db.flush()
+
     # 创建达人板块
     from app.models import ForumCategory
     board = ForumCategory(
