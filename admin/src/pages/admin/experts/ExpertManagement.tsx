@@ -3,13 +3,12 @@ import { message, Modal, Select, Tag, Spin } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
 import api, {
-  getTaskExperts,
-  getTaskExpertForAdmin,
-  updateTaskExpert,
-  deleteTaskExpert,
-  getTaskExpertApplications,
-  reviewTaskExpertApplication,
-  createExpertFromApplication,
+  getExperts,
+  getExpertForAdmin,
+  updateExpert,
+  deleteExpert,
+  getExpertApplications,
+  reviewExpertApplication,
   createExpertTeamByAdmin,
   getProfileUpdateRequests,
   reviewProfileUpdateRequest,
@@ -272,7 +271,7 @@ const ExpertManagement: React.FC = () => {
     try {
       const url = await uploadImageWithCategory(file, 'expert_avatar', createdExpertId);
       // 直接 PUT 到达人记录上
-      await updateTaskExpert(createdExpertId, { avatar: url });
+      await updateExpert(createdExpertId, { avatar: url });
       setCreatedExpertAvatar(url);
       message.success('头像上传成功');
       expertsTable.refresh();
@@ -292,7 +291,7 @@ const ExpertManagement: React.FC = () => {
 
   // ==================== 达人列表 ====================
   const fetchExperts = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
-    const response = await getTaskExperts({ page, size: pageSize });
+    const response = await getExperts({ page, size: pageSize });
     return {
       data: response.task_experts || [],
       total: response.total || 0,
@@ -308,7 +307,7 @@ const ExpertManagement: React.FC = () => {
 
   // ==================== 申请列表 ====================
   const fetchApplications = useCallback(async () => {
-    const response = await getTaskExpertApplications({});
+    const response = await getExpertApplications({});
     return {
       data: response.items || [],
       total: response.total || (response.items || []).length,
@@ -376,7 +375,7 @@ const ExpertManagement: React.FC = () => {
     onSubmit: async (values) => {
       if (!values.item) return;
       if (values.reviewType === 'application') {
-        await reviewTaskExpertApplication(values.item.id, {
+        await reviewExpertApplication(values.item.id, {
           action: values.action,
           review_comment: values.reviewComment || undefined
         });
@@ -411,7 +410,7 @@ const ExpertManagement: React.FC = () => {
         s.split(/[,，\n]/).map((v) => v.trim()).filter(Boolean);
       // 1. 基本字段 + 画像字段 走 PUT /api/admin/experts/{id}
       //    (allowlist 字段对齐 admin_expert_routes.update_expert_admin migration 188 后版本)
-      await updateTaskExpert(values.id, {
+      await updateExpert(values.id, {
         name: values.name,
         name_en: values.name_en || undefined,
         name_zh: values.name_zh || undefined,
@@ -458,10 +457,10 @@ const ExpertManagement: React.FC = () => {
     // 这里再 fetch 一次详情 + 服务列表, 保证编辑面板看到的是最新状态。
     let detail: any = expert;
     try {
-      detail = await getTaskExpertForAdmin(expert.id);
+      detail = await getExpertForAdmin(expert.id);
     } catch (e) {
       // 详情拉取失败时回退用列表行的字段, 不阻塞编辑
-      console.warn('getTaskExpertForAdmin failed, falling back to row data', e);
+      console.warn('getExpertForAdmin failed, falling back to row data', e);
     }
     let services: any[] = [];
     try {
@@ -580,7 +579,7 @@ const ExpertManagement: React.FC = () => {
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await deleteTaskExpert(expertId);
+          await deleteExpert(expertId);
           message.success('达人已删除');
           expertsTable.refresh();
         } catch (error: any) {
@@ -588,53 +587,6 @@ const ExpertManagement: React.FC = () => {
         }
       }
     });
-  };
-
-  const handleCreateFeatured = async (applicationId: number, expertId?: string) => {
-    try {
-      await createExpertFromApplication(applicationId, expertId);
-      message.success('已创建特色任务达人');
-      applicationsTable.refresh();
-      expertsTable.refresh();
-    } catch (error: any) {
-      const detail = error?.response?.data?.detail;
-      const isAmbiguous =
-        error?.response?.status === 422 &&
-        detail &&
-        typeof detail === 'object' &&
-        detail.error_code === 'ambiguous_expert_team' &&
-        Array.isArray(detail.candidates);
-
-      if (isAmbiguous && !expertId) {
-        let selected: string | undefined = detail.candidates[0];
-        Modal.confirm({
-          title: '申请人拥有多个团队',
-          content: (
-            <div>
-              <p style={{ marginTop: 0 }}>请选择要设为精选的团队 ID：</p>
-              <Select
-                defaultValue={selected}
-                style={{ width: '100%' }}
-                onChange={(val: string) => {
-                  selected = val;
-                }}
-                options={detail.candidates.map((id: string) => ({ label: id, value: id }))}
-              />
-            </div>
-          ),
-          okText: '确认',
-          cancelText: '取消',
-          onOk: () => {
-            if (selected) {
-              return handleCreateFeatured(applicationId, selected);
-            }
-          },
-        });
-        return;
-      }
-
-      message.error(getErrorMessage(error));
-    }
   };
 
   // ==================== 达人列表列定义 ====================
@@ -829,14 +781,6 @@ const ExpertManagement: React.FC = () => {
           >
             拒绝
           </button>
-          {record.status === 'approved' && (
-            <button
-              onClick={() => handleCreateFeatured(record.id)}
-              style={{ padding: '3px 8px', border: 'none', background: '#007bff', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-            >
-              创建特色达人
-            </button>
-          )}
         </div>
       ),
     },

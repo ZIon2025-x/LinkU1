@@ -437,7 +437,7 @@ export const updateCheckinSettings = async (settings: {
 
 // ==================== 任务达人管理 API ====================
 
-export const getTaskExperts = async (params?: {
+export const getExperts = async (params?: {
   page?: number;
   size?: number;
   category?: string;
@@ -448,7 +448,7 @@ export const getTaskExperts = async (params?: {
   return { task_experts: res.data.items || [], total: res.data.total || 0 };
 };
 
-export const getTaskExpertForAdmin = async (expertId: string) => {
+export const getExpertForAdmin = async (expertId: string) => {
   const res = await api.get(`/api/admin/experts/${expertId}`);
   return res.data;
 };
@@ -479,31 +479,31 @@ export const createExpertTeamByAdmin = async (data: {
   return res.data as { detail: string; expert_id: string };
 };
 
-export const updateTaskExpert = async (expertId: string, expertData: any) => {
+export const updateExpert = async (expertId: string, expertData: any) => {
   const res = await api.put(`/api/admin/experts/${expertId}`, expertData);
   return res.data;
 };
 
-export const deleteTaskExpert = async (expertId: string) => {
+export const deleteExpert = async (expertId: string) => {
   const res = await api.delete(`/api/admin/experts/${expertId}`);
   return res.data;
 };
 
 // 旧 URL 走 legacy task_experts 表查不到新团队,改用跨团队列表 + expert_id 过滤。
 export const getExpertServicesAdmin = async (expertId: string) => {
-  const res = await api.get('/api/admin/task-expert-services', { params: { expert_id: expertId } });
+  const res = await api.get('/api/admin/experts/services', { params: { expert_id: expertId } });
   return res.data;
 };
 
 /** 获取全部达人服务列表（分页），用于专家管理-服务管理 */
 export const getAllExpertServicesAdmin = async (params?: { page?: number; limit?: number; expert_id?: string; status_filter?: string }) => {
-  const res = await api.get('/api/admin/task-expert-services', { params });
+  const res = await api.get('/api/admin/experts/services', { params });
   return res.data;
 };
 
 /** 获取全部达人活动列表（分页），用于专家管理-活动管理 */
 export const getAllExpertActivitiesAdmin = async (params?: { page?: number; limit?: number; expert_id?: string; status_filter?: string }) => {
-  const res = await api.get('/api/admin/task-expert-activities', { params });
+  const res = await api.get('/api/admin/experts/activities', { params });
   return res.data;
 };
 
@@ -512,64 +512,52 @@ export const getAllExpertActivitiesAdmin = async (params?: { page?: number; limi
 // 8 字符 experts.id 不匹配,会全部 404。新端点改为只用 service_id (全局唯一),
 // 路由参数 expertId 保留以避免动 ExpertManagement.tsx 的调用站点。
 export const updateExpertServiceAdmin = async (_expertId: string, serviceId: number, serviceData: any) => {
-  const res = await api.put(`/api/admin/task-expert-services/${serviceId}`, serviceData);
+  const res = await api.put(`/api/admin/experts/services/${serviceId}`, serviceData);
   return res.data;
 };
 
 export const deleteExpertServiceAdmin = async (_expertId: string, serviceId: number) => {
-  const res = await api.delete(`/api/admin/task-expert-services/${serviceId}`);
+  const res = await api.delete(`/api/admin/experts/services/${serviceId}`);
   return res.data;
 };
 
 // 同上 — legacy 单团队活动列表 URL 已死,但函数本身被 admin_task_expert_router 列表替代,
 // 这里保留只是因为没人在用 (也没人 import)。新 URL 也走 admin_task_expert_router。
 export const getExpertActivitiesAdmin = async (expertId: string) => {
-  const res = await api.get('/api/admin/task-expert-activities', { params: { expert_id: expertId } });
+  const res = await api.get('/api/admin/experts/activities', { params: { expert_id: expertId } });
   return res.data;
 };
 
 export const updateExpertActivityAdmin = async (_expertId: string, activityId: number, activityData: any) => {
-  const res = await api.put(`/api/admin/task-expert-activities/${activityId}`, activityData);
+  const res = await api.put(`/api/admin/experts/activities/${activityId}`, activityData);
   return res.data;
 };
 
 export const deleteExpertActivityAdmin = async (_expertId: string, activityId: number) => {
-  const res = await api.delete(`/api/admin/task-expert-activities/${activityId}`);
+  const res = await api.delete(`/api/admin/experts/activities/${activityId}`);
   return res.data;
 };
 
 export const reviewExpertServiceAdmin = async (serviceId: number, data: { action: 'approve' | 'reject' }) => {
-  const res = await api.post(`/api/admin/task-expert-services/${serviceId}/review`, data);
+  const res = await api.post(`/api/admin/experts/services/${serviceId}/review`, data);
   return res.data;
 };
 
 export const reviewExpertActivityAdmin = async (activityId: number, data: { action: 'approve' | 'reject' }) => {
-  const res = await api.post(`/api/admin/task-expert-activities/${activityId}/review`, data);
+  const res = await api.post(`/api/admin/experts/activities/${activityId}/review`, data);
   return res.data;
 };
 
-export const getTaskExpertApplications = async (params?: { status?: string; limit?: number; offset?: number }) => {
+export const getExpertApplications = async (params?: { status?: string; limit?: number; offset?: number }) => {
   const res = await api.get('/api/admin/experts/applications', { params });
   return res.data;
 };
 
-export const reviewTaskExpertApplication = async (applicationId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
+export const reviewExpertApplication = async (applicationId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
   const res = await api.post(`/api/admin/experts/applications/${applicationId}/review`, data);
   return res.data;
 };
 
-export const createExpertFromApplication = async (
-  applicationId: number,
-  expertId?: string,
-) => {
-  // This still uses old endpoint — expert feature toggle uses expert_id, not application_id
-  const res = await api.post(
-    `/api/admin/task-expert-applications/${applicationId}/create-featured-expert`,
-    null,
-    expertId ? { params: { expert_id: expertId } } : undefined,
-  );
-  return res.data;
-};
 
 export const getProfileUpdateRequests = async (params?: { status?: string; limit?: number; offset?: number }) => {
   const res = await api.get('/api/admin/experts/profile-update-requests', { params });

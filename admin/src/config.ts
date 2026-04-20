@@ -38,7 +38,7 @@ export const API_ENDPOINTS = {
   // 客服管理
   CUSTOMER_SERVICES: '/api/admin/customer-services',
   
-  // 达人团队（管理员）— 实际调用见 admin/src/api.ts，使用 /api/admin/experts/* 与 /api/admin/task-expert*
+  // 达人团队（管理员）— 实际调用见 admin/src/api.ts，使用 /api/admin/experts/*
   TASK_EXPERTS: '/api/admin/experts',
   EXPERT_APPLICATIONS: '/api/admin/experts/applications',
   PROFILE_UPDATE_REQUESTS: '/api/admin/experts/profile-update-requests',
