@@ -4653,6 +4653,7 @@
   "expertActivityDrawParticipantCountSuffix": "人",
   "expertActivityServiceOptional": "關聯服務（可選）",
   "expertActivityFree": "免費（無參與費）",
+  "expertActivityImages": "活動圖片",
   "expertActivityManualDraw": "立即開獎",
   "expertActivityManualDrawConfirm": "確定要立即開獎嗎？此操作不可撤銷。",
   "expertActivityDrawSuccess": "開獎完成！已抽出 {count} 名中獎者。",

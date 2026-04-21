@@ -18,6 +18,8 @@ class Activity extends Equatable {
     this.descriptionEn,
     this.descriptionZh,
     required this.expertId,
+    this.ownerType = 'user',
+    this.ownerId,
     required this.expertServiceId,
     this.location = '',
     this.latitude,
@@ -81,7 +83,19 @@ class Activity extends Equatable {
   final String? descriptionEn;
   final String? descriptionZh;
   final String expertId;
+  /// 多态归属（migration 177）：'user' 或 'expert'
+  final String ownerType;
+  /// owner_type='user' → users.id；owner_type='expert' → experts.id（团队 UUID）
+  final String? ownerId;
   final int expertServiceId;
+
+  /// 跳转达人详情用：团队活动直接用 owner_id（团队 UUID），其他情况用 expertId（user_id）。
+  /// 后端 schemas.py:3317 注释：团队活动 expert_id 填 owner.user_id 作为代表，
+  /// 新代码用 owner_type/owner_id，所以优先取 owner_id。
+  String? get expertTeamId =>
+      (ownerType == 'expert' && ownerId != null && ownerId!.isNotEmpty)
+          ? ownerId
+          : null;
   final String location;
   final double? latitude;
   final double? longitude;
@@ -223,6 +237,8 @@ class Activity extends Equatable {
       descriptionEn: json['description_en'] as String?,
       descriptionZh: json['description_zh'] as String?,
       expertId: json['expert_id']?.toString() ?? '',
+      ownerType: json['owner_type'] as String? ?? 'user',
+      ownerId: json['owner_id']?.toString(),
       expertServiceId: json['expert_service_id'] as int? ?? 0,
       location: json['location'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble(),
@@ -314,6 +330,8 @@ class Activity extends Equatable {
       'description_en': descriptionEn,
       'description_zh': descriptionZh,
       'expert_id': expertId,
+      'owner_type': ownerType,
+      'owner_id': ownerId,
       'expert_service_id': expertServiceId,
       'location': location,
       'latitude': latitude,
@@ -379,6 +397,8 @@ class Activity extends Equatable {
     String? descriptionEn,
     String? descriptionZh,
     String? expertId,
+    String? ownerType,
+    String? ownerId,
     int? expertServiceId,
     String? location,
     double? latitude,
@@ -442,6 +462,8 @@ class Activity extends Equatable {
       descriptionEn: descriptionEn ?? this.descriptionEn,
       descriptionZh: descriptionZh ?? this.descriptionZh,
       expertId: expertId ?? this.expertId,
+      ownerType: ownerType ?? this.ownerType,
+      ownerId: ownerId ?? this.ownerId,
       expertServiceId: expertServiceId ?? this.expertServiceId,
       location: location ?? this.location,
       latitude: latitude ?? this.latitude,
@@ -501,7 +523,7 @@ class Activity extends Equatable {
   @override
   List<Object?> get props => [
         id, title, titleEn, titleZh, description, descriptionEn, descriptionZh,
-        expertId, expertServiceId, location, latitude, longitude, serviceRadiusKm, taskType, rewardType,
+        expertId, ownerType, ownerId, expertServiceId, location, latitude, longitude, serviceRadiusKm, taskType, rewardType,
         originalPricePerParticipant, discountPercentage, discountedPricePerParticipant,
         currency, pointsReward, maxParticipants, minParticipants, currentParticipants,
         completionRule, rewardDistribution, status, isPublic, visibility,

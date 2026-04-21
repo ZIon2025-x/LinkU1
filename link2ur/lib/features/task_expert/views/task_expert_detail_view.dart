@@ -855,6 +855,12 @@ class _ReviewRow extends StatelessWidget {
     final rating = (review['rating'] as num?)?.toDouble() ?? 0;
     final comment = review['comment'] as String?;
     final createdAt = review['created_at'] as String?;
+    final isAnonymous = review['is_anonymous'] == true || review['is_anonymous'] == 1;
+    final reviewerName = review['reviewer_name'] as String?;
+    final reviewerAvatar = review['reviewer_avatar'] as String?;
+    final displayName = isAnonymous
+        ? context.l10n.taskDetailAnonymousUser
+        : (reviewerName ?? context.l10n.taskDetailAnonymousUser);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -868,30 +874,29 @@ class _ReviewRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 星级 + 日期
+          // 评价人信息
           Row(
             children: [
-              ...List.generate(5, (i) {
-                final star = i + 1;
-                final fullStars = rating.floor();
-                final hasHalf = rating - fullStars >= 0.5;
-                IconData icon;
-                Color color;
-                if (star <= fullStars) {
-                  icon = Icons.star;
-                  color = AppColors.gold;
-                } else if (star == fullStars + 1 && hasHalf) {
-                  icon = Icons.star_half;
-                  color = AppColors.gold;
-                } else {
-                  icon = Icons.star_border;
-                  color = isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight;
-                }
-                return Icon(icon, size: 14, color: color);
-              }),
-              const Spacer(),
+              AvatarView(
+                imageUrl: isAnonymous ? null : reviewerAvatar,
+                name: isAnonymous ? null : reviewerName,
+                size: 28,
+                isAnonymous: isAnonymous,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  displayName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               if (createdAt != null)
                 Text(
                   _formatTime(createdAt),
@@ -904,8 +909,32 @@ class _ReviewRow extends StatelessWidget {
                 ),
             ],
           ),
+          const SizedBox(height: 8),
+          // 星级
+          Row(
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              final fullStars = rating.floor();
+              final hasHalf = rating - fullStars >= 0.5;
+              IconData icon;
+              Color color;
+              if (star <= fullStars) {
+                icon = Icons.star;
+                color = AppColors.gold;
+              } else if (star == fullStars + 1 && hasHalf) {
+                icon = Icons.star_half;
+                color = AppColors.gold;
+              } else {
+                icon = Icons.star_border;
+                color = isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight;
+              }
+              return Icon(icon, size: 14, color: color);
+            }),
+          ),
           if (comment != null && comment.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               comment,
               style: TextStyle(

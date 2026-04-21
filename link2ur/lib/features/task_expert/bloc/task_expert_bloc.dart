@@ -953,8 +953,10 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     try {
       final expert =
           await _taskExpertRepository.getExpertById(event.expertId, forceRefresh: true);
+      // event.expertId 可能是 user_id（Activity 入口），expert.id 才是真正的团队 UUID。
+      // services 端点 `/api/experts/{expert_id}/services` 必须用团队 UUID，否则 404。
       final services =
-          await _taskExpertRepository.getExpertServices(event.expertId);
+          await _taskExpertRepository.getExpertServices(expert.id);
 
       List<Activity> activities = const [];
       final activityRepo = _activityRepository;

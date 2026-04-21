@@ -413,7 +413,6 @@ async def get_service_reviews(
         models.Task.created_by_expert == True,  # noqa: E712
         models.Task.expert_service_id == service_id,
         models.Task.status == "completed",
-        models.Review.is_anonymous == 0,
         models.Review.is_deleted.is_(False),
     )
 
@@ -426,14 +425,15 @@ async def get_service_reviews(
     total = (await db.execute(count_query)).scalar() or 0
 
     list_query = (
-        select(models.Review)
+        select(models.Review, models.User.name, models.User.avatar)
         .join(models.Task, models.Review.task_id == models.Task.id)
+        .outerjoin(models.User, models.Review.user_id == models.User.id)
         .where(base_where)
         .order_by(models.Review.created_at.desc())
         .offset(offset)
         .limit(limit)
     )
-    reviews = (await db.execute(list_query)).scalars().all()
+    rows = (await db.execute(list_query)).all()
 
     return {
         "total": total,
@@ -446,8 +446,11 @@ async def get_service_reviews(
                 created_at=r.created_at,
                 reply_content=r.reply_content,
                 reply_at=r.reply_at,
+                is_anonymous=bool(r.is_anonymous),
+                reviewer_name=None if r.is_anonymous else reviewer_name,
+                reviewer_avatar=None if r.is_anonymous else reviewer_avatar,
             )
-            for r in reviews
+            for r, reviewer_name, reviewer_avatar in rows
         ],
         "limit": limit,
         "offset": offset,
@@ -476,7 +479,6 @@ async def get_expert_reviews(
     """
     base_where = and_(
         models.Task.status == "completed",
-        models.Review.is_anonymous == 0,
         models.Review.is_deleted.is_(False),
         (
             (models.Review.expert_id == expert_id)
@@ -496,14 +498,15 @@ async def get_expert_reviews(
     total = (await db.execute(count_query)).scalar() or 0
 
     list_query = (
-        select(models.Review)
+        select(models.Review, models.User.name, models.User.avatar)
         .join(models.Task, models.Review.task_id == models.Task.id)
+        .outerjoin(models.User, models.Review.user_id == models.User.id)
         .where(base_where)
         .order_by(models.Review.created_at.desc())
         .offset(offset)
         .limit(limit)
     )
-    reviews = (await db.execute(list_query)).scalars().all()
+    rows = (await db.execute(list_query)).all()
 
     return {
         "total": total,
@@ -516,8 +519,11 @@ async def get_expert_reviews(
                 created_at=r.created_at,
                 reply_content=r.reply_content,
                 reply_at=r.reply_at,
+                is_anonymous=bool(r.is_anonymous),
+                reviewer_name=None if r.is_anonymous else reviewer_name,
+                reviewer_avatar=None if r.is_anonymous else reviewer_avatar,
             )
-            for r in reviews
+            for r, reviewer_name, reviewer_avatar in rows
         ],
         "limit": limit,
         "offset": offset,

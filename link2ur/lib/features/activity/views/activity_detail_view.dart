@@ -173,7 +173,9 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 label: 'View expert profile',
                 child: GestureDetector(
                   onTap: () {
-                    context.safePush('/task-experts/${state.activityDetail!.expertId}');
+                    final a = state.activityDetail!;
+                    final id = a.expertTeamId ?? a.expertId;
+                    context.safePush('/task-experts/$id');
                   },
                   child: _buildExpertAvatarSmall(state.expert),
                 ),
@@ -1877,8 +1879,9 @@ class _PosterInfoRow extends StatelessWidget {
       child: ScrollSafeTap(
         onTap: () {
           AppHaptics.selection();
-          if (activity.expertId.isNotEmpty) {
-            context.safePush('/task-experts/${activity.expertId}');
+          final id = activity.expertTeamId ?? activity.expertId;
+          if (id.isNotEmpty) {
+            context.safePush('/task-experts/$id');
           }
         },
         child: Container(

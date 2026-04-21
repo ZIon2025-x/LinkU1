@@ -10392,6 +10392,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertActivityFree => '免费（无参与费）';
 
   @override
+  String get expertActivityImages => '活动图片';
+
+  @override
   String get expertActivityManualDraw => '立即开奖';
 
   @override
@@ -23592,6 +23595,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertActivityFree => '免費（無參與費）';
+
+  @override
+  String get expertActivityImages => '活動圖片';
 
   @override
   String get expertActivityManualDraw => '立即開獎';

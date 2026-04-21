@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:link2ur/core/constants/api_endpoints.dart';
 import 'package:link2ur/core/utils/app_exception.dart';
 import 'package:link2ur/data/models/expert_team.dart';
@@ -469,6 +470,44 @@ class ExpertTeamRepository {
       data: data,
     );
     return response.data as Map<String, dynamic>;
+  }
+
+  /// 上传活动图片，返回 URL。
+  Future<String> uploadActivityImage(Uint8List bytes, String filename) async {
+    final name = filename.trim().isNotEmpty ? filename : 'image.jpg';
+    final formData = FormData.fromMap({
+      'image': MultipartFile.fromBytes(bytes, filename: name),
+    });
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.uploadImageV2,
+      data: formData,
+      queryParameters: {'category': 'public'},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw ExpertTeamException(
+        response.errorCode ?? response.message ?? 'image_upload_failed',
+        code: response.errorCode,
+      );
+    }
+    return response.data!['url'] as String? ?? '';
+  }
+
+  /// 更新团队活动（标题、描述、图片、地点、截止时间等）。
+  Future<void> updateTeamActivity(
+    String expertId,
+    int activityId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _apiService.patch(
+      ApiEndpoints.expertTeamActivityById(expertId, activityId),
+      data: data,
+    );
+    if (!response.isSuccess) {
+      throw ExpertTeamException(
+        response.errorCode ?? response.message ?? 'activity_update_failed',
+        code: response.errorCode,
+      );
+    }
   }
 
   /// 达人手动开奖。

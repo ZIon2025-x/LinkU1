@@ -10832,6 +10832,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertActivityFree => 'Free (no entry fee)';
 
   @override
+  String get expertActivityImages => 'Activity Images';
+
+  @override
   String get expertActivityManualDraw => 'Draw Now';
 
   @override

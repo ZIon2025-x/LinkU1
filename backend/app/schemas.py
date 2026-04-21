@@ -905,7 +905,7 @@ class ReviewOut(ReviewBase):
 
 
 class ReviewPublicOut(BaseModel):
-    """公开评价输出（不包含评价人私人信息）"""
+    """公开评价输出（匿名时 reviewer_name/reviewer_avatar 为 null）"""
     id: int
     task_id: int
     rating: float
@@ -913,6 +913,9 @@ class ReviewPublicOut(BaseModel):
     created_at: datetime.datetime
     reply_content: Optional[str] = None
     reply_at: Optional[datetime.datetime] = None
+    is_anonymous: bool = False
+    reviewer_name: Optional[str] = None
+    reviewer_avatar: Optional[str] = None
 
     class Config:
         from_attributes = True

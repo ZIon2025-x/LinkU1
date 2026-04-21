@@ -4850,6 +4850,7 @@
   "expertActivityDrawParticipantCountSuffix": "人",
   "expertActivityServiceOptional": "关联服务（可选）",
   "expertActivityFree": "免费（无参与费）",
+  "expertActivityImages": "活动图片",
   "expertActivityManualDraw": "立即开奖",
   "expertActivityManualDrawConfirm": "确定要立即开奖吗？此操作不可撤销。",
   "expertActivityDrawSuccess": "开奖完成！已抽出 {count} 名中奖者。",

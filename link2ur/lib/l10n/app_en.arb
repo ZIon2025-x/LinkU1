@@ -4958,6 +4958,7 @@
   "expertActivityDrawParticipantCountSuffix": "participants",
   "expertActivityServiceOptional": "Linked Service (Optional)",
   "expertActivityFree": "Free (no entry fee)",
+  "expertActivityImages": "Activity Images",
   "expertActivityManualDraw": "Draw Now",
   "expertActivityManualDrawConfirm": "Are you sure you want to draw winners now? This cannot be undone.",
   "expertActivityDrawSuccess": "Draw completed! {count} winners selected.",

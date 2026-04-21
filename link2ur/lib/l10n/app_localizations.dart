@@ -19901,6 +19901,12 @@ abstract class AppLocalizations {
   /// **'Free (no entry fee)'**
   String get expertActivityFree;
 
+  /// No description provided for @expertActivityImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Images'**
+  String get expertActivityImages;
+
   /// No description provided for @expertActivityManualDraw.
   ///
   /// In en, this message translates to:

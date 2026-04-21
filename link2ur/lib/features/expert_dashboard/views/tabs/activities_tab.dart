@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/design/app_colors.dart';
@@ -11,6 +12,8 @@ import '../../../../core/utils/helpers.dart';
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../../core/utils/sheet_adaptation.dart';
 import '../../../../core/utils/task_type_helper.dart';
+import '../../../../core/widgets/async_image_view.dart';
+import '../../../../core/widgets/cross_platform_image.dart';
 import '../../../../core/widgets/location_picker.dart';
 import '../../../../data/repositories/expert_team_repository.dart';
 import '../../bloc/expert_dashboard_bloc.dart';
@@ -79,6 +82,7 @@ class ActivitiesTab extends StatelessWidget {
                       activity: activity,
                       expertId: context.read<SelectedExpertCubit>().state.currentExpertId,
                       repository: context.read<ExpertTeamRepository>(),
+                      onEdit: () => _showActivityFormSheet(context, state.services, activity),
                     );
                   },
                 ),
@@ -87,7 +91,7 @@ class ActivitiesTab extends StatelessWidget {
               : FloatingActionButton(
                   onPressed: state.status == ExpertDashboardStatus.submitting
                       ? null
-                      : () => _showActivityFormSheet(context, state.services),
+                      : () => _showActivityFormSheet(context, state.services, null),
                   tooltip: context.l10n.expertActivityCreate,
                   child: state.status == ExpertDashboardStatus.submitting
                       ? const SizedBox(
@@ -103,10 +107,14 @@ class ActivitiesTab extends StatelessWidget {
   }
 
   void _showActivityFormSheet(
-      BuildContext context, List<Map<String, dynamic>> services) {
+    BuildContext context,
+    List<Map<String, dynamic>> services,
+    Map<String, dynamic>? existingActivity,
+  ) {
     final expertId =
         context.read<SelectedExpertCubit>().state.currentExpertId;
     final repo = context.read<ExpertTeamRepository>();
+    final bloc = context.read<ExpertDashboardBloc>();
 
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
@@ -115,13 +123,17 @@ class ActivitiesTab extends StatelessWidget {
         services: services,
         expertId: expertId,
         repository: repo,
+        existingActivity: existingActivity,
         onSuccess: () {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(context.l10n.expertActivityPublished),
+                content: Text(existingActivity != null
+                    ? context.l10n.commonSaved
+                    : context.l10n.expertActivityPublished),
               ),
             );
+            bloc.add(const ExpertDashboardLoadActivities());
           }
         },
       ),
@@ -139,12 +151,14 @@ class _ActivityFormSheet extends StatefulWidget {
     required this.expertId,
     required this.repository,
     required this.onSuccess,
+    this.existingActivity,
   });
 
   final List<Map<String, dynamic>> services;
   final String expertId;
   final ExpertTeamRepository repository;
   final VoidCallback onSuccess;
+  final Map<String, dynamic>? existingActivity;
 
   @override
   State<_ActivityFormSheet> createState() => _ActivityFormSheetState();
@@ -169,6 +183,12 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
   bool _isSubmitting = false;
   String? _errorMessage;
 
+  // Image upload
+  final List<XFile> _newImages = [];
+  List<String> _existingImageUrls = [];
+  bool _isUploadingImages = false;
+  final _imagePicker = ImagePicker();
+
   String _activityType = 'standard'; // 'standard' | 'lottery' | 'first_come'
   String _prizeType = 'physical';    // 'physical' | 'in_person'
   String _drawMode = 'auto';         // 'auto' | 'manual'
@@ -184,14 +204,47 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController();
-    _descriptionController = TextEditingController();
-    _priceController = TextEditingController();
-    _maxParticipantsController = TextEditingController(text: '10');
-    _minParticipantsController = TextEditingController(text: '1');
-    _prizeDescriptionController = TextEditingController();
-    _prizeCountController = TextEditingController(text: '3');
-    _drawParticipantCountController = TextEditingController(text: '30');
+    final a = widget.existingActivity;
+    _titleController = TextEditingController(text: a?['title'] as String? ?? '');
+    _descriptionController = TextEditingController(text: a?['description'] as String? ?? '');
+    _priceController = TextEditingController(
+      text: a?['original_price_per_participant'] != null
+          ? (a!['original_price_per_participant'] as num).toStringAsFixed(2)
+          : '',
+    );
+    _maxParticipantsController = TextEditingController(
+      text: a?['max_participants']?.toString() ?? '10',
+    );
+    _minParticipantsController = TextEditingController(
+      text: a?['min_participants']?.toString() ?? '1',
+    );
+    _prizeDescriptionController = TextEditingController(
+      text: a?['prize_description'] as String? ?? '',
+    );
+    _prizeCountController = TextEditingController(
+      text: a?['prize_count']?.toString() ?? '3',
+    );
+    _drawParticipantCountController = TextEditingController(
+      text: a?['draw_participant_count']?.toString() ?? '30',
+    );
+    if (a != null) {
+      _taskType = a['task_type'] as String? ?? 'other';
+      _activityType = a['activity_type'] as String? ?? 'standard';
+      _location = a['location'] as String?;
+      if (a['deadline'] != null) {
+        _deadline = DateTime.tryParse(a['deadline'] as String);
+      }
+      if (a['draw_at'] != null) {
+        _drawAt = DateTime.tryParse(a['draw_at'] as String);
+      }
+      _drawMode = a['draw_mode'] as String? ?? 'auto';
+      _drawTrigger = a['draw_trigger'] as String? ?? 'by_time';
+      _prizeType = a['prize_type'] as String? ?? 'physical';
+      final imgs = a['images'];
+      if (imgs is List) {
+        _existingImageUrls = imgs.whereType<String>().toList();
+      }
+    }
     _titleController.addListener(_onTextChanged);
     _descriptionController.addListener(_onTextChanged);
   }
@@ -338,8 +391,38 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
       _errorMessage = null;
     });
 
+    // Upload new images first
+    final List<String> allImageUrls = List.from(_existingImageUrls);
+    if (_newImages.isNotEmpty) {
+      setState(() => _isUploadingImages = true);
+      try {
+        for (int i = 0; i < _newImages.length; i++) {
+          final file = _newImages[i];
+          final bytes = await file.readAsBytes();
+          final name = file.name.isNotEmpty ? file.name : 'image_${i + 1}.jpg';
+          final url = await widget.repository.uploadActivityImage(bytes, name);
+          if (url.isNotEmpty) allImageUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+            _isUploadingImages = false;
+            _errorMessage = e is Exception
+                ? e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '')
+                : e.toString();
+          });
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _isUploadingImages = false);
+      }
+    }
+
     final priceText = _priceController.text.trim();
     final price = priceText.isEmpty ? null : double.tryParse(priceText);
+
+    final isEditing = widget.existingActivity != null;
 
     final data = <String, dynamic>{
       'title': _titleController.text.trim(),
@@ -347,13 +430,17 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
       'location': _location!,
       'task_type': _taskType,
       'deadline': _deadline!.toIso8601String(),
-      'activity_type': _activityType,
-      if (_selectedService != null) 'expert_service_id': _selectedService!['id'],
+      if (allImageUrls.isNotEmpty) 'images': allImageUrls,
       if (price != null) 'original_price_per_participant': price,
       if (_latitude != null) 'latitude': _latitude,
       if (_longitude != null) 'longitude': _longitude,
       if (_serviceRadiusKm != null) 'service_radius_km': _serviceRadiusKm,
     };
+
+    if (!isEditing) {
+      data['activity_type'] = _activityType;
+      if (_selectedService != null) data['expert_service_id'] = _selectedService!['id'];
+    }
 
     if (_activityType == 'standard') {
       data['max_participants'] =
@@ -363,12 +450,15 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
     }
 
     if (_activityType != 'standard') {
-      data['prize_type'] = _prizeType;
       data['prize_description'] = _prizeDescriptionController.text.trim();
+    }
+
+    if (!isEditing && _activityType != 'standard') {
+      data['prize_type'] = _prizeType;
       data['prize_count'] = int.tryParse(_prizeCountController.text.trim()) ?? 1;
     }
 
-    if (_activityType == 'lottery') {
+    if (!isEditing && _activityType == 'lottery') {
       data['draw_mode'] = _drawMode;
       if (_drawMode == 'auto') {
         data['draw_trigger'] = _drawTrigger;
@@ -383,7 +473,12 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
     }
 
     try {
-      await widget.repository.createTeamActivity(widget.expertId, data);
+      if (isEditing) {
+        final activityId = widget.existingActivity!['id'] as int;
+        await widget.repository.updateTeamActivity(widget.expertId, activityId, data);
+      } else {
+        await widget.repository.createTeamActivity(widget.expertId, data);
+      }
       if (mounted) {
         Navigator.of(context).pop();
         widget.onSuccess();
@@ -471,6 +566,96 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
             ),
           );
         }),
+      ],
+    );
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final picked = await _imagePicker.pickMultiImage();
+      if (!mounted) return;
+      if (picked.isNotEmpty) {
+        setState(() {
+          for (final f in picked) {
+            if (_existingImageUrls.length + _newImages.length < 5) {
+              _newImages.add(f);
+            }
+          }
+        });
+      }
+    } on PlatformException catch (_) {
+      // ignore picker errors
+    }
+  }
+
+  Widget _buildImageSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final totalCount = _existingImageUrls.length + _newImages.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionLabel(label: context.l10n.expertActivityImages),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            // Existing uploaded images
+            ..._existingImageUrls.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final url = entry.value;
+              return _ImageThumb(
+                child: AsyncImageView(imageUrl: url, width: 80, height: 80),
+                onRemove: () => setState(() => _existingImageUrls.removeAt(idx)),
+              );
+            }),
+            // Newly selected images
+            ..._newImages.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final file = entry.value;
+              return _ImageThumb(
+                child: CrossPlatformImage(xFile: file, width: 80, height: 80),
+                onRemove: () => setState(() => _newImages.removeAt(idx)),
+              );
+            }),
+            // Add button
+            if (totalCount < 5)
+              GestureDetector(
+                onTap: _isUploadingImages ? null : _pickImages,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : const Color(0xFFE0E0E0),
+                    ),
+                    color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  ),
+                  child: _isUploadingImages
+                      ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                      : Icon(
+                          Icons.add_photo_alternate_outlined,
+                          color: isDark ? Colors.white38 : Colors.black38,
+                          size: 28,
+                        ),
+                ),
+              ),
+          ],
+        ),
+        if (totalCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '$totalCount/5',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white30 : Colors.black26,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -712,7 +897,9 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
                     alignment: Alignment.center,
                     children: [
                       Text(
-                        context.l10n.expertActivityCreate,
+                        widget.existingActivity != null
+                            ? context.l10n.commonEdit
+                            : context.l10n.expertActivityCreate,
                         style: theme.textTheme.titleLarge
                             ?.copyWith(fontWeight: FontWeight.w700),
                         textAlign: TextAlign.center,
@@ -897,6 +1084,10 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 20),
+
+                // ── Images ──
+                _buildImageSection(),
                 const SizedBox(height: 20),
 
                 // ── Prize fields (lottery / first_come only) ──
@@ -1209,11 +1400,13 @@ class _ActivityListTile extends StatefulWidget {
     required this.activity,
     required this.expertId,
     required this.repository,
+    required this.onEdit,
   });
 
   final Map<String, dynamic> activity;
   final String expertId;
   final ExpertTeamRepository repository;
+  final VoidCallback onEdit;
 
   @override
   State<_ActivityListTile> createState() => _ActivityListTileState();
@@ -1323,6 +1516,17 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                   child: Text(
                     l10n.activityDrawCompleted,
                     style: const TextStyle(fontSize: 11, color: Colors.purple),
+                  ),
+                ),
+              ],
+              if (status == 'open') ...[
+                const Spacer(),
+                GestureDetector(
+                  onTap: widget.onEdit,
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: isDark ? Colors.white54 : Colors.black45,
                   ),
                 ),
               ],
@@ -1446,6 +1650,44 @@ class _SectionLabel extends StatelessWidget {
                 ),
               ]
             : [],
+      ),
+    );
+  }
+}
+
+class _ImageThumb extends StatelessWidget {
+  const _ImageThumb({required this.child, required this.onRemove});
+
+  final Widget child;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 80,
+      height: 80,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(width: 80, height: 80, child: child),
+          ),
+          Positioned(
+            top: 2,
+            right: 2,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(2),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

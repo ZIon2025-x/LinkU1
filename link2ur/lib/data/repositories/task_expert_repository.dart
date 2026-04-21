@@ -79,6 +79,10 @@ class TaskExpertRepository {
   }
 
   /// 获取达人详情
+  ///
+  /// `id` 可能是新 experts.id（团队 UUID），也可能是 user_id（例如 Activity.expert_id
+  /// 后端注释 schemas.py:3317 说明：团队活动时 expert_id 填 owner.user_id 作为代表）。
+  /// 先尝试 `/api/experts/{id}`，404 时降级到 `/api/experts/by-user/{id}` 解析为团队 id 后再取详情。
   Future<TaskExpert> getExpertById(String id, {CancelToken? cancelToken, bool forceRefresh = false}) async {
     final cacheKey = '${CacheManager.prefixExpertDetail}$id';
 
@@ -90,10 +94,30 @@ class TaskExpertRepository {
     }
 
     try {
-      final response = await _apiService.get<Map<String, dynamic>>(
+      var response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.taskExpertById(id),
         cancelToken: cancelToken,
       );
+
+      // 404: id 可能是 user_id，走 by-user 解析后再取详情
+      if (!response.isSuccess && response.statusCode == 404) {
+        final byUser = await _apiService.get<Map<String, dynamic>>(
+          ApiEndpoints.taskExpertByUser(id),
+          cancelToken: cancelToken,
+        );
+        if (byUser.isSuccess && byUser.data != null) {
+          final resolvedId = byUser.data!['id']?.toString();
+          if (resolvedId != null && resolvedId.isNotEmpty && resolvedId != id) {
+            response = await _apiService.get<Map<String, dynamic>>(
+              ApiEndpoints.taskExpertById(resolvedId),
+              cancelToken: cancelToken,
+            );
+          } else {
+            // by-user 已直接返回 ExpertOut，可直接用
+            response = byUser;
+          }
+        }
+      }
 
       if (!response.isSuccess || response.data == null) {
         throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人详情失败', errorCode: response.errorCode);
@@ -107,6 +131,17 @@ class TaskExpertRepository {
       if (stale != null) return TaskExpert.fromJson(stale);
       rethrow;
     }
+  }
+
+  /// 通过 user_id 解析对应的达人团队 id（不存在时返回 null）
+  Future<String?> resolveExpertIdByUser(String userId, {CancelToken? cancelToken}) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskExpertByUser(userId),
+      cancelToken: cancelToken,
+    );
+    if (!response.isSuccess || response.data == null) return null;
+    final id = response.data!['id']?.toString();
+    return (id != null && id.isNotEmpty) ? id : null;
   }
 
   /// 获取达人服务列表

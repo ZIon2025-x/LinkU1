@@ -399,6 +399,64 @@ async def create_team_activity(
     }
 
 
+class TeamActivityUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    task_type: Optional[str] = None
+    deadline: Optional[datetime] = None
+    original_price_per_participant: Optional[float] = Field(None, ge=0)
+    max_participants: Optional[int] = Field(None, ge=1)
+    min_participants: Optional[int] = Field(None, ge=1)
+    images: Optional[List[str]] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
+    service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
+    prize_description: Optional[str] = None
+
+
+@router.patch("/{expert_id}/activities/{activity_id}")
+async def update_team_activity(
+    expert_id: str,
+    activity_id: int,
+    body: TeamActivityUpdate,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Update a team-owned activity (title, description, images, location, deadline, etc.)."""
+    await _get_member_or_403(
+        db, expert_id, current_user.id, required_roles=['owner', 'admin']
+    )
+
+    result = await db.execute(
+        select(models.Activity).where(
+            models.Activity.id == activity_id,
+            models.Activity.owner_type == 'expert',
+            models.Activity.owner_id == expert_id,
+        )
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    if activity.status not in ('open', 'pending_review'):
+        raise HTTPException(status_code=400, detail={
+            "error_code": "activity_not_editable",
+            "message": "Only open or pending activities can be edited",
+        })
+
+    update_data = body.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(activity, field, value)
+
+    from app.utils.time_utils import get_utc_time
+    activity.updated_at = get_utc_time()
+
+    await db.commit()
+    await db.refresh(activity)
+    return {"id": activity.id, "success": True}
+
+
 def _validate_draw_request(activity: models.Activity):
     """Validate that an activity can be drawn."""
     if activity.activity_type != "lottery":

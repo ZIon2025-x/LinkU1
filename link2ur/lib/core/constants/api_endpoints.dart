@@ -186,6 +186,9 @@ class ApiEndpoints {
   // 公开查询
   static const String taskExperts = '/api/experts';
   static String taskExpertById(String id) => '/api/experts/$id';
+  /// 通过 user_id 解析达人团队 (用于 Activity.expert_id 等以 user_id 暴露的入口)
+  static String taskExpertByUser(String userId) =>
+      '/api/experts/by-user/$userId';
   static String taskExpertServices(String expertId) =>
       '/api/experts/$expertId/services';
   static String taskExpertReviews(String expertId) =>
@@ -341,6 +344,8 @@ class ApiEndpoints {
   static String expertTeamStripeConnect(String id) => '/api/experts/$id/stripe-connect';
   static String expertTeamStripeStatus(String id) => '/api/experts/$id/stripe-connect/status';
   static String expertTeamActivities(String expertId) => '/api/experts/$expertId/activities';
+  static String expertTeamActivityById(String expertId, int activityId) =>
+      '/api/experts/$expertId/activities/$activityId';
   static String expertTeamActivityDraw(String expertId, int activityId) =>
       '/api/experts/$expertId/activities/$activityId/draw';
   static String expertTeamBusinessHours(String expertId) => '/api/experts/$expertId/business-hours';
