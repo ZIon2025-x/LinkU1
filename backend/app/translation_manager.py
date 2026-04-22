@@ -184,17 +184,17 @@ class TranslationManager:
                 except ImportError:
                     logger.warning("deep-translator模块未安装，跳过有道翻译")
             
-            # DeepL翻译（需要API密钥，但有免费额度）
+            # DeepL翻译（官方deepl库，自动识别:fx免费key）
             elif service_name == 'deepl':
                 try:
-                    from deep_translator import DeeplTranslator
-                    api_key = getattr(settings, 'DEEPL_API_KEY', '')
+                    import deepl as _deepl_lib
+                    api_key = getattr(settings, 'DEEPL_API_KEY', '').strip()
                     if api_key:
-                        self.services.append((TranslationService.DEEPL, DeeplTranslator))
+                        self.services.append((TranslationService.DEEPL, _deepl_lib.Translator))
                     else:
                         logger.warning("DeepL翻译需要API密钥，跳过")
                 except ImportError:
-                    logger.warning("deep-translator模块未安装，跳过DeepL翻译")
+                    logger.warning("deepl官方库未安装，跳过DeepL翻译")
             
             # LibreTranslate（免费开源翻译服务）
             elif service_name == 'libretranslate':
@@ -386,26 +386,31 @@ class TranslationManager:
                     return None
                 return translator_class_or_factory(appid=appid, secret=secret, source=source_lang, target=target_lang)
             elif service == TranslationService.DEEPL:
-                # DeepL翻译（需要API密钥）
-                # DeepL 只认 'zh'，不认 'zh-CN'/'zh-TW' 等区域子标签
-                def normalize_lang_for_deepl(lang: str) -> str:
-                    if not lang or lang == 'auto':
-                        return 'en'
+                api_key = getattr(settings, 'DEEPL_API_KEY', '').strip()
+                if not api_key:
+                    return None
+                # DeepL官方库语言代码：ZH、EN-US、EN-GB 等
+                # 官方库根据:fx后缀自动选择api-free.deepl.com或api.deepl.com
+                def _deepl_lang(lang: str) -> str:
                     low = lang.lower()
                     if low.startswith('zh'):
-                        return 'zh'
-                    # 去掉区域后缀（en-US -> en），DeepL 接受基础代码
-                    return low.split('-')[0]
+                        return 'ZH'
+                    if low in ('en', 'en-us', 'auto'):
+                        return 'EN-US'
+                    return low.split('-')[0].upper()
 
-                api_key = getattr(settings, 'DEEPL_API_KEY', '')
-                if api_key:
-                    return translator_class_or_factory(
-                        source=normalize_lang_for_deepl(source_lang),
-                        target=normalize_lang_for_deepl(target_lang),
-                        api_key=api_key,
-                        use_free_api=api_key.endswith(':fx'),
-                    )
-                return None
+                deepl_translator = translator_class_or_factory(api_key)
+                deepl_target = _deepl_lang(target_lang)
+
+                class _DeeplAdapter:
+                    def __init__(self, t, tgt):
+                        self._t = t
+                        self._tgt = tgt
+                    def translate(self, text):
+                        result = self._t.translate_text(text, target_lang=self._tgt)
+                        return result.text
+
+                return _DeeplAdapter(deepl_translator, deepl_target)
             elif service == TranslationService.LIBRETRANSLATE:
                 # LibreTranslate（免费开源）
                 api_key = getattr(settings, 'LIBRETRANSLATE_API_KEY', '')

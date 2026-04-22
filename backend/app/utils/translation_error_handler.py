@@ -40,6 +40,7 @@ class TranslationErrorHandler:
             or 'ratelimitexceeded' in error_str
             or 'userratelimitexceeded' in error_str
             or '429' in error_str
+            or 'too_many_requests' in error_str
             or ('403' in error_str and 'forbidden' in error_str)
         ):
             return TranslationErrorType.RATE_LIMIT
