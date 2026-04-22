@@ -98,7 +98,9 @@ class _ActivityDetailViewContent extends StatelessWidget {
             prev.isSubmitting != curr.isSubmitting ||
             prev.timeSlots != curr.timeSlots ||
             prev.isLoadingTimeSlots != curr.isLoadingTimeSlots ||
-            prev.errorMessage != curr.errorMessage,
+            prev.errorMessage != curr.errorMessage ||
+            prev.isFavorited != curr.isFavorited ||
+            prev.isTogglingFavorite != curr.isTogglingFavorite,
         builder: (context, state) {
           final hasImages = state.activityDetail?.images?.isNotEmpty == true ||
               state.activityDetail?.serviceImages?.isNotEmpty == true;

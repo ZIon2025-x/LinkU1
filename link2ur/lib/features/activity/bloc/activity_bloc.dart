@@ -393,10 +393,12 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       ));
 
       // 对齐iOS loadExpertInfo: 加载达人信息（名字、头像）
-      if (activity.expertId.isNotEmpty && _taskExpertRepository != null) {
+      // 团队活动用团队 UUID（expertTeamId），普通用户活动用 expertId（user_id）
+      final expertLookupId = activity.expertTeamId ?? activity.expertId;
+      if (expertLookupId.isNotEmpty && _taskExpertRepository != null) {
         try {
           final expert =
-              await _taskExpertRepository.getExpertById(activity.expertId);
+              await _taskExpertRepository.getExpertById(expertLookupId);
           emit(state.copyWith(expert: expert));
         } catch (e) {
           AppLogger.warning('Failed to load expert info', e);

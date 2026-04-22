@@ -402,7 +402,8 @@ class TranslationManager:
                     return translator_class_or_factory(
                         source=normalize_lang_for_deepl(source_lang),
                         target=normalize_lang_for_deepl(target_lang),
-                        api_key=api_key
+                        api_key=api_key,
+                        use_free_api=api_key.endswith(':fx'),
                     )
                 return None
             elif service == TranslationService.LIBRETRANSLATE:
