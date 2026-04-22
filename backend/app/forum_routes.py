@@ -9,7 +9,7 @@ import json
 import re
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Request, Body
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status, Request, Body
 from sqlalchemy import select, func, or_, and_, desc, asc, case, update, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
@@ -26,6 +26,43 @@ from app.push_notification_service import send_push_notification_async_safe
 from app.content_filter.filter_service import check_content, create_review, create_mask_record
 
 logger = logging.getLogger(__name__)
+
+
+async def _bg_translate_post(
+    post_id: int,
+    title: str,
+    content: Optional[str],
+    title_en: Optional[str] = None,
+    title_zh: Optional[str] = None,
+    content_en: Optional[str] = None,
+    content_zh: Optional[str] = None,
+) -> None:
+    """返回响应后异步翻译帖子，更新双语字段。"""
+    from app.database import AsyncSessionLocal
+    from app.utils.bilingual_helper import auto_fill_bilingual_fields
+    try:
+        _, t_en, t_zh, c_en, c_zh = await auto_fill_bilingual_fields(
+            name=title,
+            description=content,
+            name_en=title_en,
+            name_zh=title_zh,
+            description_en=content_en,
+            description_zh=content_zh,
+        )
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(models.ForumPost).where(models.ForumPost.id == post_id)
+            )
+            db_post = result.scalar_one_or_none()
+            if db_post:
+                db_post.title_en = t_en
+                db_post.title_zh = t_zh
+                db_post.content_en = c_en
+                db_post.content_zh = c_zh
+                await db.commit()
+    except Exception as e:
+        logger.warning(f"后台翻译帖子 {post_id} 失败: {e}")
+
 
 
 # ==================== 辅助函数 ====================
@@ -3144,6 +3181,7 @@ async def get_post(
 async def create_post(
     post: schemas.ForumPostCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """创建帖子（支持管理员和普通用户）"""
@@ -3290,24 +3328,9 @@ async def create_post(
         if not can_post:
             raise HTTPException(status_code=403, detail="只有达人团队成员才能在此板块发帖")
 
-    # 自动填充双语字段
-    from app.utils.bilingual_helper import auto_fill_bilingual_fields
-
-    # 内容已经是编码格式（\n 和 \c 标记），只移除首尾空白，保留编码标记
-    # 注意：strip() 不会影响 \n 和 \c 标记，因为它们不是空白字符
+    # 翻译字段由后台任务异步填充，发帖先存 None 立即返回
     normalized_content = post.content.strip() if post.content else None
-    _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
-        name=post.title,
-        description=normalized_content,  # 保留编码标记（\n 和 \c）
-        name_en=post.title_en.strip() if post.title_en else None,
-        name_zh=post.title_zh.strip() if post.title_zh else None,
-        description_en=post.content_en.strip() if post.content_en else None,
-        description_zh=post.content_zh.strip() if post.content_zh else None,
-    )
-    
-    # 注意：内容已经是编码格式（\n 和 \c 标记），翻译服务会保留这些标记
-    # 不需要尝试恢复换行符，因为内容已经是编码格式了
-    
+
     # 创建帖子（包含图片/附件和关联内容）
     post_images = post.images if hasattr(post, 'images') else None
     post_attachments = [a.model_dump() for a in post.attachments] if hasattr(post, 'attachments') and post.attachments else None
@@ -3321,11 +3344,11 @@ async def create_post(
         # 管理员发帖：使用 admin_author_id
         db_post = models.ForumPost(
             title=post.title,
-            title_en=title_en,
-            title_zh=title_zh,
+            title_en=None,
+            title_zh=None,
             content=post.content,
-            content_en=content_en,
-            content_zh=content_zh,
+            content_en=None,
+            content_zh=None,
             category_id=post.category_id,
             admin_author_id=admin_user.id,
             author_id=None,
@@ -3339,11 +3362,11 @@ async def create_post(
         # 普通用户发帖：使用 author_id
         db_post = models.ForumPost(
             title=post.title,
-            title_en=title_en,
-            title_zh=title_zh,
+            title_en=None,
+            title_zh=None,
             content=post.content,
-            content_en=content_en,
-            content_zh=content_zh,
+            content_en=None,
+            content_zh=None,
             category_id=post.category_id,
             author_id=current_user.id,
             admin_author_id=None,
@@ -3417,7 +3440,19 @@ async def create_post(
     
     await db.commit()
     await db.refresh(db_post)
-    
+
+    # 异步翻译（响应返回后执行，不阻塞用户）
+    background_tasks.add_task(
+        _bg_translate_post,
+        post_id=db_post.id,
+        title=post.title,
+        content=normalized_content,
+        title_en=post.title_en.strip() if getattr(post, 'title_en', None) else None,
+        title_zh=post.title_zh.strip() if getattr(post, 'title_zh', None) else None,
+        content_en=post.content_en.strip() if getattr(post, 'content_en', None) else None,
+        content_zh=post.content_zh.strip() if getattr(post, 'content_zh', None) else None,
+    )
+
     # 失效帖子列表 + 发现页缓存
     from app.redis_cache import invalidate_forum_cache, invalidate_discovery_cache
     invalidate_forum_cache()
@@ -3549,6 +3584,7 @@ async def update_post(
     post_id: int,
     post: schemas.ForumPostUpdate,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """更新帖子（支持管理员和普通用户）"""
@@ -3634,22 +3670,23 @@ async def update_post(
     title_changed = "title" in update_data and (updated_title or "").strip() != (db_post.title or "").strip()
     content_changed = "content" in update_data and normalized_updated_content != existing_content_normalized
 
+    # 为后台翻译任务记录需要的信息
+    _bg_translate_kwargs = None
     if title_changed or content_changed:
-        from app.utils.bilingual_helper import auto_fill_bilingual_fields
-
-        # 未改动的字段传入已有翻译，避免重复翻译
-        _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
-            name=updated_title,
-            description=normalized_updated_content,
-            name_en=update_data.get("title_en") or (db_post.title_en if not title_changed else None),
-            name_zh=update_data.get("title_zh") or (db_post.title_zh if not title_changed else None),
-            description_en=update_data.get("content_en") or (db_post.content_en if not content_changed else None),
-            description_zh=update_data.get("content_zh") or (db_post.content_zh if not content_changed else None),
+        # 保留用户显式提供的翻译（未改动字段沿用现有翻译）
+        _bg_translate_kwargs = dict(
+            title_en=update_data.get("title_en") or (db_post.title_en if not title_changed else None),
+            title_zh=update_data.get("title_zh") or (db_post.title_zh if not title_changed else None),
+            content_en=update_data.get("content_en") or (db_post.content_en if not content_changed else None),
+            content_zh=update_data.get("content_zh") or (db_post.content_zh if not content_changed else None),
         )
-        update_data["title_en"] = title_en
-        update_data["title_zh"] = title_zh
-        update_data["content_en"] = content_en
-        update_data["content_zh"] = content_zh
+        # 先清空翻译字段，由后台任务填充
+        if title_changed:
+            update_data["title_en"] = None
+            update_data["title_zh"] = None
+        if content_changed:
+            update_data["content_en"] = None
+            update_data["content_zh"] = None
     
     # 如果更新了板块，需要检查新板块的权限（学校板块需要权限）
     if "category_id" in update_data and update_data["category_id"] != old_category_id:
@@ -3784,7 +3821,17 @@ async def update_post(
         await db.refresh(db_post, ["author"])
     if db_post.admin_author_id:
         await db.refresh(db_post, ["admin_author"])
-    
+
+    # 异步翻译（响应返回后执行，不阻塞用户）
+    if _bg_translate_kwargs is not None:
+        background_tasks.add_task(
+            _bg_translate_post,
+            post_id=db_post.id,
+            title=updated_title,
+            content=normalized_updated_content,
+            **_bg_translate_kwargs,
+        )
+
     # 检查是否已点赞/收藏（只有普通用户可以点赞/收藏）
     is_liked = False
     is_favorited = False
