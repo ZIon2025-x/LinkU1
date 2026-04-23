@@ -100,6 +100,14 @@ def _serialize_service(s: models.TaskExpertService) -> dict:
         "application_count": s.application_count or 0,
         "created_at": s.created_at.isoformat() if s.created_at else None,
         "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        # Display identity fields (Task 3) — populated by callers if needed.
+        # For /me endpoints the client already knows the current user's
+        # identity, so display_name/avatar default to empty and the UI
+        # falls back to the logged-in profile.
+        "owner_type": s.owner_type or "user",
+        "owner_id": s.owner_id,
+        "display_name": "",
+        "display_avatar": None,
     }
 
 

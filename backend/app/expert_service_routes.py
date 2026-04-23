@@ -226,8 +226,20 @@ async def list_expert_services(
     result = await db.execute(query)
     services = result.scalars().all()
 
-    return [
-        {
+    # Batch resolve display identities (Task 3) — avoid N+1
+    from app.services.display_identity import batch_resolve_async
+    identities = [
+        (s.owner_type or "user", s.owner_id or "")
+        for s in services
+    ]
+    identity_map = await batch_resolve_async(db, identities)
+
+    response = []
+    for s in services:
+        otype = s.owner_type or "user"
+        oid = s.owner_id or ""
+        display_name, display_avatar = identity_map.get((otype, oid), ("", None))
+        response.append({
             "id": s.id,
             "service_name": s.service_name,
             "service_name_en": s.service_name_en,
@@ -261,11 +273,12 @@ async def list_expert_services(
             "view_count": s.view_count or 0,
             "application_count": s.application_count or 0,
             "created_at": s.created_at.isoformat() if s.created_at else None,
-            "owner_type": s.owner_type,
+            "owner_type": otype,
             "owner_id": s.owner_id,
-        }
-        for s in services
-    ]
+            "display_name": display_name,
+            "display_avatar": display_avatar,
+        })
+    return response
 
 
 @expert_service_router.post("", status_code=201)
@@ -496,6 +509,11 @@ async def get_expert_service_detail(
 
     linked_summary = await _fetch_linked_service_summary(db, service.linked_service_id)
 
+    # Resolve display identity (Task 3)
+    from app.services.display_identity import resolve_async
+    otype = service.owner_type or "user"
+    display_name, display_avatar = await resolve_async(db, otype, service.owner_id or "")
+
     return {
         "id": service.id,
         "service_name": service.service_name,
@@ -532,8 +550,10 @@ async def get_expert_service_detail(
         "application_count": service.application_count or 0,
         "created_at": service.created_at.isoformat() if service.created_at else None,
         "updated_at": service.updated_at.isoformat() if service.updated_at else None,
-        "owner_type": service.owner_type,
+        "owner_type": otype,
         "owner_id": service.owner_id,
+        "display_name": display_name,
+        "display_avatar": display_avatar,
     }
 
 

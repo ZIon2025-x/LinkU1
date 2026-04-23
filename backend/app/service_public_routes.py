@@ -222,6 +222,12 @@ async def get_service_detail(
             service_out.owner_avatar = expert_obj.avatar
             service_out.owner_rating = float(expert_obj.rating) if expert_obj.rating else 0.0
 
+    # Populate display identity fields (Task 3)
+    service_out.owner_type = service.owner_type or "user"
+    service_out.owner_id = service.owner_id
+    service_out.display_name = service_out.owner_name or ""
+    service_out.display_avatar = service_out.owner_avatar
+
     return service_out
 
 
