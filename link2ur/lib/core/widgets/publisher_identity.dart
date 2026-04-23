@@ -129,7 +129,6 @@ class PublisherIdentity extends StatelessWidget {
                     context.l10n.expertTeamLabel,
                     style: AppTypography.caption2.copyWith(
                       color: AppColors.primary,
-                      fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -141,10 +140,22 @@ class PublisherIdentity extends StatelessWidget {
     );
 
     if (!_isTappable) return content;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _onTap(context),
-      child: content,
+    return Semantics(
+      button: true,
+      label: _isExpert && showBadge
+          ? '$name, ${context.l10n.expertTeamLabel}'
+          : name,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _onTap(context),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: content,
+          ),
+        ),
+      ),
     );
   }
 }
