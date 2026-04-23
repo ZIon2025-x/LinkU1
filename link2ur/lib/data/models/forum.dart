@@ -315,6 +315,10 @@ class ForumPost extends Equatable {
     this.updatedAt,
     this.lastReplyAt,
     this.officialTaskReward,
+    this.ownerType,
+    this.ownerId,
+    this.displayName,
+    this.displayAvatar,
   });
 
   final int id;
@@ -349,6 +353,13 @@ class ForumPost extends Equatable {
   final DateTime? updatedAt;
   final DateTime? lastReplyAt;
   final Map<String, dynamic>? officialTaskReward;
+
+  // 统一显示身份字段（后端 owner_type/owner_id + display_name/display_avatar，
+  // 为 PublisherIdentity 等通用展示组件提供数据源，向后兼容：字段缺失时为 null）
+  final String? ownerType; // 'user' | 'expert'
+  final String? ownerId;   // owner_type='user'→users.id；owner_type='expert'→experts.id
+  final String? displayName;
+  final String? displayAvatar;
 
   /// 显示标题（根据 locale 选择 zh/en）
   String displayTitle(Locale locale) =>
@@ -429,6 +440,10 @@ class ForumPost extends Equatable {
           ? DateTime.tryParse(json['last_reply_at'].toString())
           : null,
       officialTaskReward: json['official_task_reward'] as Map<String, dynamic>?,
+      ownerType: json['owner_type'] as String?,
+      ownerId: json['owner_id']?.toString(),
+      displayName: json['display_name'] as String?,
+      displayAvatar: json['display_avatar'] as String?,
     );
   }
 
@@ -454,6 +469,10 @@ class ForumPost extends Equatable {
       'is_pinned': isPinned,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      if (ownerType != null) 'owner_type': ownerType,
+      if (ownerId != null) 'owner_id': ownerId,
+      if (displayName != null) 'display_name': displayName,
+      if (displayAvatar != null) 'display_avatar': displayAvatar,
     };
   }
 
@@ -465,6 +484,10 @@ class ForumPost extends Equatable {
     int? favoriteCount,
     String? content,
     Map<String, dynamic>? officialTaskReward,
+    String? ownerType,
+    String? ownerId,
+    String? displayName,
+    String? displayAvatar,
   }) {
     return ForumPost(
       id: id,
@@ -499,12 +522,16 @@ class ForumPost extends Equatable {
       updatedAt: updatedAt,
       lastReplyAt: lastReplyAt,
       officialTaskReward: officialTaskReward ?? this.officialTaskReward,
+      ownerType: ownerType ?? this.ownerType,
+      ownerId: ownerId ?? this.ownerId,
+      displayName: displayName ?? this.displayName,
+      displayAvatar: displayAvatar ?? this.displayAvatar,
     );
   }
 
   @override
   List<Object?> get props =>
-      [id, title, likeCount, replyCount, updatedAt, isLiked, isFavorited, officialTaskReward];
+      [id, title, likeCount, replyCount, updatedAt, isLiked, isFavorited, officialTaskReward, ownerType, ownerId, displayName, displayAvatar];
 }
 
 /// 论坛回复

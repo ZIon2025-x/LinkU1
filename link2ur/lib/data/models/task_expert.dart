@@ -364,6 +364,10 @@ class TaskExpertService extends Equatable {
     this.validityDays,
     this.linkedServiceId,
     this.linkedServiceSummary,
+    this.displayName,
+    this.displayAvatar,
+    this.ownerType,
+    this.ownerId,
   });
 
   final int id;
@@ -430,6 +434,13 @@ class TaskExpertService extends Equatable {
   /// 被关联服务的简要信息（后端路由层填充，方便前端直接渲染不用再拉一次）
   /// 键: id / service_name / service_name_en / service_name_zh / image / base_price / currency / status
   final Map<String, dynamic>? linkedServiceSummary;
+
+  // 统一显示身份字段（后端 owner_type/owner_id + display_name/display_avatar，
+  // 为 PublisherIdentity 等通用展示组件提供数据源，向后兼容：字段缺失时为 null）
+  final String? displayName;
+  final String? displayAvatar;
+  final String? ownerType; // 'user' | 'expert'
+  final String? ownerId;   // owner_type='user'→users.id；owner_type='expert'→experts.id
 
   /// locale-aware 展示关联服务名
   String? linkedServiceDisplayName(Locale locale) {
@@ -547,6 +558,10 @@ class TaskExpertService extends Equatable {
       validityDays: json['validity_days'] as int?,
       linkedServiceId: json['linked_service_id'] as int?,
       linkedServiceSummary: (json['linked_service_summary'] as Map?)?.cast<String, dynamic>(),
+      displayName: json['display_name'] as String?,
+      displayAvatar: json['display_avatar'] as String?,
+      ownerType: json['owner_type'] as String?,
+      ownerId: json['owner_id']?.toString(),
     );
   }
 
@@ -593,11 +608,15 @@ class TaskExpertService extends Equatable {
       'validity_days': validityDays,
       'linked_service_id': linkedServiceId,
       'linked_service_summary': linkedServiceSummary,
+      'display_name': displayName,
+      'display_avatar': displayAvatar,
+      'owner_type': ownerType,
+      'owner_id': ownerId,
     };
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, serviceRadiusKm, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds, packagePrice, validityDays, linkedServiceId, linkedServiceSummary];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, serviceRadiusKm, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds, packagePrice, validityDays, linkedServiceId, linkedServiceSummary, displayName, displayAvatar, ownerType, ownerId];
 }
 
 /// 任务达人列表响应

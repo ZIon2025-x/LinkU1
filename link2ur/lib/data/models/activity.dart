@@ -73,6 +73,8 @@ class Activity extends Equatable {
     this.isDrawn = false,
     this.isOfficial = false,
     this.currentApplicants,
+    this.displayName,
+    this.displayAvatar,
   });
 
   final int id;
@@ -156,6 +158,11 @@ class Activity extends Equatable {
   final bool isDrawn;
   final bool isOfficial;
   final int? currentApplicants;
+
+  // 统一显示身份字段（后端 display_name/display_avatar，
+  // 与 owner_type/owner_id 配合给 PublisherIdentity 通用展示组件用，向后兼容：字段缺失时为 null）
+  final String? displayName;
+  final String? displayAvatar;
 
   /// 是否抽奖活动
   bool get isLottery => activityType == 'lottery';
@@ -317,6 +324,8 @@ class Activity extends Equatable {
       isDrawn: parseBool(json['is_drawn']),
       isOfficial: parseBool(json['is_official']),
       currentApplicants: json['current_applicants'] as int?,
+      displayName: json['display_name'] as String?,
+      displayAvatar: json['display_avatar'] as String?,
     );
   }
 
@@ -385,6 +394,8 @@ class Activity extends Equatable {
       'is_drawn': isDrawn,
       'is_official': isOfficial,
       'current_applicants': currentApplicants,
+      'display_name': displayName,
+      'display_avatar': displayAvatar,
     };
   }
 
@@ -452,6 +463,8 @@ class Activity extends Equatable {
     bool? isDrawn,
     bool? isOfficial,
     int? currentApplicants,
+    String? displayName,
+    String? displayAvatar,
   }) {
     return Activity(
       id: id ?? this.id,
@@ -517,6 +530,8 @@ class Activity extends Equatable {
       isDrawn: isDrawn ?? this.isDrawn,
       isOfficial: isOfficial ?? this.isOfficial,
       currentApplicants: currentApplicants ?? this.currentApplicants,
+      displayName: displayName ?? this.displayName,
+      displayAvatar: displayAvatar ?? this.displayAvatar,
     );
   }
 
@@ -534,6 +549,7 @@ class Activity extends Equatable {
         type, participantStatus, createdAt, updatedAt,
         activityType, prizeType, prizeDescription, prizeDescriptionEn,
         prizeCount, drawMode, drawAt, drawTrigger, drawParticipantCount, drawnAt, winners, isDrawn, isOfficial, currentApplicants,
+        displayName, displayAvatar,
       ];
 }
 
