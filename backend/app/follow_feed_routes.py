@@ -21,6 +21,37 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/follow", tags=["关注"])
 
 
+def _pick_identity(
+    is_team: bool,
+    expert_name: str | None,
+    expert_avatar: str | None,
+    user_name: str | None,
+    user_avatar: str | None,
+    fallback_name: str | None = None,
+) -> tuple[str | None, str | None]:
+    """从已 JOIN 了 User + Expert 列的 feed row 中挑选展示用身份（name/avatar）。
+
+    Follow-feed 的查询把 User 和 Expert 的列通过 outerjoin 批量带进每一行，
+    这个 helper 只负责根据"这一行属于团队还是个人"来选字段，不再做任何 id 查询。
+
+    - is_team=True  → 返回 expert_name / expert_avatar
+    - is_team=False → 返回 user_name / user_avatar
+    - 当 fallback_name 非 None 时，空名字会被替换成该字符串（例如 "匿名用户"）
+
+    注意：services/activities 的旧实现没有空名字兜底（可能返回 None），
+    forum_posts 的旧实现有 "匿名用户" 兜底。通过 fallback_name 参数保留两种行为。
+    """
+    if is_team:
+        name = expert_name
+        avatar = expert_avatar
+    else:
+        name = user_name
+        avatar = user_avatar
+    if fallback_name is not None:
+        name = name or fallback_name
+    return name, avatar
+
+
 # ==================== 主接口 ====================
 
 
@@ -284,8 +315,12 @@ async def _fetch_followed_forum_posts(
         # 团队身份发帖：优先展示团队信息
         is_team_post = bool(row.post_expert_id)
         display_id = str(row.post_expert_id) if is_team_post else (str(row.author_id) if row.author_id else None)
-        display_name = (row.expert_name if is_team_post else row.user_name) or "匿名用户"
-        display_avatar = row.expert_avatar if is_team_post else row.user_avatar
+        display_name, display_avatar = _pick_identity(
+            is_team_post,
+            row.expert_name, row.expert_avatar,
+            row.user_name, row.user_avatar,
+            fallback_name="匿名用户",
+        )
         items.append({
             "feed_type": "forum_post",
             "id": f"post_{row.id}",
@@ -493,14 +528,12 @@ async def _fetch_followed_services(
     items = []
     for row in rows:
         service_thumb = _first_image(row.service_images)
-        is_team = row.owner_type == "expert"
-        if is_team:
-            display_name = row.expert_name
-            display_avatar = row.expert_avatar
-        else:
-            # 个人达人：直接使用 User 展示名（FeaturedTaskExpert 已弃用）
-            display_name = row.user_name
-            display_avatar = row.user_avatar
+        # 个人达人分支直接使用 User 展示名（FeaturedTaskExpert 已弃用）
+        display_name, display_avatar = _pick_identity(
+            row.owner_type == "expert",
+            row.expert_name, row.expert_avatar,
+            row.user_name, row.user_avatar,
+        )
         items.append({
             "feed_type": "service",
             "id": f"service_{row.id}",
@@ -657,14 +690,12 @@ async def _fetch_followed_activities(
         if original_price and price and original_price > 0 and price < original_price:
             discount_pct = round((1 - price / original_price) * 100)
 
-        is_team = row.owner_type == "expert"
-        if is_team:
-            display_name = row.expert_name
-            display_avatar = row.expert_avatar
-        else:
-            # 个人达人：直接使用 User 展示名（FeaturedTaskExpert 已弃用）
-            display_name = row.user_name
-            display_avatar = row.user_avatar
+        # 个人达人分支直接使用 User 展示名（FeaturedTaskExpert 已弃用）
+        display_name, display_avatar = _pick_identity(
+            row.owner_type == "expert",
+            row.expert_name, row.expert_avatar,
+            row.user_name, row.user_avatar,
+        )
         items.append({
             "feed_type": "activity",
             "id": f"activity_{row.id}",
