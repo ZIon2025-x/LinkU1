@@ -5884,5 +5884,9 @@
   "errorApprovalPriceNotSet": "該申請價格異常（0 或未設定），請通過『還價』設定價格後再批准。",
   "@errorApprovalPriceNotSet": {},
   "errorApplyRequiresConsultation": "此服務為議價服務且未設定基礎價格，請使用『諮詢』功能先與服務提供者溝通價格後再申請。",
-  "@errorApplyRequiresConsultation": {}
+  "@errorApplyRequiresConsultation": {},
+  "expertTeamLabel": "達人團隊",
+  "@expertTeamLabel": {},
+  "unknownUser": "未知用戶",
+  "@unknownUser": {}
 }

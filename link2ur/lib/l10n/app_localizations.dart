@@ -25373,6 +25373,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This service has no fixed price. Use Consult to discuss the price before applying.'**
   String get errorApplyRequiresConsultation;
+
+  /// No description provided for @expertTeamLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Team'**
+  String get expertTeamLabel;
+
+  /// No description provided for @unknownUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown User'**
+  String get unknownUser;
 }
 
 class _AppLocalizationsDelegate

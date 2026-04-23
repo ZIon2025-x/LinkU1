@@ -6055,5 +6055,9 @@
   "errorApprovalPriceNotSet": "Application price is missing or invalid. Send a counter-offer with a valid price before approving.",
   "@errorApprovalPriceNotSet": {},
   "errorApplyRequiresConsultation": "This service has no fixed price. Use Consult to discuss the price before applying.",
-  "@errorApplyRequiresConsultation": {}
+  "@errorApplyRequiresConsultation": {},
+  "expertTeamLabel": "Expert Team",
+  "@expertTeamLabel": {},
+  "unknownUser": "Unknown User",
+  "@unknownUser": {}
 }

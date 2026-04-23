@@ -13207,6 +13207,12 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get errorApplyRequiresConsultation =>
       '此服务为议价服务且未设定基础价格，请使用『咨询』功能先与服务提供者沟通价格后再申请。';
+
+  @override
+  String get expertTeamLabel => '达人团队';
+
+  @override
+  String get unknownUser => '未知用户';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -26412,4 +26418,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get errorApplyRequiresConsultation =>
       '此服務為議價服務且未設定基礎價格，請使用『諮詢』功能先與服務提供者溝通價格後再申請。';
+
+  @override
+  String get expertTeamLabel => '達人團隊';
+
+  @override
+  String get unknownUser => '未知用戶';
 }

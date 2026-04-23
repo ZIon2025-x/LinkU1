@@ -13799,4 +13799,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorApplyRequiresConsultation =>
       'This service has no fixed price. Use Consult to discuss the price before applying.';
+
+  @override
+  String get expertTeamLabel => 'Expert Team';
+
+  @override
+  String get unknownUser => 'Unknown User';
 }

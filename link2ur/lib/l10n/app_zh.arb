@@ -5947,5 +5947,9 @@
   "errorApprovalPriceNotSet": "该申请价格异常（0 或未设定），请通过『还价』设定价格后再批准。",
   "@errorApprovalPriceNotSet": {},
   "errorApplyRequiresConsultation": "此服务为议价服务且未设定基础价格，请使用『咨询』功能先与服务提供者沟通价格后再申请。",
-  "@errorApplyRequiresConsultation": {}
+  "@errorApplyRequiresConsultation": {},
+  "expertTeamLabel": "达人团队",
+  "@expertTeamLabel": {},
+  "unknownUser": "未知用户",
+  "@unknownUser": {}
 }
