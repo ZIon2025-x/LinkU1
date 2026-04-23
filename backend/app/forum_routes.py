@@ -6447,9 +6447,9 @@ async def get_my_posts(
     _author_ids = list({p.author_id for p in posts if p.author_id})
     _badge_cache = await preload_badge_cache(db, _author_ids)
 
-    from app.services.display_identity import batch_resolve_async as _batch_resolve_async
+    from app.services.display_identity import batch_resolve_async
     _identities = [_post_identity(p) for p in posts]
-    _identity_map = await _batch_resolve_async(db, _identities)
+    _identity_map = await batch_resolve_async(db, _identities)
 
     post_items = []
     # 获取用户可见的板块ID列表（用于过滤）
@@ -6669,9 +6669,9 @@ async def get_my_favorites(
     _fav_author_ids = list({f.post.author_id for f in favorites if f.post and f.post.author_id})
     _badge_cache = await preload_badge_cache(db, _fav_author_ids)
 
-    from app.services.display_identity import batch_resolve_async as _batch_resolve_async
+    from app.services.display_identity import batch_resolve_async
     _fav_identities = [_post_identity(f.post) for f in favorites if f.post]
-    _fav_identity_map = await _batch_resolve_async(db, _fav_identities)
+    _fav_identity_map = await batch_resolve_async(db, _fav_identities)
 
     # 转换为输出格式，并过滤掉用户无权限访问的学校板块
     favorite_list = []
