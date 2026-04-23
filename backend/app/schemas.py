@@ -2576,7 +2576,12 @@ class TaskExpertServiceOut(BaseModel):
     user_task_status: Optional[str] = None  # 任务状态
     user_task_is_paid: Optional[bool] = None  # 任务是否已支付
     user_application_has_negotiation: Optional[bool] = None  # 是否有议价（通过检查negotiated_price是否存在）
-    
+    # Display identity fields (added for expert team identity display)
+    display_name: str = ""
+    display_avatar: Optional[str] = None
+    owner_type: str = "user"
+    owner_id: Optional[str] = None
+
     @classmethod
     def from_orm(cls, obj):
         """自定义ORM转换，处理时间字段"""
@@ -3374,7 +3379,10 @@ class ActivityOut(BaseModel):
     is_drawn: bool = False
     is_official: bool = False
     current_applicants: Optional[int] = None
-    
+    # Display identity fields
+    display_name: str = ""
+    display_avatar: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -3903,6 +3911,11 @@ class ForumPostOut(BaseModel):
     updated_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
     official_task_reward: Optional[OfficialTaskRewardInfo] = None
+    # Display identity fields (synthesized from expert_id)
+    owner_type: str = "user"
+    owner_id: Optional[str] = None
+    display_name: str = ""
+    display_avatar: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -3936,6 +3949,11 @@ class ForumPostListItem(BaseModel):
     last_reply_at: Optional[datetime.datetime] = None
     is_liked: Optional[bool] = False  # 当前用户是否已点赞（列表接口动态计算）
     is_favorited: Optional[bool] = False  # 当前用户是否已收藏（列表接口动态计算）
+    # Display identity fields (synthesized from expert_id)
+    owner_type: str = "user"
+    owner_id: Optional[str] = None
+    display_name: str = ""
+    display_avatar: Optional[str] = None
 
     class Config:
         from_attributes = True
