@@ -142,14 +142,17 @@ async def browse_services(
         expert = experts_map.get(_expert_key) if _expert_key else None
         if s.owner_type == 'user' and s.owner_id:
             owner = owners_map.get(s.owner_id)
+            owner_resolved = owner is not None
             owner_name = owner.name if owner else "Unknown"
             owner_avatar = owner.avatar if owner else None
             owner_rating = float(owner.avg_rating) if owner and owner.avg_rating else None
         elif expert:
+            owner_resolved = True
             owner_name = expert.name or "Unknown"
             owner_avatar = expert.avatar
             owner_rating = float(expert.rating) if expert.rating else None
         else:
+            owner_resolved = False
             owner_name = "Unknown"
             owner_avatar = None
             owner_rating = None
@@ -189,8 +192,8 @@ async def browse_services(
             "owner_avatar": owner_avatar,
             "owner_rating": owner_rating,
             # Display identity fields (Task 3)
-            "display_name": owner_name if owner_name and owner_name != "Unknown" else "",
-            "display_avatar": owner_avatar,
+            "display_name": owner_name if owner_resolved else "",
+            "display_avatar": owner_avatar if owner_resolved else None,
             "created_at": s.created_at.isoformat() if s.created_at else None,
             "service_radius_km": eff_radius,
             "package_type": s.package_type,
