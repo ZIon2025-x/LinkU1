@@ -28,6 +28,18 @@ from app.content_filter.filter_service import check_content, create_review, crea
 logger = logging.getLogger(__name__)
 
 
+def _post_identity(post) -> tuple[str, str]:
+    """Synthesize (owner_type, owner_id) for a forum post.
+
+    forum_posts doesn't have native owner_type/owner_id columns, so derive them
+    from expert_id (team post) / author_id (regular user post).
+    """
+    if getattr(post, "expert_id", None):
+        return ("expert", post.expert_id)
+    author_id = getattr(post, "author_id", None) or ""
+    return ("user", author_id)
+
+
 async def _bg_translate_post(
     post_id: int,
     title: str,
@@ -3006,6 +3018,10 @@ async def get_posts(
     _author_ids = list({p.author_id for p in posts if p.author_id})
     _badge_cache = await preload_badge_cache(db, _author_ids)
 
+    from app.services.display_identity import batch_resolve_async
+    _identities = [_post_identity(p) for p in posts]
+    _identity_map = await batch_resolve_async(db, _identities)
+
     post_items = []
     for post in posts:
         is_liked = post.id in liked_ids
@@ -3019,6 +3035,9 @@ async def get_posts(
             content_preview_en = strip_markdown(post.content_en)
         if hasattr(post, 'content_zh') and post.content_zh:
             content_preview_zh = strip_markdown(post.content_zh)
+
+        _otype, _oid = _post_identity(post)
+        _dname, _davatar = _identity_map.get((_otype, _oid), ("", None))
 
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
@@ -3046,6 +3065,10 @@ async def get_posts(
             last_reply_at=post.last_reply_at,
             is_liked=post.id in liked_ids,
             is_favorited=post.id in favorited_ids,
+            owner_type=_otype,
+            owner_id=_oid or None,
+            display_name=_dname,
+            display_avatar=_davatar,
         ))
 
     return {
@@ -3147,6 +3170,11 @@ async def get_post(
     linked_name = await _resolve_linked_item_name(db, post.linked_item_type, post.linked_item_id)
 
     _badge_cache = await preload_badge_cache(db, [post.author_id] if post.author_id else [])
+
+    from app.services.display_identity import resolve_async
+    _otype, _oid = _post_identity(post)
+    _dname, _davatar = await resolve_async(db, _otype, _oid)
+
     return schemas.ForumPostOut(
         id=post.id,
         title=post.title,
@@ -3173,7 +3201,11 @@ async def get_post(
         linked_item_name=linked_name,
         created_at=post.created_at,
         updated_at=post.updated_at,
-        last_reply_at=post.last_reply_at
+        last_reply_at=post.last_reply_at,
+        owner_type=_otype,
+        owner_id=_oid or None,
+        display_name=_dname,
+        display_avatar=_davatar,
     )
 
 
@@ -3547,7 +3579,11 @@ async def create_post(
     # 构建作者信息（使用统一的函数，支持管理员和普通用户）
     _badge_cache = await preload_badge_cache(db, [db_post.author_id] if db_post.author_id else [])
     author_info = await get_post_author_info(db, db_post, request, _badge_cache=_badge_cache)
-    
+
+    from app.services.display_identity import resolve_async
+    _otype, _oid = _post_identity(db_post)
+    _dname, _davatar = await resolve_async(db, _otype, _oid)
+
     return schemas.ForumPostOut(
         id=db_post.id,
         title=db_post.title,
@@ -3576,6 +3612,10 @@ async def create_post(
         updated_at=db_post.updated_at,
         last_reply_at=db_post.last_reply_at,
         official_task_reward=official_task_reward,
+        owner_type=_otype,
+        owner_id=_oid or None,
+        display_name=_dname,
+        display_avatar=_davatar,
     )
 
 
@@ -3854,6 +3894,11 @@ async def update_post(
         is_favorited = favorite_result.scalar_one_or_none() is not None
     
     _badge_cache = await preload_badge_cache(db, [db_post.author_id] if db_post.author_id else [])
+
+    from app.services.display_identity import resolve_async
+    _otype, _oid = _post_identity(db_post)
+    _dname, _davatar = await resolve_async(db, _otype, _oid)
+
     return schemas.ForumPostOut(
         id=db_post.id,
         title=db_post.title,
@@ -3880,7 +3925,11 @@ async def update_post(
         linked_item_name=await _resolve_linked_item_name(db, db_post.linked_item_type, db_post.linked_item_id),
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
-        last_reply_at=db_post.last_reply_at
+        last_reply_at=db_post.last_reply_at,
+        owner_type=_otype,
+        owner_id=_oid or None,
+        display_name=_dname,
+        display_avatar=_davatar,
     )
 
 
@@ -5775,9 +5824,15 @@ async def search_posts(
     _author_ids = list({p.author_id for p in posts if p.author_id})
     _badge_cache = await preload_badge_cache(db, _author_ids)
 
+    from app.services.display_identity import batch_resolve_async
+    _identities = [_post_identity(p) for p in posts]
+    _identity_map = await batch_resolve_async(db, _identities)
+
     post_items = []
     for post in posts:
         display_view_count = view_counts.get(post.id, post.view_count or 0)
+        _otype, _oid = _post_identity(post)
+        _dname, _davatar = _identity_map.get((_otype, _oid), ("", None))
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
@@ -5797,7 +5852,11 @@ async def search_posts(
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
-            last_reply_at=post.last_reply_at
+            last_reply_at=post.last_reply_at,
+            owner_type=_otype,
+            owner_id=_oid or None,
+            display_name=_dname,
+            display_avatar=_davatar,
         ))
 
     return {
@@ -6388,6 +6447,10 @@ async def get_my_posts(
     _author_ids = list({p.author_id for p in posts if p.author_id})
     _badge_cache = await preload_badge_cache(db, _author_ids)
 
+    from app.services.display_identity import batch_resolve_async as _batch_resolve_async
+    _identities = [_post_identity(p) for p in posts]
+    _identity_map = await _batch_resolve_async(db, _identities)
+
     post_items = []
     # 获取用户可见的板块ID列表（用于过滤）
     visible_category_ids = None
@@ -6416,6 +6479,9 @@ async def get_my_posts(
             if post.category_id not in visible_category_ids:
                 continue
 
+        _otype, _oid = _post_identity(post)
+        _dname, _davatar = _identity_map.get((_otype, _oid), ("", None))
+
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
@@ -6435,7 +6501,11 @@ async def get_my_posts(
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
-            last_reply_at=post.last_reply_at
+            last_reply_at=post.last_reply_at,
+            owner_type=_otype,
+            owner_id=_oid or None,
+            display_name=_dname,
+            display_avatar=_davatar,
         ))
     
     # 重新计算总数（因为过滤了部分帖子）
@@ -6599,6 +6669,10 @@ async def get_my_favorites(
     _fav_author_ids = list({f.post.author_id for f in favorites if f.post and f.post.author_id})
     _badge_cache = await preload_badge_cache(db, _fav_author_ids)
 
+    from app.services.display_identity import batch_resolve_async as _batch_resolve_async
+    _fav_identities = [_post_identity(f.post) for f in favorites if f.post]
+    _fav_identity_map = await _batch_resolve_async(db, _fav_identities)
+
     # 转换为输出格式，并过滤掉用户无权限访问的学校板块
     favorite_list = []
     for favorite in favorites:
@@ -6607,6 +6681,8 @@ async def get_my_favorites(
         if (post.is_deleted == False and
             post.is_visible == True and
             post.category_id in visible_category_ids):
+            _otype, _oid = _post_identity(post)
+            _dname, _davatar = _fav_identity_map.get((_otype, _oid), ("", None))
             favorite_list.append(schemas.ForumFavoriteOut(
                 id=favorite.id,
                 post=schemas.ForumPostListItem(
@@ -6628,7 +6704,11 @@ async def get_my_favorites(
                     linked_item_type=post.linked_item_type,
                     linked_item_id=post.linked_item_id,
                     created_at=post.created_at,
-                    last_reply_at=post.last_reply_at
+                    last_reply_at=post.last_reply_at,
+                    owner_type=_otype,
+                    owner_id=_oid or None,
+                    display_name=_dname,
+                    display_avatar=_davatar,
                 ),
                 created_at=favorite.created_at
             ))
@@ -7233,6 +7313,10 @@ async def get_hot_posts(
     _author_ids = list({p.author_id for p in posts if p.author_id})
     _badge_cache = await preload_badge_cache(db, _author_ids)
 
+    from app.services.display_identity import batch_resolve_async
+    _identities = [_post_identity(p) for p in posts]
+    _identity_map = await batch_resolve_async(db, _identities)
+
     post_items = []
     for post in posts:
         is_liked = post.id in liked_ids
@@ -7246,6 +7330,9 @@ async def get_hot_posts(
             content_preview_en = strip_markdown(post.content_en)
         if hasattr(post, 'content_zh') and post.content_zh:
             content_preview_zh = strip_markdown(post.content_zh)
+
+        _otype, _oid = _post_identity(post)
+        _dname, _davatar = _identity_map.get((_otype, _oid), ("", None))
 
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
@@ -7270,7 +7357,11 @@ async def get_hot_posts(
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
-            last_reply_at=post.last_reply_at
+            last_reply_at=post.last_reply_at,
+            owner_type=_otype,
+            owner_id=_oid or None,
+            display_name=_dname,
+            display_avatar=_davatar,
         ))
 
     return {
@@ -7442,6 +7533,10 @@ async def get_user_hot_posts(
     _author_ids = list({p.author_id for p in posts if p.author_id})
     _badge_cache = await preload_badge_cache(db, _author_ids)
 
+    from app.services.display_identity import batch_resolve_async
+    _identities = [_post_identity(p) for p in posts]
+    _identity_map = await batch_resolve_async(db, _identities)
+
     post_items = []
     for post in posts:
         is_liked = post.id in liked_ids
@@ -7455,6 +7550,9 @@ async def get_user_hot_posts(
             content_preview_en = strip_markdown(post.content_en)
         if hasattr(post, 'content_zh') and post.content_zh:
             content_preview_zh = strip_markdown(post.content_zh)
+
+        _otype, _oid = _post_identity(post)
+        _dname, _davatar = _identity_map.get((_otype, _oid), ("", None))
 
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
@@ -7479,7 +7577,11 @@ async def get_user_hot_posts(
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
-            last_reply_at=post.last_reply_at
+            last_reply_at=post.last_reply_at,
+            owner_type=_otype,
+            owner_id=_oid or None,
+            display_name=_dname,
+            display_avatar=_davatar,
         ))
 
     return {
