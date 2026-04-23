@@ -1889,7 +1889,7 @@ async def get_activity_detail_async(
                 and float(user_task.agreed_reward) != float(user_task.base_reward)
             )
 
-    return schemas.ActivityOut.from_orm_with_participants(
+    activity_out = schemas.ActivityOut.from_orm_with_participants(
         activity,
         current_count,
         has_applied=has_applied,
@@ -1898,6 +1898,15 @@ async def get_activity_detail_async(
         user_task_is_paid=user_task_is_paid,
         user_task_has_negotiation=user_task_has_negotiation,
     )
+    from app.services.display_identity import resolve_async as _resolve_async_identity
+    _name, _avatar = await _resolve_async_identity(
+        db,
+        activity.owner_type or "user",
+        activity.owner_id or "",
+    )
+    activity_out.display_name = _name
+    activity_out.display_avatar = _avatar
+    return activity_out
 
 
 # 批量操作路由

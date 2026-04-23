@@ -10,6 +10,7 @@ Notes on id types:
 """
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 
@@ -73,6 +74,65 @@ async def batch_resolve_async(
             select(User.id, User.name, User.avatar)
             .where(User.id.in_(user_ids))
         )).all()
+        users = {r.id: (r.name or "", r.avatar) for r in rows}
+
+    out: dict[tuple[str, str], tuple[str, Optional[str]]] = {}
+    for otype, oid in identities:
+        if not oid:
+            out[(otype, oid)] = ("", None)
+        elif otype == "expert":
+            out[(otype, oid)] = experts.get(oid, ("", None))
+        else:
+            out[(otype, oid)] = users.get(oid, ("", None))
+    return out
+
+
+def resolve_sync(
+    db: Session,
+    owner_type: str,
+    owner_id: str,
+) -> tuple[str, Optional[str]]:
+    """Sync version of :func:`resolve_async` — for routes using sync ``Session``."""
+    from app.models_expert import Expert
+    from app.models import User
+
+    if not owner_id:
+        return ("", None)
+
+    if owner_type == "expert":
+        team = db.get(Expert, owner_id)
+        return ((team.name or "") if team else "", team.avatar if team else None)
+    else:
+        user = db.get(User, owner_id)
+        return ((user.name or "") if user else "", user.avatar if user else None)
+
+
+def batch_resolve_sync(
+    db: Session,
+    identities: list[tuple[str, str]],
+) -> dict[tuple[str, str], tuple[str, Optional[str]]]:
+    """Sync version of :func:`batch_resolve_async` — for routes using sync ``Session``."""
+    from app.models_expert import Expert
+    from app.models import User
+
+    expert_ids = list({oid for otype, oid in identities if otype == "expert" and oid})
+    user_ids = list({oid for otype, oid in identities if otype == "user" and oid})
+
+    experts: dict[str, tuple[str, Optional[str]]] = {}
+    users: dict[str, tuple[str, Optional[str]]] = {}
+
+    if expert_ids:
+        rows = db.execute(
+            select(Expert.id, Expert.name, Expert.avatar)
+            .where(Expert.id.in_(expert_ids))
+        ).all()
+        experts = {r.id: (r.name or "", r.avatar) for r in rows}
+
+    if user_ids:
+        rows = db.execute(
+            select(User.id, User.name, User.avatar)
+            .where(User.id.in_(user_ids))
+        ).all()
         users = {r.id: (r.name or "", r.avatar) for r in rows}
 
     out: dict[tuple[str, str], tuple[str, Optional[str]]] = {}

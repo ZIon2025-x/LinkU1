@@ -193,6 +193,12 @@ async def list_team_activities(
     result = await db.execute(query)
     activities = result.scalars().all()
 
+    from app.services.display_identity import batch_resolve_async
+    identity_map = await batch_resolve_async(
+        db,
+        [(a.owner_type or "user", a.owner_id or "") for a in activities],
+    )
+
     items = []
     for a in activities:
         # Count applicants for lottery/first_come
@@ -205,12 +211,18 @@ async def list_team_activities(
             )
             current_applicants = count_result.scalar() or 0
 
+        _otype = a.owner_type or "user"
+        _oid = a.owner_id or ""
+        _display_name, _display_avatar = identity_map.get((_otype, _oid), ("", None))
+
         items.append({
             'id': a.id,
             'expert_id': a.expert_id,
             'expert_service_id': a.expert_service_id,
-            'owner_type': a.owner_type,
+            'owner_type': _otype,
             'owner_id': a.owner_id,
+            'display_name': _display_name,
+            'display_avatar': _display_avatar,
             'title': a.title,
             'title_en': a.title_en,
             'title_zh': a.title_zh,

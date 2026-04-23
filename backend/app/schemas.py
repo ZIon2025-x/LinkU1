@@ -3468,6 +3468,8 @@ class ActivityOut(BaseModel):
             "is_drawn": getattr(obj, "is_drawn", False),
             "is_official": is_official,
             "current_applicants": current_applicants,
+            "owner_type": getattr(obj, "owner_type", None) or "user",
+            "owner_id": getattr(obj, "owner_id", None),
         }
         return cls(**data)
 

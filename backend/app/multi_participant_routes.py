@@ -1430,10 +1430,17 @@ def get_activities(
         query = query.order_by(Activity.created_at.desc())
     
     activities = query.offset(offset).limit(limit).all()
-    
+
+    # Batch resolve display identity for all activities in the page
+    from app.services.display_identity import batch_resolve_sync
+    identity_map = batch_resolve_sync(
+        db,
+        [(a.owner_type or "user", a.owner_id or "") for a in activities],
+    )
+
     # 计算每个活动的当前参与者数量，并过滤已过期的活动
     result = []
-    
+
     for activity in activities:
         # 实时检查活动是否已过期（即使状态还是 open）
         # 如果活动已过期，不显示在任务大厅
@@ -1475,8 +1482,13 @@ def get_activities(
         activity_out = schemas.ActivityOut.from_orm_with_participants(
             activity, current_count, current_applicants=current_applicants
         )
+        _otype = activity.owner_type or "user"
+        _oid = activity.owner_id or ""
+        _name, _avatar = identity_map.get((_otype, _oid), ("", None))
+        activity_out.display_name = _name
+        activity_out.display_avatar = _avatar
         result.append(activity_out)
-    
+
     return result
 
 
@@ -1601,6 +1613,16 @@ def get_activity_detail(
         user_task_has_negotiation=user_task_has_negotiation,
         current_applicants=current_applicants,
     )
+
+    # Populate display identity (sync inline — activity detail is a sync route)
+    from app.services.display_identity import resolve_sync
+    _name, _avatar = resolve_sync(
+        db,
+        activity.owner_type or "user",
+        activity.owner_id or "",
+    )
+    activity_out.display_name = _name
+    activity_out.display_avatar = _avatar
     return activity_out
 
 
@@ -2317,7 +2339,18 @@ def create_expert_activity(
     
     # 使用 from_orm_with_participants 方法创建输出对象（初始参与者数量为0）
     from app import schemas
-    return schemas.ActivityOut.from_orm_with_participants(db_activity, 0)
+    activity_out = schemas.ActivityOut.from_orm_with_participants(db_activity, 0)
+
+    # Populate display identity
+    from app.services.display_identity import resolve_sync
+    _name, _avatar = resolve_sync(
+        db,
+        db_activity.owner_type or "user",
+        db_activity.owner_id or "",
+    )
+    activity_out.display_name = _name
+    activity_out.display_avatar = _avatar
+    return activity_out
 
 
 # ===========================================
@@ -3172,7 +3205,13 @@ def get_my_activities(
                 applied_activities = db.query(Activity).options(
                     joinedload(Activity.service)
                 ).filter(Activity.id.in_(all_applied_ids)).all()
-                
+
+                from app.services.display_identity import batch_resolve_sync as _batch_resolve_sync
+                _applied_identity_map = _batch_resolve_sync(
+                    db,
+                    [(a.owner_type or "user", a.owner_id or "") for a in applied_activities],
+                )
+
                 for activity in applied_activities:
                     is_official = activity.activity_type in ("lottery", "first_come")
                     current_applicants = None
@@ -3208,7 +3247,12 @@ def get_my_activities(
                         has_applied=True,
                         current_applicants=current_applicants,
                     )
-                    
+                    _otype = activity.owner_type or "user"
+                    _oid = activity.owner_id or ""
+                    _name, _avatar = _applied_identity_map.get((_otype, _oid), ("", None))
+                    activity_out.display_name = _name
+                    activity_out.display_avatar = _avatar
+
                     activity_dict = jsonable_encoder(activity_out)
                     activity_dict["type"] = "applied"
                     activity_dict["participant_status"] = participant_status
@@ -3228,7 +3272,13 @@ def get_my_activities(
                 favorited_activities = db.query(Activity).options(
                     joinedload(Activity.service)
                 ).filter(Activity.id.in_(favorited_activity_ids)).all()
-                
+
+                from app.services.display_identity import batch_resolve_sync as _batch_resolve_sync2
+                _favorited_identity_map = _batch_resolve_sync2(
+                    db,
+                    [(a.owner_type or "user", a.owner_id or "") for a in favorited_activities],
+                )
+
                 for activity in favorited_activities:
                     if any(a["id"] == activity.id for a in activities_list):
                         for a in activities_list:
@@ -3256,7 +3306,12 @@ def get_my_activities(
                     activity_out = ActivityOut.from_orm_with_participants(
                         activity, current_count, current_applicants=current_applicants
                     )
-                    
+                    _otype = activity.owner_type or "user"
+                    _oid = activity.owner_id or ""
+                    _name, _avatar = _favorited_identity_map.get((_otype, _oid), ("", None))
+                    activity_out.display_name = _name
+                    activity_out.display_avatar = _avatar
+
                     activity_dict = _je(activity_out)
                     activity_dict["type"] = "favorited"
                     activities_list.append(activity_dict)
