@@ -21,6 +21,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
+import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -172,61 +173,108 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             builder: (context, state) {
               final post = state.selectedPost;
               if (post == null) return Text(context.l10n.forumPostDetail);
-              return Semantics(
-                button: true,
-                label: 'View author profile',
-                child: GestureDetector(
-                  onTap: () {
-                    final userId = post.author?.id ?? post.authorId;
-                    if (userId.isNotEmpty) {
-                      context.goToUserProfile(userId, isAdmin: post.author?.isAdmin ?? false);
-                    }
-                  },
-                  child: Row(
-                  children: [
-                    AvatarView(
-                      imageUrl: post.author?.avatar,
-                      name: post.author?.name,
-                      size: 32,
-                      isAnonymous: post.author == null,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
+              // 管理员发帖跳 /about（goToUserProfile 的 isAdmin 语义），PublisherIdentity
+              // 当前不支持 isAdmin 路由，因此管理员帖保留旧实现；其他发布者（个人 / 达人团队）统一走新组件
+              final isAdminPost = post.author?.isAdmin ?? false;
+              final timeText = Text(
+                _PostHeader.formatTime(context, post.createdAt),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
+                ),
+              );
+              if (isAdminPost) {
+                return Semantics(
+                  button: true,
+                  label: 'View author profile',
+                  child: GestureDetector(
+                    onTap: () {
+                      final userId = post.author?.id ?? post.authorId;
+                      if (userId.isNotEmpty) {
+                        context.goToUserProfile(userId, isAdmin: true);
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        AvatarView(
+                          imageUrl: post.author?.avatar,
+                          name: post.author?.name,
+                          size: 32,
+                          isAnonymous: post.author == null,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  post.author?.name ?? context.l10n.forumUserFallback(post.authorId),
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      post.author?.name ?? context.l10n.forumUserFallback(post.authorId),
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (post.author?.displayedBadge != null) ...[
+                                    const SizedBox(width: 4),
+                                    InlineBadgeTag(badge: post.author!.displayedBadge!),
+                                  ],
+                                ],
                               ),
-                              if (post.author?.displayedBadge != null) ...[
-                                const SizedBox(width: 4),
-                                InlineBadgeTag(badge: post.author!.displayedBadge!),
-                              ],
+                              timeText,
                             ],
                           ),
-                          Text(
-                            _PostHeader.formatTime(context, post.createdAt),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: PublisherIdentity(
+                                ownerType: post.ownerType,
+                                ownerId: (post.ownerId?.isNotEmpty ?? false)
+                                    ? post.ownerId
+                                    : post.author?.id,
+                                displayName: post.displayName,
+                                displayAvatar: post.displayAvatar,
+                                fallbackName: post.author?.name ??
+                                    context.l10n.forumUserFallback(post.authorId),
+                                fallbackAvatar: post.author?.avatar,
+                                nameStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (post.author?.displayedBadge != null) ...[
+                              const SizedBox(width: 4),
+                              InlineBadgeTag(badge: post.author!.displayedBadge!),
+                            ],
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 40),
+                          child: timeText,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               );
             },
           ),

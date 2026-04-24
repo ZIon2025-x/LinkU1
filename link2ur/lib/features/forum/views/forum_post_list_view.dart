@@ -15,7 +15,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
-import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/app_exception.dart';
@@ -324,24 +324,26 @@ class _PostCard extends StatelessWidget {
             // 底部信息
             Row(
               children: [
-                // 作者
-                if (post.author != null) ...[
-                  AvatarView(
-                    imageUrl: post.author!.avatar,
-                    name: post.author!.name,
-                    size: 20,
+                // 作者（统一用 PublisherIdentity 呈现发布者，个人 / 达人团队）
+                PublisherIdentity(
+                  ownerType: post.ownerType,
+                  ownerId: (post.ownerId?.isNotEmpty ?? false)
+                      ? post.ownerId
+                      : post.author?.id,
+                  displayName: post.displayName,
+                  displayAvatar: post.displayAvatar,
+                  fallbackName: post.author?.name,
+                  fallbackAvatar: post.author?.avatar,
+                  avatarSize: 20,
+                  showBadge: false,
+                  nameStyle: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    post.author!.name,
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary),
-                  ),
-                  if (post.author!.displayedBadge != null) ...[
-                    const SizedBox(width: 4),
-                    InlineBadgeTag(badge: post.author!.displayedBadge!),
-                  ],
+                ),
+                if (post.author?.displayedBadge != null) ...[
+                  const SizedBox(width: 4),
+                  InlineBadgeTag(badge: post.author!.displayedBadge!),
                 ],
                 const Spacer(),
                 // 统计
