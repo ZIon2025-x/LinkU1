@@ -9,6 +9,7 @@ import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/localized_string.dart';
 import '../../../core/widgets/app_select_sheet.dart';
+import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/personal_service_repository.dart';
@@ -361,6 +362,13 @@ class _BrowseServiceCard extends StatelessWidget {
     final pricingType = (service['pricing_type'] as String?) ?? 'fixed';
     final serviceType = (service['service_type'] as String?) ?? 'personal';
     final ownerName = (service['owner_name'] as String?) ?? '';
+    final ownerAvatar = service['owner_avatar'] as String?;
+    final ownerType = service['owner_type'] as String?;
+    final ownerId = service['owner_id'] as String?;
+    final displayName = service['display_name'] as String?;
+    final displayAvatar = service['display_avatar'] as String?;
+    final hasOwnerIdentity =
+        ownerName.isNotEmpty || (displayName?.isNotEmpty ?? false);
     final serviceRadiusKm = service['service_radius_km'] as int?;
     final images = service['images'] as List<dynamic>?;
     final firstImage =
@@ -481,29 +489,26 @@ class _BrowseServiceCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (ownerName.isNotEmpty) ...[
+                    if (hasOwnerIdentity) ...[
                       const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          Icon(Icons.person_outline,
-                              size: 12,
+                      PublisherIdentity(
+                        ownerType: ownerType,
+                        ownerId: ownerId,
+                        displayName: displayName,
+                        displayAvatar: displayAvatar,
+                        fallbackName: ownerName,
+                        fallbackAvatar: ownerAvatar,
+                        avatarSize: 16,
+                        showBadge: false,
+                        nameStyle: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(
+                              fontSize: 11,
                               color: isDark
                                   ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight),
-                          const SizedBox(width: 4),
-                          Text(
-                            ownerName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  fontSize: 11,
-                                  color: isDark
-                                      ? AppColors.textTertiaryDark
-                                      : AppColors.textTertiaryLight,
-                                ),
-                          ),
-                        ],
+                                  : AppColors.textTertiaryLight,
+                            ),
                       ),
                     ],
                     if (serviceRadiusKm != null) ...[
