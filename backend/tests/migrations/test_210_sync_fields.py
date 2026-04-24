@@ -23,6 +23,24 @@ MIGRATION_210_PATH = (
 )
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_expert_migration_map(_tables):
+    """CI 的 conftest 只跑 Base.metadata.create_all(),不会创建 migration 159
+    里的 _expert_id_migration_map 辅助表(它没有对应的 ORM 模型)。此 fixture
+    在测试 session 启动时用独立连接建表并 commit,使后续测试的 INSERT 可见。"""
+    if _tables.dialect.name != "postgresql":
+        return
+    with _tables.begin() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS _expert_id_migration_map ("
+                "  old_id VARCHAR(8) PRIMARY KEY,"
+                "  new_id VARCHAR(8) NOT NULL UNIQUE"
+                ")"
+            )
+        )
+
+
 def _pg_only(db: Session):
     """SQLite 不支持 DO block + JSONB cast;skip 该测试。"""
     dialect = db.bind.dialect.name
