@@ -110,10 +110,8 @@ class _ServiceDetailContent extends StatelessWidget {
                     fallbackName: service.ownerName,
                     fallbackAvatar: service.ownerAvatar,
                     showBadge: false,
-                    nameStyle: const TextStyle(
+                    nameStyle: AppTypography.subheadlineBold.copyWith(
                       color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
