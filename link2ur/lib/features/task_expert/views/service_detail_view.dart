@@ -23,6 +23,7 @@ import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/widgets/qa_section.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../data/models/activity.dart';
@@ -97,22 +98,23 @@ class _ServiceDetailContent extends StatelessWidget {
             selector: (state) => state.selectedService,
             builder: (context, service) {
               if (service == null || !service.isPersonalService) return const SizedBox.shrink();
-              final avatar = service.ownerAvatar;
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: GestureDetector(
-                  onTap: service.userId != null
-                      ? () => context.goToUserProfile(service.userId!)
-                      : null,
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white.withValues(alpha: 0.3),
-                    backgroundImage: avatar != null && avatar.isNotEmpty
-                        ? NetworkImage(Helpers.getImageUrl(avatar))
-                        : null,
-                    child: avatar == null || avatar.isEmpty
-                        ? const Icon(Icons.person, size: 16, color: Colors.white)
-                        : null,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: PublisherIdentity(
+                    ownerType: service.ownerType,
+                    ownerId: service.ownerId ?? service.userId,
+                    displayName: service.displayName,
+                    displayAvatar: service.displayAvatar,
+                    fallbackName: service.ownerName,
+                    fallbackAvatar: service.ownerAvatar,
+                    showBadge: false,
+                    nameStyle: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               );
