@@ -15,6 +15,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/models/activity.dart';
@@ -435,6 +436,29 @@ class ActivityCardView extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+
+                  // 主办方（个人/专家团队身份）
+                  if ((activity.displayName?.isNotEmpty ?? false) ||
+                      (activity.ownerId?.isNotEmpty ?? false)) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    PublisherIdentity(
+                      ownerType: activity.ownerType,
+                      ownerId: activity.ownerId,
+                      displayName: activity.displayName,
+                      displayAvatar: activity.displayAvatar,
+                      avatarSize: 18,
+                      showBadge: false,
+                      nameStyle: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.sm),
 
                   // 价格 + 参与人数（对齐iOS HStack）
