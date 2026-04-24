@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
 import '../router/go_router_extensions.dart';
+import '../utils/haptic_feedback.dart';
 import '../utils/l10n_extension.dart';
 import 'async_image_view.dart';
 
@@ -80,6 +81,7 @@ class PublisherIdentity extends StatelessWidget {
 
   void _onTap(BuildContext context) {
     if (!_isTappable) return;
+    AppHaptics.selection();
     if (_isExpert) {
       context.goToTaskExpertDetail(ownerId!);
     } else {
