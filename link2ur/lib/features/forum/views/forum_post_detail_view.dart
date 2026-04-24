@@ -255,10 +255,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                 fallbackName: post.author?.name ??
                                     context.l10n.forumUserFallback(post.authorId),
                                 fallbackAvatar: post.author?.avatar,
+                                isAnonymous: post.author == null,
                                 nameStyle: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                subtitle: timeText,
                               ),
                             ),
                             if (post.author?.displayedBadge != null) ...[
@@ -266,10 +268,6 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                               InlineBadgeTag(badge: post.author!.displayedBadge!),
                             ],
                           ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 40),
-                          child: timeText,
                         ),
                       ],
                     ),

@@ -31,6 +31,8 @@ class PublisherIdentity extends StatelessWidget {
     this.showBadge = true,
     this.avatarSize = 32,
     this.nameStyle,
+    this.isAnonymous = false,
+    this.subtitle,
   });
 
   /// 'user' | 'expert' | null
@@ -59,6 +61,12 @@ class PublisherIdentity extends StatelessWidget {
 
   /// 名称文本样式；默认 [AppTypography.subheadlineBold]
   final TextStyle? nameStyle;
+
+  /// 是否为匿名发布者；true 时 AvatarView 渲染匿名头像 asset，覆盖 displayAvatar/fallbackAvatar
+  final bool isAnonymous;
+
+  /// 可选副标题（例如发布时间）；渲染在名称/徽章下方、同一 Column 内，自动与名称左对齐
+  final Widget? subtitle;
 
   bool get _isExpert => ownerType == 'expert';
   bool get _isTappable => ownerId != null && ownerId!.isNotEmpty;
@@ -103,6 +111,7 @@ class PublisherIdentity extends StatelessWidget {
           imageUrl: avatar,
           name: name,
           size: avatarSize,
+          isAnonymous: isAnonymous,
         ),
         const SizedBox(width: 8),
         Flexible(
@@ -135,6 +144,7 @@ class PublisherIdentity extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (subtitle != null) subtitle!,
             ],
           ),
         ),
