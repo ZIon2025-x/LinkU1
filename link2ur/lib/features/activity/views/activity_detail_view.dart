@@ -21,6 +21,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
+import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../core/router/app_router.dart';
@@ -1873,136 +1874,64 @@ class _PosterInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = expert?.avatar;
-    final expertName = expert?.displayNameWith(context.l10n);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: ScrollSafeTap(
-        onTap: () {
-          AppHaptics.selection();
-          final id = activity.expertTeamId ?? activity.expertId;
-          if (id.isNotEmpty) {
-            context.safePush('/task-experts/$id');
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.cardBackgroundDark
-                : AppColors.cardBackgroundLight,
-            borderRadius: AppRadius.allLarge,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // 达人头像 - 对标iOS AvatarView
-              _buildAvatar(avatarUrl),
-              const SizedBox(width: AppSpacing.md),
-              // 达人名字 + 查看资料 - 对标iOS expert.name
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      expertName ?? context.l10n.activityPublisher,
-                      style: AppTypography.bodyBold.copyWith(
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      context.l10n.activityViewExpertProfileShort,
-                      style: AppTypography.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 箭头
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.backgroundDark
-                      : AppColors.backgroundLight,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 14,
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 达人头像：有真实头像显示真实头像，否则显示默认 icon
-  Widget _buildAvatar(String? avatarUrl) {
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return Container(
-        width: 52,
-        height: 52,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.15),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 5,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: ClipOval(
-          child: AsyncImageView(
-            imageUrl: avatarUrl,
-            width: 52,
-            height: 52,
-          ),
+        child: Row(
+          children: [
+            // 发布者身份（头像 + 名称 + 达人团队徽章）
+            // PublisherIdentity 内部根据 ownerType 决定跳转 user 或 expert 详情页
+            Expanded(
+              child: PublisherIdentity(
+                ownerType: activity.ownerType,
+                ownerId: activity.ownerId,
+                displayName: activity.displayName,
+                displayAvatar: activity.displayAvatar,
+                // 后端未回填 display_* 时兜底到 bloc 里预加载的 expert 数据
+                fallbackName: expert?.displayNameWith(context.l10n),
+                fallbackAvatar: expert?.avatar,
+                avatarSize: 52,
+                nameStyle: AppTypography.bodyBold.copyWith(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+              ),
+            ),
+            // 箭头（装饰性；点击由 PublisherIdentity 自己处理）
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.backgroundDark
+                    : AppColors.backgroundLight,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chevron_right,
+                size: 14,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ),
+          ],
         ),
-      );
-    }
-
-    // 无头像时的默认样式
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: AppColors.gradientDeepBlue,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: const Icon(Icons.person, size: 22, color: Colors.white),
     );
   }
 }
