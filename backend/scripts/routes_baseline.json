@@ -256,21 +256,6 @@
   },
   {
     "method": "DELETE",
-    "path": "/api/users/admin/task-expert/{expert_id}",
-    "name": "delete_task_expert"
-  },
-  {
-    "method": "DELETE",
-    "path": "/api/users/admin/task-expert/{expert_id}/activities/{activity_id}",
-    "name": "delete_expert_activity_admin"
-  },
-  {
-    "method": "DELETE",
-    "path": "/api/users/admin/task-expert/{expert_id}/services/{service_id}",
-    "name": "delete_expert_service_admin"
-  },
-  {
-    "method": "DELETE",
     "path": "/api/users/device-token",
     "name": "unregister_device_token"
   },
@@ -2033,26 +2018,6 @@
     "method": "GET",
     "path": "/api/users/admin/customer-service-requests/{request_id}",
     "name": "admin_get_customer_service_request_detail"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/admin/task-expert/{expert_id}",
-    "name": "get_task_expert"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/admin/task-expert/{expert_id}/activities",
-    "name": "get_expert_activities_admin"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/admin/task-expert/{expert_id}/services",
-    "name": "get_expert_services_admin"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/admin/task-experts",
-    "name": "get_task_experts"
   },
   {
     "method": "GET",
@@ -4426,16 +4391,6 @@
   },
   {
     "method": "POST",
-    "path": "/api/users/admin/task-expert",
-    "name": "create_task_expert"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/admin/task-expert/{expert_id}/services/{service_id}/time-slots/batch-create",
-    "name": "batch_create_service_time_slots_admin"
-  },
-  {
-    "method": "POST",
     "path": "/api/users/csp-report",
     "name": "csp_report"
   },
@@ -5138,21 +5093,6 @@
     "method": "PUT",
     "path": "/api/users/admin/customer-service-requests/{request_id}",
     "name": "admin_update_customer_service_request"
-  },
-  {
-    "method": "PUT",
-    "path": "/api/users/admin/task-expert/{expert_id}",
-    "name": "update_task_expert"
-  },
-  {
-    "method": "PUT",
-    "path": "/api/users/admin/task-expert/{expert_id}/activities/{activity_id}",
-    "name": "update_expert_activity_admin"
-  },
-  {
-    "method": "PUT",
-    "path": "/api/users/admin/task-expert/{expert_id}/services/{service_id}",
-    "name": "update_expert_service_admin"
   },
   {
     "method": "PUT",

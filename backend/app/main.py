@@ -328,6 +328,10 @@ app.include_router(admin_user_management_router, tags=["管理员-用户管理"]
 from app.admin_task_management_routes import router as admin_task_management_router
 app.include_router(admin_task_management_router, tags=["管理员-任务管理"])
 
+# 管理员任务达人管理路由（从 routers.py 迁出）
+from app.admin_task_expert_routes import router as admin_task_expert_router
+app.include_router(admin_task_expert_router, tags=["管理员-任务达人管理"])
+
 # 管理员客服管理路由
 from app.admin_customer_service_routes import router as admin_customer_service_router
 app.include_router(admin_customer_service_router, tags=["管理员-客服管理"])
