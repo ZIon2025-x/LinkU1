@@ -44,13 +44,13 @@ from app.routers import router as main_router
 # 新拆分出来的领域 router（每次提取一个域时在此 import + 加入 _SPLIT_ROUTERS）
 from app.routes import (
     auth_inline_routes,
+    refund_routes,
     system_routes,
     translation_routes,
     upload_inline_routes,
 )
 # from app.routes import (
 #     task_routes,
-#     refund_routes,
 #     profile_routes,
 #     message_routes,
 #     payment_inline_routes,
@@ -363,8 +363,8 @@ _SPLIT_ROUTERS: list[tuple[object, str]] = [
     (system_routes.router, "系统"),
     (upload_inline_routes.router, "上传-inline"),
     (auth_inline_routes.router, "auth-inline"),
+    (refund_routes.router, "退款"),
     # (task_routes.router, "任务"),
-    # (refund_routes.router, "退款"),
     # (profile_routes.router, "用户资料"),
     # (message_routes.router, "消息与通知"),
     # (payment_inline_routes.router, "支付-inline"),
