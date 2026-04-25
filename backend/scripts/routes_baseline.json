@@ -1,0 +1,5262 @@
+[
+  {
+    "method": "DELETE",
+    "path": "/api/admin/admin-user/{admin_id}",
+    "name": "delete_admin_user_by_super_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/banners/{banner_id}",
+    "name": "delete_banner"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/checkin/rewards/{reward_id}",
+    "name": "delete_checkin_reward"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/content-moderation/homophone-mappings/{mapping_id}",
+    "name": "delete_homophone_mapping"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/content-moderation/sensitive-words/{word_id}",
+    "name": "delete_sensitive_word"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/coupons/{coupon_id}",
+    "name": "delete_coupon"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/customer-service-user/{user_id}",
+    "name": "admin_remove_customer_service_user"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/experts/activities/{activity_id}",
+    "name": "delete_expert_activity_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/experts/services/{service_id}",
+    "name": "delete_expert_service_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/experts/{expert_id}",
+    "name": "delete_expert_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/invitation-codes/{invitation_id}",
+    "name": "delete_invitation_code"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/job-positions/{position_id}",
+    "name": "admin_delete_job_position"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/messages/{message_id}",
+    "name": "admin_delete_message"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/notifications/{notification_id}",
+    "name": "admin_delete_notification"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/official-tasks/{task_id}",
+    "name": "deactivate_official_task"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/official/activities/{activity_id}",
+    "name": "cancel_official_activity"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/official/activities/{activity_id}/applicants/{user_id}",
+    "name": "remove_activity_applicant"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/promotion-codes/{promo_id}",
+    "name": "delete_promotion_code"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/skill-categories/{category_id}",
+    "name": "deactivate_skill_category"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/task-expert/{expert_id}",
+    "name": "delete_task_expert"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/task-expert/{expert_id}/activities/{activity_id}",
+    "name": "delete_expert_activity_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/task-expert/{expert_id}/services/{service_id}",
+    "name": "delete_expert_service_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tasks/{task_id}",
+    "name": "admin_delete_task"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/ai/conversations/{conversation_id}",
+    "name": "archive_conversation"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/custom-leaderboards/admin/items/{item_id}",
+    "name": "delete_item_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/expert/activities/{activity_id}",
+    "name": "delete_expert_activity"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/experts/{expert_id}/closed-dates/by-date",
+    "name": "delete_closed_date_by_date"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/experts/{expert_id}/closed-dates/{closed_date_id}",
+    "name": "delete_closed_date"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/experts/{expert_id}/coupons/{coupon_id}",
+    "name": "deactivate_expert_coupon"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/experts/{expert_id}/members/{user_id}",
+    "name": "remove_member"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/experts/{expert_id}/services/{service_id}",
+    "name": "delete_expert_service"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/experts/{expert_id}/services/{service_id}/time-slots/by-date",
+    "name": "delete_time_slots_by_date"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/experts/{expert_id}/services/{service_id}/time-slots/{slot_id}",
+    "name": "delete_time_slot"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/flea-market/admin/items/{item_id}",
+    "name": "delete_flea_market_item_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/forum/categories/{category_id}",
+    "name": "delete_category"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/forum/posts/{post_id}",
+    "name": "delete_post"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/forum/posts/{post_id}/feature",
+    "name": "unfeature_post"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/forum/posts/{post_id}/lock",
+    "name": "unlock_post"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/forum/posts/{post_id}/pin",
+    "name": "unpin_post"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/forum/replies/{reply_id}",
+    "name": "delete_reply"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/official-activities/{activity_id}/apply",
+    "name": "cancel_official_activity_application"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/profile/capabilities/{capability_id}",
+    "name": "delete_capability"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/questions/{question_id}",
+    "name": "delete_question"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/secure-auth/sessions/{session_id}",
+    "name": "revoke_session"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/services/me/{service_id}",
+    "name": "delete_personal_service"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/skills/my/{skill_id}",
+    "name": "delete_my_skill"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/tasks/{task_id}/delete",
+    "name": "delete_cancelled_task"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/trending/admin/blacklist/{item_id}",
+    "name": "remove_blacklist"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/trending/admin/pinned/{item_id}",
+    "name": "remove_pinned"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/trending/admin/snapshot",
+    "name": "clear_trending_snapshot"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/account",
+    "name": "delete_user_account"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/admin/task-expert/{expert_id}",
+    "name": "delete_task_expert"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/admin/task-expert/{expert_id}/activities/{activity_id}",
+    "name": "delete_expert_activity_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/admin/task-expert/{expert_id}/services/{service_id}",
+    "name": "delete_expert_service_admin"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/device-token",
+    "name": "unregister_device_token"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/tasks/{task_id}/delete",
+    "name": "delete_cancelled_task"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/users/account",
+    "name": "delete_user_account"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/users/device-token",
+    "name": "unregister_device_token"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/{user_id}/follow",
+    "name": "unfollow_user"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v2/upload/image",
+    "name": "delete_image"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v2/upload/temp",
+    "name": "delete_temp_images"
+  },
+  {
+    "method": "GET",
+    "path": "/",
+    "name": "read_root"
+  },
+  {
+    "method": "GET",
+    "path": "/",
+    "name": "ssr_home"
+  },
+  {
+    "method": "GET",
+    "path": "/.well-known/openid-configuration",
+    "name": "openid_configuration"
+  },
+  {
+    "method": "GET",
+    "path": "/activities/{activity_id}",
+    "name": "ssr_activity_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/db/check-conversation-key",
+    "name": "check_conversation_key"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/read-only",
+    "name": "get_read_only_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/activities",
+    "name": "get_activities"
+  },
+  {
+    "method": "GET",
+    "path": "/api/activities/{activity_id}",
+    "name": "get_activity_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/activities/{activity_id}/favorite/status",
+    "name": "get_activity_favorite_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/activities/{activity_id}/i18n",
+    "name": "get_activity_detail_async"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/admin-users",
+    "name": "get_admin_users_for_super_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/audit-logs",
+    "name": "admin_get_audit_logs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/audit-logs",
+    "name": "get_audit_logs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/audit-logs/{log_id}",
+    "name": "get_audit_log_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/banners",
+    "name": "get_banners_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/banners/{banner_id}",
+    "name": "get_banner_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/cancel-requests",
+    "name": "admin_get_cancel_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/checkin/rewards",
+    "name": "get_checkin_rewards_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/checkin/rewards",
+    "name": "list_checkin_rewards"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/checkin/settings",
+    "name": "get_checkin_settings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/content-moderation/content-reviews",
+    "name": "list_content_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/content-moderation/filter-logs",
+    "name": "list_filter_logs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/content-moderation/homophone-mappings",
+    "name": "list_homophone_mappings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/content-moderation/sensitive-words",
+    "name": "list_sensitive_words"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/coupons",
+    "name": "get_coupons_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/coupons/{coupon_id}",
+    "name": "get_coupon_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/customer-service-chat",
+    "name": "admin_get_customer_service_chat_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/customer-service-requests",
+    "name": "admin_get_customer_service_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/customer-service-requests/{request_id}",
+    "name": "admin_get_customer_service_request_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/customer-service-stats",
+    "name": "admin_get_customer_service_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/customer-service-users",
+    "name": "admin_get_customer_service_users"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/dashboard/payment-methods",
+    "name": "admin_get_payment_methods_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/dashboard/revenue",
+    "name": "admin_get_revenue_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/dashboard/stats",
+    "name": "get_dashboard_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/experts",
+    "name": "list_experts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/experts/activities",
+    "name": "get_all_expert_activities_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/experts/applications",
+    "name": "list_expert_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/experts/profile-update-requests",
+    "name": "list_profile_update_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/experts/services",
+    "name": "get_all_expert_services_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/experts/{expert_id}",
+    "name": "get_expert_detail_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/invitation-codes",
+    "name": "get_invitation_codes_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/invitation-codes/{invitation_id}",
+    "name": "get_invitation_code_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/invitation-codes/{invitation_id}/statistics",
+    "name": "get_invitation_code_statistics"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/invitation-codes/{invitation_id}/users",
+    "name": "get_invitation_code_users"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/job-positions",
+    "name": "admin_get_job_positions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/messages",
+    "name": "admin_get_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/newbie-tasks/config",
+    "name": "list_newbie_task_configs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/notification-stats",
+    "name": "admin_get_notification_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/notifications",
+    "name": "admin_get_notifications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/oauth/clients",
+    "name": "list_oauth_clients"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/oauth/clients/{client_id}",
+    "name": "get_oauth_client"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/official-tasks",
+    "name": "list_all_official_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/official-tasks/{task_id}/stats",
+    "name": "get_official_task_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/official/account",
+    "name": "get_official_account"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/official/activities",
+    "name": "list_official_activities"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/official/activities/{activity_id}/applicants",
+    "name": "get_activity_applicants"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/payments",
+    "name": "admin_get_payments"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/payments/stats",
+    "name": "admin_get_payment_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/payments/{payment_id}",
+    "name": "admin_get_payment_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/promotion-codes",
+    "name": "get_promotion_codes_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/recommendation-analytics",
+    "name": "get_recommendation_analytics_endpoint"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/recommendation-health",
+    "name": "get_recommendation_health"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/recommendation-metrics",
+    "name": "get_recommendation_metrics_endpoint"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/recommendation-optimization",
+    "name": "get_recommendation_optimization"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/refund-requests",
+    "name": "get_admin_refund_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/reward-logs",
+    "name": "list_reward_logs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rewards",
+    "name": "get_rewards_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rewards/{reward_id}",
+    "name": "get_reward_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/settings/points",
+    "name": "get_points_settings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/skill-categories",
+    "name": "list_skill_categories"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/stage-bonus/config",
+    "name": "list_stage_bonus_configs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/stats/daily-active",
+    "name": "get_daily_active_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/stats/task-growth",
+    "name": "get_task_growth_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/stats/user-growth",
+    "name": "get_user_growth_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/system-settings",
+    "name": "admin_get_system_settings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/task-disputes",
+    "name": "get_admin_task_disputes"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/task-disputes/{dispute_id}",
+    "name": "get_admin_task_dispute_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/task-expert/{expert_id}",
+    "name": "get_task_expert"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/task-expert/{expert_id}/activities",
+    "name": "get_expert_activities_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/task-expert/{expert_id}/services",
+    "name": "get_expert_services_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/task-experts",
+    "name": "get_task_experts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tasks",
+    "name": "admin_get_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tasks/{task_id}",
+    "name": "admin_get_task_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/top-recommended-tasks",
+    "name": "get_top_recommended_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users",
+    "name": "get_users_for_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users/{user_id}/details",
+    "name": "get_user_details"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/vip-subscriptions",
+    "name": "admin_list_vip_subscriptions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/vip-subscriptions/stats",
+    "name": "admin_vip_subscription_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/categories",
+    "name": "get_categories"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/conversations",
+    "name": "list_conversations"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/conversations/{conversation_id}",
+    "name": "get_conversation"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/site-info",
+    "name": "get_site_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/tasks/summary",
+    "name": "get_tasks_summary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/app/version-check",
+    "name": "check_app_version"
+  },
+  {
+    "method": "GET",
+    "path": "/api/applications/{application_id}/status",
+    "name": "get_application_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/admin/2fa/setup",
+    "name": "get_2fa_setup"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/admin/2fa/status",
+    "name": "get_2fa_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/admin/notifications",
+    "name": "get_admin_notifications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/admin/notifications/unread",
+    "name": "get_unread_admin_notifications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/admin/profile",
+    "name": "get_admin_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/admin/sessions",
+    "name": "get_admin_sessions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/service/profile",
+    "name": "get_service_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/service/redis-test",
+    "name": "service_redis_test"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/service/sessions",
+    "name": "get_service_sessions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/user/profile",
+    "name": "get_user_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/badges/my",
+    "name": "get_my_badges"
+  },
+  {
+    "method": "GET",
+    "path": "/api/badges/user/{user_id}",
+    "name": "get_user_badges"
+  },
+  {
+    "method": "GET",
+    "path": "/api/banners",
+    "name": "get_banners"
+  },
+  {
+    "method": "GET",
+    "path": "/api/chat/tasks/{task_id}/participants",
+    "name": "get_chat_participants"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cleanup/cleanup/status",
+    "name": "get_cleanup_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cleanup/cleanup/user-stats",
+    "name": "get_user_data_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/confirm/{token}",
+    "name": "confirm_email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/contacts",
+    "name": "get_contacts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/checkin/rewards",
+    "name": "get_check_in_rewards"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/checkin/status",
+    "name": "get_check_in_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/coupons/available",
+    "name": "get_available_coupons_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/coupons/my",
+    "name": "get_my_coupons"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/payment-history",
+    "name": "get_payment_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/payment-history/{payment_id}/receipt",
+    "name": "download_receipt"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/points/account",
+    "name": "get_account_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/points/transactions",
+    "name": "get_transactions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/coupon-points/tasks/{task_id}/payment-status",
+    "name": "get_task_payment_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/csrf/status",
+    "name": "get_csrf_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/csrf/token",
+    "name": "get_csrf_token"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards",
+    "name": "get_leaderboards"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/admin/all",
+    "name": "get_all_leaderboards_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/admin/items",
+    "name": "get_items_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/admin/pending-requests/count",
+    "name": "get_pending_leaderboard_requests_count"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/admin/reports",
+    "name": "get_reports_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/admin/votes",
+    "name": "get_votes_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/items/{item_id}",
+    "name": "get_item_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/items/{item_id}/votes",
+    "name": "get_item_votes"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/my/favorites",
+    "name": "get_my_leaderboard_favorites"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/{leaderboard_id}",
+    "name": "get_leaderboard_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/{leaderboard_id}/favorite/status",
+    "name": "get_leaderboard_favorite_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/custom-leaderboards/{leaderboard_id}/items",
+    "name": "get_leaderboard_items"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/admin-chat",
+    "name": "get_admin_chat_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/admin-requests",
+    "name": "get_admin_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/all-ratings",
+    "name": "get_all_customer_service_ratings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/cancel-requests",
+    "name": "cs_get_cancel_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/chats",
+    "name": "get_customer_service_chats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/chats/{chat_id}/messages",
+    "name": "get_customer_service_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/chats/{chat_id}/timeout-status",
+    "name": "get_chat_timeout_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/check-availability",
+    "name": "check_customer_service_availability"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/permissions",
+    "name": "get_cs_permissions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/profile",
+    "name": "get_cs_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/status",
+    "name": "get_customer_service_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/customer-service/{service_id}/rating",
+    "name": "get_customer_service_rating"
+  },
+  {
+    "method": "GET",
+    "path": "/api/debug/check-pending/{email}",
+    "name": "debug_check_pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/debug/check-user-avatar/{user_id}",
+    "name": "check_user_avatar"
+  },
+  {
+    "method": "GET",
+    "path": "/api/debug/session-status",
+    "name": "debug_session_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/debug/simple-test",
+    "name": "debug_simple_test"
+  },
+  {
+    "method": "GET",
+    "path": "/api/debug/test-confirm-simple",
+    "name": "debug_test_confirm_simple"
+  },
+  {
+    "method": "GET",
+    "path": "/api/debug/test-reviews/{user_id}",
+    "name": "debug_test_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/debug/test-token/{token}",
+    "name": "debug_test_token"
+  },
+  {
+    "method": "GET",
+    "path": "/api/discovery/feed",
+    "name": "get_discovery_feed"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts",
+    "name": "list_experts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/by-user/{user_id}",
+    "name": "get_expert_by_user"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/featured",
+    "name": "list_featured_experts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/my-applications",
+    "name": "list_my_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/my-following",
+    "name": "list_my_following_experts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/my-invitations",
+    "name": "list_my_invitations"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/my-teams",
+    "name": "list_my_teams"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}",
+    "name": "get_expert_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/activities",
+    "name": "list_team_activities"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/applications",
+    "name": "list_expert_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/board",
+    "name": "get_expert_board"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/closed-dates",
+    "name": "list_closed_dates"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/coupons",
+    "name": "list_expert_coupons"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/customer-packages",
+    "name": "list_customer_packages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/dashboard/stats",
+    "name": "get_dashboard_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/earnings/summary",
+    "name": "earnings_summary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/earnings/transfers",
+    "name": "transfer_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/join-requests",
+    "name": "list_join_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/members",
+    "name": "list_members"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/reviews",
+    "name": "get_expert_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/reviews",
+    "name": "get_expert_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/schedule",
+    "name": "get_expert_schedule"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/services",
+    "name": "list_expert_services"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/services/my-tasks",
+    "name": "get_expert_my_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/services/{service_id}",
+    "name": "get_expert_service_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/services/{service_id}/time-slots",
+    "name": "list_service_time_slots"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/stripe-connect/status",
+    "name": "get_expert_stripe_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/experts/{expert_id}/tasks",
+    "name": "list_team_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/faq",
+    "name": "get_faq"
+  },
+  {
+    "method": "GET",
+    "path": "/api/feed/ticker",
+    "name": "get_ticker"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/admin/items",
+    "name": "get_flea_market_items_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/admin/reports",
+    "name": "get_flea_market_reports"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/categories",
+    "name": "get_flea_market_categories"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/favorites",
+    "name": "get_my_favorites"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/favorites/items",
+    "name": "get_my_favorite_items"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/items",
+    "name": "get_flea_market_items"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/items/{item_id}",
+    "name": "get_flea_market_item"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/items/{item_id}/purchase-requests",
+    "name": "get_purchase_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/items/{item_id}/rental-requests",
+    "name": "get_rental_requests_for_item"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/my-purchases",
+    "name": "get_my_purchases"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/my-related-items",
+    "name": "get_my_related_flea_items"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/my-rentals",
+    "name": "get_my_rentals"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/purchase-requests/{request_id}/consult-status",
+    "name": "flea_market_consult_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/flea-market/rentals/{rental_id}",
+    "name": "get_rental_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/follow/feed",
+    "name": "get_follow_feed"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/admin/categories",
+    "name": "get_admin_categories"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/admin/operation-logs",
+    "name": "get_admin_operation_logs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/admin/pending-requests/count",
+    "name": "get_pending_requests_count"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/admin/stats",
+    "name": "get_forum_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/categories",
+    "name": "get_categories"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/categories/requests",
+    "name": "get_category_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/categories/requests/my",
+    "name": "get_my_category_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/categories/{category_id}",
+    "name": "get_category"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/categories/{category_id}/favorite/status",
+    "name": "get_category_favorite_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/categories/{category_id}/feed",
+    "name": "get_skill_feed"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/categories/{category_id}/stats",
+    "name": "get_category_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/forums/visible",
+    "name": "get_visible_forums"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/hot-posts",
+    "name": "get_hot_posts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/leaderboard/favorites",
+    "name": "get_top_favorites_leaderboard"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/leaderboard/likes",
+    "name": "get_top_likes_leaderboard"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/leaderboard/posts",
+    "name": "get_top_posts_leaderboard"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/linkable-for-user",
+    "name": "get_linkable_content_for_user"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/my/category-favorites",
+    "name": "get_my_category_favorites"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/my/favorites",
+    "name": "get_my_favorites"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/my/likes",
+    "name": "get_my_likes"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/my/posts",
+    "name": "get_my_posts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/my/replies",
+    "name": "get_my_replies"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/notifications",
+    "name": "get_notifications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/notifications/unread-count",
+    "name": "get_unread_notification_count"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/posts",
+    "name": "get_posts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/posts/{post_id}",
+    "name": "get_post"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/posts/{post_id}/likes",
+    "name": "get_post_likes"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/posts/{post_id}/replies",
+    "name": "get_replies"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/replies/{reply_id}/likes",
+    "name": "get_reply_likes"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/reports",
+    "name": "get_reports"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/search",
+    "name": "search_posts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/search-linkable",
+    "name": "search_linkable_content"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/users/{user_id}/hot-posts",
+    "name": "get_user_hot_posts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/forum/users/{user_id}/stats",
+    "name": "get_user_forum_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/group-buy/activities/{activity_id}/status",
+    "name": "get_group_buy_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/job-positions",
+    "name": "get_public_job_positions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/leaderboard/cities",
+    "name": "list_supported_cities"
+  },
+  {
+    "method": "GET",
+    "path": "/api/leaderboard/skills",
+    "name": "list_skill_categories"
+  },
+  {
+    "method": "GET",
+    "path": "/api/leaderboard/skills/{category}",
+    "name": "get_leaderboard"
+  },
+  {
+    "method": "GET",
+    "path": "/api/leaderboard/skills/{category}/my-rank",
+    "name": "get_my_rank"
+  },
+  {
+    "method": "GET",
+    "path": "/api/legal/{doc_type}",
+    "name": "get_legal_document"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages",
+    "name": "get_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/conversation/{user_id}",
+    "name": "get_conversation_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/history/{user_id}",
+    "name": "get_chat_history_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/task/{task_id}",
+    "name": "get_task_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/tasks",
+    "name": "get_task_chat_list"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/tasks/unread/count",
+    "name": "get_task_chat_unread_count"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/unread",
+    "name": "get_unread_messages_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/unread/by-contact",
+    "name": "get_unread_count_by_contact_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/messages/unread/count",
+    "name": "get_unread_count_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my-applications",
+    "name": "get_user_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my-tasks",
+    "name": "get_my_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my/activities",
+    "name": "get_my_activities"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my/packages",
+    "name": "get_my_packages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my/packages/{package_id}",
+    "name": "get_my_package_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my/packages/{package_id}/redemption-qr",
+    "name": "get_redemption_qr"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my/service-applications",
+    "name": "list_my_service_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/newbie-tasks/progress",
+    "name": "get_progress"
+  },
+  {
+    "method": "GET",
+    "path": "/api/newbie-tasks/stages",
+    "name": "get_stages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications",
+    "name": "get_notifications_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications/interaction",
+    "name": "get_interaction_notifications_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications/unread",
+    "name": "get_unread_notifications_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications/unread/count",
+    "name": "get_unread_notification_count_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications/with-recent-read",
+    "name": "get_notifications_with_recent_read_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications/{notification_id}/negotiation-tokens",
+    "name": "get_negotiation_tokens"
+  },
+  {
+    "method": "GET",
+    "path": "/api/oauth/authorize",
+    "name": "oauth_authorize"
+  },
+  {
+    "method": "GET",
+    "path": "/api/oauth/userinfo",
+    "name": "oauth_userinfo"
+  },
+  {
+    "method": "GET",
+    "path": "/api/official-activities/{activity_id}/result",
+    "name": "get_official_activity_result"
+  },
+  {
+    "method": "GET",
+    "path": "/api/official-tasks/",
+    "name": "list_active_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/official-tasks/{task_id}",
+    "name": "get_task_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/private-file",
+    "name": "get_private_file"
+  },
+  {
+    "method": "GET",
+    "path": "/api/private-image/{image_id}",
+    "name": "get_private_image"
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/capabilities",
+    "name": "get_capabilities"
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/demand",
+    "name": "get_demand"
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/me",
+    "name": "get_my_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/preferences",
+    "name": "get_preferences"
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/reliability",
+    "name": "get_reliability"
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/summary",
+    "name": "get_summary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/{user_id}",
+    "name": "user_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/proxy/image",
+    "name": "proxy_image"
+  },
+  {
+    "method": "GET",
+    "path": "/api/proxy/resource",
+    "name": "proxy_resource_route"
+  },
+  {
+    "method": "GET",
+    "path": "/api/questions",
+    "name": "list_questions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/rate-limit/config",
+    "name": "get_rate_limit_config"
+  },
+  {
+    "method": "GET",
+    "path": "/api/rate-limit/info",
+    "name": "get_rate_limit_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/rate-limit/info/{rate_type}",
+    "name": "get_specific_rate_limit_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/recommendations",
+    "name": "get_recommendations"
+  },
+  {
+    "method": "GET",
+    "path": "/api/secure-auth/captcha-site-key",
+    "name": "get_captcha_site_key"
+  },
+  {
+    "method": "GET",
+    "path": "/api/secure-auth/redis-status",
+    "name": "get_redis_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/secure-auth/session-diagnose",
+    "name": "diagnose_session"
+  },
+  {
+    "method": "GET",
+    "path": "/api/secure-auth/session-id",
+    "name": "get_session_id"
+  },
+  {
+    "method": "GET",
+    "path": "/api/secure-auth/sessions",
+    "name": "get_active_sessions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/secure-auth/status",
+    "name": "get_auth_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/browse",
+    "name": "browse_services"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/me",
+    "name": "list_my_personal_services"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/me/{service_id}",
+    "name": "get_personal_service"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/{service_id}",
+    "name": "get_service_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/{service_id}/applications",
+    "name": "get_service_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/{service_id}/reviews",
+    "name": "get_service_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/{service_id}/reviews",
+    "name": "get_service_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/{service_id}/reviews/summary",
+    "name": "get_service_review_summary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/services/{service_id}/time-slots",
+    "name": "get_public_service_time_slots"
+  },
+  {
+    "method": "GET",
+    "path": "/api/skills/categories",
+    "name": "get_skill_categories"
+  },
+  {
+    "method": "GET",
+    "path": "/api/skills/my",
+    "name": "get_my_skills"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stats",
+    "name": "get_public_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stripe/connect/account/balance",
+    "name": "get_account_balance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stripe/connect/account/details",
+    "name": "get_account_details"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stripe/connect/account/external-accounts",
+    "name": "get_external_accounts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stripe/connect/account/status",
+    "name": "get_account_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stripe/connect/account/supported-countries",
+    "name": "get_supported_countries"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stripe/connect/account/transactions",
+    "name": "get_account_transactions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/stripe/connect/onboarding-page",
+    "name": "onboarding_page"
+  },
+  {
+    "method": "GET",
+    "path": "/api/student-verification/status",
+    "name": "get_verification_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/student-verification/universities",
+    "name": "get_universities"
+  },
+  {
+    "method": "GET",
+    "path": "/api/student-verification/user/{user_id}/status",
+    "name": "get_user_verification_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/student-verification/verify/{token}",
+    "name": "verify_email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/system-settings/public",
+    "name": "get_public_system_settings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/system/database/pool",
+    "name": "get_database_pool_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/system/database/stats",
+    "name": "get_database_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/system/health",
+    "name": "system_health_check"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks",
+    "name": "get_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}",
+    "name": "get_task_by_id"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/applications",
+    "name": "get_task_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/consult-status",
+    "name": "consult_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/dispute-timeline",
+    "name": "get_task_dispute_timeline"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/history",
+    "name": "get_task_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/match-score",
+    "name": "get_task_match_score"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/participants",
+    "name": "get_task_participants"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/refund-history",
+    "name": "get_refund_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/refund-status",
+    "name": "get_refund_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/reviews",
+    "name": "get_task_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tasks/{task_id}/reviews",
+    "name": "get_task_reviews_async"
+  },
+  {
+    "method": "GET",
+    "path": "/api/test",
+    "name": "test_simple_route"
+  },
+  {
+    "method": "GET",
+    "path": "/api/timezone/info",
+    "name": "get_timezone_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/translate/alerts",
+    "name": "get_translation_alerts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/translate/metrics",
+    "name": "get_translation_metrics"
+  },
+  {
+    "method": "GET",
+    "path": "/api/translate/services/failed",
+    "name": "get_failed_services_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/translate/services/status",
+    "name": "get_translation_services_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/translate/task/{task_id}",
+    "name": "get_task_translation"
+  },
+  {
+    "method": "GET",
+    "path": "/api/trending/admin/blacklist",
+    "name": "list_blacklist"
+  },
+  {
+    "method": "GET",
+    "path": "/api/trending/admin/pinned",
+    "name": "list_pinned"
+  },
+  {
+    "method": "GET",
+    "path": "/api/trending/searches",
+    "name": "get_trending_searches"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user-preferences",
+    "name": "get_user_preferences"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/customer-service/availability",
+    "name": "check_customer_service_availability"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/customer-service/chats",
+    "name": "get_my_customer_service_chats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/customer-service/chats/{chat_id}/messages",
+    "name": "get_customer_service_chat_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/customer-service/queue-status",
+    "name": "get_customer_service_queue_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/info",
+    "name": "get_user_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/recommendation-stats",
+    "name": "get_user_recommendation_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users",
+    "name": "get_users"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/admin/customer-service-chat",
+    "name": "admin_get_customer_service_chat_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/admin/customer-service-requests",
+    "name": "admin_get_customer_service_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/admin/customer-service-requests/{request_id}",
+    "name": "admin_get_customer_service_request_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/admin/task-expert/{expert_id}",
+    "name": "get_task_expert"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/admin/task-expert/{expert_id}/activities",
+    "name": "get_expert_activities_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/admin/task-expert/{expert_id}/services",
+    "name": "get_expert_services_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/admin/task-experts",
+    "name": "get_task_experts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/app/version-check",
+    "name": "check_app_version"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/banners",
+    "name": "get_banners"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/confirm/{token}",
+    "name": "confirm_email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/contacts",
+    "name": "get_contacts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/admin-chat",
+    "name": "get_admin_chat_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/admin-requests",
+    "name": "get_admin_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/all-ratings",
+    "name": "get_all_customer_service_ratings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/cancel-requests",
+    "name": "cs_get_cancel_requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/chats",
+    "name": "get_customer_service_chats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/chats/{chat_id}/messages",
+    "name": "get_customer_service_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/chats/{chat_id}/timeout-status",
+    "name": "get_chat_timeout_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/check-availability",
+    "name": "check_customer_service_availability"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/status",
+    "name": "get_customer_service_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/customer-service/{service_id}/rating",
+    "name": "get_customer_service_rating"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/debug/check-pending/{email}",
+    "name": "debug_check_pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/debug/check-user-avatar/{user_id}",
+    "name": "check_user_avatar"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/debug/session-status",
+    "name": "debug_session_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/debug/simple-test",
+    "name": "debug_simple_test"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/debug/test-confirm-simple",
+    "name": "debug_test_confirm_simple"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/debug/test-reviews/{user_id}",
+    "name": "debug_test_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/debug/test-token/{token}",
+    "name": "debug_test_token"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/faq",
+    "name": "get_faq"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/job-positions",
+    "name": "get_public_job_positions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/legal/{doc_type}",
+    "name": "get_legal_document"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/me",
+    "name": "get_current_user_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/me/service-applications",
+    "name": "get_my_service_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/me/service-applications/received",
+    "name": "get_received_service_applications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/messages/history/{user_id}",
+    "name": "get_chat_history_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/messages/unread",
+    "name": "get_unread_messages_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/messages/unread/by-contact",
+    "name": "get_unread_count_by_contact_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/messages/unread/count",
+    "name": "get_unread_count_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/my-tasks",
+    "name": "get_my_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/notifications",
+    "name": "get_notifications_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/notifications/interaction",
+    "name": "get_interaction_notifications_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/notifications/unread",
+    "name": "get_unread_notifications_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/notifications/unread/count",
+    "name": "get_unread_notification_count_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/notifications/with-recent-read",
+    "name": "get_notifications_with_recent_read_api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/private-file",
+    "name": "get_private_file"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/private-image/{image_id}",
+    "name": "get_private_image"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/profile/me",
+    "name": "get_my_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/profile/{user_id}",
+    "name": "user_profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/recommendations",
+    "name": "get_recommendations"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/shared-tasks/{other_user_id}",
+    "name": "get_shared_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/staff/notifications",
+    "name": "get_staff_notifications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/staff/notifications/unread",
+    "name": "get_unread_staff_notifications"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/stats",
+    "name": "get_public_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/system-settings/public",
+    "name": "get_public_system_settings"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/tasks/{task_id}/dispute-timeline",
+    "name": "get_task_dispute_timeline"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/tasks/{task_id}/history",
+    "name": "get_task_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/tasks/{task_id}/match-score",
+    "name": "get_task_match_score"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/tasks/{task_id}/refund-history",
+    "name": "get_refund_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/tasks/{task_id}/refund-status",
+    "name": "get_refund_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/tasks/{task_id}/reviews",
+    "name": "get_task_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/timezone/info",
+    "name": "get_timezone_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/translate/alerts",
+    "name": "get_translation_alerts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/translate/metrics",
+    "name": "get_translation_metrics"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/translate/services/failed",
+    "name": "get_failed_services_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/translate/services/status",
+    "name": "get_translation_services_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/translate/task/{task_id}",
+    "name": "get_task_translation"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/user-preferences",
+    "name": "get_user_preferences"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/user/customer-service/availability",
+    "name": "check_customer_service_availability"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/user/customer-service/chats",
+    "name": "get_my_customer_service_chats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/user/customer-service/chats/{chat_id}/messages",
+    "name": "get_customer_service_chat_messages"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/user/customer-service/queue-status",
+    "name": "get_customer_service_queue_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/user/info",
+    "name": "get_user_info"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/user/recommendation-stats",
+    "name": "get_user_recommendation_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/users/shared-tasks/{other_user_id}",
+    "name": "get_shared_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/users/vip/history",
+    "name": "get_vip_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/users/vip/status",
+    "name": "get_vip_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/users/{user_id}/received-reviews",
+    "name": "get_user_received_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/users/{user_id}/task-statistics",
+    "name": "get_user_task_statistics"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/verify-email",
+    "name": "verify_email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/verify-email/{token}",
+    "name": "verify_email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/vip/history",
+    "name": "get_vip_history"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/vip/status",
+    "name": "get_vip_status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}",
+    "name": "get_user_by_id"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}/followers",
+    "name": "get_followers"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}/following",
+    "name": "get_following"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}/received-reviews",
+    "name": "get_user_received_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}/reviews",
+    "name": "get_user_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}/task-statistics",
+    "name": "get_user_task_statistics"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}/tasks",
+    "name": "get_user_tasks"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/storage/categories",
+    "name": "get_category_stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/storage/disk",
+    "name": "get_disk_usage"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/storage/metrics",
+    "name": "get_storage_metrics"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/storage/temp-cleanup-preview",
+    "name": "preview_temp_cleanup"
+  },
+  {
+    "method": "GET",
+    "path": "/api/verify-email",
+    "name": "verify_email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/verify-email/{token}",
+    "name": "verify_email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/wallet/balance",
+    "name": "get_balance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/wallet/transactions",
+    "name": "get_transactions"
+  },
+  {
+    "method": "GET",
+    "path": "/api/{user_id}/reviews",
+    "name": "get_user_reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/dst-info/{year}",
+    "name": "get_dst_info"
+  },
+  {
+    "method": "GET",
+    "path": "/en",
+    "name": "ssr_home"
+  },
+  {
+    "method": "GET",
+    "path": "/en/activities/{activity_id}",
+    "name": "ssr_activity_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/en/forum/post/{post_id}",
+    "name": "ssr_forum_post_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/en/leaderboard/custom/{leaderboard_id}",
+    "name": "ssr_leaderboard_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/en/tasks/{task_id}",
+    "name": "ssr_task_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/forum/post/{post_id}",
+    "name": "ssr_forum_post_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/health",
+    "name": "health_check"
+  },
+  {
+    "method": "GET",
+    "path": "/health/time-check",
+    "name": "time_check"
+  },
+  {
+    "method": "GET",
+    "path": "/health/time-check/simple",
+    "name": "simple_time_check"
+  },
+  {
+    "method": "GET",
+    "path": "/leaderboard/custom/{leaderboard_id}",
+    "name": "ssr_leaderboard_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/live",
+    "name": "liveness_check"
+  },
+  {
+    "method": "GET",
+    "path": "/metrics",
+    "name": "metrics"
+  },
+  {
+    "method": "GET",
+    "path": "/metrics/performance",
+    "name": "performance_metrics"
+  },
+  {
+    "method": "GET",
+    "path": "/ping",
+    "name": "ping"
+  },
+  {
+    "method": "GET",
+    "path": "/robots.txt",
+    "name": "robots_txt"
+  },
+  {
+    "method": "GET",
+    "path": "/sitemap.xml",
+    "name": "generate_sitemap"
+  },
+  {
+    "method": "GET",
+    "path": "/static/{file_path:path}",
+    "name": "serve_static"
+  },
+  {
+    "method": "GET",
+    "path": "/tasks/{task_id}",
+    "name": "ssr_task_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/test-active-connections",
+    "name": "test_active_connections"
+  },
+  {
+    "method": "GET",
+    "path": "/test-db",
+    "name": "test_db"
+  },
+  {
+    "method": "GET",
+    "path": "/test-ws",
+    "name": "test_ws"
+  },
+  {
+    "method": "GET",
+    "path": "/timezone-info",
+    "name": "get_timezone_info"
+  },
+  {
+    "method": "GET",
+    "path": "/uploads/flea_market/{file_path:path}",
+    "name": "serve_flea_market_images"
+  },
+  {
+    "method": "GET",
+    "path": "/uploads/images/{file_path:path}",
+    "name": "serve_uploads_images_compat"
+  },
+  {
+    "method": "GET",
+    "path": "/zh",
+    "name": "ssr_home"
+  },
+  {
+    "method": "GET",
+    "path": "/zh/activities/{activity_id}",
+    "name": "ssr_activity_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/zh/forum/post/{post_id}",
+    "name": "ssr_forum_post_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/zh/leaderboard/custom/{leaderboard_id}",
+    "name": "ssr_leaderboard_detail"
+  },
+  {
+    "method": "GET",
+    "path": "/zh/tasks/{task_id}",
+    "name": "ssr_task_detail"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/banners/{banner_id}/toggle-status",
+    "name": "toggle_banner_status"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/oauth/clients/{client_id}",
+    "name": "update_oauth_client"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/users/{user_id}",
+    "name": "update_user_by_admin"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/vip-subscriptions/{subscription_id}",
+    "name": "admin_update_vip_subscription"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/experts/{expert_id}/activities/{activity_id}",
+    "name": "update_team_activity"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/experts/{expert_id}/services/{service_id}/status",
+    "name": "toggle_expert_service_status"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/profile",
+    "name": "update_profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/profile/avatar",
+    "name": "update_avatar"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/profile/timezone",
+    "name": "update_timezone"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/services/me/{service_id}/status",
+    "name": "toggle_personal_service_status"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/tasks/{task_id}/reward",
+    "name": "update_task_reward"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/tasks/{task_id}/visibility",
+    "name": "update_task_visibility"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/users/profile",
+    "name": "update_profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/users/profile/avatar",
+    "name": "update_avatar"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/users/profile/timezone",
+    "name": "update_timezone"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/users/tasks/{task_id}/reward",
+    "name": "update_task_reward"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/users/tasks/{task_id}/visibility",
+    "name": "update_task_visibility"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/db/fix-conversation-key",
+    "name": "fix_conversation_key"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/read-only",
+    "name": "toggle_read_only_mode"
+  },
+  {
+    "method": "POST",
+    "path": "/api/activities/{activity_id}/apply",
+    "name": "apply_to_activity"
+  },
+  {
+    "method": "POST",
+    "path": "/api/activities/{activity_id}/favorite",
+    "name": "toggle_activity_favorite"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/admin-user",
+    "name": "create_admin_user_by_super_admin"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/banners",
+    "name": "create_banner"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/banners/batch-delete",
+    "name": "batch_delete_banners"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/banners/upload-image",
+    "name": "upload_banner_image"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/cancel-expired-tasks",
+    "name": "manual_cancel_expired_tasks"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/cancel-requests/{request_id}/review",
+    "name": "admin_review_cancel_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/checkin/rewards",
+    "name": "create_checkin_reward"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/checkin/rewards",
+    "name": "create_checkin_reward"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/cleanup/expired-tasks",
+    "name": "admin_cleanup_expired_tasks"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/cleanup/task-files/{task_id}",
+    "name": "admin_cleanup_task_files"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/content-moderation/homophone-mappings",
+    "name": "create_homophone_mapping"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/content-moderation/sensitive-words",
+    "name": "create_sensitive_word"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/content-moderation/sensitive-words/batch",
+    "name": "batch_import_sensitive_words"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/coupons",
+    "name": "create_coupon"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/customer-service-chat",
+    "name": "admin_send_customer_service_chat_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/customer-service-user",
+    "name": "admin_add_customer_service_user"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/experts",
+    "name": "admin_create_expert_team"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/experts/activities/{activity_id}/review",
+    "name": "review_expert_activity"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/experts/applications/{application_id}/review",
+    "name": "review_expert_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/experts/profile-update-requests/{request_id}/review",
+    "name": "review_profile_update_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/experts/services/{service_id}/review",
+    "name": "review_expert_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/experts/{expert_id}/feature",
+    "name": "toggle_featured_expert"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/invitation-codes",
+    "name": "create_invitation_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/job-positions",
+    "name": "admin_create_job_position"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/leaderboard/refresh",
+    "name": "refresh_leaderboard"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/login",
+    "name": "admin_login"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/notifications/batch-delete",
+    "name": "admin_batch_delete_notifications"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/notifications/send",
+    "name": "admin_send_notification"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/oauth/clients",
+    "name": "create_oauth_client"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/oauth/clients/{client_id}/rotate-secret",
+    "name": "rotate_oauth_client_secret"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/official-tasks",
+    "name": "create_official_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/official/account/setup",
+    "name": "setup_official_account"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/official/activities",
+    "name": "create_official_activity"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/official/activities/{activity_id}/draw",
+    "name": "manual_draw"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/promotion-codes",
+    "name": "create_promotion_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/refund-requests/{refund_id}/approve",
+    "name": "approve_refund_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/refund-requests/{refund_id}/reject",
+    "name": "reject_refund_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/rewards/coupons/batch",
+    "name": "batch_reward_coupons"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/rewards/points/batch",
+    "name": "batch_reward_points"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/rewards/send",
+    "name": "send_manual_reward"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/skill-categories",
+    "name": "create_skill_category"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/staff-notification",
+    "name": "admin_send_staff_notification"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/student-verification/{verification_id}/extend",
+    "name": "extend_verification"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/student-verification/{verification_id}/revoke",
+    "name": "revoke_verification"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/task-disputes/{dispute_id}/dismiss",
+    "name": "dismiss_task_dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/task-disputes/{dispute_id}/resolve",
+    "name": "resolve_task_dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/task-expert",
+    "name": "create_task_expert"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/task-expert/{expert_id}/services/{service_id}/time-slots/batch-create",
+    "name": "batch_create_service_time_slots_admin"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/task/{task_id}/set_level",
+    "name": "admin_set_task_level"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/batch-delete",
+    "name": "admin_batch_delete_tasks"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/batch-update",
+    "name": "admin_batch_update_tasks"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/multi-participant",
+    "name": "create_official_multi_participant_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/{task_id}/complete",
+    "name": "distribute_rewards_equal"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/{task_id}/complete/custom",
+    "name": "distribute_rewards_custom"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/{task_id}/participants/{participant_id}/exit/approve",
+    "name": "admin_approve_exit"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/{task_id}/participants/{participant_id}/exit/reject",
+    "name": "admin_reject_exit"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/{task_id}/start",
+    "name": "start_multi_participant_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/update-user-statistics",
+    "name": "manual_update_user_statistics"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/user/{user_id}/set_level",
+    "name": "admin_set_user_level"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/user/{user_id}/set_status",
+    "name": "admin_set_user_status"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/users/{user_id}/points/adjust",
+    "name": "adjust_user_points"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ai/conversations",
+    "name": "create_conversation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ai/conversations/{conversation_id}/messages",
+    "name": "send_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/analytics/web-vitals",
+    "name": "receive_web_vitals"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/approve",
+    "name": "approve_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/close",
+    "name": "close_consultation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/counter-offer",
+    "name": "counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/formal-apply",
+    "name": "formal_apply"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/negotiate",
+    "name": "negotiate_price"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/negotiate-response",
+    "name": "respond_to_negotiation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/pay-and-finalize",
+    "name": "pay_and_finalize"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/quote",
+    "name": "quote_price"
+  },
+  {
+    "method": "POST",
+    "path": "/api/applications/{application_id}/reject",
+    "name": "reject_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/2fa/disable",
+    "name": "disable_2fa"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/2fa/regenerate-backup-codes",
+    "name": "regenerate_backup_codes"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/2fa/verify-setup",
+    "name": "verify_2fa_setup"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/change-password",
+    "name": "admin_change_password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/login",
+    "name": "admin_login"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/logout",
+    "name": "admin_logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/notifications/read-all",
+    "name": "mark_all_admin_notifications_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/notifications/{notification_id}/read",
+    "name": "mark_admin_notification_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/refresh",
+    "name": "admin_refresh"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/send-verification-code",
+    "name": "send_admin_verification_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/sessions/clear",
+    "name": "clear_admin_sessions"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/verify-code",
+    "name": "verify_admin_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/service/change-password",
+    "name": "service_change_password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/service/login",
+    "name": "service_login"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/service/logout",
+    "name": "service_logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/service/refresh",
+    "name": "service_refresh"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/service/refresh-token",
+    "name": "service_refresh_token"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/service/sessions/clear",
+    "name": "clear_service_sessions"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/user/logout",
+    "name": "user_logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/chat/tasks/{task_id}/invite",
+    "name": "invite_to_task_chat"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cleanup/cleanup/all",
+    "name": "cleanup_all"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cleanup/cleanup/cache",
+    "name": "cleanup_cache"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cleanup/cleanup/refresh-tokens",
+    "name": "cleanup_refresh_tokens"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cleanup/cleanup/sessions",
+    "name": "cleanup_sessions"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cleanup/cleanup/start",
+    "name": "start_cleanup_tasks"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cleanup/cleanup/stop",
+    "name": "stop_cleanup_tasks"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cleanup/cleanup/user-data",
+    "name": "cleanup_user_data"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/checkin",
+    "name": "check_in_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/coupons/claim",
+    "name": "claim_coupon_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/coupons/use",
+    "name": "use_coupon_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/coupons/validate",
+    "name": "validate_coupon"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/invitation-codes/validate",
+    "name": "validate_invitation_code_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/points/redeem/coupon",
+    "name": "redeem_coupon"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/points/redeem/product",
+    "name": "redeem_product"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/tasks/{task_id}/payment",
+    "name": "create_task_payment"
+  },
+  {
+    "method": "POST",
+    "path": "/api/coupon-points/tasks/{task_id}/wechat-checkout",
+    "name": "create_wechat_checkout_session"
+  },
+  {
+    "method": "POST",
+    "path": "/api/csp-report",
+    "name": "csp_report"
+  },
+  {
+    "method": "POST",
+    "path": "/api/csrf/verify",
+    "name": "verify_csrf_token"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/admin/items",
+    "name": "create_item_admin"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/admin/recalculate-scores",
+    "name": "recalculate_all_vote_scores"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/admin/reports/{report_id}/review",
+    "name": "review_report"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/apply",
+    "name": "apply_leaderboard"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/favorites/batch",
+    "name": "get_leaderboard_favorites_batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/items",
+    "name": "submit_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/items/{item_id}/report",
+    "name": "report_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/items/{item_id}/vote",
+    "name": "vote_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/votes/{vote_id}/like",
+    "name": "like_vote_comment"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/{leaderboard_id}/favorite",
+    "name": "toggle_leaderboard_favorite"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/{leaderboard_id}/report",
+    "name": "report_leaderboard"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-leaderboards/{leaderboard_id}/review",
+    "name": "review_leaderboard"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/admin-chat",
+    "name": "send_admin_chat_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/admin-requests",
+    "name": "create_admin_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/cancel-requests/{request_id}/review",
+    "name": "cs_review_cancel_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/chats/{chat_id}/end",
+    "name": "end_customer_service_chat"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/chats/{chat_id}/files",
+    "name": "upload_customer_service_file"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/chats/{chat_id}/mark-read",
+    "name": "mark_customer_service_messages_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/chats/{chat_id}/messages",
+    "name": "send_customer_service_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/chats/{chat_id}/timeout-end",
+    "name": "timeout_end_customer_service_chat"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/cleanup-old-chats/{service_id}",
+    "name": "cleanup_old_customer_service_chats"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/login",
+    "name": "cs_login"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/logout",
+    "name": "cs_logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/offline",
+    "name": "set_customer_service_offline"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/online",
+    "name": "set_customer_service_online"
+  },
+  {
+    "method": "POST",
+    "path": "/api/customer-service/refresh",
+    "name": "cs_refresh_token"
+  },
+  {
+    "method": "POST",
+    "path": "/api/debug/fix-avatar-null",
+    "name": "fix_avatar_null"
+  },
+  {
+    "method": "POST",
+    "path": "/api/expert/activities",
+    "name": "create_expert_activity"
+  },
+  {
+    "method": "POST",
+    "path": "/api/expert/tasks/{task_id}/participants/{participant_id}/approve",
+    "name": "approve_participant_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/expert/tasks/{task_id}/participants/{participant_id}/exit/approve",
+    "name": "expert_approve_exit"
+  },
+  {
+    "method": "POST",
+    "path": "/api/expert/tasks/{task_id}/participants/{participant_id}/exit/reject",
+    "name": "expert_reject_exit"
+  },
+  {
+    "method": "POST",
+    "path": "/api/expert/tasks/{task_id}/participants/{participant_id}/reject",
+    "name": "reject_participant_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/expert/tasks/{task_id}/start",
+    "name": "start_expert_multi_participant_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/apply",
+    "name": "apply_to_create_expert"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/invitations/{invitation_id}/respond",
+    "name": "respond_to_invitation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/activities",
+    "name": "create_team_activity"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/activities/{activity_id}/draw",
+    "name": "expert_manual_draw"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/closed-dates",
+    "name": "create_closed_date"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/consult",
+    "name": "create_team_consultation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/coupons",
+    "name": "create_expert_coupon"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/dissolve",
+    "name": "dissolve_expert_team"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/follow",
+    "name": "toggle_follow"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/invite",
+    "name": "invite_user"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/join",
+    "name": "request_to_join"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/leave",
+    "name": "leave_team"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/packages/redeem",
+    "name": "redeem_package"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/services",
+    "name": "create_expert_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/services/{service_id}/time-slots",
+    "name": "create_time_slot"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/services/{service_id}/time-slots/batch-create",
+    "name": "batch_create_time_slots"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/stripe-connect",
+    "name": "create_expert_stripe_connect"
+  },
+  {
+    "method": "POST",
+    "path": "/api/experts/{expert_id}/transfer",
+    "name": "transfer_ownership"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items",
+    "name": "create_flea_market_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/accept-purchase",
+    "name": "accept_purchase_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/consult",
+    "name": "create_flea_market_consultation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/counter-offer",
+    "name": "seller_counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/direct-purchase",
+    "name": "direct_purchase_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/favorite",
+    "name": "toggle_favorite_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/purchase-request",
+    "name": "create_purchase_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/refresh",
+    "name": "refresh_flea_market_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/reject-purchase",
+    "name": "reject_purchase_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/rental-request",
+    "name": "create_rental_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/report",
+    "name": "report_item"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/items/{item_id}/respond-counter-offer",
+    "name": "buyer_respond_to_counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/purchase-requests/{request_id}/approve",
+    "name": "approve_purchase_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/purchase-requests/{request_id}/consult-close",
+    "name": "flea_market_consult_close"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/purchase-requests/{request_id}/consult-formal-buy",
+    "name": "flea_market_consult_formal_buy"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/purchase-requests/{request_id}/consult-negotiate",
+    "name": "flea_market_consult_negotiate"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/purchase-requests/{request_id}/consult-quote",
+    "name": "flea_market_consult_quote"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/purchase-requests/{request_id}/consult-respond",
+    "name": "flea_market_consult_respond"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/rental-requests/{request_id}/approve",
+    "name": "approve_rental_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/rental-requests/{request_id}/counter-offer",
+    "name": "counter_offer_rental_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/rental-requests/{request_id}/reject",
+    "name": "reject_rental_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/rental-requests/{request_id}/respond-counter-offer",
+    "name": "respond_rental_counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/rentals/{rental_id}/confirm-return",
+    "name": "confirm_rental_return"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/rentals/{rental_id}/extend",
+    "name": "extend_rental"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/rentals/{rental_id}/renter-confirm-return",
+    "name": "renter_confirm_return"
+  },
+  {
+    "method": "POST",
+    "path": "/api/flea-market/upload-image",
+    "name": "upload_flea_market_image"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forgot_password",
+    "name": "forgot_password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/admin/fix-statistics",
+    "name": "fix_forum_statistics"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/categories",
+    "name": "create_category"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/categories/favorites/batch",
+    "name": "get_category_favorites_batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/categories/request",
+    "name": "request_new_category"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/categories/{category_id}/favorite",
+    "name": "toggle_category_favorite"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/favorites",
+    "name": "toggle_favorite"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/likes",
+    "name": "toggle_like"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts",
+    "name": "create_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts/{post_id}/feature",
+    "name": "feature_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts/{post_id}/hide",
+    "name": "hide_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts/{post_id}/lock",
+    "name": "lock_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts/{post_id}/pin",
+    "name": "pin_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts/{post_id}/replies",
+    "name": "create_reply"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts/{post_id}/restore",
+    "name": "restore_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/posts/{post_id}/unhide",
+    "name": "unhide_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/replies/{reply_id}/restore",
+    "name": "restore_reply"
+  },
+  {
+    "method": "POST",
+    "path": "/api/forum/reports",
+    "name": "create_report"
+  },
+  {
+    "method": "POST",
+    "path": "/api/group-buy/activities/{activity_id}/cancel",
+    "name": "cancel_group_buy"
+  },
+  {
+    "method": "POST",
+    "path": "/api/group-buy/activities/{activity_id}/join",
+    "name": "join_group_buy"
+  },
+  {
+    "method": "POST",
+    "path": "/api/job-applications",
+    "name": "submit_job_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/logout",
+    "name": "logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/messages",
+    "name": "send_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/messages/generate-image-url",
+    "name": "generate_image_url"
+  },
+  {
+    "method": "POST",
+    "path": "/api/messages/mark-chat-read/{contact_id}",
+    "name": "mark_chat_messages_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/messages/send",
+    "name": "send_message_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/messages/task/{task_id}/read",
+    "name": "mark_messages_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/messages/task/{task_id}/send",
+    "name": "send_task_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/messages/{msg_id}/read",
+    "name": "mark_message_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/my/packages/{package_id}/dispute",
+    "name": "open_package_dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/api/my/packages/{package_id}/refund",
+    "name": "request_package_refund"
+  },
+  {
+    "method": "POST",
+    "path": "/api/my/packages/{package_id}/review",
+    "name": "review_package"
+  },
+  {
+    "method": "POST",
+    "path": "/api/newbie-tasks/stages/{stage}/claim",
+    "name": "claim_stage_bonus"
+  },
+  {
+    "method": "POST",
+    "path": "/api/newbie-tasks/{task_key}/claim",
+    "name": "claim_task_reward"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/batch",
+    "name": "batch_create_notifications"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/read-all",
+    "name": "mark_all_notifications_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/send-announcement",
+    "name": "send_announcement_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/{notification_id}/read",
+    "name": "mark_notification_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/oauth/consent",
+    "name": "oauth_consent"
+  },
+  {
+    "method": "POST",
+    "path": "/api/oauth/token",
+    "name": "oauth_token"
+  },
+  {
+    "method": "POST",
+    "path": "/api/official-activities/{activity_id}/apply",
+    "name": "apply_official_activity"
+  },
+  {
+    "method": "POST",
+    "path": "/api/official-tasks/{task_id}/claim",
+    "name": "claim_task_reward"
+  },
+  {
+    "method": "POST",
+    "path": "/api/official-tasks/{task_id}/submit",
+    "name": "submit_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/password/validate",
+    "name": "validate_password_strength"
+  },
+  {
+    "method": "POST",
+    "path": "/api/profile/location",
+    "name": "upload_location"
+  },
+  {
+    "method": "POST",
+    "path": "/api/profile/onboarding",
+    "name": "submit_onboarding"
+  },
+  {
+    "method": "POST",
+    "path": "/api/profile/send-email-update-code",
+    "name": "send_email_update_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/profile/send-phone-update-code",
+    "name": "send_phone_update_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/questions",
+    "name": "ask_question"
+  },
+  {
+    "method": "POST",
+    "path": "/api/questions/{question_id}/reply",
+    "name": "reply_question"
+  },
+  {
+    "method": "POST",
+    "path": "/api/recommendations/{task_id}/feedback",
+    "name": "submit_recommendation_feedback"
+  },
+  {
+    "method": "POST",
+    "path": "/api/refresh-image-url",
+    "name": "refresh_image_url"
+  },
+  {
+    "method": "POST",
+    "path": "/api/register",
+    "name": "register"
+  },
+  {
+    "method": "POST",
+    "path": "/api/register/debug",
+    "name": "register_debug"
+  },
+  {
+    "method": "POST",
+    "path": "/api/register/test",
+    "name": "register_test"
+  },
+  {
+    "method": "POST",
+    "path": "/api/resend-verification",
+    "name": "resend_verification_email"
+  },
+  {
+    "method": "POST",
+    "path": "/api/reset_password/{token}",
+    "name": "reset_password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/reviews/{review_id}/reply",
+    "name": "reply_to_review"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/cleanup-refresh-tokens",
+    "name": "cleanup_old_refresh_tokens_endpoint"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/login",
+    "name": "secure_login"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/login-with-code",
+    "name": "login_with_verification_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/login-with-phone-code",
+    "name": "login_with_phone_verification_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/logout",
+    "name": "secure_logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/logout-all",
+    "name": "logout_all_sessions"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/logout-others",
+    "name": "logout_other_sessions"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/refresh",
+    "name": "refresh_session"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/refresh-token",
+    "name": "refresh_session_with_token"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/send-phone-verification-code",
+    "name": "send_phone_verification_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/secure-auth/send-verification-code",
+    "name": "send_email_verification_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/services/me",
+    "name": "create_personal_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/services/{service_id}/applications/{application_id}/reply",
+    "name": "reply_to_service_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/services/{service_id}/apply",
+    "name": "apply_for_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/services/{service_id}/consult",
+    "name": "create_consultation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/services/{service_id}/purchase-package",
+    "name": "purchase_package"
+  },
+  {
+    "method": "POST",
+    "path": "/api/skills/my",
+    "name": "add_my_skill"
+  },
+  {
+    "method": "POST",
+    "path": "/api/stripe/connect/account/create",
+    "name": "create_connect_account"
+  },
+  {
+    "method": "POST",
+    "path": "/api/stripe/connect/account/create-embedded",
+    "name": "create_connect_account_embedded"
+  },
+  {
+    "method": "POST",
+    "path": "/api/stripe/connect/account/onboarding-session",
+    "name": "create_onboarding_session"
+  },
+  {
+    "method": "POST",
+    "path": "/api/stripe/connect/account/payout",
+    "name": "create_payout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/stripe/connect/account_session",
+    "name": "create_account_session"
+  },
+  {
+    "method": "POST",
+    "path": "/api/stripe/connect/webhook",
+    "name": "connect_webhook"
+  },
+  {
+    "method": "POST",
+    "path": "/api/stripe/webhook",
+    "name": "stripe_webhook"
+  },
+  {
+    "method": "POST",
+    "path": "/api/student-verification/change-email",
+    "name": "change_email"
+  },
+  {
+    "method": "POST",
+    "path": "/api/student-verification/renew",
+    "name": "renew_verification"
+  },
+  {
+    "method": "POST",
+    "path": "/api/student-verification/submit",
+    "name": "submit_verification"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks",
+    "name": "create_task_async"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/ai-optimize",
+    "name": "ai_optimize_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/accept",
+    "name": "accept_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/accept",
+    "name": "accept_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/confirm-and-pay",
+    "name": "confirm_and_pay"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/consult-approve",
+    "name": "consult_approve"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/consult-close",
+    "name": "consult_close"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/consult-formal-apply",
+    "name": "consult_formal_apply"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/consult-negotiate",
+    "name": "consult_negotiate"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/consult-quote",
+    "name": "consult_quote"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/consult-respond",
+    "name": "consult_respond"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/negotiate",
+    "name": "negotiate_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/propose-price",
+    "name": "propose_price"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/public-reply",
+    "name": "public_reply_to_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/reject",
+    "name": "reject_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/reply-message",
+    "name": "reply_application_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/respond-negotiation",
+    "name": "respond_negotiation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/send-message",
+    "name": "send_application_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/start-chat",
+    "name": "start_application_chat"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/start-consultation",
+    "name": "poster_start_consultation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/applications/{application_id}/withdraw",
+    "name": "withdraw_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/apply",
+    "name": "apply_for_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/apply-test",
+    "name": "apply_for_task_test"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/approve",
+    "name": "approve_task_taker"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/approve/{applicant_id}",
+    "name": "approve_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/cancel",
+    "name": "cancel_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/complete",
+    "name": "complete_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/confirm_complete",
+    "name": "confirm_task_complete"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/confirm_completion",
+    "name": "confirm_task_completion"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/confirm_completion",
+    "name": "confirm_task_completion_async"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/consult",
+    "name": "create_task_consultation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/designated/accept",
+    "name": "accept_designated_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/designated/reject",
+    "name": "reject_designated_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/designated/withdraw",
+    "name": "withdraw_designated_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/dispute",
+    "name": "create_task_dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/interaction",
+    "name": "record_task_interaction"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/participants/me/complete",
+    "name": "complete_participant_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/participants/me/exit-request",
+    "name": "request_exit_from_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/pay",
+    "name": "create_payment"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/refund-request",
+    "name": "create_refund_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/refund-request/{refund_id}/cancel",
+    "name": "cancel_refund_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/refund-request/{refund_id}/rebuttal",
+    "name": "submit_refund_rebuttal"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/reject",
+    "name": "reject_task_taker"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/respond-taker-counter-offer",
+    "name": "respond_taker_counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/review",
+    "name": "create_review"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/review",
+    "name": "create_review_async"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tasks/{task_id}/taker-counter-offer",
+    "name": "taker_counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/test",
+    "name": "test_simple_route_post"
+  },
+  {
+    "method": "POST",
+    "path": "/api/translate",
+    "name": "translate_text"
+  },
+  {
+    "method": "POST",
+    "path": "/api/translate/batch",
+    "name": "translate_batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/translate/prefetch",
+    "name": "prefetch_translations"
+  },
+  {
+    "method": "POST",
+    "path": "/api/translate/services/reset",
+    "name": "reset_translation_services"
+  },
+  {
+    "method": "POST",
+    "path": "/api/translate/task/{task_id}",
+    "name": "translate_and_save_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/translate/tasks/batch",
+    "name": "get_task_translations_batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/translate/warmup",
+    "name": "warmup_translations"
+  },
+  {
+    "method": "POST",
+    "path": "/api/trending/admin/blacklist",
+    "name": "add_blacklist"
+  },
+  {
+    "method": "POST",
+    "path": "/api/trending/admin/pinned",
+    "name": "add_pinned"
+  },
+  {
+    "method": "POST",
+    "path": "/api/trending/log-search",
+    "name": "log_search_endpoint"
+  },
+  {
+    "method": "POST",
+    "path": "/api/upload/file",
+    "name": "upload_file"
+  },
+  {
+    "method": "POST",
+    "path": "/api/upload/image",
+    "name": "upload_image"
+  },
+  {
+    "method": "POST",
+    "path": "/api/upload/public-image",
+    "name": "upload_public_image"
+  },
+  {
+    "method": "POST",
+    "path": "/api/user/customer-service/assign",
+    "name": "assign_customer_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/user/customer-service/chats/{chat_id}/end",
+    "name": "end_customer_service_chat_user"
+  },
+  {
+    "method": "POST",
+    "path": "/api/user/customer-service/chats/{chat_id}/files",
+    "name": "upload_customer_service_chat_file"
+  },
+  {
+    "method": "POST",
+    "path": "/api/user/customer-service/chats/{chat_id}/messages",
+    "name": "send_customer_service_chat_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/user/customer-service/chats/{chat_id}/messages/{message_id}/mark-read",
+    "name": "mark_customer_service_message_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/user/customer-service/chats/{chat_id}/rate",
+    "name": "rate_customer_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/admin/customer-service-chat",
+    "name": "admin_send_customer_service_chat_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/admin/login",
+    "name": "admin_login"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/admin/task-expert",
+    "name": "create_task_expert"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/admin/task-expert/{expert_id}/services/{service_id}/time-slots/batch-create",
+    "name": "batch_create_service_time_slots_admin"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/csp-report",
+    "name": "csp_report"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/admin-chat",
+    "name": "send_admin_chat_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/admin-requests",
+    "name": "create_admin_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/cancel-requests/{request_id}/review",
+    "name": "cs_review_cancel_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/chats/{chat_id}/end",
+    "name": "end_customer_service_chat"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/chats/{chat_id}/files",
+    "name": "upload_customer_service_file"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/chats/{chat_id}/mark-read",
+    "name": "mark_customer_service_messages_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/chats/{chat_id}/messages",
+    "name": "send_customer_service_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/chats/{chat_id}/timeout-end",
+    "name": "timeout_end_customer_service_chat"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/cleanup-old-chats/{service_id}",
+    "name": "cleanup_old_customer_service_chats"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/offline",
+    "name": "set_customer_service_offline"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/customer-service/online",
+    "name": "set_customer_service_online"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/debug/fix-avatar-null",
+    "name": "fix_avatar_null"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/device-token",
+    "name": "register_device_token"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/forgot_password",
+    "name": "forgot_password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/job-applications",
+    "name": "submit_job_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/logout",
+    "name": "logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/me/service-applications/{application_id}/cancel",
+    "name": "cancel_service_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/me/service-applications/{application_id}/owner-approve",
+    "name": "owner_approve_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/me/service-applications/{application_id}/owner-counter-offer",
+    "name": "owner_counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/me/service-applications/{application_id}/owner-reject",
+    "name": "owner_reject_application"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/me/service-applications/{application_id}/respond-counter-offer",
+    "name": "respond_to_counter_offer"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/messages/generate-image-url",
+    "name": "generate_image_url"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/messages/mark-chat-read/{contact_id}",
+    "name": "mark_chat_messages_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/messages/send",
+    "name": "send_message_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/messages/{msg_id}/read",
+    "name": "mark_message_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/notifications/read-all",
+    "name": "mark_all_notifications_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/notifications/send-announcement",
+    "name": "send_announcement_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/notifications/{notification_id}/read",
+    "name": "mark_notification_read_api"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/password/validate",
+    "name": "validate_password_strength"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/profile/send-email-update-code",
+    "name": "send_email_update_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/profile/send-phone-update-code",
+    "name": "send_phone_update_code"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/recommendations/{task_id}/feedback",
+    "name": "submit_recommendation_feedback"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/refresh-image-url",
+    "name": "refresh_image_url"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/register",
+    "name": "register"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/register/debug",
+    "name": "register_debug"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/register/test",
+    "name": "register_test"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/resend-verification",
+    "name": "resend_verification_email"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/reset_password/{token}",
+    "name": "reset_password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/staff/notifications/read-all",
+    "name": "mark_all_staff_notifications_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/staff/notifications/{notification_id}/read",
+    "name": "mark_staff_notification_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/stripe/webhook",
+    "name": "stripe_webhook"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/accept",
+    "name": "accept_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/approve",
+    "name": "approve_task_taker"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/cancel",
+    "name": "cancel_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/complete",
+    "name": "complete_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/confirm_complete",
+    "name": "confirm_task_complete"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/confirm_completion",
+    "name": "confirm_task_completion"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/dispute",
+    "name": "create_task_dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/interaction",
+    "name": "record_task_interaction"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/pay",
+    "name": "create_payment"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/refund-request",
+    "name": "create_refund_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/refund-request/{refund_id}/cancel",
+    "name": "cancel_refund_request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/refund-request/{refund_id}/rebuttal",
+    "name": "submit_refund_rebuttal"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/reject",
+    "name": "reject_task_taker"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/tasks/{task_id}/review",
+    "name": "create_review"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/translate",
+    "name": "translate_text"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/translate/batch",
+    "name": "translate_batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/translate/prefetch",
+    "name": "prefetch_translations"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/translate/services/reset",
+    "name": "reset_translation_services"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/translate/task/{task_id}",
+    "name": "translate_and_save_task"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/translate/tasks/batch",
+    "name": "get_task_translations_batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/translate/warmup",
+    "name": "warmup_translations"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/upload/file",
+    "name": "upload_file"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/upload/image",
+    "name": "upload_image"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/upload/public-image",
+    "name": "upload_public_image"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/user/customer-service/assign",
+    "name": "assign_customer_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/user/customer-service/chats/{chat_id}/end",
+    "name": "end_customer_service_chat_user"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/user/customer-service/chats/{chat_id}/files",
+    "name": "upload_customer_service_chat_file"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/user/customer-service/chats/{chat_id}/messages",
+    "name": "send_customer_service_chat_message"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/user/customer-service/chats/{chat_id}/messages/{message_id}/mark-read",
+    "name": "mark_customer_service_message_read"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/user/customer-service/chats/{chat_id}/rate",
+    "name": "rate_customer_service"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/users/device-token",
+    "name": "register_device_token"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/users/vip/activate",
+    "name": "activate_vip"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/vip/activate",
+    "name": "activate_vip"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/webhooks/apple-iap",
+    "name": "apple_iap_webhook"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/{user_id}/follow",
+    "name": "follow_user"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/upload/forum-file",
+    "name": "upload_forum_post_file"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/upload/image",
+    "name": "upload_image_v2"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/upload/image/batch",
+    "name": "upload_images_batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/wallet/withdraw",
+    "name": "withdraw"
+  },
+  {
+    "method": "POST",
+    "path": "/api/webhooks/apple-iap",
+    "name": "apple_iap_webhook"
+  },
+  {
+    "method": "POST",
+    "path": "/convert-to-utc",
+    "name": "convert_to_utc"
+  },
+  {
+    "method": "POST",
+    "path": "/format-time",
+    "name": "format_time"
+  },
+  {
+    "method": "POST",
+    "path": "/validate-time",
+    "name": "validate_time"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/banners/batch-update-order",
+    "name": "batch_update_banner_order"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/banners/{banner_id}",
+    "name": "update_banner"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/checkin/rewards/{reward_id}",
+    "name": "update_checkin_reward"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/checkin/rewards/{reward_id}",
+    "name": "update_checkin_reward"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/checkin/settings",
+    "name": "update_checkin_settings"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/content-moderation/content-reviews/{review_id}",
+    "name": "review_content"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/content-moderation/sensitive-words/{word_id}",
+    "name": "update_sensitive_word"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/coupons/{coupon_id}",
+    "name": "update_coupon"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/customer-service-requests/{request_id}",
+    "name": "admin_update_customer_service_request"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/experts/activities/{activity_id}",
+    "name": "update_expert_activity_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/experts/services/{service_id}",
+    "name": "update_expert_service_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/experts/{expert_id}",
+    "name": "update_expert_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/experts/{expert_id}/status",
+    "name": "change_expert_status"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/invitation-codes/{invitation_id}",
+    "name": "update_invitation_code"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/job-positions/{position_id}",
+    "name": "admin_update_job_position"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/newbie-tasks/config/{task_key}",
+    "name": "update_newbie_task_config"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/official-tasks/{task_id}",
+    "name": "update_official_task"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/official/activities/{activity_id}",
+    "name": "update_official_activity"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/promotion-codes/{promo_id}",
+    "name": "update_promotion_code"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/settings/points",
+    "name": "update_points_settings"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/skill-categories/{category_id}",
+    "name": "update_skill_category"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/stage-bonus/config/{stage}",
+    "name": "update_stage_bonus_config"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/system-settings",
+    "name": "admin_update_system_settings_batch"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/system-settings/{key}",
+    "name": "admin_update_system_setting"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/task-expert/{expert_id}",
+    "name": "update_task_expert"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/task-expert/{expert_id}/activities/{activity_id}",
+    "name": "update_expert_activity_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/task-expert/{expert_id}/services/{service_id}",
+    "name": "update_expert_service_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tasks/{task_id}",
+    "name": "admin_update_task"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tasks/{task_id}/points-reward",
+    "name": "update_task_points_reward"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/badges/{badge_id}/display",
+    "name": "toggle_badge_display"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/custom-leaderboards/admin/items/{item_id}",
+    "name": "update_item_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/custom-leaderboards/admin/leaderboards/{leaderboard_id}",
+    "name": "update_leaderboard_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/customer-service/change-password",
+    "name": "cs_change_password"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/allow-applications",
+    "name": "toggle_allow_applications"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/board",
+    "name": "update_expert_board"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/business-hours",
+    "name": "update_business_hours"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/coupons/{coupon_id}",
+    "name": "update_expert_coupon"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/join-requests/{request_id}",
+    "name": "review_join_request"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/location",
+    "name": "update_expert_location"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/members/{user_id}/role",
+    "name": "change_member_role"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/profile",
+    "name": "update_expert_profile"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/services/{service_id}",
+    "name": "update_expert_service"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experts/{expert_id}/services/{service_id}/time-slots/{slot_id}",
+    "name": "update_time_slot"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/flea-market/admin/items/{item_id}",
+    "name": "update_flea_market_item_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/flea-market/admin/reports/{report_id}/process",
+    "name": "process_flea_market_report"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/flea-market/agree-notice",
+    "name": "agree_flea_market_notice"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/flea-market/items/{item_id}",
+    "name": "update_flea_market_item"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/forum/admin/reports/{report_id}/process",
+    "name": "process_report"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/forum/categories/requests/{request_id}/review",
+    "name": "review_category_request"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/forum/categories/{category_id}",
+    "name": "update_category"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/forum/notifications/read-all",
+    "name": "mark_all_notifications_read"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/forum/notifications/{notification_id}/read",
+    "name": "mark_notification_read"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/forum/posts/{post_id}",
+    "name": "update_post"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/forum/replies/{reply_id}",
+    "name": "update_reply"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/profile/capabilities",
+    "name": "update_capabilities"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/profile/preferences",
+    "name": "update_preferences"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/services/me/{service_id}",
+    "name": "update_personal_service"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/user-preferences",
+    "name": "update_user_preferences"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/admin/customer-service-requests/{request_id}",
+    "name": "admin_update_customer_service_request"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/admin/task-expert/{expert_id}",
+    "name": "update_task_expert"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/admin/task-expert/{expert_id}/activities/{activity_id}",
+    "name": "update_expert_activity_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/admin/task-expert/{expert_id}/services/{service_id}",
+    "name": "update_expert_service_admin"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/user-preferences",
+    "name": "update_user_preferences"
+  }
+]
