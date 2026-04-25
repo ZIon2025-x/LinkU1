@@ -49,11 +49,11 @@ from app.routes import (
     profile_routes,
     refund_routes,
     system_routes,
+    task_routes,
     translation_routes,
     upload_inline_routes,
 )
 # from app.routes import (
-#     task_routes,
 #     cs_routes,
 # )
 
@@ -367,7 +367,7 @@ _SPLIT_ROUTERS: list[tuple[object, str]] = [
     (profile_routes.router, "用户资料"),
     (message_routes.router, "消息与通知"),
     (payment_inline_routes.router, "支付-inline"),
-    # (task_routes.router, "任务"),
+    (task_routes.router, "任务"),
     # (payment_inline_routes.router, "支付-inline"),
     # (cs_routes.router, "客服"),
 ]
