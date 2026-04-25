@@ -45,6 +45,7 @@ from app.routers import router as main_router
 from app.routes import (
     auth_inline_routes,
     message_routes,
+    payment_inline_routes,
     profile_routes,
     refund_routes,
     system_routes,
@@ -53,7 +54,6 @@ from app.routes import (
 )
 # from app.routes import (
 #     task_routes,
-#     payment_inline_routes,
 #     cs_routes,
 # )
 
@@ -366,6 +366,7 @@ _SPLIT_ROUTERS: list[tuple[object, str]] = [
     (refund_routes.router, "退款"),
     (profile_routes.router, "用户资料"),
     (message_routes.router, "消息与通知"),
+    (payment_inline_routes.router, "支付-inline"),
     # (task_routes.router, "任务"),
     # (payment_inline_routes.router, "支付-inline"),
     # (cs_routes.router, "客服"),

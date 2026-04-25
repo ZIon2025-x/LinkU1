@@ -456,11 +456,11 @@ def test_task_api_rejects_placeholder_payment():
     This test verifies the endpoint actually CALLS the guard (integration check via source inspection).
     """
     import inspect
-    from app import routers
+    from app.routes import payment_inline_routes
 
-    source = inspect.getsource(routers)
+    source = inspect.getsource(payment_inline_routes)
     # Find the pay endpoint by finding `@router.post("/tasks/{task_id}/pay")`
-    assert '@router.post("/tasks/{task_id}/pay")' in source, "pay endpoint should exist"
+    assert '@router.post("/tasks/{task_id}/pay")' in source, "pay endpoint should exist in payment_inline_routes"
     # Check the helper is imported
     assert "load_real_task_or_404_sync" in source, "guard helper should be imported/used"
 
