@@ -18,6 +18,7 @@ and unaffected by this split.
 Mounts at both /api and /api/users via main.py (same as the original main_router).
 """
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -37,9 +38,13 @@ from app import crud, models
 from app.deps import get_current_user_secure_sync_csrf, get_db
 from app.file_utils import _resolve_legacy_private_file_path
 from app.rate_limiting import rate_limit
-# Module-level upload config stays in app/routers.py per the split plan;
-# re-import the bits this module needs.
-from app.routers import RAILWAY_ENVIRONMENT, USE_CLOUD_STORAGE
+
+# Upload env detection — duplicated in cs_routes.py (cs routes also use
+# RAILWAY_ENVIRONMENT/USE_CLOUD_STORAGE for legacy private-file fallback).
+# Cheap two-line definition; kept inline rather than introducing a new
+# shared utils module.
+RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+USE_CLOUD_STORAGE = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
 
 logger = logging.getLogger(__name__)
 
