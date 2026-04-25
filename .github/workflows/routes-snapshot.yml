@@ -1,0 +1,66 @@
+name: Routes Snapshot Check
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "backend/app/**"
+      - "backend/scripts/dump_routes.py"
+      - "backend/scripts/routes_baseline.json"
+      - "backend/tests/test_routers_split_smoke.py"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "backend/app/**"
+      - "backend/scripts/dump_routes.py"
+      - "backend/scripts/routes_baseline.json"
+
+jobs:
+  snapshot-diff:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: linku_db
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install -r tests/requirements-test.txt || true
+
+      - name: Compare route snapshot
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/linku_db
+        run: |
+          python -m scripts.dump_routes > /tmp/routes_current.json
+          if ! diff -u scripts/routes_baseline.json /tmp/routes_current.json; then
+            echo "::error::Route snapshot has diverged from baseline."
+            echo "If intentional (e.g., commit 4 deletes 10 debug routes), regenerate:"
+            echo "  python -m scripts.dump_routes scripts/routes_baseline.json"
+            exit 1
+          fi
+
+      - name: Run smoke test
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/linku_db
+        run: pytest tests/test_routers_split_smoke.py -v
