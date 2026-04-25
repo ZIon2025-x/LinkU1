@@ -40,6 +40,21 @@ from app.rate_limit_routes import router as rate_limit_router
 from app.security_monitoring_routes import router as security_monitoring_router
 from app.deps import get_db
 from app.routers import router as main_router
+
+# 新拆分出来的领域 router（每次提取一个域时在此 import + 加入 _SPLIT_ROUTERS）
+# from app.routes import (
+#     auth_inline_routes,
+#     task_routes,
+#     refund_routes,
+#     profile_routes,
+#     message_routes,
+#     payment_inline_routes,
+#     cs_routes,
+#     translation_routes,
+#     system_routes,
+#     upload_inline_routes,
+# )
+
 from app.sitemap_routes import sitemap_router
 from app.security import add_security_headers
 from app.security_monitoring import check_security_middleware
@@ -337,6 +352,27 @@ app.include_router(user_profile_router)
 
 # ==================== 主路由（包含所有未迁移的路由） ====================
 app.include_router(main_router, prefix="/api", tags=["main"])  # 添加主路由，包含图片上传API
+
+# === Split routers (extracted from app/routers.py) ===
+# 每个都双挂载到 /api 和 /api/users，行为等价于 main_router 的双挂载。
+# 每次新域提取时往这个列表里取消注释一行。
+_SPLIT_ROUTERS: list[tuple[object, str]] = [
+    # (auth_inline_routes.router, "auth-inline"),
+    # (task_routes.router, "任务"),
+    # (refund_routes.router, "退款"),
+    # (profile_routes.router, "用户资料"),
+    # (message_routes.router, "消息与通知"),
+    # (payment_inline_routes.router, "支付-inline"),
+    # (cs_routes.router, "客服"),
+    # (translation_routes.router, "翻译"),
+    # (system_routes.router, "系统"),
+    # (upload_inline_routes.router, "上传-inline"),
+]
+
+for _r, _tag in _SPLIT_ROUTERS:
+    app.include_router(_r, prefix="/api/users", tags=[_tag])
+    app.include_router(_r, prefix="/api", tags=[_tag])
+
 # auth_router 已移除，使用 secure_auth_router 替代
 app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安全认证系统
 # 旧的客服认证路由已删除，使用新的独立认证系统
