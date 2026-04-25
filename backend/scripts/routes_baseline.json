@@ -1046,41 +1046,6 @@
   },
   {
     "method": "GET",
-    "path": "/api/debug/check-pending/{email}",
-    "name": "debug_check_pending"
-  },
-  {
-    "method": "GET",
-    "path": "/api/debug/check-user-avatar/{user_id}",
-    "name": "check_user_avatar"
-  },
-  {
-    "method": "GET",
-    "path": "/api/debug/session-status",
-    "name": "debug_session_status"
-  },
-  {
-    "method": "GET",
-    "path": "/api/debug/simple-test",
-    "name": "debug_simple_test"
-  },
-  {
-    "method": "GET",
-    "path": "/api/debug/test-confirm-simple",
-    "name": "debug_test_confirm_simple"
-  },
-  {
-    "method": "GET",
-    "path": "/api/debug/test-reviews/{user_id}",
-    "name": "debug_test_reviews"
-  },
-  {
-    "method": "GET",
-    "path": "/api/debug/test-token/{token}",
-    "name": "debug_test_token"
-  },
-  {
-    "method": "GET",
     "path": "/api/discovery/feed",
     "name": "get_discovery_feed"
   },
@@ -2158,41 +2123,6 @@
     "method": "GET",
     "path": "/api/users/customer-service/{service_id}/rating",
     "name": "get_customer_service_rating"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/debug/check-pending/{email}",
-    "name": "debug_check_pending"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/debug/check-user-avatar/{user_id}",
-    "name": "check_user_avatar"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/debug/session-status",
-    "name": "debug_session_status"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/debug/simple-test",
-    "name": "debug_simple_test"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/debug/test-confirm-simple",
-    "name": "debug_test_confirm_simple"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/debug/test-reviews/{user_id}",
-    "name": "debug_test_reviews"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/debug/test-token/{token}",
-    "name": "debug_test_token"
   },
   {
     "method": "GET",
@@ -3486,11 +3416,6 @@
   },
   {
     "method": "POST",
-    "path": "/api/debug/fix-avatar-null",
-    "name": "fix_avatar_null"
-  },
-  {
-    "method": "POST",
     "path": "/api/expert/activities",
     "name": "create_expert_activity"
   },
@@ -4003,16 +3928,6 @@
     "method": "POST",
     "path": "/api/register",
     "name": "register"
-  },
-  {
-    "method": "POST",
-    "path": "/api/register/debug",
-    "name": "register_debug"
-  },
-  {
-    "method": "POST",
-    "path": "/api/register/test",
-    "name": "register_test"
   },
   {
     "method": "POST",
@@ -4581,11 +4496,6 @@
   },
   {
     "method": "POST",
-    "path": "/api/users/debug/fix-avatar-null",
-    "name": "fix_avatar_null"
-  },
-  {
-    "method": "POST",
     "path": "/api/users/device-token",
     "name": "register_device_token"
   },
@@ -4693,16 +4603,6 @@
     "method": "POST",
     "path": "/api/users/register",
     "name": "register"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/register/debug",
-    "name": "register_debug"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/register/test",
-    "name": "register_test"
   },
   {
     "method": "POST",
