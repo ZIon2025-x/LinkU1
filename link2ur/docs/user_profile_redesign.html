@@ -930,12 +930,29 @@
   }
   .b-review-mini-text {
     font-size: 12.5px;
-    color: #6f767e;
-    line-height: 1.5;
+    color: #4d5560;
+    line-height: 1.55;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
+  }
+  .b-review-mini-tags {
+    margin-top: 8px;
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .b-review-mini-tag {
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #f4f5f7;
+    color: #6f767e;
+    font-weight: 500;
+  }
+  /* 第一条评价无上边框 —— 紧贴 section head */
+  .b-review-mini:first-of-type {
+    border-top: 0;
+    padding-top: 4px;
   }
   .b-review-all-btn {
     margin-top: 12px;
@@ -1214,234 +1231,11 @@
 <body>
 
 <div class="page-header">
-  <h1>用户主页 · 重新设计对比</h1>
-  <p>Link2Ur · 他人公开主页（公开访问场景）·  iPhone 14 Pro 模拟尺寸（390×844）</p>
+  <h1>普通用户主页 · 重新设计</h1>
+  <p>Link2Ur · 他人公开主页（user_profile_view）· 不含达人/服务相关字段 · iPhone 14 Pro 模拟尺寸（390×844）</p>
 </div>
 
 <div class="phones">
-
-  <!-- ==================== PLAN A ==================== -->
-  <div class="phone-wrap">
-    <div class="phone-label">
-      <span class="tag">PLAN A</span>
-      <h2>沉浸式封面 · 社交感</h2>
-      <p>大渐变 cover、头像凸出、Tab 切内容。<br/>偏「内容创作者 / 学生」的活泼调性。</p>
-    </div>
-
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="screen">
-        <div class="scroll">
-          <!-- status bar (white text on cover) -->
-          <div class="statusbar dark">
-            <span>9:41</span>
-            <div class="right">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zm4-4h2v7H6zm4-4h2v11h-2zm4-4h2v15h-2zm4-4h2v19h-2z"/></svg>
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 2.7 6 0 9.4l1.4 1.7C3.6 8.4 7.5 6.5 12 6.5s8.4 1.9 10.6 4.6L24 9.4C21.3 6 17 4 12 4zm0 5c-3 0-5.7 1.2-7.6 3.1l1.4 1.7C7.4 12.3 9.6 11.5 12 11.5s4.6.8 6.2 2.3l1.4-1.7C17.7 10.2 15 9 12 9zm0 5c-1.7 0-3.2.6-4.4 1.5l1.4 1.7c.9-.7 2-1.2 3-1.2s2.1.5 3 1.2l1.4-1.7C15.2 14.6 13.7 14 12 14zm0 4l-2 2 2 2 2-2-2-2z"/></svg>
-              <svg viewBox="0 0 26 12" fill="none" stroke="currentColor"><rect x="1" y="1" width="20" height="10" rx="3" stroke-width="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" fill="currentColor"/></svg>
-            </div>
-          </div>
-
-          <!-- cover -->
-          <div class="a-cover">
-            <div class="a-cover-actions">
-              <button class="glass-btn" aria-label="back">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-              </button>
-              <div style="display:flex; gap:8px;">
-                <button class="glass-btn" aria-label="share">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
-                </button>
-                <button class="glass-btn" aria-label="more">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- header content -->
-          <div class="a-header">
-            <div class="a-avatar-row">
-              <div class="avatar-large">
-                林
-                <div class="avatar-crown" title="VIP">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 5.5 6 1-4.5 4.5 1 6L12 16l-5.5 3 1-6L3 8.5l6-1L12 2z"/></svg>
-                </div>
-              </div>
-              <div class="a-actions">
-                <button class="btn-secondary" aria-label="message">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                </button>
-                <button class="btn-primary">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  关注
-                </button>
-              </div>
-            </div>
-
-            <div class="a-name-row">
-              <span class="a-name">林思琪</span>
-              <span class="badge-icon" title="达人认证">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-              <span class="badge-icon" title="学生认证">
-                <svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
-              </span>
-              <span class="badge-pill gold">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
-                VIP
-              </span>
-            </div>
-
-            <div class="a-handle">@sequila · UCL 设计系</div>
-
-            <div class="a-bio">
-              设计专业大三 · 擅长 PPT、海报、品牌视觉 ✨<br/>
-              接单稳准快，急活也能扛 · 已合作 47 单 0 投诉
-            </div>
-
-            <div class="a-meta">
-              <span class="meta-chip">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                伦敦
-              </span>
-              <span class="meta-chip">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
-                平均 2 小时回复
-              </span>
-              <span class="meta-chip">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                注册 2 年
-              </span>
-            </div>
-
-            <div class="a-stats">
-              <div><span class="a-stat-num">1,284</span><span class="a-stat-label">关注</span></div>
-              <div><span class="a-stat-num">236</span><span class="a-stat-label">粉丝</span></div>
-              <div><span class="a-stat-num">18</span><span class="a-stat-label">勋章</span></div>
-            </div>
-          </div>
-
-          <!-- big stats strip -->
-          <div class="a-bigstats">
-            <div class="a-bigstat">
-              <div class="a-bigstat-num">4.9</div>
-              <div class="a-bigstat-label">平均评分</div>
-            </div>
-            <div class="a-bigstat">
-              <div class="a-bigstat-num">96%</div>
-              <div class="a-bigstat-label">完成率</div>
-            </div>
-            <div class="a-bigstat">
-              <div class="a-bigstat-num plain">47</div>
-              <div class="a-bigstat-label">已完成</div>
-            </div>
-          </div>
-
-          <!-- tabs -->
-          <div class="a-tabs">
-            <div class="a-tab active">服务</div>
-            <div class="a-tab">评价 <span style="color:#9a9fa5; font-size:11px;">·32</span></div>
-            <div class="a-tab">动态</div>
-            <div class="a-tab">闲置</div>
-          </div>
-
-          <!-- tab content: 服务 -->
-          <div class="a-section">
-            <div class="service-card">
-              <div class="service-thumb">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-              </div>
-              <div class="service-meta">
-                <div class="service-title">论文 PPT 答辩美化 · 24h 加急</div>
-                <div class="service-foot">
-                  <span class="service-tag">设计</span>
-                  <span class="grow"></span>
-                  <span class="service-price">£35 起</span>
-                </div>
-              </div>
-            </div>
-            <div class="service-card">
-              <div class="service-thumb b">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
-              </div>
-              <div class="service-meta">
-                <div class="service-title">小红书封面图 / 配图设计 包修改</div>
-                <div class="service-foot">
-                  <span class="service-tag">视觉</span>
-                  <span class="grow"></span>
-                  <span class="service-price">£12 / 张</span>
-                </div>
-              </div>
-            </div>
-            <div class="service-card">
-              <div class="service-thumb c">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15,8.5 22,9.3 17,14 18.2,21 12,17.8 5.8,21 7,14 2,9.3 9,8.5"/></svg>
-              </div>
-              <div class="service-meta">
-                <div class="service-title">个人品牌 / 自媒体 LOGO 三方案</div>
-                <div class="service-foot">
-                  <span class="service-tag">品牌</span>
-                  <span class="grow"></span>
-                  <span class="service-price">£80 起</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- radar -->
-          <div class="radar-card">
-            <div class="radar-title">能力画像</div>
-            <svg class="radar-svg" viewBox="-100 -90 200 180">
-              <!-- grid -->
-              <g fill="none" stroke="#dcdde6" stroke-width="0.6">
-                <polygon points="0,-72 68,-22 42,58 -42,58 -68,-22"/>
-                <polygon points="0,-54 51,-16 31,44 -31,44 -51,-16"/>
-                <polygon points="0,-36 34,-11 21,29 -21,29 -34,-11"/>
-                <polygon points="0,-18 17,-5 10,15 -10,15 -17,-5"/>
-              </g>
-              <g stroke="#dcdde6" stroke-width="0.6">
-                <line x1="0" y1="0" x2="0" y2="-72"/>
-                <line x1="0" y1="0" x2="68" y2="-22"/>
-                <line x1="0" y1="0" x2="42" y2="58"/>
-                <line x1="0" y1="0" x2="-42" y2="58"/>
-                <line x1="0" y1="0" x2="-68" y2="-22"/>
-              </g>
-              <!-- data: 评分 0.98, 完成率 0.96, 响应 0.85, 经验 0.78, 任务量 0.62 -->
-              <polygon
-                points="0,-70 65,-21 35,49 -33,46 -42,-14"
-                fill="url(#radarFill)" fill-opacity="0.55"
-                stroke="#7c5bff" stroke-width="1.6" stroke-linejoin="round"/>
-              <defs>
-                <linearGradient id="radarFill" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0%" stop-color="#5b6cff"/>
-                  <stop offset="100%" stop-color="#c084fc"/>
-                </linearGradient>
-              </defs>
-              <!-- labels -->
-              <g font-size="10" fill="#4d5560" text-anchor="middle" font-weight="600">
-                <text x="0" y="-80">⭐ 评分</text>
-                <text x="80" y="-22">✅ 完成率</text>
-                <text x="48" y="72">⚡ 响应</text>
-                <text x="-48" y="72">🏆 经验</text>
-                <text x="-80" y="-22">📦 任务量</text>
-              </g>
-            </svg>
-          </div>
-
-          <div class="section-pad-bottom"></div>
-        </div>
-
-        <!-- sticky CTA -->
-        <div class="cta-bar">
-          <button class="cta-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            发起任务请求
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ==================== PLAN B ==================== -->
   <div class="phone-wrap">
@@ -1484,53 +1278,53 @@
           <!-- HERO CARD overlapping banner -->
           <div class="b-hero-card">
             <div class="b-hero-avatar-wrap">
-              <div class="b-avatar-img">陈</div>
-              <div class="b-avatar-crown-deluxe" title="超级会员">
+              <div class="b-avatar-img">周</div>
+              <div class="b-avatar-crown-deluxe" title="VIP">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
               </div>
             </div>
 
             <div class="b-hero-name-row">
-              <span class="b-hero-name">陈宇航</span>
-              <span class="badge-icon" title="达人认证">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="b-hero-name">周哲</span>
+              <span class="badge-icon" title="学生认证">
+                <svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
               </span>
             </div>
 
+            <!-- 用户勋章（DisplayedBadge）—— 不是金牌达人 -->
             <div class="b-honor-deluxe">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              金牌达人 · Top 5%
+              社区活跃用户 · Lv.5
             </div>
 
             <div class="b-meta-line">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              伦敦
+              伦敦 · UCL
               <span class="b-meta-dot"></span>
-              注册 2 年
-              <span class="b-meta-dot"></span>
-              1h 内回复
+              注册 1 年 6 个月
             </div>
 
             <p class="b-hero-bio">
-              资深 PPT / 数据可视化设计师，服务过 30+ 高校与品牌项目，擅长论文答辩、商业路演、品牌发布会场景。注重沟通节奏，按时交付。
+              UCL 经济系大三在读 · 偶尔发任务找帮手，也接些小活赚零花。<br/>
+              喜欢摄影和咖啡，有需要可以发任务给我 ☕
             </p>
 
-            <!-- TRUST STRIP -->
+            <!-- TRUST STRIP（普通用户视角：口碑 / 活跃度 / 社交） -->
             <div class="b-trust-strip">
               <div class="b-tstat">
                 <div class="num">
                   <span class="gold">4.9</span>
                   <span class="star"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
                 </div>
-                <div class="label">综合评分 · 32</div>
+                <div class="label">综合评分 · 12</div>
               </div>
               <div class="b-tstat">
-                <div class="num"><span class="green">96%</span></div>
-                <div class="label">完成率</div>
+                <div class="num">18</div>
+                <div class="label">已完成任务</div>
               </div>
               <div class="b-tstat">
-                <div class="num">47</div>
-                <div class="label">已完成订单</div>
+                <div class="num">236</div>
+                <div class="label">粉丝</div>
               </div>
             </div>
 
@@ -1538,9 +1332,6 @@
               <button class="b-btn-follow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 关注 TA
-              </button>
-              <button class="b-btn-message" aria-label="message">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </button>
             </div>
           </div>
@@ -1581,66 +1372,56 @@
             </div>
           </div>
 
-          <!-- ===== 个人服务 ===== -->
+          <!-- ===== TA 发布的任务（recent_tasks） ===== -->
           <div class="b-section">
             <div class="b-section-head">
               <div class="b-section-title">
-                个人服务
-                <span class="b-section-sub">· 5 项</span>
+                TA 发布的任务
+                <span class="b-section-sub">· 18 个</span>
               </div>
               <span class="b-more">全部
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
               </span>
             </div>
 
-            <div class="b-service-card">
-              <div class="b-service-thumb warm">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
               </div>
-              <div class="b-service-info">
-                <div class="b-service-title">论文答辩 PPT 美化 · 24h 加急</div>
-                <div class="b-service-desc">页数不限，含动效 · 已售 28 单</div>
-                <div class="b-service-foot">
-                  <div class="b-service-pills">
-                    <span class="b-service-pill hot">🔥 热门</span>
-                    <span class="b-service-pill">设计</span>
-                  </div>
-                  <div class="b-service-price">£35<small>起</small></div>
+              <div class="b-task-meta">
+                <div class="b-task-title">Camden 周末搬家帮手 · 1.5h</div>
+                <div class="b-task-sub">
+                  <span class="role-tag poster">已完成</span>
+                  · 3 天前
                 </div>
               </div>
+              <div class="b-task-price">£25</div>
             </div>
-
-            <div class="b-service-card">
-              <div class="b-service-thumb cool">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </div>
-              <div class="b-service-info">
-                <div class="b-service-title">小红书封面图 / 配图 · 包修改</div>
-                <div class="b-service-desc">3 稿可选，含品牌色搭配 · 已售 17 单</div>
-                <div class="b-service-foot">
-                  <div class="b-service-pills">
-                    <span class="b-service-pill">视觉</span>
-                    <span class="b-service-pill">单价低</span>
-                  </div>
-                  <div class="b-service-price">£12<small>/张</small></div>
+              <div class="b-task-meta">
+                <div class="b-task-title">代取国王十字火车站快递</div>
+                <div class="b-task-sub">
+                  <span class="role-tag taker" style="background:#fef3c7; color:#92400e;">进行中</span>
+                  · 今天
                 </div>
               </div>
+              <div class="b-task-price">£8</div>
             </div>
-
-            <div class="b-service-card">
-              <div class="b-service-thumb pink">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15,8.5 22,9.3 17,14 18.2,21 12,17.8 5.8,21 7,14 2,9.3 9,8.5"/></svg>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               </div>
-              <div class="b-service-info">
-                <div class="b-service-title">个人品牌 / 自媒体 LOGO · 三方案</div>
-                <div class="b-service-desc">含黑白稿、应用规范 · 已售 9 单</div>
-                <div class="b-service-foot">
-                  <div class="b-service-pills">
-                    <span class="b-service-pill">品牌</span>
-                  </div>
-                  <div class="b-service-price">£80<small>起</small></div>
+              <div class="b-task-meta">
+                <div class="b-task-title">中文家教（小学六年级数学）</div>
+                <div class="b-task-sub">
+                  <span class="role-tag poster">已完成</span>
+                  · 上周
                 </div>
               </div>
+              <div class="b-task-price">£40</div>
             </div>
           </div>
 
@@ -1656,30 +1437,27 @@
               </span>
             </div>
 
-            <div class="b-review-featured">
-              <span class="b-quote-mark">"</span>
-              <div class="b-review-content">
-                <div class="b-review-text">
+            <div class="b-review-mini">
+              <div class="review-avatar">王</div>
+              <div class="b-review-mini-meta">
+                <div class="b-review-mini-head">
+                  <span class="b-review-mini-name">王同学</span>
+                  <div class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  </div>
+                  <span class="review-time">3 天前</span>
+                </div>
+                <div class="b-review-mini-text">
                   论文答辩 PPT，给的素材很乱但他梳理得超清晰，配色和层次都很讲究，最后导师当场表扬。第二次找他了，很专业！
                 </div>
-                <div class="b-review-tags">
-                  <span class="b-review-tag">沟通顺畅</span>
-                  <span class="b-review-tag">交付准时</span>
-                  <span class="b-review-tag">细节出色</span>
-                </div>
-                <div class="b-review-foot">
-                  <div class="review-avatar">王</div>
-                  <div>
-                    <div class="review-name">王同学</div>
-                    <div class="review-stars">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                    </div>
-                  </div>
-                  <span class="review-time">3 天前 · PPT 美化</span>
+                <div class="b-review-mini-tags">
+                  <span class="b-review-mini-tag">沟通顺畅</span>
+                  <span class="b-review-mini-tag">交付准时</span>
+                  <span class="b-review-mini-tag">细节出色</span>
                 </div>
               </div>
             </div>
@@ -1728,6 +1506,50 @@
               查看全部 32 条评价
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
+          </div>
+
+          <!-- ===== TA 的论坛动态（recent_forum_posts） ===== -->
+          <div class="b-section">
+            <div class="b-section-head">
+              <div class="b-section-title">
+                TA 的论坛动态
+                <span class="b-section-sub">· 24 篇</span>
+              </div>
+              <span class="b-more">全部
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="b-task-row">
+              <div class="b-task-icon" style="background:#fef3c7; color:#d97706;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="b-task-meta">
+                <div class="b-task-title">UCL 期末求学姐学长收旧 econ 教材</div>
+                <div class="b-task-sub">
+                  <span style="display:inline-flex; align-items:center; gap:3px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px; height:11px;"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="12" rx="2"/></svg>
+                    32 赞
+                  </span>
+                  · 12 评论 · 2 天前
+                </div>
+              </div>
+            </div>
+            <div class="b-task-row">
+              <div class="b-task-icon" style="background:#dcfce7; color:#059669;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12c0 5-7 10-7 10s-7-5-7-10a7 7 0 1114 0z"/></svg>
+              </div>
+              <div class="b-task-meta">
+                <div class="b-task-title">伦敦周末出片机位推荐合集（已更新 4 期）</div>
+                <div class="b-task-sub">
+                  <span style="display:inline-flex; align-items:center; gap:3px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px; height:11px;"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="12" rx="2"/></svg>
+                    87 赞
+                  </span>
+                  · 28 评论 · 1 周前
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="section-pad-bottom"></div>
@@ -1783,35 +1605,34 @@
           <!-- HERO 同 plan B -->
           <div class="b-hero-card">
             <div class="b-hero-avatar-wrap">
-              <div class="b-avatar-img">陈</div>
-              <div class="b-avatar-crown-deluxe" title="超级会员">
+              <div class="b-avatar-img">周</div>
+              <div class="b-avatar-crown-deluxe" title="VIP">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
               </div>
             </div>
 
             <div class="b-hero-name-row">
-              <span class="b-hero-name">陈宇航</span>
-              <span class="badge-icon" title="达人认证">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="b-hero-name">周哲</span>
+              <span class="badge-icon" title="学生认证">
+                <svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
               </span>
             </div>
 
             <div class="b-honor-deluxe">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              金牌达人 · Top 5%
+              社区活跃用户 · Lv.5
             </div>
 
             <div class="b-meta-line">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              伦敦
+              伦敦 · UCL
               <span class="b-meta-dot"></span>
-              注册 2 年
-              <span class="b-meta-dot"></span>
-              1h 内回复
+              注册 1 年 6 个月
             </div>
 
             <p class="b-hero-bio">
-              资深 PPT / 数据可视化设计师，服务过 30+ 高校与品牌项目，擅长论文答辩、商业路演、品牌发布会场景。注重沟通节奏，按时交付。
+              UCL 经济系大三在读 · 偶尔发任务找帮手，也接些小活赚零花。<br/>
+              喜欢摄影和咖啡，有需要可以发任务给我 ☕
             </p>
 
             <div class="b-trust-strip">
@@ -1820,15 +1641,15 @@
                   <span class="gold">4.9</span>
                   <span class="star"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
                 </div>
-                <div class="label">综合评分 · 32</div>
+                <div class="label">综合评分 · 12</div>
               </div>
               <div class="b-tstat">
-                <div class="num"><span class="green">96%</span></div>
-                <div class="label">完成率</div>
+                <div class="num">18</div>
+                <div class="label">已完成任务</div>
               </div>
               <div class="b-tstat">
-                <div class="num">47</div>
-                <div class="label">已完成订单</div>
+                <div class="num">236</div>
+                <div class="label">粉丝</div>
               </div>
             </div>
 
@@ -1837,73 +1658,60 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 关注 TA
               </button>
-              <button class="b-btn-message" aria-label="message">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              </button>
             </div>
           </div>
 
           <!-- ❌ 没有「你和 TA 的合作」section（陌生人，零数据）-->
-          <!-- ✅ 个人服务 直接顶上 → 强化"挑选服务下单"路径 -->
+          <!-- ✅ TA 发布的任务 直接顶上 → 让访客看到 TA 的活跃度 -->
           <div class="b-section">
             <div class="b-section-head">
               <div class="b-section-title">
-                个人服务
-                <span class="b-section-sub">· 5 项</span>
+                TA 发布的任务
+                <span class="b-section-sub">· 18 个</span>
               </div>
               <span class="b-more">全部
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
               </span>
             </div>
 
-            <div class="b-service-card">
-              <div class="b-service-thumb warm">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
               </div>
-              <div class="b-service-info">
-                <div class="b-service-title">论文答辩 PPT 美化 · 24h 加急</div>
-                <div class="b-service-desc">页数不限，含动效 · 已售 28 单</div>
-                <div class="b-service-foot">
-                  <div class="b-service-pills">
-                    <span class="b-service-pill hot">🔥 热门</span>
-                    <span class="b-service-pill">设计</span>
-                  </div>
-                  <div class="b-service-price">£35<small>起</small></div>
+              <div class="b-task-meta">
+                <div class="b-task-title">Camden 周末搬家帮手 · 1.5h</div>
+                <div class="b-task-sub">
+                  <span class="role-tag poster">已完成</span>
+                  · 3 天前
                 </div>
               </div>
+              <div class="b-task-price">£25</div>
             </div>
-
-            <div class="b-service-card">
-              <div class="b-service-thumb cool">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </div>
-              <div class="b-service-info">
-                <div class="b-service-title">小红书封面图 / 配图 · 包修改</div>
-                <div class="b-service-desc">3 稿可选，含品牌色搭配 · 已售 17 单</div>
-                <div class="b-service-foot">
-                  <div class="b-service-pills">
-                    <span class="b-service-pill">视觉</span>
-                    <span class="b-service-pill">单价低</span>
-                  </div>
-                  <div class="b-service-price">£12<small>/张</small></div>
+              <div class="b-task-meta">
+                <div class="b-task-title">代取国王十字火车站快递</div>
+                <div class="b-task-sub">
+                  <span class="role-tag taker" style="background:#fef3c7; color:#92400e;">进行中</span>
+                  · 今天
                 </div>
               </div>
+              <div class="b-task-price">£8</div>
             </div>
-
-            <div class="b-service-card">
-              <div class="b-service-thumb pink">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15,8.5 22,9.3 17,14 18.2,21 12,17.8 5.8,21 7,14 2,9.3 9,8.5"/></svg>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               </div>
-              <div class="b-service-info">
-                <div class="b-service-title">个人品牌 / 自媒体 LOGO · 三方案</div>
-                <div class="b-service-desc">含黑白稿、应用规范 · 已售 9 单</div>
-                <div class="b-service-foot">
-                  <div class="b-service-pills">
-                    <span class="b-service-pill">品牌</span>
-                  </div>
-                  <div class="b-service-price">£80<small>起</small></div>
+              <div class="b-task-meta">
+                <div class="b-task-title">中文家教（小学六年级数学）</div>
+                <div class="b-task-sub">
+                  <span class="role-tag poster">已完成</span>
+                  · 上周
                 </div>
               </div>
+              <div class="b-task-price">£40</div>
             </div>
           </div>
 
@@ -1919,30 +1727,27 @@
               </span>
             </div>
 
-            <div class="b-review-featured">
-              <span class="b-quote-mark">"</span>
-              <div class="b-review-content">
-                <div class="b-review-text">
+            <div class="b-review-mini">
+              <div class="review-avatar">王</div>
+              <div class="b-review-mini-meta">
+                <div class="b-review-mini-head">
+                  <span class="b-review-mini-name">王同学</span>
+                  <div class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  </div>
+                  <span class="review-time">3 天前</span>
+                </div>
+                <div class="b-review-mini-text">
                   论文答辩 PPT，给的素材很乱但他梳理得超清晰，配色和层次都很讲究，最后导师当场表扬。第二次找他了，很专业！
                 </div>
-                <div class="b-review-tags">
-                  <span class="b-review-tag">沟通顺畅</span>
-                  <span class="b-review-tag">交付准时</span>
-                  <span class="b-review-tag">细节出色</span>
-                </div>
-                <div class="b-review-foot">
-                  <div class="review-avatar">王</div>
-                  <div>
-                    <div class="review-name">王同学</div>
-                    <div class="review-stars">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                    </div>
-                  </div>
-                  <span class="review-time">3 天前 · PPT 美化</span>
+                <div class="b-review-mini-tags">
+                  <span class="b-review-mini-tag">沟通顺畅</span>
+                  <span class="b-review-mini-tag">交付准时</span>
+                  <span class="b-review-mini-tag">细节出色</span>
                 </div>
               </div>
             </div>
@@ -1951,6 +1756,50 @@
               查看全部 32 条评价
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
+          </div>
+
+          <!-- ===== TA 的论坛动态 ===== -->
+          <div class="b-section">
+            <div class="b-section-head">
+              <div class="b-section-title">
+                TA 的论坛动态
+                <span class="b-section-sub">· 24 篇</span>
+              </div>
+              <span class="b-more">全部
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="b-task-row">
+              <div class="b-task-icon" style="background:#fef3c7; color:#d97706;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="b-task-meta">
+                <div class="b-task-title">UCL 期末求学姐学长收旧 econ 教材</div>
+                <div class="b-task-sub">
+                  <span style="display:inline-flex; align-items:center; gap:3px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px; height:11px;"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="12" rx="2"/></svg>
+                    32 赞
+                  </span>
+                  · 12 评论 · 2 天前
+                </div>
+              </div>
+            </div>
+            <div class="b-task-row">
+              <div class="b-task-icon" style="background:#dcfce7; color:#059669;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12c0 5-7 10-7 10s-7-5-7-10a7 7 0 1114 0z"/></svg>
+              </div>
+              <div class="b-task-meta">
+                <div class="b-task-title">伦敦周末出片机位推荐合集（已更新 4 期）</div>
+                <div class="b-task-sub">
+                  <span style="display:inline-flex; align-items:center; gap:3px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px; height:11px;"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="12" rx="2"/></svg>
+                    87 赞
+                  </span>
+                  · 28 评论 · 1 周前
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="section-pad-bottom"></div>
@@ -1966,232 +1815,6 @@
     </div>
   </div>
 
-  <!-- ==================== PLAN B · 能力详情 抽屉 ==================== -->
-  <div class="phone-wrap">
-    <div class="phone-label">
-      <span class="tag">PLAN B · 能力详情</span>
-      <h2>底部抽屉（···菜单触发）</h2>
-      <p>从右上角 ··· → 点「能力详情」拉起。<br/>主页面更干净，对详情有兴趣才打开。</p>
-    </div>
-
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="screen b-screen">
-        <!-- 背后的主页面（hero 部分），会被 backdrop 遮住一部分 -->
-        <div class="scroll" style="pointer-events:none;">
-          <div class="b-banner">
-            <div class="statusbar light">
-              <span>9:41</span>
-              <div class="right">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zm4-4h2v7H6zm4-4h2v11h-2zm4-4h2v15h-2zm4-4h2v19h-2z"/></svg>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 2.7 6 0 9.4l1.4 1.7C3.6 8.4 7.5 6.5 12 6.5s8.4 1.9 10.6 4.6L24 9.4C21.3 6 17 4 12 4zm0 5c-3 0-5.7 1.2-7.6 3.1l1.4 1.7C7.4 12.3 9.6 11.5 12 11.5s4.6.8 6.2 2.3l1.4-1.7C17.7 10.2 15 9 12 9zm0 5c-1.7 0-3.2.6-4.4 1.5l1.4 1.7c.9-.7 2-1.2 3-1.2s2.1.5 3 1.2l1.4-1.7C15.2 14.6 13.7 14 12 14zm0 4l-2 2 2 2 2-2-2-2z"/></svg>
-                <svg viewBox="0 0 26 12" fill="none" stroke="currentColor"><rect x="1" y="1" width="20" height="10" rx="3" stroke-width="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" fill="currentColor"/></svg>
-              </div>
-            </div>
-            <div class="b-topbar">
-              <button class="b-iconbtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-              </button>
-              <div class="b-topbar-title">用户主页</div>
-              <div class="b-topbar-actions">
-                <button class="b-iconbtn">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
-                </button>
-                <button class="b-iconbtn b-iconbtn-pulse" title="点这里 → 能力详情">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="b-hero-card">
-            <div class="b-hero-avatar-wrap">
-              <div class="b-avatar-img">陈</div>
-              <div class="b-avatar-crown-deluxe">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
-              </div>
-            </div>
-            <div class="b-hero-name-row">
-              <span class="b-hero-name">陈宇航</span>
-              <span class="badge-icon">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-            </div>
-            <div class="b-honor-deluxe">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              金牌达人 · Top 5%
-            </div>
-            <div class="b-trust-strip">
-              <div class="b-tstat">
-                <div class="num">
-                  <span class="gold">4.9</span>
-                  <span class="star"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
-                </div>
-                <div class="label">综合评分 · 32</div>
-              </div>
-              <div class="b-tstat">
-                <div class="num"><span class="green">96%</span></div>
-                <div class="label">完成率</div>
-              </div>
-              <div class="b-tstat">
-                <div class="num">47</div>
-                <div class="label">已完成</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- backdrop -->
-        <div class="sheet-backdrop"></div>
-
-        <!-- bottom sheet -->
-        <div class="bottom-sheet">
-          <div class="sheet-handle"></div>
-          <div class="sheet-header">
-            <div class="sheet-title-block">
-              <div class="sheet-title">能力详情</div>
-              <div class="sheet-subtitle">陈宇航 · 基于近 30 天 · 47 单完成数据</div>
-            </div>
-            <button class="sheet-close" aria-label="close">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-
-          <div class="sheet-body">
-            <!-- 4 数据卡 -->
-            <div class="sheet-skill-grid">
-              <div class="b-skill-card">
-                <div class="b-skill-card-head">
-                  <div class="b-skill-card-icon gold">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  </div>
-                  <span class="b-skill-card-label">综合评分</span>
-                </div>
-                <div class="b-skill-card-num">4.9<span class="unit">/5</span></div>
-                <div class="b-skill-card-mini">
-                  <span style="width:98%; background: linear-gradient(90deg,#fbbf24,#d97706);"></span>
-                </div>
-                <div class="b-skill-card-trend">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-                  优于 96%
-                </div>
-              </div>
-
-              <div class="b-skill-card">
-                <div class="b-skill-card-head">
-                  <div class="b-skill-card-icon green">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </div>
-                  <span class="b-skill-card-label">完成率</span>
-                </div>
-                <div class="b-skill-card-num">96<span class="unit">%</span></div>
-                <div class="b-skill-card-mini">
-                  <span style="width:96%; background: linear-gradient(90deg,#34d399,#059669);"></span>
-                </div>
-                <div class="b-skill-card-trend">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-                  47 / 49
-                </div>
-              </div>
-
-              <div class="b-skill-card">
-                <div class="b-skill-card-head">
-                  <div class="b-skill-card-icon indigo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  </div>
-                  <span class="b-skill-card-label">响应速度</span>
-                </div>
-                <div class="b-skill-card-num">1.2<span class="unit">h</span></div>
-                <div class="b-skill-card-mini">
-                  <span style="width:90%; background: linear-gradient(90deg,#818cf8,#4f46e5);"></span>
-                </div>
-                <div class="b-skill-card-trend">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-                  比平均快 3×
-                </div>
-              </div>
-
-              <div class="b-skill-card">
-                <div class="b-skill-card-head">
-                  <div class="b-skill-card-icon pink">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
-                  </div>
-                  <span class="b-skill-card-label">经验值</span>
-                </div>
-                <div class="b-skill-card-num">Lv.8</div>
-                <div class="b-skill-card-mini">
-                  <span style="width:78%; background: linear-gradient(90deg,#f472b6,#db2777);"></span>
-                </div>
-                <div class="b-skill-card-trend">
-                  78% → Lv.9
-                </div>
-              </div>
-            </div>
-
-            <!-- 横向对比卡 (只有详情页才有) -->
-            <div class="sheet-cmp-card">
-              <div class="sheet-cmp-head">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
-                vs 平台同类达人
-              </div>
-              <div class="sheet-cmp-sub">和「设计 / 视觉」分类近 90 天活跃的 218 位达人比较</div>
-
-              <div class="pct-row">
-                <div class="pct-row-head">
-                  <span class="pct-label">综合评分</span>
-                  <span class="pct-value">超过 <span class="accent">96%</span></span>
-                </div>
-                <div class="pct-bar">
-                  <span class="pct-fill" style="width: 96%;"></span>
-                  <span class="pct-marker" style="left: 96%;"></span>
-                </div>
-                <div class="pct-foot">
-                  <span>平均 4.5</span>
-                  <span>TOP 1%: 4.95</span>
-                </div>
-              </div>
-
-              <div class="pct-row">
-                <div class="pct-row-head">
-                  <span class="pct-label">完成率</span>
-                  <span class="pct-value">超过 <span class="accent">88%</span></span>
-                </div>
-                <div class="pct-bar">
-                  <span class="pct-fill" style="width: 88%;"></span>
-                  <span class="pct-marker" style="left: 88%;"></span>
-                </div>
-                <div class="pct-foot">
-                  <span>平均 82%</span>
-                  <span>TOP 1%: 99%</span>
-                </div>
-              </div>
-
-              <div class="pct-row">
-                <div class="pct-row-head">
-                  <span class="pct-label">响应速度</span>
-                  <span class="pct-value">超过 <span class="accent">93%</span></span>
-                </div>
-                <div class="pct-bar">
-                  <span class="pct-fill" style="width: 93%;"></span>
-                  <span class="pct-marker" style="left: 93%;"></span>
-                </div>
-                <div class="pct-foot">
-                  <span>平均 4.2h</span>
-                  <span>TOP 1%: 0.5h</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 解释 tip -->
-            <div class="sheet-tip">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>
-              <span>数据基于近 30 天有效订单计算，每日凌晨更新。新达人未达 5 单时不展示百分位。</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
 </div>
 

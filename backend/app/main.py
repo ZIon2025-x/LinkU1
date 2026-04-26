@@ -1079,6 +1079,15 @@ async def startup_event():
         logger.info("Prometheus 指标已初始化")
     except Exception as e:
         logger.warning(f"初始化 Prometheus 指标失败: {e}")
+
+    # 预热 jieba：词典首次加载约 0.8s 是同步 IO，会阻塞 asyncio 事件循环，
+    # 导致首个分词请求附近的并发请求一起被拖慢。在 to_thread 中预热避免堵塞启动循环。
+    try:
+        from app.utils.tokenizer import tokenize_query
+        await asyncio.to_thread(tokenize_query, "预热")
+        logger.info("✅ jieba 词典已预热")
+    except Exception as e:
+        logger.warning(f"⚠️  jieba 预热失败: {e}")
     
     # 启动行为采集器
     try:
