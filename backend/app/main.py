@@ -528,6 +528,10 @@ app.include_router(trending_router)
 from app.discovery_routes import router as discovery_router
 app.include_router(discovery_router)
 
+# /api/task-experts/* 已废弃，返回 410 + "请更新" 提示给老 App Store iOS 客户端
+from app.routes.task_expert_deprecated_routes import router as task_expert_deprecated_router
+app.include_router(task_expert_deprecated_router)
+
 # Follow 系统路由
 from app.follow_routes import router as follow_router
 app.include_router(follow_router)
