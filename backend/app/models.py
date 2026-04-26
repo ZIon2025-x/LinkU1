@@ -2545,7 +2545,6 @@ class ForumReply(Base):
     content = Column(Text, nullable=False)
     post_id = Column(Integer, ForeignKey("forum_posts.id", ondelete="CASCADE"), nullable=False)
     parent_reply_id = Column(Integer, ForeignKey("forum_replies.id", ondelete="CASCADE"), nullable=True)
-    reply_level = Column(Integer, default=1, server_default=text('1'))
     author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     # 管理员作者（用于后台官方回复）
     admin_author_id = Column(String(5), ForeignKey("admin_users.id", ondelete="CASCADE"), nullable=True)
@@ -2569,7 +2568,6 @@ class ForumReply(Base):
     )
     
     __table_args__ = (
-        CheckConstraint("reply_level BETWEEN 1 AND 3", name="check_reply_level"),
         CheckConstraint(
             "(author_id IS NOT NULL) OR (admin_author_id IS NOT NULL)",
             name="check_reply_has_author"

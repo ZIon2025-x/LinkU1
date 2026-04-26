@@ -4724,7 +4724,7 @@ async def get_replies(
     _badge_cache = await preload_badge_cache(db, _reply_author_ids)
 
     async def convert_reply(reply_data, liked_set):
-        """递归转换回复为输出格式"""
+        """递归转换回复为扁平 ForumReplyOut 列表（self + 所有子孙）"""
         reply = reply_data["reply"]
         is_liked = reply.id in liked_set
         parent_author = None
@@ -4737,25 +4737,21 @@ async def get_replies(
             author=await get_reply_author_info(db, reply, request, _badge_cache=_badge_cache),
             parent_reply_id=reply.parent_reply_id,
             parent_reply_author=parent_author,
-            reply_level=reply.reply_level,
             like_count=reply.like_count,
             is_liked=is_liked,
             created_at=reply.created_at,
             updated_at=reply.updated_at,
-            replies=[]
         )
-        
-        # 递归处理子回复
+
+        # 扁平化模型：返回 [self] + 所有子孙的扁平列表
+        result = [reply_out]
         for child_data in reply_data["children"]:
-            child_reply = await convert_reply(child_data, liked_set)
-            reply_out.replies.append(child_reply)
-        
-        return reply_out
-    
+            result.extend(await convert_reply(child_data, liked_set))
+        return result
+
     reply_list = []
     for item in reply_tree:
-        reply = await convert_reply(item, user_liked_replies)
-        reply_list.append(reply)
+        reply_list.extend(await convert_reply(item, user_liked_replies))
 
     return {
         "replies": reply_list,
@@ -4873,41 +4869,30 @@ async def create_reply(
             headers={"X-Error-Code": "POST_LOCKED"}
         )
     
-    # 如果是指定父回复，检查层级
-    reply_level = 1
+    # 校验父回复存在性 + 同帖归属（扁平化模型下不再有层级上限）
     if reply.parent_reply_id:
         parent_result = await db.execute(
             select(models.ForumReply).where(models.ForumReply.id == reply.parent_reply_id)
         )
         parent_reply = parent_result.scalar_one_or_none()
-        
+
         if not parent_reply:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="父回复不存在"
             )
-        
+
         if parent_reply.post_id != post_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="父回复不属于该帖子"
             )
-        
-        if parent_reply.reply_level >= 3:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="回复层级最多三层",
-                headers={"X-Error-Code": "REPLY_LEVEL_LIMIT"}
-            )
-        
-        reply_level = parent_reply.reply_level + 1
-    
+
     # 创建回复
     db_reply = models.ForumReply(
         post_id=post_id,
         content=reply.content,
         parent_reply_id=reply.parent_reply_id,
-        reply_level=reply_level,
         author_id=current_user.id if current_user else None,
         admin_author_id=admin_user.id if admin_user else None
     )
@@ -5033,12 +5018,10 @@ async def create_reply(
         author=await get_reply_author_info(db, db_reply, request, _badge_cache=_badge_cache),
         parent_reply_id=db_reply.parent_reply_id,
         parent_reply_author=parent_reply_author,
-        reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
         is_liked=False,
         created_at=db_reply.created_at,
         updated_at=db_reply.updated_at,
-        replies=[]
     )
 
 
@@ -5133,12 +5116,10 @@ async def update_reply(
         content=db_reply.content,
         author=await get_reply_author_info(db, db_reply, request, _badge_cache=_badge_cache),
         parent_reply_id=db_reply.parent_reply_id,
-        reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
         is_liked=is_liked,
         created_at=db_reply.created_at,
         updated_at=db_reply.updated_at,
-        replies=[]
     )
 
 

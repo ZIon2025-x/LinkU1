@@ -3985,18 +3985,16 @@ class ForumReplyUpdate(BaseModel):
 
 
 class ForumReplyOut(BaseModel):
-    """回复输出"""
+    """回复输出 - 扁平化模型，所有回复同层级，parent_reply_id 用于"@xxx"语义"""
     id: int
     content: str
     author: UserInfo
     parent_reply_id: Optional[int] = None
     parent_reply_author: Optional[UserInfo] = None  # 被回复人，用于前端展示「回复 @xxx」
-    reply_level: int
     like_count: int
     is_liked: Optional[bool] = False  # 当前用户是否已点赞（动态计算）
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    replies: List["ForumReplyOut"] = []  # 嵌套回复
 
     class Config:
         from_attributes = True

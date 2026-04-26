@@ -313,12 +313,10 @@ async def get_my_replies(
             content=reply.content,
             author=await get_reply_author_info(db, reply, _badge_cache=_badge_cache),
             parent_reply_id=reply.parent_reply_id,
-            reply_level=reply.reply_level,
             like_count=reply.like_count,
             is_liked=False,
             created_at=reply.created_at,
             updated_at=reply.updated_at,
-            replies=[]
         ))
 
     return {
