@@ -3179,6 +3179,7 @@
     "createSuccess": "发布成功",
     "updateSuccess": "更新成功",
     "reply": "回复",
+    "replyTargetNotLoaded": "原回复未加载，请加载更多",
     "like": "点赞",
     "unlike": "取消点赞",
     "favorite": "收藏",

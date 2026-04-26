@@ -3180,6 +3180,7 @@
     "createSuccess": "Posted successfully",
     "updateSuccess": "Updated successfully",
     "reply": "Reply",
+    "replyTargetNotLoaded": "Original reply not loaded — please load more",
     "like": "Like",
     "unlike": "Unlike",
     "favorite": "Favorite",

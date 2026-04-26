@@ -53,8 +53,12 @@ interface ForumReply {
   is_liked: boolean;
   created_at: string;
   updated_at: string;
-  replies?: ForumReply[];
   parent_reply_id?: number;
+  parent_reply_author?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
 }
 
 interface ForumPost {
@@ -657,12 +661,6 @@ const ForumPostDetail: React.FC = () => {
               like_count: response.like_count
             };
           }
-          if (reply.replies && reply.replies.length > 0) {
-            return {
-              ...reply,
-              replies: reply.replies.map(updateReply)
-            };
-          }
           return reply;
         };
         return prevReplies.map(updateReply);
@@ -911,21 +909,34 @@ const ForumPostDetail: React.FC = () => {
     setShowShareModal(false);
   };
 
-  const renderReply = (reply: ForumReply, level: number = 0) => {
-    if (level > 2) return null; // 最多3层嵌套
-    
-    const isNested = level > 0;
-    
+  const handleMentionClick = (parentReplyId: number | undefined) => {
+    if (!parentReplyId) return;
+    const target = document.getElementById(`reply-${parentReplyId}`);
+    if (!target) {
+      message.info(t('forum.replyTargetNotLoaded'));
+      return;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const pulseClass = styles.highlightPulse;
+    if (pulseClass) {
+      target.classList.add(pulseClass);
+      setTimeout(() => {
+        target.classList.remove(pulseClass);
+      }, 800);
+    }
+  };
+
+  const renderReply = (reply: ForumReply) => {
     return (
-      <div 
-        key={reply.id} 
-        className={`${styles.replyItem} ${isNested ? styles.nestedReplyItem : ''}`}
-        data-level={level}
+      <div
+        key={reply.id}
+        id={`reply-${reply.id}`}
+        className={styles.replyItem}
       >
         <div className={styles.replyHeader}>
           <Space wrap>
-            <Avatar 
-              src={reply.author.avatar} 
+            <Avatar
+              src={reply.author.avatar}
               icon={<UserOutlined />}
               size="small"
             />
@@ -935,6 +946,17 @@ const ForumPostDetail: React.FC = () => {
             )}
             {reply.author.user_level && (reply.author.user_level === 'vip' || reply.author.user_level === 'super') && (
               <MemberBadge level={reply.author.user_level} variant="compact" />
+            )}
+            {reply.parent_reply_author && (
+              <span
+                style={{ color: '#1890ff', cursor: 'pointer', fontSize: 13, marginLeft: 4 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMentionClick(reply.parent_reply_id);
+                }}
+              >
+                @{reply.parent_reply_author.name}
+              </span>
             )}
             <Text type="secondary" style={{ fontSize: 12 }}>
               <ClockCircleOutlined /> {formatRelativeTime(reply.created_at)}
@@ -984,11 +1006,6 @@ const ForumPostDetail: React.FC = () => {
         <div className={styles.replyContent}>
           <SafeContent content={reply.content} />
         </div>
-        {reply.replies && reply.replies.length > 0 && (
-          <div className={styles.nestedReplies}>
-            {reply.replies.map((nestedReply) => renderReply(nestedReply, level + 1))}
-          </div>
-        )}
       </div>
     );
   };
