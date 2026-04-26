@@ -28,7 +28,7 @@ from app.csrf import (
 )
 from app.utils.time_utils import get_utc_time
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/secure-auth/login")
 
 
 # 同步数据库依赖（向后兼容）

@@ -102,8 +102,8 @@ def create_payment(
             }
         ],
         mode="payment",
-        success_url=f"{Config.BASE_URL}/api/users/tasks/{task_id}/pay/success",
-        cancel_url=f"{Config.BASE_URL}/api/users/tasks/{task_id}/pay/cancel",
+        success_url=f"{Config.FRONTEND_URL}/tasks/{task_id}/pay/success",
+        cancel_url=f"{Config.FRONTEND_URL}/tasks/{task_id}/pay/cancel",
         metadata={
             "task_id": task_id,
             "application_fee": application_fee_pence,
