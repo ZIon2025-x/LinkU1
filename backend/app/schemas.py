@@ -450,6 +450,7 @@ class TaskOut(TaskBase):
     originating_user_id: Optional[str] = None  # 申请活动创建的任务的申请人ID（用于"我的任务"显示）
     status: str
     task_level: str = "normal"  # normal, vip, super, expert（达人任务）
+    is_paid: Optional[bool] = None  # 是否已托管支付（前端用于在 in_progress 状态下决定是否显示"标记完成"按钮）
     created_at: datetime.datetime
     accepted_at: Optional[datetime.datetime] = None  # 任务接受时间
     completed_at: Optional[datetime.datetime] = None  # 任务完成时间

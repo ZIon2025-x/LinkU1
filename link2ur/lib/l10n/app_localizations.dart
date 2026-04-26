@@ -11247,6 +11247,12 @@ abstract class AppLocalizations {
   /// **'Waiting for poster to confirm'**
   String get taskDetailWaitingPosterConfirm;
 
+  /// No description provided for @taskDetailWaitingPosterPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for poster to pay'**
+  String get taskDetailWaitingPosterPayment;
+
   /// No description provided for @taskDetailSubmitQuote.
   ///
   /// In en, this message translates to:

@@ -83,59 +83,71 @@ async def get_discovery_feed(
         user_location = None
         if user_lat is None and current_user.residence_city:
             user_location = current_user.residence_city
+        # 推荐引擎跑在独立 session 里：asyncio.wait_for 超时取消时 greenlet 仍可能
+        # 在用 connection 执行 SQL，会破坏 session 状态。隔离后即使污染也只影响这个临时 session。
         try:
             import asyncio
-            recommendation_scores = await asyncio.wait_for(
-                db.run_sync(lambda session: _get_recommendation_scores_sync(
-                    session, current_user.id,
-                    latitude=user_lat, longitude=user_lng,
-                    location=user_location,
-                )),
-                timeout=0.5,  # 500ms timeout
-            )
+            from app.database import AsyncSessionLocal
+            async with AsyncSessionLocal() as rec_session:
+                recommendation_scores = await asyncio.wait_for(
+                    rec_session.run_sync(lambda session: _get_recommendation_scores_sync(
+                        session, current_user.id,
+                        latitude=user_lat, longitude=user_lng,
+                        location=user_location,
+                    )),
+                    timeout=0.5,  # 500ms timeout
+                )
         except Exception as e:
-            logger.debug(f"Recommendation engine unavailable: {e}")
+            logger.warning(f"Recommendation engine unavailable: {e}")
         # Load user preferred categories for non-task content personalization
+        # SAVEPOINT 隔离：失败时只回滚到此前状态，不污染主 session
         try:
-            pref_result = await db.execute(
-                select(models.UserProfilePreference.preferred_categories,
-                       models.UserProfilePreference.task_types)
-                .where(models.UserProfilePreference.user_id == current_user.id)
-            )
-            pref_row = pref_result.first()
-            if pref_row:
-                cats = pref_row.preferred_categories or []
-                types = pref_row.task_types or []
-                user_preferred_categories = list(set(cats + types))
+            async with db.begin_nested():
+                pref_result = await db.execute(
+                    select(models.UserProfilePreference.preferred_categories,
+                           models.UserProfilePreference.task_types)
+                    .where(models.UserProfilePreference.user_id == current_user.id)
+                )
+                pref_row = pref_result.first()
+                if pref_row:
+                    cats = pref_row.preferred_categories or []
+                    types = pref_row.task_types or []
+                    user_preferred_categories = list(set(cats + types))
         except Exception as e:
-            logger.debug(f"Failed to load user preferences: {e}")
+            logger.warning(f"Failed to load user preferences: {e}")
 
     # 构建用户兴趣画像（轻量版），用于活动/服务的 match_score
+    # 两个查询拆成各自的 SAVEPOINT，单个失败不影响另一个
     user_interest_types = set()
     if current_user:
+        # 从历史申请的任务类型中提取兴趣
         try:
-            # 从历史申请的任务类型中提取兴趣
-            applied_types_result = await db.execute(
-                select(models.Task.task_type)
-                .join(models.TaskApplication, models.TaskApplication.task_id == models.Task.id)
-                .where(models.TaskApplication.applicant_id == current_user.id)
-                .group_by(models.Task.task_type)
-                .limit(20)
-            )
-            user_interest_types.update(r[0] for r in applied_types_result.all() if r[0])
-
-            # 从参加过的活动类型中提取兴趣
-            attended_types_result = await db.execute(
-                select(models.Activity.task_type)
-                .join(models.OfficialActivityApplication,
-                      models.OfficialActivityApplication.activity_id == models.Activity.id)
-                .where(models.OfficialActivityApplication.user_id == current_user.id)
-                .group_by(models.Activity.task_type)
-                .limit(20)
-            )
-            user_interest_types.update(r[0] for r in attended_types_result.all() if r[0])
+            async with db.begin_nested():
+                applied_types_result = await db.execute(
+                    select(models.Task.task_type)
+                    .join(models.TaskApplication, models.TaskApplication.task_id == models.Task.id)
+                    .where(models.TaskApplication.applicant_id == current_user.id)
+                    .group_by(models.Task.task_type)
+                    .limit(20)
+                )
+                user_interest_types.update(r[0] for r in applied_types_result.all() if r[0])
         except Exception as e:
-            logger.debug(f"Failed to build user interest profile: {e}")
+            logger.warning(f"Failed to load applied task types: {e}")
+
+        # 从参加过的活动类型中提取兴趣
+        try:
+            async with db.begin_nested():
+                attended_types_result = await db.execute(
+                    select(models.Activity.task_type)
+                    .join(models.OfficialActivityApplication,
+                          models.OfficialActivityApplication.activity_id == models.Activity.id)
+                    .where(models.OfficialActivityApplication.user_id == current_user.id)
+                    .group_by(models.Activity.task_type)
+                    .limit(20)
+                )
+                user_interest_types.update(r[0] for r in attended_types_result.all() if r[0])
+        except Exception as e:
+            logger.warning(f"Failed to load attended activity types: {e}")
 
     # 每个 fetch 用 SAVEPOINT 隔离，单个类型失败不影响其他类型
     fetch_tasks = [

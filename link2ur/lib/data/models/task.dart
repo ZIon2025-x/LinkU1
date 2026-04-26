@@ -71,6 +71,7 @@ class Task extends Equatable {
     this.taskMode = 'online',
     this.requiredSkills = const [],
     this.isConsultationPlaceholder = false,
+    this.isPaid = false,
   });
 
   final int id;
@@ -152,6 +153,11 @@ class Task extends Equatable {
 
   /// 是否为咨询占位任务（后端 is_consultation_placeholder，spec §F.1.2）
   final bool isConsultationPlaceholder;
+
+  /// 是否已托管支付。后端 `Task.is_paid` (Integer 0/1) 经 schema 转 bool。
+  /// 前端在 status==in_progress 时用此字段判断是否允许接单方点"标记完成":
+  /// 后端 `POST /tasks/{id}/complete` 会校验 is_paid=true，否则拒 400 TASK_NOT_PAID。
+  final bool isPaid;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -459,6 +465,7 @@ class Task extends Equatable {
               .toList() ??
           [],
       isConsultationPlaceholder: json['is_consultation_placeholder'] as bool? ?? false,
+      isPaid: parseBool(json['is_paid']),
     );
   }
 
@@ -521,6 +528,7 @@ class Task extends Equatable {
       'task_mode': taskMode,
       'required_skills': requiredSkills,
       'is_consultation_placeholder': isConsultationPlaceholder,
+      'is_paid': isPaid,
     };
   }
 
@@ -585,6 +593,7 @@ class Task extends Equatable {
     String? taskMode,
     List<String>? requiredSkills,
     bool? isConsultationPlaceholder,
+    bool? isPaid,
   }) {
     return Task(
       id: id ?? this.id,
@@ -647,6 +656,7 @@ class Task extends Equatable {
       taskMode: taskMode ?? this.taskMode,
       requiredSkills: requiredSkills ?? this.requiredSkills,
       isConsultationPlaceholder: isConsultationPlaceholder ?? this.isConsultationPlaceholder,
+      isPaid: isPaid ?? this.isPaid,
     );
   }
 
@@ -658,6 +668,7 @@ class Task extends Equatable {
         isPublic, takerPublic,
         pricingType, taskMode, requiredSkills,
         isConsultationPlaceholder,
+        isPaid,
       ];
 }
 

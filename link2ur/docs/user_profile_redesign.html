@@ -1,0 +1,2199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>User Profile · 重新设计对比</title>
+<style>
+  /* ===== Base ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+      "Microsoft YaHei", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 0% 0%, #eef2ff 0%, transparent 60%),
+      radial-gradient(1200px 600px at 100% 100%, #fdf4ff 0%, transparent 60%),
+      #f5f7fb;
+    color: #1a1d1f;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 48px 24px 16px;
+  }
+  .page-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .page-header p {
+    margin-top: 8px;
+    color: #6f767e;
+    font-size: 14px;
+  }
+
+  .phones {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 56px;
+    padding: 32px 24px 80px;
+    flex-wrap: wrap;
+  }
+
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+  .phone-label {
+    margin-bottom: 16px;
+    text-align: center;
+    max-width: 390px;
+  }
+  .phone-label .tag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #1a1d1f;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .phone-label h2 {
+    margin-top: 10px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .phone-label p {
+    margin-top: 4px;
+    color: #6f767e;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  /* ===== Phone shell ===== */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #000;
+    border-radius: 54px;
+    padding: 12px;
+    box-shadow:
+      0 30px 60px -20px rgba(15, 23, 42, 0.35),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+    position: relative;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 42px;
+    overflow: hidden;
+    background: #fff;
+    position: relative;
+  }
+  /* Hide scrollbar inside phones */
+  .scroll {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  .notch {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 32px;
+    background: #000;
+    border-radius: 0 0 18px 18px;
+    z-index: 50;
+  }
+
+  /* iOS status bar */
+  .statusbar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    font-size: 14px;
+    font-weight: 600;
+    position: relative;
+    z-index: 10;
+  }
+  .statusbar .right { display: flex; gap: 6px; align-items: center; }
+  .statusbar svg { width: 16px; height: 16px; }
+  .statusbar.dark { color: #fff; }
+  .statusbar.light { color: #1a1d1f; }
+
+  /* Sticky CTA */
+  .cta-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 14px 20px 28px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.95) 30%, #fff 100%);
+    backdrop-filter: blur(8px);
+    z-index: 20;
+  }
+  .cta-btn {
+    width: 100%;
+    height: 52px;
+    border: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #5b6cff, #8b5bff);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 12px 28px -10px rgba(91, 108, 255, 0.65);
+  }
+  .cta-btn svg { width: 18px; height: 18px; }
+
+  /* =============================================
+     PLAN A — Immersive Cover
+     ============================================= */
+  .a-cover {
+    position: relative;
+    height: 240px;
+    background:
+      radial-gradient(120% 80% at 20% 20%, #ffd6f0 0%, transparent 55%),
+      radial-gradient(120% 80% at 100% 30%, #c5b8ff 0%, transparent 55%),
+      linear-gradient(135deg, #6c5ce7 0%, #a29bfe 50%, #fd79a8 100%);
+  }
+  .a-cover::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #fff 100%);
+  }
+  .a-cover-actions {
+    position: absolute;
+    top: 56px; left: 16px; right: 16px;
+    display: flex; justify-content: space-between;
+    z-index: 6;
+  }
+  .glass-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    cursor: pointer;
+  }
+  .glass-btn svg { width: 18px; height: 18px; }
+
+  .a-header {
+    position: relative;
+    padding: 0 20px;
+    margin-top: -64px;
+    z-index: 5;
+  }
+  .a-avatar-row {
+    display: flex; align-items: flex-end; gap: 14px;
+    margin-bottom: 12px;
+  }
+  .avatar-large {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff9a8b 0%, #ff6a88 55%, #ff99ac 100%);
+    border: 4px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 36px;
+    font-weight: 700;
+    position: relative;
+    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.18);
+    flex-shrink: 0;
+  }
+  .avatar-crown {
+    position: absolute;
+    right: -2px; bottom: -2px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    display: flex; align-items: center; justify-content: center;
+    border: 2.5px solid #fff;
+    color: #fff;
+  }
+  .avatar-crown svg { width: 16px; height: 16px; }
+
+  .a-actions {
+    flex: 1;
+    display: flex; gap: 8px;
+    justify-content: flex-end;
+    padding-bottom: 4px;
+  }
+  .btn-primary {
+    height: 36px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: #1a1d1f;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    border: 0;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-secondary {
+    height: 36px; width: 36px;
+    border-radius: 50%;
+    background: #f4f5f7;
+    border: 0;
+    color: #1a1d1f;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-primary svg, .btn-secondary svg { width: 16px; height: 16px; }
+
+  .a-name-row {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 6px;
+  }
+  .a-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .badge-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px;
+  }
+  .badge-icon svg { width: 100%; height: 100%; }
+  .badge-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-pill.gold {
+    background: linear-gradient(135deg, #fde68a, #f59e0b);
+    color: #78350f;
+  }
+  .badge-pill.purple {
+    background: linear-gradient(135deg, #f5d0fe, #c084fc);
+    color: #581c87;
+  }
+  .badge-pill svg { width: 10px; height: 10px; }
+
+  .a-handle {
+    color: #6f767e;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .a-bio {
+    font-size: 14px;
+    line-height: 1.55;
+    color: #2c3036;
+    margin-bottom: 12px;
+  }
+  .a-meta {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 16px;
+  }
+  .meta-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f4f5f7;
+    color: #4d5560;
+    font-size: 12px;
+  }
+  .meta-chip svg { width: 12px; height: 12px; }
+
+  .a-stats {
+    display: flex; gap: 24px;
+    padding: 4px 0 18px;
+    font-size: 13px;
+  }
+  .a-stat-num { font-weight: 700; color: #1a1d1f; font-size: 15px; }
+  .a-stat-label { color: #6f767e; margin-left: 4px; }
+
+  /* big stat strip */
+  .a-bigstats {
+    display: flex;
+    margin: 0 20px 16px;
+    background: #fafbfc;
+    border: 1px solid #eef0f2;
+    border-radius: 18px;
+    padding: 14px 6px;
+  }
+  .a-bigstat {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .a-bigstat + .a-bigstat::before {
+    content: "";
+    position: absolute; left: 0; top: 8px; bottom: 8px;
+    width: 1px;
+    background: #e5e7eb;
+  }
+  .a-bigstat-num {
+    font-size: 20px; font-weight: 700;
+    background: linear-gradient(135deg, #5b6cff, #c084fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .a-bigstat-num.plain {
+    background: none;
+    -webkit-background-clip: initial;
+    color: #1a1d1f;
+  }
+  .a-bigstat-label {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #6f767e;
+  }
+
+  /* tabs */
+  .a-tabs {
+    position: sticky; top: 0;
+    background: #fff;
+    display: flex;
+    padding: 0 20px;
+    border-bottom: 1px solid #eef0f2;
+    z-index: 4;
+  }
+  .a-tab {
+    flex: 1;
+    padding: 14px 0 12px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6f767e;
+    position: relative;
+    cursor: pointer;
+  }
+  .a-tab.active { color: #1a1d1f; font-weight: 600; }
+  .a-tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 28px; height: 3px;
+    background: linear-gradient(90deg, #5b6cff, #c084fc);
+    border-radius: 3px 3px 0 0;
+  }
+
+  .a-section { padding: 16px 20px 8px; }
+  .service-card {
+    display: flex; gap: 12px;
+    padding: 12px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid #eef0f2;
+    margin-bottom: 10px;
+  }
+  .service-thumb {
+    width: 64px; height: 64px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #fef3c7, #fbbf24);
+    display: flex; align-items: center; justify-content: center;
+    color: #92400e;
+  }
+  .service-thumb.b { background: linear-gradient(135deg, #dbeafe, #60a5fa); color: #1e40af; }
+  .service-thumb.c { background: linear-gradient(135deg, #ddd6fe, #a78bfa); color: #5b21b6; }
+  .service-thumb svg { width: 26px; height: 26px; }
+  .service-meta {
+    flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+    min-width: 0;
+  }
+  .service-title {
+    font-size: 14px; font-weight: 600; color: #1a1d1f;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .service-foot { display: flex; align-items: center; gap: 8px; }
+  .service-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef0ff;
+    color: #4c4dff;
+    font-weight: 500;
+  }
+  .service-price {
+    font-size: 14px; font-weight: 700;
+    color: #5b6cff;
+  }
+
+  /* radar */
+  .radar-card {
+    margin: 16px 20px 8px;
+    padding: 18px 16px 12px;
+    background: linear-gradient(135deg, #f8f9ff 0%, #fef5ff 100%);
+    border-radius: 20px;
+    text-align: center;
+  }
+  .radar-title {
+    font-size: 13px; font-weight: 600; color: #6f767e;
+    margin-bottom: 8px; letter-spacing: 0.3px;
+  }
+  .radar-svg { width: 200px; height: 180px; }
+
+  .section-pad-bottom { height: 120px; }
+
+  /* =============================================
+     PLAN B — Trust Card (refined)
+     ============================================= */
+  .b-screen { background: #faf7f2; }
+
+  /* warm banner */
+  .b-banner {
+    position: relative;
+    height: 168px;
+    background:
+      radial-gradient(120% 80% at 50% 0%, #fff 0%, transparent 65%),
+      linear-gradient(180deg, #f3e7d4 0%, #fbebd2 55%, #faf7f2 100%);
+  }
+  .b-topbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 14px 0;
+    position: relative;
+    z-index: 5;
+  }
+  .b-iconbtn {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(0,0,0,0.04);
+    color: #1a1d1f;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+  }
+  .b-iconbtn svg { width: 18px; height: 18px; }
+  .b-topbar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1d1f;
+    letter-spacing: -0.2px;
+  }
+  .b-topbar-actions { display: flex; gap: 6px; }
+
+  /* Hero card — overlaps banner */
+  .b-hero-card {
+    margin: -54px 14px 14px;
+    background: #fff;
+    border-radius: 28px;
+    padding: 26px 22px 22px;
+    box-shadow:
+      0 1px 2px rgba(15,23,42,0.04),
+      0 24px 48px -22px rgba(15,23,42,0.18);
+    text-align: center;
+    position: relative;
+  }
+  .b-hero-avatar-wrap {
+    display: inline-block;
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .b-avatar-img {
+    width: 88px; height: 88px;
+    border-radius: 26px;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+    border: 4px solid #fff;
+    box-shadow: 0 14px 28px -10px rgba(79,70,229,0.45);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+  .b-avatar-crown-deluxe {
+    position: absolute;
+    right: -4px; bottom: -4px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #b45309 100%);
+    border: 3px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 10px -2px rgba(245,158,11,0.55);
+  }
+  .b-avatar-crown-deluxe svg { width: 14px; height: 14px; }
+
+  .b-hero-name-row {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .b-hero-name {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #1a1d1f;
+  }
+  .b-hero-name-row .badge-icon { width: 20px; height: 20px; }
+
+  /* deluxe gold badge */
+  .b-honor-deluxe {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 10px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: #78350f;
+    background:
+      linear-gradient(135deg, #fef3c7 0%, #fde68a 35%, #fcd34d 70%, #fde68a 100%);
+    border: 1px solid #fcd34d;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.7),
+      0 1px 0 rgba(180,83,9,0.08);
+  }
+  .b-honor-deluxe svg { width: 12px; height: 12px; }
+
+  .b-meta-line {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #6f767e;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .b-meta-line svg { width: 12px; height: 12px; }
+  .b-meta-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: #c5cad1;
+  }
+
+  .b-hero-bio {
+    margin-top: 14px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: #4d5560;
+    text-align: left;
+    letter-spacing: -0.05px;
+  }
+
+  /* trust strip — the centerpiece */
+  .b-trust-strip {
+    display: flex;
+    margin-top: 18px;
+    padding: 16px 0;
+    background: linear-gradient(135deg, #fafaff 0%, #fef5f5 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(91,108,255,0.08);
+  }
+  .b-tstat {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .b-tstat + .b-tstat::before {
+    content: "";
+    position: absolute; left: 0; top: 8px; bottom: 8px;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.08), transparent);
+  }
+  .b-tstat .num {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1a1d1f;
+    letter-spacing: -0.8px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .b-tstat .num .gold { color: #d97706; }
+  .b-tstat .num .green { color: #059669; }
+  .b-tstat .num .star {
+    display: inline-block;
+    color: #f59e0b;
+    margin-left: 1px;
+    vertical-align: -2px;
+  }
+  .b-tstat .num .star svg { width: 17px; height: 17px; }
+  .b-tstat .label {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #6f767e;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+  }
+
+  .b-actions {
+    display: flex; gap: 10px;
+    margin-top: 18px;
+  }
+  .b-btn-follow {
+    flex: 1;
+    height: 46px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border: 0;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 10px 22px -10px rgba(79,70,229,0.55);
+  }
+  .b-btn-message {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #1a1d1f;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .b-btn-follow svg, .b-btn-message svg { width: 16px; height: 16px; }
+
+  /* generic section */
+  .b-section {
+    margin: 0 14px 14px;
+    background: #fff;
+    border-radius: 22px;
+    padding: 20px 20px 16px;
+    box-shadow:
+      0 1px 2px rgba(15,23,42,0.03),
+      0 8px 22px -14px rgba(15,23,42,0.08);
+  }
+  .b-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .b-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #1a1d1f;
+    display: inline-flex; align-items: baseline; gap: 6px;
+  }
+  .b-section-sub {
+    font-size: 12px;
+    color: #9a9fa5;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .b-more {
+    font-size: 12px;
+    color: #6f767e;
+    display: inline-flex; align-items: center; gap: 2px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .b-more svg { width: 12px; height: 12px; }
+
+  /* === 个人服务 === */
+  .b-service-card {
+    display: flex; gap: 14px;
+    padding: 14px;
+    border-radius: 18px;
+    background: #fafbfc;
+    border: 1px solid #f0f1f4;
+    margin-bottom: 10px;
+  }
+  .b-service-card:last-child { margin-bottom: 0; }
+  .b-service-thumb {
+    width: 68px; height: 68px;
+    border-radius: 16px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .b-service-thumb svg { width: 28px; height: 28px; z-index: 1; }
+  .b-service-thumb.warm { background: linear-gradient(135deg, #fde68a, #f59e0b); color: #78350f; }
+  .b-service-thumb.cool { background: linear-gradient(135deg, #bfdbfe, #3b82f6); color: #1e3a8a; }
+  .b-service-thumb.pink { background: linear-gradient(135deg, #fbcfe8, #ec4899); color: #831843; }
+  .b-service-info {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+  }
+  .b-service-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1d1f;
+    line-height: 1.4;
+    letter-spacing: -0.1px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .b-service-desc {
+    margin-top: 3px;
+    font-size: 12px;
+    color: #8b929c;
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .b-service-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+  .b-service-pills {
+    display: flex; gap: 5px; flex-wrap: nowrap; overflow: hidden;
+  }
+  .b-service-pill {
+    font-size: 10.5px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: #fff;
+    color: #6f767e;
+    border: 1px solid #ebecef;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .b-service-pill.hot {
+    background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+    color: #be123c;
+    border-color: #fecdd3;
+  }
+  .b-service-price {
+    font-size: 16px;
+    font-weight: 800;
+    color: #4f46e5;
+    letter-spacing: -0.4px;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .b-service-price small {
+    font-size: 11px;
+    font-weight: 500;
+    color: #9a9fa5;
+  }
+
+  /* === 能力画像: 2×2 数据卡 === */
+  .b-skill-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .b-skill-card {
+    padding: 14px;
+    border-radius: 16px;
+    background: #fafbfc;
+    border: 1px solid #f0f1f4;
+    position: relative;
+  }
+  .b-skill-card-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .b-skill-card-icon {
+    width: 28px; height: 28px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .b-skill-card-icon svg { width: 14px; height: 14px; }
+  .b-skill-card-icon.gold { background: linear-gradient(135deg, #fbbf24, #d97706); }
+  .b-skill-card-icon.green { background: linear-gradient(135deg, #34d399, #059669); }
+  .b-skill-card-icon.indigo { background: linear-gradient(135deg, #818cf8, #4f46e5); }
+  .b-skill-card-icon.pink { background: linear-gradient(135deg, #f472b6, #db2777); }
+  .b-skill-card-label {
+    font-size: 12px;
+    color: #6f767e;
+    font-weight: 500;
+  }
+  .b-skill-card-num {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    color: #1a1d1f;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .b-skill-card-num .unit {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6f767e;
+    margin-left: 1px;
+  }
+  .b-skill-card-mini {
+    margin-top: 10px;
+    height: 4px;
+    background: #ebecef;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .b-skill-card-mini > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+  }
+  .b-skill-card-trend {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #059669;
+    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 2px;
+  }
+  .b-skill-card-trend svg { width: 11px; height: 11px; }
+  .b-skill-card-trend.warn { color: #d97706; }
+
+  /* === 评价 featured === */
+  .b-review-featured {
+    padding: 18px 16px 14px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fffaf0 0%, #fff5e8 100%);
+    border: 1px solid #fde9d6;
+    position: relative;
+    overflow: hidden;
+  }
+  .b-quote-mark {
+    position: absolute;
+    top: 6px; left: 12px;
+    font-size: 64px;
+    font-weight: 900;
+    line-height: 1;
+    color: #fbbf24;
+    opacity: 0.3;
+    font-family: Georgia, "Times New Roman", serif;
+    pointer-events: none;
+  }
+  .b-review-content { position: relative; z-index: 2; }
+  .b-review-text {
+    font-size: 14px;
+    line-height: 1.65;
+    color: #2c3036;
+    letter-spacing: -0.1px;
+    font-weight: 500;
+    padding-top: 12px;
+  }
+  .b-review-tags {
+    margin-top: 12px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .b-review-tag {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid #fde9d6;
+    color: #92400e;
+    font-weight: 500;
+  }
+  .b-review-foot {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(252,211,77,0.4);
+  }
+  .review-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd6a5, #ff9a3c);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 12px;
+    flex-shrink: 0;
+  }
+  .review-avatar.b { background: linear-gradient(135deg, #a8edea, #67d4ff); }
+  .review-avatar.c { background: linear-gradient(135deg, #c8b6ff, #9484ff); }
+  .review-name { font-size: 13px; font-weight: 600; color: #1a1d1f; }
+  .review-stars { display: inline-flex; gap: 1px; align-items: center; color: #f59e0b; }
+  .review-stars svg { width: 11px; height: 11px; }
+  .review-time { font-size: 11px; color: #9a9fa5; margin-left: auto; }
+
+  /* mini review row */
+  .b-review-mini {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 12px 0;
+    border-top: 1px solid #f0f1f4;
+  }
+  .b-review-mini-meta { flex: 1; min-width: 0; }
+  .b-review-mini-head {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .b-review-mini-name {
+    font-size: 13px; font-weight: 600; color: #1a1d1f;
+  }
+  .b-review-mini-text {
+    font-size: 12.5px;
+    color: #6f767e;
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .b-review-all-btn {
+    margin-top: 12px;
+    width: 100%;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    font-size: 13px;
+    color: #4d5560;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .b-review-all-btn svg { width: 12px; height: 12px; }
+
+  /* shared task list */
+  .b-task-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid #f0f1f4;
+  }
+  .b-task-row:first-child { border-top: 0; padding-top: 4px; }
+  .b-task-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: #eef0ff;
+    color: #4f46e5;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .b-task-icon svg { width: 18px; height: 18px; }
+  .b-task-meta { flex: 1; min-width: 0; }
+  .b-task-title { font-size: 13.5px; font-weight: 600; color: #1a1d1f; letter-spacing: -0.1px; }
+  .b-task-sub {
+    margin-top: 4px; display: flex; gap: 6px; align-items: center;
+    font-size: 11px; color: #9a9fa5;
+  }
+  .role-tag {
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .role-tag.poster { background: #eef0ff; color: #4338ca; }
+  .role-tag.taker { background: #d1fae5; color: #047857; }
+  .b-task-price {
+    font-size: 14px; font-weight: 700; color: #1a1d1f;
+    letter-spacing: -0.2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* portfolio */
+  .b-portfolio {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .portfolio-item {
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    display: flex; align-items: flex-end;
+    padding: 9px;
+    color: #fff;
+  }
+  .portfolio-item::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, transparent 35%, rgba(0,0,0,0.6) 100%);
+  }
+  .portfolio-decor {
+    position: absolute;
+    top: 8px; left: 8px;
+    font-size: 18px;
+    z-index: 1;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .portfolio-meta {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+  }
+  .portfolio-title {
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+    margin-bottom: 1px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .portfolio-price {
+    font-size: 12.5px;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* =============================================
+     Bottom Sheet (能力详情)
+     ============================================= */
+  .sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 18, 28, 0.55);
+    z-index: 30;
+    border-radius: 42px;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  .bottom-sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 78%;
+    background: #fff;
+    border-radius: 28px 28px 0 0;
+    z-index: 31;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sheet-handle {
+    width: 40px; height: 4px;
+    background: #d1d5db;
+    border-radius: 999px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+  .sheet-header {
+    padding: 14px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #f0f1f4;
+    flex-shrink: 0;
+  }
+  .sheet-title-block { flex: 1; min-width: 0; }
+  .sheet-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #1a1d1f;
+  }
+  .sheet-subtitle {
+    font-size: 11.5px;
+    color: #6f767e;
+    margin-top: 2px;
+  }
+  .sheet-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #f4f5f7;
+    border: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #4d5560;
+  }
+  .sheet-close svg { width: 16px; height: 16px; }
+  .sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 18px 28px;
+    scrollbar-width: none;
+  }
+  .sheet-body::-webkit-scrollbar { display: none; }
+  .sheet-skill-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  /* percentile / comparison card */
+  .sheet-cmp-card {
+    padding: 16px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f6f8ff 0%, #fdf4ff 100%);
+    border: 1px solid #eef0ff;
+  }
+  .sheet-cmp-head {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1d1f;
+    margin-bottom: 4px;
+  }
+  .sheet-cmp-head svg { width: 14px; height: 14px; color: #4f46e5; }
+  .sheet-cmp-sub {
+    font-size: 11.5px;
+    color: #6f767e;
+    margin-bottom: 14px;
+  }
+  .pct-row { margin-bottom: 14px; }
+  .pct-row:last-child { margin-bottom: 0; }
+  .pct-row-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px;
+    margin-bottom: 5px;
+  }
+  .pct-label { color: #4d5560; font-weight: 500; }
+  .pct-value {
+    color: #1a1d1f; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .pct-value .accent { color: #4f46e5; }
+  .pct-bar {
+    height: 6px;
+    background: #ebecef;
+    border-radius: 999px;
+    position: relative;
+    overflow: visible;
+  }
+  .pct-fill {
+    position: absolute; left: 0; top: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #818cf8, #4f46e5);
+  }
+  .pct-marker {
+    position: absolute; top: -3px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2.5px solid #4f46e5;
+    transform: translateX(-50%);
+    box-shadow: 0 1px 4px rgba(79, 70, 229, 0.3);
+  }
+  .pct-foot {
+    margin-top: 4px;
+    font-size: 10.5px;
+    color: #9a9fa5;
+    display: flex; justify-content: space-between;
+  }
+
+  .sheet-tip {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff8eb;
+    border: 1px solid #fde68a;
+    font-size: 12px;
+    color: #78350f;
+    line-height: 1.55;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .sheet-tip svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: #d97706; }
+
+  /* highlighted "..." button to indicate trigger */
+  .b-iconbtn-pulse {
+    position: relative;
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.6);
+    animation: pulse-ring 2s infinite;
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(79, 70, 229, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+  }
+
+  /* helper */
+  .grow { flex: 1; }
+
+  @media (max-width: 880px) {
+    .phones { gap: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>用户主页 · 重新设计对比</h1>
+  <p>Link2Ur · 他人公开主页（公开访问场景）·  iPhone 14 Pro 模拟尺寸（390×844）</p>
+</div>
+
+<div class="phones">
+
+  <!-- ==================== PLAN A ==================== -->
+  <div class="phone-wrap">
+    <div class="phone-label">
+      <span class="tag">PLAN A</span>
+      <h2>沉浸式封面 · 社交感</h2>
+      <p>大渐变 cover、头像凸出、Tab 切内容。<br/>偏「内容创作者 / 学生」的活泼调性。</p>
+    </div>
+
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="scroll">
+          <!-- status bar (white text on cover) -->
+          <div class="statusbar dark">
+            <span>9:41</span>
+            <div class="right">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zm4-4h2v7H6zm4-4h2v11h-2zm4-4h2v15h-2zm4-4h2v19h-2z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 2.7 6 0 9.4l1.4 1.7C3.6 8.4 7.5 6.5 12 6.5s8.4 1.9 10.6 4.6L24 9.4C21.3 6 17 4 12 4zm0 5c-3 0-5.7 1.2-7.6 3.1l1.4 1.7C7.4 12.3 9.6 11.5 12 11.5s4.6.8 6.2 2.3l1.4-1.7C17.7 10.2 15 9 12 9zm0 5c-1.7 0-3.2.6-4.4 1.5l1.4 1.7c.9-.7 2-1.2 3-1.2s2.1.5 3 1.2l1.4-1.7C15.2 14.6 13.7 14 12 14zm0 4l-2 2 2 2 2-2-2-2z"/></svg>
+              <svg viewBox="0 0 26 12" fill="none" stroke="currentColor"><rect x="1" y="1" width="20" height="10" rx="3" stroke-width="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" fill="currentColor"/></svg>
+            </div>
+          </div>
+
+          <!-- cover -->
+          <div class="a-cover">
+            <div class="a-cover-actions">
+              <button class="glass-btn" aria-label="back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <div style="display:flex; gap:8px;">
+                <button class="glass-btn" aria-label="share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+                </button>
+                <button class="glass-btn" aria-label="more">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- header content -->
+          <div class="a-header">
+            <div class="a-avatar-row">
+              <div class="avatar-large">
+                林
+                <div class="avatar-crown" title="VIP">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 5.5 6 1-4.5 4.5 1 6L12 16l-5.5 3 1-6L3 8.5l6-1L12 2z"/></svg>
+                </div>
+              </div>
+              <div class="a-actions">
+                <button class="btn-secondary" aria-label="message">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <button class="btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  关注
+                </button>
+              </div>
+            </div>
+
+            <div class="a-name-row">
+              <span class="a-name">林思琪</span>
+              <span class="badge-icon" title="达人认证">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="badge-icon" title="学生认证">
+                <svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+              </span>
+              <span class="badge-pill gold">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
+                VIP
+              </span>
+            </div>
+
+            <div class="a-handle">@sequila · UCL 设计系</div>
+
+            <div class="a-bio">
+              设计专业大三 · 擅长 PPT、海报、品牌视觉 ✨<br/>
+              接单稳准快，急活也能扛 · 已合作 47 单 0 投诉
+            </div>
+
+            <div class="a-meta">
+              <span class="meta-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                伦敦
+              </span>
+              <span class="meta-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                平均 2 小时回复
+              </span>
+              <span class="meta-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                注册 2 年
+              </span>
+            </div>
+
+            <div class="a-stats">
+              <div><span class="a-stat-num">1,284</span><span class="a-stat-label">关注</span></div>
+              <div><span class="a-stat-num">236</span><span class="a-stat-label">粉丝</span></div>
+              <div><span class="a-stat-num">18</span><span class="a-stat-label">勋章</span></div>
+            </div>
+          </div>
+
+          <!-- big stats strip -->
+          <div class="a-bigstats">
+            <div class="a-bigstat">
+              <div class="a-bigstat-num">4.9</div>
+              <div class="a-bigstat-label">平均评分</div>
+            </div>
+            <div class="a-bigstat">
+              <div class="a-bigstat-num">96%</div>
+              <div class="a-bigstat-label">完成率</div>
+            </div>
+            <div class="a-bigstat">
+              <div class="a-bigstat-num plain">47</div>
+              <div class="a-bigstat-label">已完成</div>
+            </div>
+          </div>
+
+          <!-- tabs -->
+          <div class="a-tabs">
+            <div class="a-tab active">服务</div>
+            <div class="a-tab">评价 <span style="color:#9a9fa5; font-size:11px;">·32</span></div>
+            <div class="a-tab">动态</div>
+            <div class="a-tab">闲置</div>
+          </div>
+
+          <!-- tab content: 服务 -->
+          <div class="a-section">
+            <div class="service-card">
+              <div class="service-thumb">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+              </div>
+              <div class="service-meta">
+                <div class="service-title">论文 PPT 答辩美化 · 24h 加急</div>
+                <div class="service-foot">
+                  <span class="service-tag">设计</span>
+                  <span class="grow"></span>
+                  <span class="service-price">£35 起</span>
+                </div>
+              </div>
+            </div>
+            <div class="service-card">
+              <div class="service-thumb b">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+              </div>
+              <div class="service-meta">
+                <div class="service-title">小红书封面图 / 配图设计 包修改</div>
+                <div class="service-foot">
+                  <span class="service-tag">视觉</span>
+                  <span class="grow"></span>
+                  <span class="service-price">£12 / 张</span>
+                </div>
+              </div>
+            </div>
+            <div class="service-card">
+              <div class="service-thumb c">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15,8.5 22,9.3 17,14 18.2,21 12,17.8 5.8,21 7,14 2,9.3 9,8.5"/></svg>
+              </div>
+              <div class="service-meta">
+                <div class="service-title">个人品牌 / 自媒体 LOGO 三方案</div>
+                <div class="service-foot">
+                  <span class="service-tag">品牌</span>
+                  <span class="grow"></span>
+                  <span class="service-price">£80 起</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- radar -->
+          <div class="radar-card">
+            <div class="radar-title">能力画像</div>
+            <svg class="radar-svg" viewBox="-100 -90 200 180">
+              <!-- grid -->
+              <g fill="none" stroke="#dcdde6" stroke-width="0.6">
+                <polygon points="0,-72 68,-22 42,58 -42,58 -68,-22"/>
+                <polygon points="0,-54 51,-16 31,44 -31,44 -51,-16"/>
+                <polygon points="0,-36 34,-11 21,29 -21,29 -34,-11"/>
+                <polygon points="0,-18 17,-5 10,15 -10,15 -17,-5"/>
+              </g>
+              <g stroke="#dcdde6" stroke-width="0.6">
+                <line x1="0" y1="0" x2="0" y2="-72"/>
+                <line x1="0" y1="0" x2="68" y2="-22"/>
+                <line x1="0" y1="0" x2="42" y2="58"/>
+                <line x1="0" y1="0" x2="-42" y2="58"/>
+                <line x1="0" y1="0" x2="-68" y2="-22"/>
+              </g>
+              <!-- data: 评分 0.98, 完成率 0.96, 响应 0.85, 经验 0.78, 任务量 0.62 -->
+              <polygon
+                points="0,-70 65,-21 35,49 -33,46 -42,-14"
+                fill="url(#radarFill)" fill-opacity="0.55"
+                stroke="#7c5bff" stroke-width="1.6" stroke-linejoin="round"/>
+              <defs>
+                <linearGradient id="radarFill" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#5b6cff"/>
+                  <stop offset="100%" stop-color="#c084fc"/>
+                </linearGradient>
+              </defs>
+              <!-- labels -->
+              <g font-size="10" fill="#4d5560" text-anchor="middle" font-weight="600">
+                <text x="0" y="-80">⭐ 评分</text>
+                <text x="80" y="-22">✅ 完成率</text>
+                <text x="48" y="72">⚡ 响应</text>
+                <text x="-48" y="72">🏆 经验</text>
+                <text x="-80" y="-22">📦 任务量</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="section-pad-bottom"></div>
+        </div>
+
+        <!-- sticky CTA -->
+        <div class="cta-bar">
+          <button class="cta-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            发起任务请求
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PLAN B ==================== -->
+  <div class="phone-wrap">
+    <div class="phone-label">
+      <span class="tag">PLAN B · 老用户视角</span>
+      <h2>有共同合作记录</h2>
+      <p>「你和 TA 的合作」置顶 → 复购决策路径最短。</p>
+    </div>
+
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen b-screen">
+        <div class="scroll">
+          <!-- banner with status bar + topbar -->
+          <div class="b-banner">
+            <div class="statusbar light">
+              <span>9:41</span>
+              <div class="right">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zm4-4h2v7H6zm4-4h2v11h-2zm4-4h2v15h-2zm4-4h2v19h-2z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 2.7 6 0 9.4l1.4 1.7C3.6 8.4 7.5 6.5 12 6.5s8.4 1.9 10.6 4.6L24 9.4C21.3 6 17 4 12 4zm0 5c-3 0-5.7 1.2-7.6 3.1l1.4 1.7C7.4 12.3 9.6 11.5 12 11.5s4.6.8 6.2 2.3l1.4-1.7C17.7 10.2 15 9 12 9zm0 5c-1.7 0-3.2.6-4.4 1.5l1.4 1.7c.9-.7 2-1.2 3-1.2s2.1.5 3 1.2l1.4-1.7C15.2 14.6 13.7 14 12 14zm0 4l-2 2 2 2 2-2-2-2z"/></svg>
+                <svg viewBox="0 0 26 12" fill="none" stroke="currentColor"><rect x="1" y="1" width="20" height="10" rx="3" stroke-width="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" fill="currentColor"/></svg>
+              </div>
+            </div>
+            <div class="b-topbar">
+              <button class="b-iconbtn" aria-label="back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <div class="b-topbar-title">用户主页</div>
+              <div class="b-topbar-actions">
+                <button class="b-iconbtn" aria-label="share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+                </button>
+                <button class="b-iconbtn" aria-label="more">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- HERO CARD overlapping banner -->
+          <div class="b-hero-card">
+            <div class="b-hero-avatar-wrap">
+              <div class="b-avatar-img">陈</div>
+              <div class="b-avatar-crown-deluxe" title="超级会员">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
+              </div>
+            </div>
+
+            <div class="b-hero-name-row">
+              <span class="b-hero-name">陈宇航</span>
+              <span class="badge-icon" title="达人认证">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+
+            <div class="b-honor-deluxe">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              金牌达人 · Top 5%
+            </div>
+
+            <div class="b-meta-line">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              伦敦
+              <span class="b-meta-dot"></span>
+              注册 2 年
+              <span class="b-meta-dot"></span>
+              1h 内回复
+            </div>
+
+            <p class="b-hero-bio">
+              资深 PPT / 数据可视化设计师，服务过 30+ 高校与品牌项目，擅长论文答辩、商业路演、品牌发布会场景。注重沟通节奏，按时交付。
+            </p>
+
+            <!-- TRUST STRIP -->
+            <div class="b-trust-strip">
+              <div class="b-tstat">
+                <div class="num">
+                  <span class="gold">4.9</span>
+                  <span class="star"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+                </div>
+                <div class="label">综合评分 · 32</div>
+              </div>
+              <div class="b-tstat">
+                <div class="num"><span class="green">96%</span></div>
+                <div class="label">完成率</div>
+              </div>
+              <div class="b-tstat">
+                <div class="num">47</div>
+                <div class="label">已完成订单</div>
+              </div>
+            </div>
+
+            <div class="b-actions">
+              <button class="b-btn-follow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                关注 TA
+              </button>
+              <button class="b-btn-message" aria-label="message">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ===== 你和 TA 的合作（置顶 · 老用户决策核心） ===== -->
+          <div class="b-section">
+            <div class="b-section-head">
+              <div class="b-section-title">
+                你和 TA 的合作
+                <span class="b-section-sub">· 2 次</span>
+              </div>
+            </div>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+              </div>
+              <div class="b-task-meta">
+                <div class="b-task-title">毕业答辩 PPT 美化（30 页）</div>
+                <div class="b-task-sub">
+                  <span class="role-tag taker">TA 接单</span>
+                  · 已完成 · 给了 5 星
+                </div>
+              </div>
+              <div class="b-task-price">£42</div>
+            </div>
+            <div class="b-task-row">
+              <div class="b-task-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="b-task-meta">
+                <div class="b-task-title">实习招聘海报 · 加急 24h</div>
+                <div class="b-task-sub">
+                  <span class="role-tag poster">TA 发布</span>
+                  · 已完成 · 8 月
+                </div>
+              </div>
+              <div class="b-task-price">£28</div>
+            </div>
+          </div>
+
+          <!-- ===== 个人服务 ===== -->
+          <div class="b-section">
+            <div class="b-section-head">
+              <div class="b-section-title">
+                个人服务
+                <span class="b-section-sub">· 5 项</span>
+              </div>
+              <span class="b-more">全部
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="b-service-card">
+              <div class="b-service-thumb warm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div class="b-service-info">
+                <div class="b-service-title">论文答辩 PPT 美化 · 24h 加急</div>
+                <div class="b-service-desc">页数不限，含动效 · 已售 28 单</div>
+                <div class="b-service-foot">
+                  <div class="b-service-pills">
+                    <span class="b-service-pill hot">🔥 热门</span>
+                    <span class="b-service-pill">设计</span>
+                  </div>
+                  <div class="b-service-price">£35<small>起</small></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="b-service-card">
+              <div class="b-service-thumb cool">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+              </div>
+              <div class="b-service-info">
+                <div class="b-service-title">小红书封面图 / 配图 · 包修改</div>
+                <div class="b-service-desc">3 稿可选，含品牌色搭配 · 已售 17 单</div>
+                <div class="b-service-foot">
+                  <div class="b-service-pills">
+                    <span class="b-service-pill">视觉</span>
+                    <span class="b-service-pill">单价低</span>
+                  </div>
+                  <div class="b-service-price">£12<small>/张</small></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="b-service-card">
+              <div class="b-service-thumb pink">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15,8.5 22,9.3 17,14 18.2,21 12,17.8 5.8,21 7,14 2,9.3 9,8.5"/></svg>
+              </div>
+              <div class="b-service-info">
+                <div class="b-service-title">个人品牌 / 自媒体 LOGO · 三方案</div>
+                <div class="b-service-desc">含黑白稿、应用规范 · 已售 9 单</div>
+                <div class="b-service-foot">
+                  <div class="b-service-pills">
+                    <span class="b-service-pill">品牌</span>
+                  </div>
+                  <div class="b-service-price">£80<small>起</small></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== 评价 ===== -->
+          <div class="b-section">
+            <div class="b-section-head">
+              <div class="b-section-title">
+                收到的评价
+                <span class="b-section-sub">4.9 · 32 条</span>
+              </div>
+              <span class="b-more">全部
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="b-review-featured">
+              <span class="b-quote-mark">"</span>
+              <div class="b-review-content">
+                <div class="b-review-text">
+                  论文答辩 PPT，给的素材很乱但他梳理得超清晰，配色和层次都很讲究，最后导师当场表扬。第二次找他了，很专业！
+                </div>
+                <div class="b-review-tags">
+                  <span class="b-review-tag">沟通顺畅</span>
+                  <span class="b-review-tag">交付准时</span>
+                  <span class="b-review-tag">细节出色</span>
+                </div>
+                <div class="b-review-foot">
+                  <div class="review-avatar">王</div>
+                  <div>
+                    <div class="review-name">王同学</div>
+                    <div class="review-stars">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                  </div>
+                  <span class="review-time">3 天前 · PPT 美化</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="b-review-mini">
+              <div class="review-avatar b">林</div>
+              <div class="b-review-mini-meta">
+                <div class="b-review-mini-head">
+                  <span class="b-review-mini-name">林同学</span>
+                  <div class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  </div>
+                  <span class="review-time">1 周前</span>
+                </div>
+                <div class="b-review-mini-text">
+                  社团招新海报，加急 8 小时出稿，效果完全超预期。学姐看了说要拿给学院推。
+                </div>
+              </div>
+            </div>
+
+            <div class="b-review-mini">
+              <div class="review-avatar c">M</div>
+              <div class="b-review-mini-meta">
+                <div class="b-review-mini-head">
+                  <span class="b-review-mini-name">Michael</span>
+                  <div class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor" opacity=".25"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  </div>
+                  <span class="review-time">2 周前</span>
+                </div>
+                <div class="b-review-mini-text">
+                  品牌路演 deck，反馈到位、改稿很快。沟通可以更主动一点，整体满意。
+                </div>
+              </div>
+            </div>
+
+            <button class="b-review-all-btn">
+              查看全部 32 条评价
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div class="section-pad-bottom"></div>
+        </div>
+
+        <div class="cta-bar">
+          <button class="cta-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            向 TA 发起任务请求
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PLAN B · 陌生人视角 ==================== -->
+  <div class="phone-wrap">
+    <div class="phone-label">
+      <span class="tag">PLAN B · 陌生人视角</span>
+      <h2>首次访问 / 无合作</h2>
+      <p>合作 section 自动隐藏，个人服务直接顶上 → 主推接单。</p>
+    </div>
+
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen b-screen">
+        <div class="scroll">
+          <div class="b-banner">
+            <div class="statusbar light">
+              <span>9:41</span>
+              <div class="right">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zm4-4h2v7H6zm4-4h2v11h-2zm4-4h2v15h-2zm4-4h2v19h-2z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 2.7 6 0 9.4l1.4 1.7C3.6 8.4 7.5 6.5 12 6.5s8.4 1.9 10.6 4.6L24 9.4C21.3 6 17 4 12 4zm0 5c-3 0-5.7 1.2-7.6 3.1l1.4 1.7C7.4 12.3 9.6 11.5 12 11.5s4.6.8 6.2 2.3l1.4-1.7C17.7 10.2 15 9 12 9zm0 5c-1.7 0-3.2.6-4.4 1.5l1.4 1.7c.9-.7 2-1.2 3-1.2s2.1.5 3 1.2l1.4-1.7C15.2 14.6 13.7 14 12 14zm0 4l-2 2 2 2 2-2-2-2z"/></svg>
+                <svg viewBox="0 0 26 12" fill="none" stroke="currentColor"><rect x="1" y="1" width="20" height="10" rx="3" stroke-width="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" fill="currentColor"/></svg>
+              </div>
+            </div>
+            <div class="b-topbar">
+              <button class="b-iconbtn" aria-label="back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <div class="b-topbar-title">用户主页</div>
+              <div class="b-topbar-actions">
+                <button class="b-iconbtn" aria-label="share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+                </button>
+                <button class="b-iconbtn" aria-label="more">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- HERO 同 plan B -->
+          <div class="b-hero-card">
+            <div class="b-hero-avatar-wrap">
+              <div class="b-avatar-img">陈</div>
+              <div class="b-avatar-crown-deluxe" title="超级会员">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
+              </div>
+            </div>
+
+            <div class="b-hero-name-row">
+              <span class="b-hero-name">陈宇航</span>
+              <span class="badge-icon" title="达人认证">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+
+            <div class="b-honor-deluxe">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              金牌达人 · Top 5%
+            </div>
+
+            <div class="b-meta-line">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              伦敦
+              <span class="b-meta-dot"></span>
+              注册 2 年
+              <span class="b-meta-dot"></span>
+              1h 内回复
+            </div>
+
+            <p class="b-hero-bio">
+              资深 PPT / 数据可视化设计师，服务过 30+ 高校与品牌项目，擅长论文答辩、商业路演、品牌发布会场景。注重沟通节奏，按时交付。
+            </p>
+
+            <div class="b-trust-strip">
+              <div class="b-tstat">
+                <div class="num">
+                  <span class="gold">4.9</span>
+                  <span class="star"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+                </div>
+                <div class="label">综合评分 · 32</div>
+              </div>
+              <div class="b-tstat">
+                <div class="num"><span class="green">96%</span></div>
+                <div class="label">完成率</div>
+              </div>
+              <div class="b-tstat">
+                <div class="num">47</div>
+                <div class="label">已完成订单</div>
+              </div>
+            </div>
+
+            <div class="b-actions">
+              <button class="b-btn-follow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                关注 TA
+              </button>
+              <button class="b-btn-message" aria-label="message">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ❌ 没有「你和 TA 的合作」section（陌生人，零数据）-->
+          <!-- ✅ 个人服务 直接顶上 → 强化"挑选服务下单"路径 -->
+          <div class="b-section">
+            <div class="b-section-head">
+              <div class="b-section-title">
+                个人服务
+                <span class="b-section-sub">· 5 项</span>
+              </div>
+              <span class="b-more">全部
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="b-service-card">
+              <div class="b-service-thumb warm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div class="b-service-info">
+                <div class="b-service-title">论文答辩 PPT 美化 · 24h 加急</div>
+                <div class="b-service-desc">页数不限，含动效 · 已售 28 单</div>
+                <div class="b-service-foot">
+                  <div class="b-service-pills">
+                    <span class="b-service-pill hot">🔥 热门</span>
+                    <span class="b-service-pill">设计</span>
+                  </div>
+                  <div class="b-service-price">£35<small>起</small></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="b-service-card">
+              <div class="b-service-thumb cool">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+              </div>
+              <div class="b-service-info">
+                <div class="b-service-title">小红书封面图 / 配图 · 包修改</div>
+                <div class="b-service-desc">3 稿可选，含品牌色搭配 · 已售 17 单</div>
+                <div class="b-service-foot">
+                  <div class="b-service-pills">
+                    <span class="b-service-pill">视觉</span>
+                    <span class="b-service-pill">单价低</span>
+                  </div>
+                  <div class="b-service-price">£12<small>/张</small></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="b-service-card">
+              <div class="b-service-thumb pink">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15,8.5 22,9.3 17,14 18.2,21 12,17.8 5.8,21 7,14 2,9.3 9,8.5"/></svg>
+              </div>
+              <div class="b-service-info">
+                <div class="b-service-title">个人品牌 / 自媒体 LOGO · 三方案</div>
+                <div class="b-service-desc">含黑白稿、应用规范 · 已售 9 单</div>
+                <div class="b-service-foot">
+                  <div class="b-service-pills">
+                    <span class="b-service-pill">品牌</span>
+                  </div>
+                  <div class="b-service-price">£80<small>起</small></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 评价 -->
+          <div class="b-section">
+            <div class="b-section-head">
+              <div class="b-section-title">
+                收到的评价
+                <span class="b-section-sub">4.9 · 32 条</span>
+              </div>
+              <span class="b-more">全部
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="b-review-featured">
+              <span class="b-quote-mark">"</span>
+              <div class="b-review-content">
+                <div class="b-review-text">
+                  论文答辩 PPT，给的素材很乱但他梳理得超清晰，配色和层次都很讲究，最后导师当场表扬。第二次找他了，很专业！
+                </div>
+                <div class="b-review-tags">
+                  <span class="b-review-tag">沟通顺畅</span>
+                  <span class="b-review-tag">交付准时</span>
+                  <span class="b-review-tag">细节出色</span>
+                </div>
+                <div class="b-review-foot">
+                  <div class="review-avatar">王</div>
+                  <div>
+                    <div class="review-name">王同学</div>
+                    <div class="review-stars">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                  </div>
+                  <span class="review-time">3 天前 · PPT 美化</span>
+                </div>
+              </div>
+            </div>
+
+            <button class="b-review-all-btn">
+              查看全部 32 条评价
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div class="section-pad-bottom"></div>
+        </div>
+
+        <div class="cta-bar">
+          <button class="cta-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            向 TA 发起任务请求
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PLAN B · 能力详情 抽屉 ==================== -->
+  <div class="phone-wrap">
+    <div class="phone-label">
+      <span class="tag">PLAN B · 能力详情</span>
+      <h2>底部抽屉（···菜单触发）</h2>
+      <p>从右上角 ··· → 点「能力详情」拉起。<br/>主页面更干净，对详情有兴趣才打开。</p>
+    </div>
+
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen b-screen">
+        <!-- 背后的主页面（hero 部分），会被 backdrop 遮住一部分 -->
+        <div class="scroll" style="pointer-events:none;">
+          <div class="b-banner">
+            <div class="statusbar light">
+              <span>9:41</span>
+              <div class="right">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zm4-4h2v7H6zm4-4h2v11h-2zm4-4h2v15h-2zm4-4h2v19h-2z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 2.7 6 0 9.4l1.4 1.7C3.6 8.4 7.5 6.5 12 6.5s8.4 1.9 10.6 4.6L24 9.4C21.3 6 17 4 12 4zm0 5c-3 0-5.7 1.2-7.6 3.1l1.4 1.7C7.4 12.3 9.6 11.5 12 11.5s4.6.8 6.2 2.3l1.4-1.7C17.7 10.2 15 9 12 9zm0 5c-1.7 0-3.2.6-4.4 1.5l1.4 1.7c.9-.7 2-1.2 3-1.2s2.1.5 3 1.2l1.4-1.7C15.2 14.6 13.7 14 12 14zm0 4l-2 2 2 2 2-2-2-2z"/></svg>
+                <svg viewBox="0 0 26 12" fill="none" stroke="currentColor"><rect x="1" y="1" width="20" height="10" rx="3" stroke-width="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" fill="currentColor"/></svg>
+              </div>
+            </div>
+            <div class="b-topbar">
+              <button class="b-iconbtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <div class="b-topbar-title">用户主页</div>
+              <div class="b-topbar-actions">
+                <button class="b-iconbtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+                </button>
+                <button class="b-iconbtn b-iconbtn-pulse" title="点这里 → 能力详情">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="b-hero-card">
+            <div class="b-hero-avatar-wrap">
+              <div class="b-avatar-img">陈</div>
+              <div class="b-avatar-crown-deluxe">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
+              </div>
+            </div>
+            <div class="b-hero-name-row">
+              <span class="b-hero-name">陈宇航</span>
+              <span class="badge-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M9 12.5l2 2 4.5-4.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+            <div class="b-honor-deluxe">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              金牌达人 · Top 5%
+            </div>
+            <div class="b-trust-strip">
+              <div class="b-tstat">
+                <div class="num">
+                  <span class="gold">4.9</span>
+                  <span class="star"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+                </div>
+                <div class="label">综合评分 · 32</div>
+              </div>
+              <div class="b-tstat">
+                <div class="num"><span class="green">96%</span></div>
+                <div class="label">完成率</div>
+              </div>
+              <div class="b-tstat">
+                <div class="num">47</div>
+                <div class="label">已完成</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- backdrop -->
+        <div class="sheet-backdrop"></div>
+
+        <!-- bottom sheet -->
+        <div class="bottom-sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-header">
+            <div class="sheet-title-block">
+              <div class="sheet-title">能力详情</div>
+              <div class="sheet-subtitle">陈宇航 · 基于近 30 天 · 47 单完成数据</div>
+            </div>
+            <button class="sheet-close" aria-label="close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="sheet-body">
+            <!-- 4 数据卡 -->
+            <div class="sheet-skill-grid">
+              <div class="b-skill-card">
+                <div class="b-skill-card-head">
+                  <div class="b-skill-card-icon gold">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  </div>
+                  <span class="b-skill-card-label">综合评分</span>
+                </div>
+                <div class="b-skill-card-num">4.9<span class="unit">/5</span></div>
+                <div class="b-skill-card-mini">
+                  <span style="width:98%; background: linear-gradient(90deg,#fbbf24,#d97706);"></span>
+                </div>
+                <div class="b-skill-card-trend">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  优于 96%
+                </div>
+              </div>
+
+              <div class="b-skill-card">
+                <div class="b-skill-card-head">
+                  <div class="b-skill-card-icon green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span class="b-skill-card-label">完成率</span>
+                </div>
+                <div class="b-skill-card-num">96<span class="unit">%</span></div>
+                <div class="b-skill-card-mini">
+                  <span style="width:96%; background: linear-gradient(90deg,#34d399,#059669);"></span>
+                </div>
+                <div class="b-skill-card-trend">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  47 / 49
+                </div>
+              </div>
+
+              <div class="b-skill-card">
+                <div class="b-skill-card-head">
+                  <div class="b-skill-card-icon indigo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <span class="b-skill-card-label">响应速度</span>
+                </div>
+                <div class="b-skill-card-num">1.2<span class="unit">h</span></div>
+                <div class="b-skill-card-mini">
+                  <span style="width:90%; background: linear-gradient(90deg,#818cf8,#4f46e5);"></span>
+                </div>
+                <div class="b-skill-card-trend">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  比平均快 3×
+                </div>
+              </div>
+
+              <div class="b-skill-card">
+                <div class="b-skill-card-head">
+                  <div class="b-skill-card-icon pink">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z"/></svg>
+                  </div>
+                  <span class="b-skill-card-label">经验值</span>
+                </div>
+                <div class="b-skill-card-num">Lv.8</div>
+                <div class="b-skill-card-mini">
+                  <span style="width:78%; background: linear-gradient(90deg,#f472b6,#db2777);"></span>
+                </div>
+                <div class="b-skill-card-trend">
+                  78% → Lv.9
+                </div>
+              </div>
+            </div>
+
+            <!-- 横向对比卡 (只有详情页才有) -->
+            <div class="sheet-cmp-card">
+              <div class="sheet-cmp-head">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+                vs 平台同类达人
+              </div>
+              <div class="sheet-cmp-sub">和「设计 / 视觉」分类近 90 天活跃的 218 位达人比较</div>
+
+              <div class="pct-row">
+                <div class="pct-row-head">
+                  <span class="pct-label">综合评分</span>
+                  <span class="pct-value">超过 <span class="accent">96%</span></span>
+                </div>
+                <div class="pct-bar">
+                  <span class="pct-fill" style="width: 96%;"></span>
+                  <span class="pct-marker" style="left: 96%;"></span>
+                </div>
+                <div class="pct-foot">
+                  <span>平均 4.5</span>
+                  <span>TOP 1%: 4.95</span>
+                </div>
+              </div>
+
+              <div class="pct-row">
+                <div class="pct-row-head">
+                  <span class="pct-label">完成率</span>
+                  <span class="pct-value">超过 <span class="accent">88%</span></span>
+                </div>
+                <div class="pct-bar">
+                  <span class="pct-fill" style="width: 88%;"></span>
+                  <span class="pct-marker" style="left: 88%;"></span>
+                </div>
+                <div class="pct-foot">
+                  <span>平均 82%</span>
+                  <span>TOP 1%: 99%</span>
+                </div>
+              </div>
+
+              <div class="pct-row">
+                <div class="pct-row-head">
+                  <span class="pct-label">响应速度</span>
+                  <span class="pct-value">超过 <span class="accent">93%</span></span>
+                </div>
+                <div class="pct-bar">
+                  <span class="pct-fill" style="width: 93%;"></span>
+                  <span class="pct-marker" style="left: 93%;"></span>
+                </div>
+                <div class="pct-foot">
+                  <span>平均 4.2h</span>
+                  <span>TOP 1%: 0.5h</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 解释 tip -->
+            <div class="sheet-tip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>
+              <span>数据基于近 30 天有效订单计算，每日凌晨更新。新达人未达 5 单时不展示百分位。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

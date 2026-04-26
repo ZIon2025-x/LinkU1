@@ -1231,14 +1231,28 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    // 接单者 + 进行中 → 标记完成（打开证据收集对话框）
-    if (isTaker && task.status == AppConstants.taskStatusInProgress) {
+    // 接单者 + 进行中 + 已托管支付 → 标记完成（打开证据收集对话框）
+    // 与后端 `POST /tasks/{id}/complete` 的 is_paid 校验对齐：
+    // 状态可能在已支付前就推进到 in_progress（历史/异常路径），此时按钮必须隐藏，
+    // 否则点击会被后端 400 拒绝并打安全告警 WARNING 日志。
+    if (isTaker &&
+        task.status == AppConstants.taskStatusInProgress &&
+        task.isPaid) {
       return PrimaryButton(
         text: context.l10n.actionsMarkComplete,
         onPressed: () => _showCompleteTaskSheet(context),
         gradient: LinearGradient(
           colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
         ),
+      );
+    }
+
+    // 接单者 + 进行中 + 未支付 → 显示等待发布者付款的提示（不给可点按钮）
+    if (isTaker &&
+        task.status == AppConstants.taskStatusInProgress &&
+        !task.isPaid) {
+      return PrimaryButton(
+        text: context.l10n.taskDetailWaitingPosterPayment,
       );
     }
 

@@ -8,9 +8,9 @@
 // never propagate failures to crawlers.
 
 const NON_JS_CRAWLERS: RegExp[] = [
-  /MicroMessenger/i,
-  /WeChat/i,
-  /Weixin/i,
+  // 仅匹配微信分享扩展（链接预览抓取器），不匹配微信内置浏览器
+  // MicroMessenger / WeChat / Weixin 是微信 in-app 浏览器的真实用户 UA，
+  // 它们会执行 JS，转发到 SSR 会触发自跳转死循环。
   /WeChatShareExtension/i,
   /facebookexternalhit/i,
   /Facebot/i,

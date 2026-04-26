@@ -2799,6 +2799,7 @@
   "taskDetailAutoConfirmSoon": "即將自動確認，請立即確認！",
   "taskDetailConfirmNow": "立即確認",
   "taskDetailWaitingPosterConfirm": "等待發布者確認",
+  "taskDetailWaitingPosterPayment": "等待發布者付款",
   "taskDetailSubmitQuote": "提交報價",
   "taskDetailAcceptDesignated": "接受任務",
   "taskDetailDeclineDesignated": "拒絕",

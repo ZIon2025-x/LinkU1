@@ -6131,6 +6131,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailWaitingPosterConfirm => 'Waiting for poster to confirm';
 
   @override
+  String get taskDetailWaitingPosterPayment => 'Waiting for poster to pay';
+
+  @override
   String get taskDetailSubmitQuote => 'Submit Quote';
 
   @override

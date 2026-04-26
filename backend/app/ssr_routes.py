@@ -25,10 +25,11 @@ ssr_router = APIRouter(tags=["SSR"])
 # 不执行JavaScript的爬虫（需要SSR）
 # 这些爬虫通常只读取HTML，不执行JavaScript
 NON_JS_CRAWLERS = [
-    r'MicroMessenger',      # 微信（不执行JS）
-    r'WeChat',              # 微信（包括 WeChatShareExtensionNew）
-    r'Weixin',              # 微信
-    r'WeChatShareExtension', # 微信分享扩展
+    # 仅匹配微信分享扩展（链接预览抓取器），不匹配微信内置浏览器。
+    # MicroMessenger / WeChat / Weixin 是微信 in-app 浏览器的真实用户 UA，
+    # 会执行 JS；如果走 SSR 分支会触发 generate_html 内已删除的自跳转脚本死循环，
+    # 即便去掉脚本，他们看到的也是裸 HTML 而非真 SPA，所以一律走前端。
+    r'WeChatShareExtension', # 微信分享扩展（链接预览爬虫）
     r'facebookexternalhit', # Facebook（不执行JS）
     r'Facebot',             # Facebook
     r'Twitterbot',          # Twitter（不执行JS）
@@ -273,18 +274,12 @@ def generate_html(
     
     <!-- 结构化数据 -->
     {structured_data_json}
-    
-    <!-- 对于普通浏览器，延迟重定向（给爬虫时间抓取内容） -->
-    <script>
-        // 检测是否是爬虫（不执行JavaScript的爬虫不会执行这段代码）
-        setTimeout(function() {{
-            // 只有普通浏览器才会执行重定向
-            if (document.referrer === '' || !navigator.userAgent.match(/bot|crawler|spider|crawling/i)) {{
-                window.location.href = "{page_url}";
-            }}
-        }}, 100);
-    </script>
-    
+
+    <!-- 注意：此处曾经有一段「检测非爬虫则 setTimeout 跳回 page_url」的脚本，已删除。
+         原因：爬虫不执行 JS 用不到它；任何真实用户执行到时，由于此 SSR 接口是被
+         Vercel 中间件按 UA 转发进来的，跳转目标 URL 与当前 URL 相同，会再次被
+         中间件转发，形成无限刷新循环（微信 in-app 浏览器场景已踩过）。 -->
+
     <style>
         * {{
             margin: 0;

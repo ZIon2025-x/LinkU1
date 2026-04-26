@@ -2807,6 +2807,7 @@
   "taskDetailAutoConfirmSoon": "Will auto-confirm soon. Please confirm now.",
   "taskDetailConfirmNow": "Confirm now",
   "taskDetailWaitingPosterConfirm": "Waiting for poster to confirm",
+  "taskDetailWaitingPosterPayment": "Waiting for poster to pay",
   "taskDetailSubmitQuote": "Submit Quote",
   "taskDetailAcceptDesignated": "Accept Task",
   "taskDetailDeclineDesignated": "Decline",

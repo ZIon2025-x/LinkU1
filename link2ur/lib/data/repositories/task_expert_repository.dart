@@ -168,9 +168,19 @@ class TaskExpertRepository {
     }
 
     try {
-      final response = await _apiService.get<dynamic>(
+      var response = await _apiService.get<dynamic>(
         ApiEndpoints.taskExpertServices(expertId),
       );
+
+      // 404: expertId 可能是 user_id（Activity 入口等），走 by-user 解析为团队 id 后重试。
+      if (!response.isSuccess && response.statusCode == 404) {
+        final resolvedId = await resolveExpertIdByUser(expertId);
+        if (resolvedId != null && resolvedId.isNotEmpty && resolvedId != expertId) {
+          response = await _apiService.get<dynamic>(
+            ApiEndpoints.taskExpertServices(resolvedId),
+          );
+        }
+      }
 
       if (!response.isSuccess || response.data == null) {
         throw TaskExpertException(response.errorCode ?? response.message ?? '获取达人服务失败', errorCode: response.errorCode);

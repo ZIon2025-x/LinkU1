@@ -5867,6 +5867,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailWaitingPosterConfirm => '等待发布者确认';
 
   @override
+  String get taskDetailWaitingPosterPayment => '等待发布者付款';
+
+  @override
   String get taskDetailSubmitQuote => '提交报价';
 
   @override
@@ -19076,6 +19079,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailWaitingPosterConfirm => '等待發布者確認';
+
+  @override
+  String get taskDetailWaitingPosterPayment => '等待發布者付款';
 
   @override
   String get taskDetailSubmitQuote => '提交報價';

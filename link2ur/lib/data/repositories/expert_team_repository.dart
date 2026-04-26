@@ -32,8 +32,35 @@ class ExpertTeamRepository {
   }
 
   Future<ExpertTeam> getExpertById(String id) async {
-    final response = await _apiService.get(ApiEndpoints.expertTeamById(id));
+    var response = await _apiService.get(ApiEndpoints.expertTeamById(id));
+
+    // 404: id 可能是 user_id (Activity/UserProfile 入口)，走 by-user 解析为团队 id 后重试。
+    if (!response.isSuccess && response.statusCode == 404) {
+      final byUser = await _apiService.get(ApiEndpoints.taskExpertByUser(id));
+      if (byUser.isSuccess && byUser.data is Map<String, dynamic>) {
+        final byUserData = byUser.data as Map<String, dynamic>;
+        final resolvedId = byUserData['id']?.toString();
+        if (resolvedId != null && resolvedId.isNotEmpty && resolvedId != id) {
+          response = await _apiService.get(ApiEndpoints.expertTeamById(resolvedId));
+        } else {
+          // by-user 已直接返回 ExpertOut，可直接用
+          response = byUser;
+        }
+      }
+    }
+
+    if (!response.isSuccess || response.data == null) {
+      throw AppException(response.message ?? '获取达人团队失败', code: response.errorCode);
+    }
     return ExpertTeam.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 通过 user_id 解析对应的达人团队 id（不存在时返回 null）。
+  Future<String?> resolveExpertIdByUser(String userId) async {
+    final response = await _apiService.get(ApiEndpoints.taskExpertByUser(userId));
+    if (!response.isSuccess || response.data is! Map<String, dynamic>) return null;
+    final id = (response.data as Map<String, dynamic>)['id']?.toString();
+    return (id != null && id.isNotEmpty) ? id : null;
   }
 
   // ==================== 我的团队 ====================
@@ -199,10 +226,25 @@ class ExpertTeamRepository {
     };
     if (status != null) params['status'] = status;
 
-    final response = await _apiService.get(
+    var response = await _apiService.get(
       ApiEndpoints.expertTeamServices(expertId),
       queryParameters: params,
     );
+
+    // 404: expertId 可能是 user_id，走 by-user 解析为团队 id 后重试。
+    if (!response.isSuccess && response.statusCode == 404) {
+      final resolvedId = await resolveExpertIdByUser(expertId);
+      if (resolvedId != null && resolvedId.isNotEmpty && resolvedId != expertId) {
+        response = await _apiService.get(
+          ApiEndpoints.expertTeamServices(resolvedId),
+          queryParameters: params,
+        );
+      }
+    }
+
+    if (!response.isSuccess || response.data == null) {
+      throw AppException(response.message ?? '获取达人服务失败', code: response.errorCode);
+    }
     return (response.data as List).cast<Map<String, dynamic>>();
   }
 

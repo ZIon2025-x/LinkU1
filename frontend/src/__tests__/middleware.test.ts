@@ -16,9 +16,15 @@ describe('middleware', () => {
     return new Request(url, { headers: { 'user-agent': ua } });
   }
 
+  // 微信分享扩展（链接预览爬虫）—— 仍走 SSR
   const WECHAT_UA =
     'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
-    'Chrome/53.0.2785.116 Safari/537.36 MicroMessenger/6.5.2.501 NetType/WIFI WindowsWechat';
+    'Chrome/53.0.2785.116 Safari/537.36 WeChatShareExtension/8.0.0';
+
+  // 微信内置浏览器（真实用户）—— 不应被中间件劫持
+  const WECHAT_INAPP_BROWSER_UA =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 ' +
+    '(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.42(0x18002a3a) NetType/WIFI Language/zh_CN';
 
   it('forwards WeChat crawler requests on whitelisted task path to backend SSR', async () => {
     const backendHtml = '<html><head><meta property="og:title" content="Real Task"></head></html>';
@@ -64,6 +70,21 @@ describe('middleware', () => {
       'https://www.link2ur.com/zh/tasks/123',
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 ' +
         '(KHTML, like Gecko) Version/17.0 Safari/605.1.15'
+    );
+
+    const res = await middleware(req);
+
+    expect(res).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  // 回归测试：微信 in-app 浏览器（MicroMessenger / WeChat / Weixin）是真实用户，
+  // 会执行 JS。如果被中间件转发到 SSR，会因 SSR HTML 自跳转脚本陷入无限刷新。
+  it('does NOT intercept WeChat in-app browser users (MicroMessenger UA)', async () => {
+    global.fetch = jest.fn();
+    const req = makeRequest(
+      'https://www.link2ur.com/zh/tasks/123',
+      WECHAT_INAPP_BROWSER_UA
     );
 
     const res = await middleware(req);
@@ -202,9 +223,7 @@ describe('middleware', () => {
 
   it('intercepts all listed non-JS crawler User-Agents', async () => {
     const crawlerUAs = [
-      'MicroMessenger/6.5.2',
-      'Mozilla/5.0 WeChat/8.0',
-      'Weixin/1.0',
+      'WeChatShareExtension/8.0.0',
       'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
       'Facebot/1.0',
       'Twitterbot/1.0',
