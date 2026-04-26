@@ -516,7 +516,17 @@ async def visible_forums(user: Optional[models.User], db: AsyncSession) -> List[
     verification = verification_result.scalar_one_or_none()
     
     if not verification:
-        logger.warning(f"用户 {user.id} 没有有效的学生认证记录（需 status='verified' 且未过期且大学 is_active）")
+        # 非学生是正常状态，不是异常；降到 debug 避免日志刷屏
+        logger.debug(f"用户 {user.id} 没有有效的学生认证记录（需 status='verified' 且未过期且大学 is_active）")
+        # 缓存空结果，避免每次调用都重查 DB
+        try:
+            from app.redis_cache import get_redis_client
+            redis_client = get_redis_client()
+            if redis_client:
+                import json
+                redis_client.setex(f"visible_forums:v2:{user.id}", 300, json.dumps([]))
+        except Exception as e:
+            logger.debug(f"写入可见板块空缓存失败: {e}")
         return []
 
     university = verification.university
