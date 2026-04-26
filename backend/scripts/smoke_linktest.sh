@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Smoke test against linktest (Railway staging) — runs after each split commit
-# is deployed. Asserts each domain probe returns an expected status at BOTH
-# /api and /api/users prefixes.
+# is deployed. Each probe asserts a status at the prefix(es) that domain is
+# actually mounted at (see _SPLIT_ROUTERS in app/main.py).
+#
+# After the 2026-04-26 prefix audit, four domains are single-mounted at /api:
+# translation, upload_inline, refund, payment_inline. The probe for those
+# only hits /api/<path>; hitting /api/users/<path> would now correctly 404.
 #
 # Usage:
 #   bash backend/scripts/smoke_linktest.sh
@@ -11,26 +15,32 @@
 set -u
 BASE="${BASE:-https://linktest.up.railway.app}"
 
-# (method, path, expected_codes_pipe_separated)
+# (method, path, expected_codes_pipe_separated, prefixes_space_separated)
 PROBES=(
-  "POST /csp-report 204|400|422"
-  "GET /tasks/1/history 401|403"
-  "GET /tasks/1/refund-status 401|403"
-  "GET /profile/me 401|403"
-  "GET /messages/unread/count 401|403"
-  "POST /stripe/webhook 400|422"
-  "GET /customer-service/status 200|401|403"
-  "GET /translate/metrics 200|401|403"
-  "GET /banners 200"
-  "GET /faq 200"
-  "POST /upload/image 401|403|422"
+  "POST /csp-report 204|400|422 /api /api/users"
+  "GET /tasks/1/history 401|403 /api /api/users"
+  "GET /tasks/1/refund-status 401|403 /api"
+  "GET /profile/me 401|403 /api /api/users"
+  "GET /messages/unread/count 401|403 /api /api/users"
+  "POST /stripe/webhook 400|422 /api"
+  "GET /customer-service/status 200|401|403 /api /api/users"
+  "GET /translate/metrics 200|401|403 /api"
+  "GET /banners 200 /api /api/users"
+  "GET /faq 200 /api /api/users"
+  "POST /upload/image 401|403|422 /api"
 )
 
-PREFIXES=("/api" "/api/users")
 fail=0
+total=0
 for probe in "${PROBES[@]}"; do
-  read -r method path expected <<< "$probe"
-  for prefix in "${PREFIXES[@]}"; do
+  # shellcheck disable=SC2086
+  set -- $probe
+  method=$1
+  path=$2
+  expected=$3
+  shift 3
+  for prefix in "$@"; do
+    total=$((total + 1))
     url="${BASE}${prefix}${path}"
     code=$(curl -s -o /dev/null -w "%{http_code}" -X "$method" "$url")
     if [[ "|$expected|" != *"|$code|"* ]]; then
@@ -49,4 +59,4 @@ if [[ $fail -ne 0 ]]; then
   exit 1
 fi
 echo ""
-echo "Linktest smoke OK ($((${#PROBES[@]} * 2)) probes)."
+echo "Linktest smoke OK ($total probes)."

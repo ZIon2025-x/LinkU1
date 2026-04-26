@@ -359,24 +359,26 @@ from app.routes.user_profile import router as user_profile_router
 app.include_router(user_profile_router)
 
 # === Split routers (extracted from app/routers.py) ===
-# 双挂载到 /api 和 /api/users，复刻原 main_router 的挂载行为。
-# main_router 已删除（2026-04-25 router 拆分完成）。
-_SPLIT_ROUTERS: list[tuple[object, str]] = [
-    (translation_routes.router, "翻译"),
-    (system_routes.router, "系统"),
-    (upload_inline_routes.router, "上传-inline"),
-    (auth_inline_routes.router, "auth-inline"),
-    (refund_routes.router, "退款"),
-    (profile_routes.router, "用户资料"),
-    (message_routes.router, "消息与通知"),
-    (payment_inline_routes.router, "支付-inline"),
-    (task_routes.router, "任务"),
-    (cs_routes.router, "客服"),
+# 每个域单独配置挂载前缀。Routers 拆分初版为零行为变更，全部双挂载到 /api 和
+# /api/users；2026-04-26 前缀审计后，确认 4 个域只在 /api 下被调用，其 /api/users
+# 镜像无 caller，已收窄为单挂载（见每行注释）。其余 6 个域仍保留双挂载，因为
+# 真实客户端（Flutter / React Web）有 /api/users/* URL 在调。
+_SPLIT_ROUTERS: list[tuple[object, str, tuple[str, ...]]] = [
+    (translation_routes.router,    "翻译",       ("/api",)),                  # 无 /api/users 调用
+    (system_routes.router,         "系统",       ("/api", "/api/users")),     # /api/users/timezone/info (Web)
+    (upload_inline_routes.router,  "上传-inline", ("/api",)),                  # 无 /api/users 调用
+    (auth_inline_routes.router,    "auth-inline", ("/api", "/api/users")),     # /api/users/register, /password/validate, /forgot_password, /resend-verification
+    (refund_routes.router,         "退款",       ("/api",)),                  # 无 /api/users 调用
+    (profile_routes.router,        "用户资料",    ("/api", "/api/users")),     # /api/users/profile* x6
+    (message_routes.router,        "消息与通知",  ("/api", "/api/users")),     # /api/users/{messages,notifications,contacts}/*
+    (payment_inline_routes.router, "支付-inline", ("/api",)),                  # /vip/* via /api mount of /users/vip/*; stripe webhook 单挂载
+    (task_routes.router,           "任务",       ("/api", "/api/users")),     # /api/users/my-tasks (Web)
+    (cs_routes.router,             "客服",       ("/api", "/api/users")),     # /api/users/user/customer-service/* (Flutter)
 ]
 
-for _r, _tag in _SPLIT_ROUTERS:
-    app.include_router(_r, prefix="/api/users", tags=[_tag])
-    app.include_router(_r, prefix="/api", tags=[_tag])
+for _r, _tag, _prefixes in _SPLIT_ROUTERS:
+    for _prefix in _prefixes:
+        app.include_router(_r, prefix=_prefix, tags=[_tag])
 
 # auth_router 已移除，使用 secure_auth_router 替代
 app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安全认证系统

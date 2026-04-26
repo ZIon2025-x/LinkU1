@@ -2171,16 +2171,6 @@
   },
   {
     "method": "GET",
-    "path": "/api/users/private-file",
-    "name": "get_private_file"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/private-image/{image_id}",
-    "name": "get_private_image"
-  },
-  {
-    "method": "GET",
     "path": "/api/users/profile/me",
     "name": "get_my_profile"
   },
@@ -2221,11 +2211,6 @@
   },
   {
     "method": "GET",
-    "path": "/api/users/tasks/{task_id}/dispute-timeline",
-    "name": "get_task_dispute_timeline"
-  },
-  {
-    "method": "GET",
     "path": "/api/users/tasks/{task_id}/history",
     "name": "get_task_history"
   },
@@ -2236,16 +2221,6 @@
   },
   {
     "method": "GET",
-    "path": "/api/users/tasks/{task_id}/refund-history",
-    "name": "get_refund_history"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/tasks/{task_id}/refund-status",
-    "name": "get_refund_status"
-  },
-  {
-    "method": "GET",
     "path": "/api/users/tasks/{task_id}/reviews",
     "name": "get_task_reviews"
   },
@@ -2253,31 +2228,6 @@
     "method": "GET",
     "path": "/api/users/timezone/info",
     "name": "get_timezone_info"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/translate/alerts",
-    "name": "get_translation_alerts"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/translate/metrics",
-    "name": "get_translation_metrics"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/translate/services/failed",
-    "name": "get_failed_services_info"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/translate/services/status",
-    "name": "get_translation_services_status"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/translate/task/{task_id}",
-    "name": "get_task_translation"
   },
   {
     "method": "GET",
@@ -2318,16 +2268,6 @@
     "method": "GET",
     "path": "/api/users/users/shared-tasks/{other_user_id}",
     "name": "get_shared_tasks"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/users/vip/history",
-    "name": "get_vip_history"
-  },
-  {
-    "method": "GET",
-    "path": "/api/users/users/vip/status",
-    "name": "get_vip_status"
   },
   {
     "method": "GET",
@@ -4496,11 +4436,6 @@
   },
   {
     "method": "POST",
-    "path": "/api/users/messages/generate-image-url",
-    "name": "generate_image_url"
-  },
-  {
-    "method": "POST",
     "path": "/api/users/messages/mark-chat-read/{contact_id}",
     "name": "mark_chat_messages_read_api"
   },
@@ -4551,11 +4486,6 @@
   },
   {
     "method": "POST",
-    "path": "/api/users/refresh-image-url",
-    "name": "refresh_image_url"
-  },
-  {
-    "method": "POST",
     "path": "/api/users/register",
     "name": "register"
   },
@@ -4581,11 +4511,6 @@
   },
   {
     "method": "POST",
-    "path": "/api/users/stripe/webhook",
-    "name": "stripe_webhook"
-  },
-  {
-    "method": "POST",
     "path": "/api/users/tasks/{task_id}/accept",
     "name": "accept_task"
   },
@@ -4606,43 +4531,8 @@
   },
   {
     "method": "POST",
-    "path": "/api/users/tasks/{task_id}/confirm_complete",
-    "name": "confirm_task_complete"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/tasks/{task_id}/confirm_completion",
-    "name": "confirm_task_completion"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/tasks/{task_id}/dispute",
-    "name": "create_task_dispute"
-  },
-  {
-    "method": "POST",
     "path": "/api/users/tasks/{task_id}/interaction",
     "name": "record_task_interaction"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/tasks/{task_id}/pay",
-    "name": "create_payment"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/tasks/{task_id}/refund-request",
-    "name": "create_refund_request"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/tasks/{task_id}/refund-request/{refund_id}/cancel",
-    "name": "cancel_refund_request"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/tasks/{task_id}/refund-request/{refund_id}/rebuttal",
-    "name": "submit_refund_rebuttal"
   },
   {
     "method": "POST",
@@ -4653,56 +4543,6 @@
     "method": "POST",
     "path": "/api/users/tasks/{task_id}/review",
     "name": "create_review"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/translate",
-    "name": "translate_text"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/translate/batch",
-    "name": "translate_batch"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/translate/prefetch",
-    "name": "prefetch_translations"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/translate/services/reset",
-    "name": "reset_translation_services"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/translate/task/{task_id}",
-    "name": "translate_and_save_task"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/translate/tasks/batch",
-    "name": "get_task_translations_batch"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/translate/warmup",
-    "name": "warmup_translations"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/upload/file",
-    "name": "upload_file"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/upload/image",
-    "name": "upload_image"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/upload/public-image",
-    "name": "upload_public_image"
   },
   {
     "method": "POST",
@@ -4741,18 +4581,8 @@
   },
   {
     "method": "POST",
-    "path": "/api/users/users/vip/activate",
-    "name": "activate_vip"
-  },
-  {
-    "method": "POST",
     "path": "/api/users/vip/activate",
     "name": "activate_vip"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/webhooks/apple-iap",
-    "name": "apple_iap_webhook"
   },
   {
     "method": "POST",

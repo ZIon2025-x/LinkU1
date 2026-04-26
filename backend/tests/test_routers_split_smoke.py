@@ -1,14 +1,16 @@
 """
 Smoke test for the routers.py split refactor.
 
-For each domain that gets extracted, verify at least one representative route
-is still reachable at BOTH /api/ and /api/users/ prefixes. Asserts HTTP status
-code only — not business logic.
+For each domain, verify at least one representative route is reachable
+at the prefixes that domain is actually mounted under (see _SPLIT_ROUTERS
+in app/main.py). After the 2026-04-26 prefix audit, four domains are
+single-mounted at /api only — translation, upload_inline, refund,
+payment_inline — because no real client (Flutter / React Web) was calling
+the /api/users mirror. The smoke test reflects that.
 
-If a route's auth behavior turns out differently than asserted here during
-execution, adjust the expected code inline. The goal is to catch:
+Asserts HTTP status code only — not business logic. The goal is to catch:
   - Router not registered at all (→ 404)
-  - Router registered at only one prefix (→ 404 on the other)
+  - Router unexpectedly missing a prefix it should be mounted at
   - Import error in the new module (→ 500 or collection error)
 """
 from __future__ import annotations
@@ -29,26 +31,35 @@ def client():
     return TestClient(app)
 
 
-# (domain, method, path, expected_status_codes)
-# Both /api/<p> and /api/users/<p> should be reachable.
-SMOKE_PROBES: list[tuple[str, str, str, tuple[int, ...]]] = [
-    ("auth_inline", "POST", "/csp-report", (204, 400, 422)),
-    ("task", "GET", "/tasks/1/history", (401, 403)),
-    ("refund", "GET", "/tasks/1/refund-status", (401, 403)),
-    ("profile", "GET", "/profile/me", (401, 403)),
-    ("message", "GET", "/messages/unread/count", (401, 403)),
-    ("payment_inline", "POST", "/stripe/webhook", (400, 422, 500)),
-    ("cs", "GET", "/customer-service/status", (200, 401, 403)),
-    ("translation", "GET", "/translate/metrics", (200, 401, 403)),
-    ("system", "GET", "/banners", (200,)),
-    ("system", "GET", "/faq", (200,)),
-    ("upload_inline", "POST", "/upload/image", (401, 403, 422)),
+_DUAL = ("/api", "/api/users")
+_API_ONLY = ("/api",)
+
+# (domain, method, path, expected_status_codes, prefixes_to_probe)
+# prefixes_to_probe must match the domain's _SPLIT_ROUTERS configuration.
+SMOKE_PROBES: list[tuple[str, str, str, tuple[int, ...], tuple[str, ...]]] = [
+    ("auth_inline",    "POST", "/csp-report",            (204, 400, 422), _DUAL),
+    ("task",           "GET",  "/tasks/1/history",       (401, 403),       _DUAL),
+    ("refund",         "GET",  "/tasks/1/refund-status", (401, 403),       _API_ONLY),
+    ("profile",        "GET",  "/profile/me",            (401, 403),       _DUAL),
+    ("message",        "GET",  "/messages/unread/count", (401, 403),       _DUAL),
+    ("payment_inline", "POST", "/stripe/webhook",        (400, 422, 500),  _API_ONLY),
+    ("cs",             "GET",  "/customer-service/status",(200, 401, 403), _DUAL),
+    ("translation",    "GET",  "/translate/metrics",     (200, 401, 403),  _API_ONLY),
+    ("system",         "GET",  "/banners",               (200,),           _DUAL),
+    ("system",         "GET",  "/faq",                   (200,),           _DUAL),
+    ("upload_inline",  "POST", "/upload/image",          (401, 403, 422),  _API_ONLY),
 ]
 
 
-@pytest.mark.parametrize("domain,method,path,expected", SMOKE_PROBES)
-@pytest.mark.parametrize("prefix", ["/api", "/api/users"])
-def test_route_reachable_at_both_prefixes(
+def _expand(probes):
+    for domain, method, path, expected, prefixes in probes:
+        for prefix in prefixes:
+            yield pytest.param(prefix, domain, method, path, expected,
+                               id=f"{prefix}-{domain}-{method}-{path}")
+
+
+@pytest.mark.parametrize("prefix,domain,method,path,expected", list(_expand(SMOKE_PROBES)))
+def test_route_reachable_at_expected_prefixes(
     client: TestClient,
     prefix: str,
     domain: str,
