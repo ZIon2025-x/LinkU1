@@ -48,6 +48,7 @@ from app.deps import get_db
 from app.routes import (
     auth_inline_routes,
     cs_routes,
+    forum_my_routes,
     message_routes,
     payment_inline_routes,
     profile_routes,
@@ -513,7 +514,9 @@ app.include_router(forum_router)
 # 2026-04-26 forum_routes.py split — sub-routers populated commit-by-commit.
 # When _FORUM_ROUTERS reaches 7 entries (final commit), the legacy
 # `forum_router` import + include_router two lines above are deleted.
-_FORUM_ROUTERS: list[tuple] = []
+_FORUM_ROUTERS: list[tuple] = [
+    (forum_my_routes.router, "论坛-我的"),
+]
 for r, tag in _FORUM_ROUTERS:
     app.include_router(r, prefix="/api/forum", tags=[tag])
 
