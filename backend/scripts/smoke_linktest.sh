@@ -28,6 +28,13 @@ PROBES=(
   "GET /banners 200 /api /api/users"
   "GET /faq 200 /api /api/users"
   "POST /upload/image 401|403|422 /api"
+  # Forum probes — pre-flight for 2026-04-26 forum_routes.py split.
+  # forum_router has prefix="/api/forum" and is single-mounted (no /api/users mirror).
+  "GET /forum/categories 200|401 /api"
+  "GET /forum/hot-posts 200|401 /api"
+  "GET /forum/my/posts 401 /api"
+  "GET /forum/admin/stats 401|403 /api"
+  "GET /forum/leaderboard/posts 200|401 /api"
 )
 
 fail=0

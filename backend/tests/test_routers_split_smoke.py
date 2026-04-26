@@ -28,7 +28,10 @@ from app.main import app
 
 @pytest.fixture(scope="module")
 def client():
-    return TestClient(app)
+    # raise_server_exceptions=False so async-pool "Event loop is closed" errors
+    # in the local no-DB environment surface as 500 status codes rather than
+    # propagating as exceptions that abort the test run.
+    return TestClient(app, raise_server_exceptions=False)
 
 
 _DUAL = ("/api", "/api/users")
@@ -48,6 +51,15 @@ SMOKE_PROBES: list[tuple[str, str, str, tuple[int, ...], tuple[str, ...]]] = [
     ("system",         "GET",  "/banners",               (200,),           _DUAL),
     ("system",         "GET",  "/faq",                   (200,),           _DUAL),
     ("upload_inline",  "POST", "/upload/image",          (401, 403, 422),  _API_ONLY),
+    # Forum probes — pre-flight for 2026-04-26 forum_routes.py split (Tasks 1-7).
+    # forum_router has prefix="/api/forum" and is single-mounted (no /api/users mirror).
+    ("forum_categories",   "GET",  "/forum/categories",      (200, 401),        _API_ONLY),
+    ("forum_posts",        "GET",  "/forum/posts/1",         (401, 404, 500),   _API_ONLY),
+    ("forum_replies",      "GET",  "/forum/posts/1/replies", (401, 404, 500),   _API_ONLY),
+    ("forum_interactions", "GET",  "/forum/likes",           (405, 401),        _API_ONLY),
+    ("forum_my",           "GET",  "/forum/my/posts",        (401,),            _API_ONLY),
+    ("forum_discovery",    "GET",  "/forum/hot-posts",       (200, 401, 500),   _API_ONLY),
+    ("forum_admin",        "GET",  "/forum/admin/stats",     (401, 403),        _API_ONLY),
 ]
 
 

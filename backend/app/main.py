@@ -510,6 +510,12 @@ app.include_router(multi_participant_router)
 # 论坛路由
 from app.forum_routes import router as forum_router
 app.include_router(forum_router)
+# 2026-04-26 forum_routes.py split — sub-routers populated commit-by-commit.
+# When _FORUM_ROUTERS reaches 7 entries (final commit), the legacy
+# `forum_router` import + include_router two lines above are deleted.
+_FORUM_ROUTERS: list[tuple] = []
+for r, tag in _FORUM_ROUTERS:
+    app.include_router(r, prefix="/api/forum", tags=[tag])
 
 # 热搜榜路由
 from app.trending_routes import router as trending_router
