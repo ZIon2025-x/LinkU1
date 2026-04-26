@@ -2040,7 +2040,7 @@ const Home: React.FC = () => {
                           color: '#1a202c',
                           marginBottom: '4px'
                         }}>
-                          {expert.completion_rate || 0}%
+                          {Math.round((expert.completion_rate || 0) * 100) / 100}%
                         </div>
                         <div style={{
                           fontSize: isMobile ? '10px' : '11px',

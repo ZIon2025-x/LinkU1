@@ -940,7 +940,7 @@ const TaskExperts: React.FC = () => {
                     color: 'white',
                     marginBottom: '4px'
                   }}>
-                    {expert.completion_rate}%
+                    {Math.round((expert.completion_rate || 0) * 100) / 100}%
                   </div>
                   <div style={{
                     fontSize: '11px',

@@ -219,7 +219,7 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
                       <span>✅ {expert.completed_tasks} {t('taskExperts.tasks') || '任务'}</span>
                     )}
                     {expert.completion_rate !== undefined && (
-                      <span>📊 {expert.completion_rate}% {t('taskExperts.completionRate') || '完成率'}</span>
+                      <span>📊 {Math.round(expert.completion_rate * 100) / 100}% {t('taskExperts.completionRate') || '完成率'}</span>
                     )}
                   </div>
                   {/* 城市和分类信息 */}
