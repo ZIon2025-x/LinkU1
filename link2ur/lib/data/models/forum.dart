@@ -544,7 +544,6 @@ class ForumReply extends Equatable {
     this.author,
     this.parentReplyId,
     this.parentReplyAuthor,
-    this.replyLevel = 0,
     this.likeCount = 0,
     this.isLiked = false,
     this.createdAt,
@@ -558,7 +557,6 @@ class ForumReply extends Equatable {
   final UserBrief? author;
   final int? parentReplyId;
   final UserBrief? parentReplyAuthor;
-  final int replyLevel;
   final int likeCount;
   final bool isLiked;
   final DateTime? createdAt;
@@ -579,7 +577,6 @@ class ForumReply extends Equatable {
       author: author,
       parentReplyId: parentReplyId,
       parentReplyAuthor: parentReplyAuthor,
-      replyLevel: replyLevel,
       likeCount: likeCount ?? this.likeCount,
       isLiked: isLiked ?? this.isLiked,
       createdAt: createdAt,
@@ -601,7 +598,6 @@ class ForumReply extends Equatable {
           ? UserBrief.fromJson(
               json['parent_reply_author'] as Map<String, dynamic>)
           : null,
-      replyLevel: json['reply_level'] as int? ?? 0,
       likeCount: json['like_count'] as int? ?? 0,
       isLiked: parseBool(json['is_liked']),
       createdAt: json['created_at'] != null
