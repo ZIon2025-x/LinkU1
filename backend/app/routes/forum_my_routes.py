@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.services.display_identity import batch_resolve_async
 
 # Helpers from the original forum_routes module (stays as helper hub)
 from app.forum_routes import (
@@ -92,7 +93,7 @@ async def get_my_category_favorites(
 async def get_my_posts(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    request: Request = None,
+    request: Request = None,  # FastAPI injects; Optional[Request] breaks Pydantic field detection
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取我的帖子（支持管理员和普通用户）"""
@@ -160,15 +161,12 @@ async def get_my_posts(
     _author_ids = list({p.author_id for p in posts if p.author_id})
     _badge_cache = await preload_badge_cache(db, _author_ids)
 
-    from app.services.display_identity import batch_resolve_async
     _identities = [_post_identity(p) for p in posts]
     _identity_map = await batch_resolve_async(db, _identities)
 
     post_items = []
     # 获取用户可见的板块ID列表（用于过滤）
     visible_category_ids = None
-    # 检查是否为管理员
-    is_admin_user = admin_user is not None
     if not is_admin_user:
         visible_category_ids = []
         # 添加所有普通板块
@@ -380,7 +378,6 @@ async def get_my_favorites(
     _fav_author_ids = list({f.post.author_id for f in favorites if f.post and f.post.author_id})
     _badge_cache = await preload_badge_cache(db, _fav_author_ids)
 
-    from app.services.display_identity import batch_resolve_async
     _fav_identities = [_post_identity(f.post) for f in favorites if f.post]
     _fav_identity_map = await batch_resolve_async(db, _fav_identities)
 
@@ -438,7 +435,7 @@ async def get_my_likes(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
-    request: Request = None,
+    request: Request = None,  # FastAPI injects; Optional[Request] breaks Pydantic field detection
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取我赞过的内容"""
