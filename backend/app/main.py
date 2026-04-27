@@ -49,6 +49,7 @@ from app.routes import (
     auth_inline_routes,
     cs_routes,
     forum_my_routes,
+    forum_replies_routes,
     message_routes,
     payment_inline_routes,
     profile_routes,
@@ -516,6 +517,7 @@ app.include_router(forum_router)
 # `forum_router` import + include_router two lines above are deleted.
 _FORUM_ROUTERS: list[tuple] = [
     (forum_my_routes.router, "论坛-我的"),
+    (forum_replies_routes.router, "论坛-回复"),
 ]
 for r, tag in _FORUM_ROUTERS:
     app.include_router(r, prefix="/api/forum", tags=[tag])
