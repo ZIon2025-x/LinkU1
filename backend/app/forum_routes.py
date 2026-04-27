@@ -3320,6 +3320,10 @@ async def create_post(
     filter_actions = [title_result.action, content_result.action]
     final_action = "review" if "review" in filter_actions else ("mask" if "mask" in filter_actions else "pass")
 
+    # 保存原文(用于 mask_record),mask 会改写 post.title/post.content
+    original_title = post.title
+    original_content = post.content
+
     if title_result.action == "mask":
         post.title = title_result.cleaned_text
     if content_result.action == "mask":
@@ -3431,7 +3435,7 @@ async def create_post(
     elif final_action == "mask":
         combined_matched = title_result.matched_words + content_result.matched_words
         await create_mask_record(db, "forum_post", db_post.id, filter_user_id,
-                                {"title": post.title, "content": post.content}, combined_matched)
+                                {"title": original_title, "content": original_content}, combined_matched)
         await db.flush()
 
     # 如果有图片，移动临时图片到永久路径
@@ -4775,218 +4779,6 @@ async def search_posts(
         "page": page,
         "page_size": page_size
     }
-
-
-# ==================== 举报 API ====================
-
-@router.post("/reports", response_model=schemas.ForumReportOut)
-async def create_report(
-    report: schemas.ForumReportCreate,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
-    request: Request = None,
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """创建举报"""
-    # 检查是否为管理员
-    is_admin = False
-    try:
-        await get_current_admin_async(request, db)
-        is_admin = True
-    except HTTPException:
-        pass
-    
-    # 验证目标存在并检查权限
-    if report.target_type == "post":
-        result = await db.execute(
-            select(models.ForumPost)
-            .options(selectinload(models.ForumPost.category))
-            .where(models.ForumPost.id == report.target_id)
-        )
-        target = result.scalar_one_or_none()
-        if not target:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="帖子不存在"
-            )
-        # 检查用户是否有权限访问该帖子所属的板块（学校板块需要权限）
-        if not is_admin:
-            await assert_forum_visible(current_user, target.category_id, db, raise_exception=True)
-    else:  # reply
-        result = await db.execute(
-            select(models.ForumReply)
-            .options(selectinload(models.ForumReply.post).selectinload(models.ForumPost.category))
-            .where(models.ForumReply.id == report.target_id)
-        )
-        target = result.scalar_one_or_none()
-        if not target:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="回复不存在"
-            )
-        # 检查用户是否有权限访问该回复所属帖子所属的板块（学校板块需要权限）
-        if not is_admin:
-            await assert_forum_visible(current_user, target.post.category_id, db, raise_exception=True)
-    
-    # 检查是否已举报（pending 状态）
-    existing_report = await db.execute(
-        select(models.ForumReport).where(
-            models.ForumReport.target_type == report.target_type,
-            models.ForumReport.target_id == report.target_id,
-            models.ForumReport.reporter_id == current_user.id,
-            models.ForumReport.status == "pending"
-        )
-    )
-    if existing_report.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="您已举报过该内容，请等待处理"
-        )
-    
-    # 创建举报
-    db_report = models.ForumReport(
-        target_type=report.target_type,
-        target_id=report.target_id,
-        reporter_id=current_user.id,
-        reason=report.reason,
-        description=report.description,
-        status="pending"
-    )
-    db.add(db_report)
-    await db.flush()
-    
-    # 触发风控检查
-    try:
-        await check_and_trigger_risk_control(
-            target_type=report.target_type,
-            target_id=report.target_id,
-            db=db
-        )
-    except Exception as e:
-        # 风控检查失败不影响举报创建，记录日志即可
-        logger.warning(f"风控检查失败: {e}", exc_info=True)
-    
-    await db.commit()
-    await db.refresh(db_report)
-    
-    return schemas.ForumReportOut(
-        id=db_report.id,
-        target_type=db_report.target_type,
-        target_id=db_report.target_id,
-        reason=db_report.reason,
-        description=db_report.description,
-        status=db_report.status,
-        created_at=db_report.created_at
-    )
-
-
-@router.get("/reports", response_model=schemas.ForumReportListResponse)
-async def get_reports(
-    status_filter: Optional[str] = Query(None, pattern="^(pending|processed|rejected)$"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """获取举报列表（管理员）"""
-    query = select(models.ForumReport)
-    
-    if status_filter:
-        query = query.where(models.ForumReport.status == status_filter)
-    
-    query = query.order_by(models.ForumReport.created_at.desc())
-    
-    # 获取总数
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
-    
-    # 分页
-    offset = (page - 1) * page_size
-    query = query.offset(offset).limit(page_size)
-    
-    result = await db.execute(query)
-    reports = result.scalars().all()
-    
-    report_list = [
-        schemas.ForumReportOut(
-            id=r.id,
-            target_type=r.target_type,
-            target_id=r.target_id,
-            reason=r.reason,
-            description=r.description,
-            status=r.status,
-            created_at=r.created_at
-        )
-        for r in reports
-    ]
-    
-    return {
-        "reports": report_list,
-        "total": total,
-        "page": page,
-        "page_size": page_size
-    }
-
-
-@router.put("/admin/reports/{report_id}/process", response_model=schemas.ForumReportOut)
-async def process_report(
-    report_id: int,
-    process: schemas.ForumReportProcess,
-    request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """处理举报（管理员）"""
-    result = await db.execute(
-        select(models.ForumReport).where(models.ForumReport.id == report_id)
-    )
-    report = result.scalar_one_or_none()
-    
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="举报不存在"
-        )
-    
-    if report.status != "pending":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="该举报已处理"
-        )
-    
-    # 更新举报状态
-    report.status = process.status
-    # processor_id 是外键到 users.id，但管理员ID是 admin_users.id，类型不匹配
-    # 因此设置为 NULL，管理员信息通过操作日志追踪
-    report.processor_id = None
-    report.processed_at = get_utc_time()
-    report.action = process.action
-    await db.flush()
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="process_report",
-        target_type="report",
-        target_id=report_id,
-        action=process.action or process.status,
-        reason=process.action,
-        request=request,
-        db=db
-    )
-    
-    await db.commit()
-    await db.refresh(report)
-    
-    return schemas.ForumReportOut(
-        id=report.id,
-        target_type=report.target_type,
-        target_id=report.target_id,
-        reason=report.reason,
-        description=report.description,
-        status=report.status,
-        created_at=report.created_at
-    )
 
 
 # ==================== 通知 API ====================

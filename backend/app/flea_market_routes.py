@@ -1002,6 +1002,10 @@ async def create_flea_market_item(
         filter_actions = [title_result.action, desc_result.action]
         final_action = "review" if "review" in filter_actions else ("mask" if "mask" in filter_actions else "pass")
 
+        # 保存原文(用于 mask_record),mask 会改写 item_data 字段
+        original_title = item_data.title
+        original_description = item_data.description
+
         if title_result.action == "mask":
             item_data.title = title_result.cleaned_text
         if desc_result.action == "mask":
@@ -1049,7 +1053,7 @@ async def create_flea_market_item(
             await db.refresh(new_item)
         elif final_action == "mask":
             combined_matched = title_result.matched_words + desc_result.matched_words
-            original_fields = {"title": item_data.title, "description": item_data.description}
+            original_fields = {"title": original_title, "description": original_description}
             await create_mask_record(db, "flea_market", new_item.id, current_user.id,
                                     original_fields, combined_matched)
             await db.commit()

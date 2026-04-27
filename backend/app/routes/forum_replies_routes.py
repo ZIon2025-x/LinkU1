@@ -282,6 +282,9 @@ async def create_reply(
     reply_filter_user_id = current_user.id if current_user else admin_user.id
     content_result = await check_content(db, reply.content, "forum_reply", reply_filter_user_id)
 
+    # 保存原文(用于 mask_record),mask 会改写 reply.content
+    original_reply_content = reply.content
+
     if content_result.action == "mask":
         reply.content = content_result.cleaned_text
 
@@ -339,7 +342,7 @@ async def create_reply(
         await db.flush()
     elif content_result.action == "mask":
         await create_mask_record(db, "forum_reply", db_reply.id, reply_filter_user_id,
-                                {"content": reply.content}, content_result.matched_words)
+                                {"content": original_reply_content}, content_result.matched_words)
         await db.flush()
 
     # 更新帖子统计（仅当回复可见时）

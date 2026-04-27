@@ -739,6 +739,10 @@ async def create_task_async(
         filter_actions = [title_result.action, desc_result.action]
         final_action = "review" if "review" in filter_actions else ("mask" if "mask" in filter_actions else "pass")
 
+        # 保存原文(用于 mask_record),mask 会改写 task.title/task.description
+        original_title = task.title
+        original_description = task.description
+
         if title_result.action == "mask":
             task.title = title_result.cleaned_text
         if desc_result.action == "mask":
@@ -767,7 +771,7 @@ async def create_task_async(
         elif final_action == "mask":
             combined_matched = title_result.matched_words + desc_result.matched_words
             await create_mask_record(db, "task", db_task.id, user_id,
-                                    {"title": task.title, "description": task.description}, combined_matched)
+                                    {"title": original_title, "description": original_description}, combined_matched)
             await db.commit()
             await db.refresh(db_task)
 

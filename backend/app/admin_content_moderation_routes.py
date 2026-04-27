@@ -480,7 +480,7 @@ async def review_content(
             if content:
                 content.is_visible = True
 
-    # 恢复屏蔽 → 用原文覆盖当前内容（含翻译字段）
+    # 恢复屏蔽 → 用原文覆盖当前内容,并重新生成翻译
     elif body.action == "restored":
         model_cls = model_map.get(review.content_type)
         if model_cls:
@@ -489,7 +489,7 @@ async def review_content(
             )
             content = content_result.scalar_one_or_none()
             if content:
-                # original_text is JSON dict: {"title": "...", "content": "...", "title_en": "...", ...}
+                # original_text is JSON dict: {"title": "...", "content": "...", ...}
                 try:
                     fields = json.loads(review.original_text)
                 except (json.JSONDecodeError, TypeError):
@@ -505,6 +505,35 @@ async def review_content(
                         content.content = review.original_text
                     elif hasattr(content, "description"):
                         content.description = review.original_text
+
+                # 翻译字段处理:打码时翻译跟着被污染,恢复原文后需要清空/重译
+                #   - forum_post: 发帖时后台异步翻译 → 同步重译并写回
+                #   - task: 懒翻译(读取时按需翻译) → 清空,下次读自动重译
+                #   - flea_market / forum_reply: 无翻译字段,无需处理
+                if review.content_type == "forum_post":
+                    from app.utils.bilingual_helper import auto_fill_bilingual_fields
+                    try:
+                        _, t_en, t_zh, c_en, c_zh = await auto_fill_bilingual_fields(
+                            name=content.title,
+                            description=content.content,
+                        )
+                        content.title_en = t_en
+                        content.title_zh = t_zh
+                        content.content_en = c_en
+                        content.content_zh = c_zh
+                    except Exception as e:
+                        logger.warning(
+                            f"恢复 forum_post {review.content_id} 时重译失败,清空翻译字段交给读取时重试: {e}"
+                        )
+                        content.title_en = None
+                        content.title_zh = None
+                        content.content_en = None
+                        content.content_zh = None
+                elif review.content_type == "task":
+                    content.title_en = None
+                    content.title_zh = None
+                    content.description_en = None
+                    content.description_zh = None
 
     await db.commit()
 
