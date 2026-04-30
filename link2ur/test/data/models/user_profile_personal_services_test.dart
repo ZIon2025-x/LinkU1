@@ -3,8 +3,8 @@ import 'package:link2ur/data/models/user.dart';
 
 void main() {
   group('UserProfileDetail.personalServices', () {
-    Map<String, dynamic> baseJson() => {
-      'user': {
+    Map<String, dynamic> baseJson() => <String, dynamic>{
+      'user': <String, dynamic>{
         'id': '00000099',
         'name': '周哲',
         'avatar': null,
@@ -24,17 +24,17 @@ void main() {
         'is_following': false,
         'displayed_badge': null,
       },
-      'stats': {},
-      'recent_tasks': [],
-      'reviews': [],
-      'recent_forum_posts': [],
-      'sold_flea_items': [],
+      'stats': <String, dynamic>{},
+      'recent_tasks': <dynamic>[],
+      'reviews': <dynamic>[],
+      'recent_forum_posts': <dynamic>[],
+      'sold_flea_items': <dynamic>[],
     };
 
     test('parses non-empty personal_services array', () {
       final json = baseJson();
-      json['personal_services'] = [
-        {
+      json['personal_services'] = <Map<String, dynamic>>[
+        <String, dynamic>{
           'id': 1,
           'service_name': '家教 · 小学数学',
           'service_name_en': null,
@@ -46,7 +46,7 @@ void main() {
           'pricing_type': 'fixed',
           'location_type': 'both',
           'location': 'London',
-          'images': [],
+          'images': <String>[],
           'status': 'active',
         },
       ];

@@ -287,6 +287,7 @@ class UserProfileDetail {
     this.reviews = const [],
     this.recentForumPosts = const [],
     this.soldFleaItems = const [],
+    this.personalServices = const [],
     this.isFollowing = false,
     this.followersCount = 0,
     this.followingCount = 0,
@@ -298,6 +299,7 @@ class UserProfileDetail {
   final List<UserProfileReview> reviews;
   final List<UserProfileForumPost> recentForumPosts;
   final List<UserProfileFleaItem> soldFleaItems;
+  final List<UserProfilePersonalService> personalServices;
   final bool isFollowing;
   final int followersCount;
   final int followingCount;
@@ -317,6 +319,8 @@ class UserProfileDetail {
         json['recent_forum_posts'] as List<dynamic>? ?? [];
     final fleaItemsRaw =
         json['sold_flea_items'] as List<dynamic>? ?? [];
+    final personalServicesRaw =
+        json['personal_services'] as List<dynamic>? ?? [];
 
     return UserProfileDetail(
       user: User.fromJson(userJson),
@@ -343,6 +347,11 @@ class UserProfileDetail {
           .toList(),
       soldFleaItems: fleaItemsRaw
           .map((e) => UserProfileFleaItem.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
+      personalServices: personalServicesRaw
+          .map((e) => UserProfilePersonalService.fromJson(
                 Map<String, dynamic>.from(e as Map),
               ))
           .toList(),
@@ -593,5 +602,77 @@ class UserBrief {
       isAdmin: user.isAdmin,
       displayedBadge: user.displayedBadge,
     );
+  }
+}
+
+/// 个人服务（task_expert_services 表 service_type='personal' 行的公开视图）。
+/// 仅用于他人主页展示，不含 owner 私有字段。
+class UserProfilePersonalService {
+  const UserProfilePersonalService({
+    required this.id,
+    required this.serviceName,
+    this.serviceNameEn,
+    this.serviceNameZh,
+    this.description,
+    this.descriptionEn,
+    this.descriptionZh,
+    this.category,
+    required this.basePrice,
+    this.currency = 'GBP',
+    this.pricingType = 'fixed',
+    this.locationType = 'online',
+    this.location,
+    this.images = const [],
+    this.viewCount = 0,
+  });
+
+  final int id;
+  final String serviceName;
+  final String? serviceNameEn;
+  final String? serviceNameZh;
+  final String? description;
+  final String? descriptionEn;
+  final String? descriptionZh;
+  final String? category;
+  final double basePrice;
+  final String currency;
+  final String pricingType; // 'fixed' | 'negotiable'
+  final String locationType; // 'online' | 'in_person' | 'both'
+  final String? location;
+  final List<String> images;
+  final int viewCount;
+
+  factory UserProfilePersonalService.fromJson(Map<String, dynamic> json) {
+    return UserProfilePersonalService(
+      id: json['id'] as int,
+      serviceName: json['service_name'] as String? ?? '',
+      serviceNameEn: json['service_name_en'] as String?,
+      serviceNameZh: json['service_name_zh'] as String?,
+      description: json['description'] as String?,
+      descriptionEn: json['description_en'] as String?,
+      descriptionZh: json['description_zh'] as String?,
+      category: json['category'] as String?,
+      basePrice: (json['base_price'] as num?)?.toDouble() ?? 0.0,
+      currency: json['currency'] as String? ?? 'GBP',
+      pricingType: json['pricing_type'] as String? ?? 'fixed',
+      locationType: json['location_type'] as String? ?? 'online',
+      location: json['location'] as String?,
+      images: ((json['images'] as List<dynamic>?) ?? [])
+          .whereType<String>()
+          .toList(),
+      viewCount: json['view_count'] as int? ?? 0,
+    );
+  }
+
+  /// 按当前 locale 返回 service_name 的本地化版本。
+  String displayName(Locale locale) {
+    final lang = locale.languageCode;
+    if (lang == 'en' && (serviceNameEn?.isNotEmpty ?? false)) {
+      return serviceNameEn!;
+    }
+    if (lang == 'zh' && (serviceNameZh?.isNotEmpty ?? false)) {
+      return serviceNameZh!;
+    }
+    return serviceName;
   }
 }

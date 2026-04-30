@@ -22,7 +22,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/skill_radar_chart.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost, UserProfileFleaItem;
+import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost, UserProfileFleaItem, UserProfilePersonalService;
 import '../../../data/models/task.dart' show CreateTaskRequest;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
