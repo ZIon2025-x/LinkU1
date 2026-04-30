@@ -4164,6 +4164,10 @@
   "profileRecentPosts": "近期帖子",
   "profileNoRecentPosts": "暫無帖子",
   "profileSoldItems": "已售物品",
+  "profileMetaJoinedFor": "註冊 {months, plural, other{{months} 個月}}",
+  "@profileMetaJoinedFor": {
+    "placeholders": { "months": { "type": "int" } }
+  },
   "profileNoSoldItems": "暫無已售物品",
   "profilePersonalServices": "個人服務",
   "profilePersonalServicesCount": "· {count} 項",

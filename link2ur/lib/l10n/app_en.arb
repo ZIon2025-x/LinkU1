@@ -4323,6 +4323,10 @@
   "profileRecentPosts": "Recent Posts",
   "profileNoRecentPosts": "No posts yet",
   "profileSoldItems": "Sold Items",
+  "profileMetaJoinedFor": "Joined {months, plural, =1{1 month ago} other{{months} months ago}}",
+  "@profileMetaJoinedFor": {
+    "placeholders": { "months": { "type": "int" } }
+  },
   "profileNoSoldItems": "No sold items yet",
   "profilePersonalServices": "Personal Services",
   "profilePersonalServicesCount": "{count, plural, =1{·1 item} other{·{count} items}}",

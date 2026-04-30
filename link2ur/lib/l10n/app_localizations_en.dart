@@ -9364,6 +9364,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSoldItems => 'Sold Items';
 
   @override
+  String profileMetaJoinedFor(int months) {
+    String _temp0 = intl.Intl.pluralLogic(
+      months,
+      locale: localeName,
+      other: '$months months ago',
+      one: '1 month ago',
+    );
+    return 'Joined $_temp0';
+  }
+
+  @override
   String get profileNoSoldItems => 'No sold items yet';
 
   @override

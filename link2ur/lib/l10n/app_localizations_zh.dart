@@ -8985,6 +8985,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileSoldItems => '已售物品';
 
   @override
+  String profileMetaJoinedFor(int months) {
+    String _temp0 = intl.Intl.pluralLogic(
+      months,
+      locale: localeName,
+      other: '$months 个月',
+    );
+    return '注册 $_temp0';
+  }
+
+  @override
   String get profileNoSoldItems => '暂无已售物品';
 
   @override
@@ -22211,6 +22221,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileSoldItems => '已售物品';
+
+  @override
+  String profileMetaJoinedFor(int months) {
+    String _temp0 = intl.Intl.pluralLogic(
+      months,
+      locale: localeName,
+      other: '$months 個月',
+    );
+    return '註冊 $_temp0';
+  }
 
   @override
   String get profileNoSoldItems => '暫無已售物品';

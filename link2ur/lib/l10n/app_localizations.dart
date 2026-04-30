@@ -17177,6 +17177,12 @@ abstract class AppLocalizations {
   /// **'Sold Items'**
   String get profileSoldItems;
 
+  /// No description provided for @profileMetaJoinedFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined {months, plural, =1{1 month ago} other{{months} months ago}}'**
+  String profileMetaJoinedFor(int months);
+
   /// No description provided for @profileNoSoldItems.
   ///
   /// In en, this message translates to:
