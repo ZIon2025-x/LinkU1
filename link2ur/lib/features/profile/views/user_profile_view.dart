@@ -5,7 +5,6 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
-import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -14,15 +13,10 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../core/widgets/stat_item.dart';
-import '../../../core/widgets/async_image_view.dart';
-import '../../../core/widgets/animated_circular_progress.dart';
 import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/utils/date_formatter.dart';
-import '../../../core/widgets/skill_radar_chart.dart';
-import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost, UserProfileFleaItem;
+import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost;
 import '../../../data/models/task.dart' show CreateTaskRequest;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -32,6 +26,7 @@ import '../../../core/router/app_router.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
 import 'widgets/personal_services_section.dart';
+import 'widgets/user_profile_hero_card.dart';
 
 /// 公开用户资料页
 /// 参考iOS UserProfileView.swift
@@ -108,12 +103,34 @@ class UserProfileView extends StatelessWidget {
                                     physics: const AlwaysScrollableScrollPhysics(),
                                     child: Column(
                                       children: [
-                                        // 用户信息卡片（头像、名字、徽章、简介、城市 + 三项统计）
-                                        _buildUserInfoCard(context, state.publicUser!, state),
-                                        const SizedBox(height: AppSpacing.xl),
-                                        // 技能雷达图
-                                        _buildSkillRadar(context, state.publicUser!),
-                                        const SizedBox(height: AppSpacing.section),
+                                        BlocBuilder<AuthBloc, AuthState>(
+                                          buildWhen: (prev, curr) =>
+                                              prev.user?.id != curr.user?.id ||
+                                              prev.status != curr.status,
+                                          builder: (context, authState) {
+                                            final currentUserId = authState.status == AuthStatus.authenticated
+                                                ? authState.user?.id
+                                                : null;
+                                            final isSelf = currentUserId == state.publicUser!.id;
+                                            return UserProfileHeroCard(
+                                              user: state.publicUser!,
+                                              followersCount: state.followersCount,
+                                              followingCount: state.followingCount,
+                                              totalReviews: state.publicProfileDetail?.stats.totalReviews ?? 0,
+                                              isSelf: isSelf,
+                                              isFollowing: state.isFollowing,
+                                              isFollowLoading: state.isFollowLoading,
+                                              onFollow: () {
+                                                if (state.isFollowing) {
+                                                  context.read<ProfileBloc>().add(ProfileUnfollowUser(state.publicUser!.id));
+                                                } else {
+                                                  context.read<ProfileBloc>().add(ProfileFollowUser(state.publicUser!.id));
+                                                }
+                                              },
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(height: AppSpacing.lg),
                                         // 合作记录
                                         BlocBuilder<ProfileBloc, ProfileState>(
                                           buildWhen: (prev, curr) =>
@@ -138,9 +155,6 @@ class UserProfileView extends StatelessWidget {
                                         // 近期论坛帖子
                                         if (state.publicProfileDetail?.recentForumPosts.isNotEmpty == true)
                                           _buildRecentForumPostsSection(context, state.publicProfileDetail!.recentForumPosts),
-                                        // 已售闲置物品
-                                        if (state.publicProfileDetail?.soldFleaItems.isNotEmpty == true)
-                                          _buildSoldFleaItemsSection(context, state.publicProfileDetail!.soldFleaItems),
                                         const SizedBox(height: AppSpacing.xxl),
                                       ],
                                     ),
@@ -154,336 +168,6 @@ class UserProfileView extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
-  }
-
-  Widget _buildUserInfoCard(BuildContext context, User user, ProfileState state) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.large),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // 头像 + 会员/超级会员角标（右下角皇冠/徽章）
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.bottomRight,
-            children: [
-              AvatarView(
-                imageUrl: user.avatar,
-                name: user.displayNameWith(context.l10n),
-                size: 88,
-              ),
-              Positioned(
-                right: -2,
-                bottom: -2,
-                child: MemberBadgeAvatarOverlay(
-                  userLevel: user.userLevel,
-                  size: 32,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // 名称 + 徽章（达人蓝标、学生、会员、超级会员）
-          Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              Text(
-                user.displayNameWith(context.l10n),
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              if (user.isExpert) ...[
-                const Icon(Icons.verified, color: AppColors.primary, size: 20),
-              ],
-              if (user.isStudentVerified) ...[
-                const Icon(Icons.school, color: Colors.blue, size: 20),
-              ],
-              if (user.userLevel == 'vip') ...[
-                IdentityBadge(
-                  text: context.l10n.badgeVip,
-                  icon: Icons.workspace_premium,
-                  gradientColors: AppColors.gradientGold,
-                  compact: true,
-                ),
-              ],
-              if (user.userLevel == 'super') ...[
-                IdentityBadge(
-                  text: context.l10n.badgeSuper,
-                  icon: Icons.local_fire_department,
-                  gradientColors: AppColors.gradientPinkPurple,
-                  compact: true,
-                ),
-              ],
-            ],
-          ),
-          // 勋章标签
-          if (user.displayedBadge != null) ...[
-            const SizedBox(height: 6),
-            DisplayedBadgeLabel(badge: user.displayedBadge!, compact: true),
-          ],
-          const SizedBox(height: AppSpacing.md),
-
-          // 关注按钮 + 粉丝/关注数
-          _buildFollowSection(context, user, state),
-          const SizedBox(height: AppSpacing.sm),
-
-          // 简介
-          if (user.bio != null && user.bio!.isNotEmpty) ...[
-            Text(
-              user.bio!,
-              style: const TextStyle(
-                  fontSize: 14, color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
-
-          // 居住城市
-          if (user.residenceCity != null &&
-              user.residenceCity!.isNotEmpty) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.location_on,
-                    size: 14, color: AppColors.textTertiary),
-                const SizedBox(width: 4),
-                Text(
-                  user.residenceCity!,
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textTertiary),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          // 三项统计数据（完成数、总任务、评分）
-          _buildStatsRow(context, user),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsRow(BuildContext context, User user) {
-    final l10n = context.l10n;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
-      child: Row(
-        children: [
-          // 任务完成率 — 环形进度条
-          Expanded(
-            child: AnimatedCircularProgress(
-              progress: user.completionRate,
-              size: 56,
-              strokeWidth: 5,
-              gradientColors: const [AppColors.primary, AppColors.primaryLight],
-              label: l10n.profileCompletedTasks,
-              centerWidget: Text(
-                '${user.completedTaskCount}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          // 总任务数
-          Expanded(
-            child: StatItem(
-              label: l10n.profileTaskCount,
-              value: '${user.taskCount}',
-              icon: Icons.assignment,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          // 评分 — 星星动画
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedStarRating(
-                  rating: user.avgRating ?? 0,
-                  size: 14,
-                  spacing: 2,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.ratingDisplay,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.gold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.profileRating,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFollowSection(BuildContext context, User user, ProfileState state) {
-    final l10n = context.l10n;
-
-    // 不显示关注按钮：自己 或 未登录
-    final authState = context.read<AuthBloc>().state;
-    final isAuthenticated = authState.status == AuthStatus.authenticated;
-    final currentUserId = isAuthenticated ? authState.user?.id : null;
-    final isSelf = currentUserId == user.id;
-
-    return Column(
-      children: [
-        // 粉丝 / 关注数
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '${state.followersCount}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              l10n.profileFollowers,
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: AppSpacing.lg),
-            Text(
-              '${state.followingCount}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              l10n.profileFollowing,
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-        if (isAuthenticated && !isSelf) ...[
-          const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            width: 140,
-            height: 36,
-            child: state.isFollowing
-                ? OutlinedButton(
-                    onPressed: state.isFollowLoading
-                        ? null
-                        : () => requireAuth(context, () => context.read<ProfileBloc>().add(ProfileUnfollowUser(user.id))),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.textTertiary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      padding: EdgeInsets.zero,
-                    ),
-                    child: state.isFollowLoading
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(
-                            l10n.profileFollowingAction,
-                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                          ),
-                  )
-                : ElevatedButton.icon(
-                    onPressed: state.isFollowLoading
-                        ? null
-                        : () => requireAuth(context, () => context.read<ProfileBloc>().add(ProfileFollowUser(user.id))),
-                    icon: state.isFollowLoading
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.add, size: 18),
-                    label: Text(l10n.profileFollow, style: const TextStyle(fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  /// 技能雷达图 — 展示用户多维能力
-  Widget _buildSkillRadar(BuildContext context, User user) {
-    final l10n = context.l10n;
-    // 根据用户数据构建雷达图维度
-    final rating = (user.avgRating ?? 0) / 5.0; // 归一化到 0-1
-    final completionRate = user.completionRate;
-    final taskVolume =
-        (user.taskCount / 50).clamp(0.0, 1.0); // 50个任务为满
-    final experience = user.completedTaskCount > 0
-        ? (user.completedTaskCount / 30).clamp(0.0, 1.0)
-        : 0.0;
-    // 如果数据太少，不显示雷达图
-    if (user.taskCount == 0 && (user.avgRating ?? 0) == 0) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.large),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(l10n.profileRating,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: AppSpacing.md),
-          Center(
-            child: SkillRadarChart(
-              data: {
-                '⭐': rating,
-                '✅': completionRate,
-                '📦': taskVolume,
-                '🏆': experience,
-              },
-              size: 160,
-              color: AppColors.primary,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -989,113 +673,6 @@ class UserProfileView extends StatelessWidget {
                   onTap: () => context.goToForumPostDetail(p.id),
                 ),
               )),
-        ],
-      ),
-    );
-  }
-
-  /// 已售闲置物品
-  Widget _buildSoldFleaItemsSection(
-    BuildContext context,
-    List<UserProfileFleaItem> items,
-  ) {
-    final l10n = context.l10n;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.storefront, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              Text(l10n.profileSoldItems,
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            height: 140,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return Semantics(
-                  button: true,
-                  label: 'View details',
-                  excludeSemantics: true,
-                  child: GestureDetector(
-                    onTap: () => context.goToFleaMarketDetail('${item.id}'),
-                    child: Container(
-                      width: 120,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(AppRadius.medium),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Thumbnail
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(AppRadius.medium),
-                          ),
-                          child: item.images.isNotEmpty
-                              ? AsyncImageView(
-                                  imageUrl: Helpers.getThumbnailUrl(item.images.first),
-                                  fallbackUrl: Helpers.getImageUrl(item.images.first),
-                                  width: 120,
-                                  height: 80,
-                                )
-                              : Container(
-                                  width: 120,
-                                  height: 80,
-                                  color: Colors.grey.shade200,
-                                  child: const Icon(Icons.image, color: AppColors.textTertiary),
-                                ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                Helpers.formatPrice(item.price, currency: item.currency),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ),
-                );
-              },
-            ),
-          ),
         ],
       ),
     );
