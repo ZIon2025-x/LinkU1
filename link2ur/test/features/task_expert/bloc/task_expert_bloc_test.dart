@@ -229,8 +229,11 @@ void main() {
       blocTest<TaskExpertBloc, TaskExpertState>(
         'loads expert detail with services',
         build: () {
-          when(() => mockExpertRepo.getExpertById(any()))
-              .thenAnswer((_) async => testExpert);
+          // Production passes forceRefresh: true; matcher needs to allow named args.
+          when(() => mockExpertRepo.getExpertById(
+                any(),
+                forceRefresh: any(named: 'forceRefresh'),
+              )).thenAnswer((_) async => testExpert);
           when(() => mockExpertRepo.getExpertServices(any()))
               .thenAnswer((_) async => [testService]);
           return bloc;

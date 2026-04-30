@@ -15,6 +15,11 @@ void main() {
     mockAuthRepository = MockAuthRepository();
     authBloc = AuthBloc(authRepository: mockAuthRepository);
     registerFallbackValues();
+    // Stub the background profile refresh dispatched in _onCheckRequested.
+    // Returning null prevents AuthUserUpdated from being added, which would
+    // otherwise touch StorageService.instance (uninitialized in unit tests).
+    when(() => mockAuthRepository.fetchUserProfile())
+        .thenAnswer((_) async => null);
   });
 
   tearDown(() {

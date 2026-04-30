@@ -257,17 +257,17 @@ void main() {
       blocTest<FleaMarketBloc, FleaMarketState>(
         'loads item detail with favorite status',
         build: () {
+          // Production reads item.isFavorited directly from getItemById response
+          // (single state emission), no longer fetches favorites list separately.
+          const favoritedItem = FleaMarketItem(
+            id: '1',
+            title: 'Test Item',
+            price: 25.0,
+            sellerId: 'seller1',
+            isFavorited: true,
+          );
           when(() => mockRepo.getItemById(any()))
-              .thenAnswer((_) async => testItem);
-          when(() => mockRepo.getFavoriteItems(
-                page: any(named: 'page'),
-                pageSize: any(named: 'pageSize'),
-              )).thenAnswer((_) async => const FleaMarketListResponse(
-                items: [testItem],
-                total: 1,
-                page: 1,
-                pageSize: 100,
-              ));
+              .thenAnswer((_) async => favoritedItem);
           return bloc;
         },
         act: (bloc) => bloc.add(
@@ -279,11 +279,7 @@ void main() {
           isA<FleaMarketState>()
               .having((s) => s.detailStatus, 'detailStatus',
                   FleaMarketStatus.loaded)
-              .having(
-                  (s) => s.selectedItem, 'selectedItem', testItem),
-          isA<FleaMarketState>()
-              .having(
-                  (s) => s.isFavorited, 'isFavorited', isTrue),
+              .having((s) => s.isFavorited, 'isFavorited', isTrue),
         ],
       );
     });
@@ -293,7 +289,7 @@ void main() {
         'toggles favorite optimistically',
         build: () {
           when(() => mockRepo.toggleFavorite(any()))
-              .thenAnswer((_) async => true);
+              .thenAnswer((_) async => (isFavorited: true, favoriteCount: 1));
           return bloc;
         },
         seed: () => const FleaMarketState(
