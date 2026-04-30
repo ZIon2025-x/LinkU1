@@ -1546,7 +1546,7 @@ class AuditLog(Base):
 # ==================== 任务达人功能模型 ====================
 # Phase B1 收口第四轮 (2026-04-09): TaskExpertApplication 模型已删除
 #   - 随 task_expert_routes.py 一起废弃 (所有申请走新 models_expert.ExpertApplication)
-#   - 表 `task_expert_applications` 保留 (历史数据,不接收新写入),后续 migration 可 drop
+#   - 表 `task_expert_applications` 已通过 migration 220 (2026-04-30) drop
 #
 # TaskExpert 模型保留 (仍被 admin_official / discovery / multi_participant / routers /
 #   ai_tools / cleanup / celery / crud/user 等 11 个文件使用于官方账户/AI 搜索等场景)
@@ -1593,7 +1593,7 @@ class TaskExpert(Base):
 # Phase B1 收口第四轮 (2026-04-09): TaskExpertProfileUpdateRequest 模型已删除
 #   - 表从未挂到任何 handler (只有 models.py 声明 + schemas.py 定义)
 #   - 新团队信息修改走 models_expert.ExpertProfileUpdateRequest (完全不同的表)
-#   - 表 `task_expert_profile_update_requests` 保留 (历史数据),后续 migration 可 drop
+#   - 表 `task_expert_profile_update_requests` 已通过 migration 220 (2026-04-30) drop
 
 
 class TaskExpertService(Base):
