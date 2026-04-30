@@ -1,4 +1,5 @@
 from math import radians, cos, sqrt, sin, atan2
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, or_, select, case, func
@@ -7,11 +8,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models
 from app.deps import get_async_db_dependency
 from app.models_expert import Expert
+from app.forum_routes import get_current_user_optional
+from app.utils.feed_scoring import (
+    compute_score_with_prefs,
+    load_user_personalization_context,
+)
 
 service_browse_router = APIRouter(
     prefix="/api/services",
     tags=["service-browse"],
 )
+
+# recommended 排序时,在 Python 层个性化打分前先按时间倒序拉取的最大候选数
+# 超出此值的服务会被截断（避免无界扫描）。当前规模下 500 足够。
+_RECOMMEND_CANDIDATE_CAP = 500
 
 
 @service_browse_router.get("/browse")
@@ -25,6 +35,7 @@ async def browse_services(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
     S = models.TaskExpertService  # alias for readability
 
@@ -86,24 +97,33 @@ async def browse_services(
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    # Sort / Order
-    if sort == "recommended":
+    # 已登录 + recommended → 走 Python 端个性化打分（共享 feed_scoring）
+    # 匿名或其他排序模式 → 沿用 SQL 层排序+分页（高效，无个性化）
+    use_python_recommend = sort == "recommended" and current_user is not None
+
+    if use_python_recommend:
+        # 用 created_at DESC + 达人优先做候选筛选，限制总量后在 Python 层重排
         query = query.order_by(
             case((S.service_type == "expert", 0), else_=1),
             S.created_at.desc(),
-        )
-    elif sort == "newest":
-        query = query.order_by(S.created_at.desc())
-    elif sort == "price_asc":
-        query = query.order_by(S.base_price.asc())
-    elif sort == "price_desc":
-        query = query.order_by(S.base_price.desc())
-    elif sort == "nearby":
-        query = query.order_by(distance_sq.asc())
+        ).limit(_RECOMMEND_CANDIDATE_CAP)
+    else:
+        if sort == "recommended":
+            query = query.order_by(
+                case((S.service_type == "expert", 0), else_=1),
+                S.created_at.desc(),
+            )
+        elif sort == "newest":
+            query = query.order_by(S.created_at.desc())
+        elif sort == "price_asc":
+            query = query.order_by(S.base_price.asc())
+        elif sort == "price_desc":
+            query = query.order_by(S.base_price.desc())
+        elif sort == "nearby":
+            query = query.order_by(distance_sq.asc())
 
-    # Pagination
-    offset = (page - 1) * page_size
-    query = query.offset(offset).limit(page_size)
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size)
 
     result = await db.execute(query)
     services = result.scalars().all()
@@ -212,5 +232,43 @@ async def browse_services(
             else:
                 item["within_service_area"] = dist_km <= eff_radius
         items.append(item)
+
+    # 已登录 + recommended: Python 端个性化打分排序 + 分页
+    if use_python_recommend and items:
+        ctx = await load_user_personalization_context(db, current_user)
+        prefs = set(ctx["user_prefs"])
+        cv = ctx["city_variants"]
+        interests = ctx["user_interest_types"]
+
+        # services 与 items 长度/顺序一致，zip 取 SQLA 对象的 category 字段
+        for it, s in zip(items, services):
+            score_view = {
+                "feed_type": "service",
+                "title": it.get("service_name") or "",
+                "description": it.get("description") or "",
+                "rating": it.get("owner_rating"),
+                "view_count": 0,
+                "created_at": it.get("created_at"),
+                "extra_data": {
+                    "category": s.category,
+                    "location": it.get("location"),
+                },
+            }
+            it["_score"] = compute_score_with_prefs(score_view, prefs, cv, interests)
+            # 命中"同城"时回传 reason_code，前端可显示同城标签
+            rc = score_view["extra_data"].get("reason_code")
+            if rc:
+                it["reason_code"] = rc
+
+        items.sort(key=lambda it: it.get("_score", 0), reverse=True)
+        for it in items:
+            it.pop("_score", None)
+
+        # 候选被截断时，total 也要 cap 住，避免客户端按 total/page_size 翻到空页
+        if total > _RECOMMEND_CANDIDATE_CAP:
+            total = _RECOMMEND_CANDIDATE_CAP
+
+        offset = (page - 1) * page_size
+        items = items[offset:offset + page_size]
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}

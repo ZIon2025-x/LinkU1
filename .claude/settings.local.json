@@ -61,7 +61,9 @@
       "Bash(while read:*)",
       "Bash(do echo:*)",
       "Read(//f/python_work/LinkU/**)",
-      "Bash(ls -la backend/migrations/15*.sql backend/migrations/16*.sql backend/migrations/17*.sql)"
+      "Bash(ls -la backend/migrations/15*.sql backend/migrations/16*.sql backend/migrations/17*.sql)",
+      "Bash(wc -l frontend/src/api*.ts)",
+      "Bash(wc -l admin/src/api*.ts)"
     ]
   }
 }
