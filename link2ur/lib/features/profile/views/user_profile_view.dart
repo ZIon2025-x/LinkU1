@@ -22,7 +22,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/skill_radar_chart.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost, UserProfileFleaItem, UserProfilePersonalService;
+import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost, UserProfileFleaItem;
 import '../../../data/models/task.dart' show CreateTaskRequest;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -31,6 +31,7 @@ import '../../../data/repositories/follow_repository.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
+import 'widgets/personal_services_section.dart';
 
 /// 公开用户资料页
 /// 参考iOS UserProfileView.swift
@@ -124,6 +125,10 @@ class UserProfileView extends StatelessWidget {
                                             }
                                             return _buildSharedTasksSection(context, state.sharedTasks);
                                           },
+                                        ),
+                                        // 个人服务（widget 内部判空，无服务时折叠）
+                                        PersonalServicesSection(
+                                          services: state.publicProfileDetail?.personalServices ?? const [],
                                         ),
                                         // 收到的评价
                                         if (state.publicProfileDetail?.reviews.isNotEmpty == true)
