@@ -53,18 +53,12 @@ async def get_replies(
     except HTTPException:
         pass
 
-    # 检查是否为管理员
-    is_admin = False
-    try:
-        await get_current_admin_async(request, db)
-        is_admin = True
-    except HTTPException:
-        pass
-
     # 尝试获取管理员会话
     current_admin = None
+    is_admin = False
     try:
         current_admin = await get_current_admin_async(request, db)
+        is_admin = True
     except HTTPException:
         pass
 
@@ -665,7 +659,6 @@ async def restore_reply(
         )
 
     # 恢复回复
-    old_is_visible = reply.is_visible
     reply.is_deleted = False
     reply.updated_at = get_utc_time()
     await db.flush()

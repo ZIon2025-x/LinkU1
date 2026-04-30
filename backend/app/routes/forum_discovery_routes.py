@@ -219,12 +219,8 @@ async def get_notifications(
 
     query = query.order_by(models.ForumNotification.created_at.desc())
 
-    # 注意：总数和未读数会在过滤后重新计算，因为需要过滤学校板块
-    # 这里先查询原始数据，实际统计会在过滤后重新计算
-
-    # 分页
-    offset = (page - 1) * page_size
-    query = query.offset(offset).limit(page_size)
+    # 必须先 filter（学校板块权限）再分页，否则 total 和分页都不准。
+    # 这里先抓全部匹配通知，过滤后在 Python 端按 page/page_size 切片。
 
     # 加载关联数据
     query = query.options(
@@ -331,12 +327,16 @@ async def get_notifications(
                     created_at=n.created_at
                 ))
 
-    # 重新计算总数和未读数（因为过滤了部分通知）
+    # 总数和未读数基于完整过滤结果（不受分页影响）
     total = len(notification_list)
     unread_count = sum(1 for n in notification_list if not n.is_read)
 
+    # 分页切片
+    offset = (page - 1) * page_size
+    paginated = notification_list[offset:offset + page_size]
+
     return {
-        "notifications": notification_list,
+        "notifications": paginated,
         "total": total,
         "unread_count": unread_count,
         "page": page,
@@ -637,6 +637,8 @@ async def get_hot_posts(
             is_locked=post.is_locked,
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
+            is_liked=is_liked,
+            is_favorited=is_favorited,
             images=post.images,
             attachments=_parse_attachments(post.attachments),
             linked_item_type=post.linked_item_type,
@@ -857,6 +859,8 @@ async def get_user_hot_posts(
             is_locked=post.is_locked,
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
+            is_liked=is_liked,
+            is_favorited=is_favorited,
             images=post.images,
             attachments=_parse_attachments(post.attachments),
             linked_item_type=post.linked_item_type,

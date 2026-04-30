@@ -19,6 +19,11 @@ from app.coupon_points_crud import add_points_transaction
 from app.utils.time_utils import get_utc_time
 from app.performance_monitor import measure_api_performance
 from app.content_filter.filter_service import check_content, create_review, create_mask_record
+from app.expert_forum_helpers import (
+    is_expert_board,
+    check_expert_board_post_permission,
+    check_expert_board_manage_permission,
+)
 
 # Helpers from the original forum_routes module (stays as helper hub)
 from app.forum_routes import (
@@ -526,7 +531,6 @@ async def create_post(
             )
 
     # 达人板块发帖权限检查
-    from app.expert_forum_helpers import is_expert_board, check_expert_board_post_permission
     is_expert, expert_id = await is_expert_board(db, post.category_id)
     if is_expert:
         if not current_user:
@@ -1208,12 +1212,12 @@ async def pin_post(
 
     # 达人板块管理权限：Owner/Admin 也可以操作
     current_user = None
+    post = None
     if not current_admin:
         try:
             current_user = await get_current_user_secure_async_csrf(request, db)
         except HTTPException:
             pass
-        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
         post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
         post = post_result.scalar_one_or_none()
         if post:
@@ -1227,10 +1231,11 @@ async def pin_post(
         if not current_admin and not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
 
-    result = await db.execute(
-        select(models.ForumPost).where(models.ForumPost.id == post_id)
-    )
-    post = result.scalar_one_or_none()
+    if post is None:
+        result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == post_id)
+        )
+        post = result.scalar_one_or_none()
 
     if not post:
         raise HTTPException(
@@ -1286,12 +1291,12 @@ async def unpin_post(
 
     # 达人板块管理权限：Owner/Admin 也可以操作
     current_user = None
+    post = None
     if not current_admin:
         try:
             current_user = await get_current_user_secure_async_csrf(request, db)
         except HTTPException:
             pass
-        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
         post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
         post = post_result.scalar_one_or_none()
         if post:
@@ -1305,10 +1310,11 @@ async def unpin_post(
         if not current_admin and not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
 
-    result = await db.execute(
-        select(models.ForumPost).where(models.ForumPost.id == post_id)
-    )
-    post = result.scalar_one_or_none()
+    if post is None:
+        result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == post_id)
+        )
+        post = result.scalar_one_or_none()
 
     if not post:
         raise HTTPException(
@@ -1353,12 +1359,12 @@ async def feature_post(
 
     # 达人板块管理权限：Owner/Admin 也可以操作
     current_user = None
+    post = None
     if not current_admin:
         try:
             current_user = await get_current_user_secure_async_csrf(request, db)
         except HTTPException:
             pass
-        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
         post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
         post = post_result.scalar_one_or_none()
         if post:
@@ -1372,10 +1378,11 @@ async def feature_post(
         if not current_admin and not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
 
-    result = await db.execute(
-        select(models.ForumPost).where(models.ForumPost.id == post_id)
-    )
-    post = result.scalar_one_or_none()
+    if post is None:
+        result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == post_id)
+        )
+        post = result.scalar_one_or_none()
 
     if not post:
         raise HTTPException(
@@ -1431,12 +1438,12 @@ async def unfeature_post(
 
     # 达人板块管理权限：Owner/Admin 也可以操作
     current_user = None
+    post = None
     if not current_admin:
         try:
             current_user = await get_current_user_secure_async_csrf(request, db)
         except HTTPException:
             pass
-        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
         post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
         post = post_result.scalar_one_or_none()
         if post:
@@ -1450,10 +1457,11 @@ async def unfeature_post(
         if not current_admin and not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
 
-    result = await db.execute(
-        select(models.ForumPost).where(models.ForumPost.id == post_id)
-    )
-    post = result.scalar_one_or_none()
+    if post is None:
+        result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == post_id)
+        )
+        post = result.scalar_one_or_none()
 
     if not post:
         raise HTTPException(
@@ -1498,12 +1506,12 @@ async def lock_post(
 
     # 达人板块管理权限：Owner/Admin 也可以操作
     current_user = None
+    post = None
     if not current_admin:
         try:
             current_user = await get_current_user_secure_async_csrf(request, db)
         except HTTPException:
             pass
-        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
         post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
         post = post_result.scalar_one_or_none()
         if post:
@@ -1517,10 +1525,11 @@ async def lock_post(
         if not current_admin and not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
 
-    result = await db.execute(
-        select(models.ForumPost).where(models.ForumPost.id == post_id)
-    )
-    post = result.scalar_one_or_none()
+    if post is None:
+        result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == post_id)
+        )
+        post = result.scalar_one_or_none()
 
     if not post:
         raise HTTPException(
@@ -1565,12 +1574,12 @@ async def unlock_post(
 
     # 达人板块管理权限：Owner/Admin 也可以操作
     current_user = None
+    post = None
     if not current_admin:
         try:
             current_user = await get_current_user_secure_async_csrf(request, db)
         except HTTPException:
             pass
-        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
         post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
         post = post_result.scalar_one_or_none()
         if post:
@@ -1584,10 +1593,11 @@ async def unlock_post(
         if not current_admin and not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
 
-    result = await db.execute(
-        select(models.ForumPost).where(models.ForumPost.id == post_id)
-    )
-    post = result.scalar_one_or_none()
+    if post is None:
+        result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == post_id)
+        )
+        post = result.scalar_one_or_none()
 
     if not post:
         raise HTTPException(
