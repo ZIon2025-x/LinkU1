@@ -9367,6 +9367,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNoSoldItems => 'No sold items yet';
 
   @override
+  String get profilePersonalServices => 'Personal Services';
+
+  @override
+  String profilePersonalServicesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '·$count items',
+      one: '·1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileServicePriceFrom => 'from';
+
+  @override
+  String get profileServiceNegotiable => 'Negotiable';
+
+  @override
   String get profileFollowers => 'Followers';
 
   @override

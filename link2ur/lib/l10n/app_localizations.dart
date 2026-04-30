@@ -17183,6 +17183,30 @@ abstract class AppLocalizations {
   /// **'No sold items yet'**
   String get profileNoSoldItems;
 
+  /// No description provided for @profilePersonalServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Services'**
+  String get profilePersonalServices;
+
+  /// No description provided for @profilePersonalServicesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{·1 item} other{·{count} items}}'**
+  String profilePersonalServicesCount(int count);
+
+  /// No description provided for @profileServicePriceFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'from'**
+  String get profileServicePriceFrom;
+
+  /// No description provided for @profileServiceNegotiable.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiable'**
+  String get profileServiceNegotiable;
+
   /// No description provided for @profileFollowers.
   ///
   /// In en, this message translates to:

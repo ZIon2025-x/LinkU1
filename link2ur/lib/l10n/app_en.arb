@@ -4324,6 +4324,13 @@
   "profileNoRecentPosts": "No posts yet",
   "profileSoldItems": "Sold Items",
   "profileNoSoldItems": "No sold items yet",
+  "profilePersonalServices": "Personal Services",
+  "profilePersonalServicesCount": "{count, plural, =1{·1 item} other{·{count} items}}",
+  "@profilePersonalServicesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileServicePriceFrom": "from",
+  "profileServiceNegotiable": "Negotiable",
   "profileFollowers": "Followers",
   "profileFollowing": "Following",
   "profileFollow": "Follow",

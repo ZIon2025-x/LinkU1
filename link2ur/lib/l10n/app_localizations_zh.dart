@@ -8988,6 +8988,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileNoSoldItems => '暂无已售物品';
 
   @override
+  String get profilePersonalServices => '个人服务';
+
+  @override
+  String profilePersonalServicesCount(int count) {
+    return '· $count 项';
+  }
+
+  @override
+  String get profileServicePriceFrom => '起';
+
+  @override
+  String get profileServiceNegotiable => '议价';
+
+  @override
   String get profileFollowers => '粉丝';
 
   @override
@@ -22200,6 +22214,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileNoSoldItems => '暫無已售物品';
+
+  @override
+  String get profilePersonalServices => '個人服務';
+
+  @override
+  String profilePersonalServicesCount(int count) {
+    return '· $count 項';
+  }
+
+  @override
+  String get profileServicePriceFrom => '起';
+
+  @override
+  String get profileServiceNegotiable => '議價';
 
   @override
   String get profileFollowers => '粉絲';

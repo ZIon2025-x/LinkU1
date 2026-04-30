@@ -4165,6 +4165,13 @@
   "profileNoRecentPosts": "暫無帖子",
   "profileSoldItems": "已售物品",
   "profileNoSoldItems": "暫無已售物品",
+  "profilePersonalServices": "個人服務",
+  "profilePersonalServicesCount": "· {count} 項",
+  "@profilePersonalServicesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileServicePriceFrom": "起",
+  "profileServiceNegotiable": "議價",
   "profileFollowers": "粉絲",
   "profileFollowing": "關注",
   "profileFollow": "關注",
