@@ -429,6 +429,45 @@ def user_profile(
         .all()
     )
 
+    # 获取用户「个人服务」(service_type='personal' + owner_type='user', 仅 active, 按 display_order 升序最多 5 条)
+    from app.models import TaskExpertService
+    personal_service_rows = (
+        db.query(TaskExpertService)
+        .filter(
+            TaskExpertService.owner_type == "user",
+            TaskExpertService.owner_id == user_id,
+            TaskExpertService.service_type == "personal",
+            TaskExpertService.status == "active",
+        )
+        .order_by(
+            TaskExpertService.display_order.asc(),
+            TaskExpertService.created_at.desc(),
+        )
+        .limit(5)
+        .all()
+    )
+
+    def _serialize_personal_service(s: TaskExpertService) -> dict:
+        return {
+            "id": s.id,
+            "service_name": s.service_name,
+            "service_name_en": s.service_name_en,
+            "service_name_zh": s.service_name_zh,
+            "description": s.description,
+            "description_en": s.description_en,
+            "description_zh": s.description_zh,
+            "category": s.category,
+            "base_price": float(s.base_price) if s.base_price else 0.0,
+            "currency": s.currency or "GBP",
+            "pricing_type": s.pricing_type or "fixed",
+            "location_type": s.location_type or "online",
+            "location": s.location,
+            "images": s.images or [],
+            "status": s.status,
+            "view_count": s.view_count or 0,
+            "application_count": s.application_count or 0,
+        }
+
     return {
         "user": user_data,
         "stats": {
@@ -492,6 +531,7 @@ def user_profile(
             }
             for item in sold_flea_items
         ],
+        "personal_services": [_serialize_personal_service(s) for s in personal_service_rows],
     }
 
 
