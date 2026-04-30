@@ -199,7 +199,8 @@ class _ManagementCenterScaffold extends StatelessWidget {
               _MenuTile(
                 icon: Icons.credit_card,
                 label: 'Stripe Connect',
-                onTap: () => _handleStripeConnect(context, expertId),
+                onTap: () => context.push(
+                    '/expert-dashboard/$expertId/management/stripe-connect'),
               ),
             ]),
           ],
@@ -265,47 +266,6 @@ class _ManagementCenterScaffold extends StatelessWidget {
     }
   }
 
-  Future<void> _handleStripeConnect(
-      BuildContext context, String expertId) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
-    final l10n = context.l10n;
-    try {
-      final status = await context
-          .read<ExpertTeamRepository>()
-          .getStripeConnectStatus(expertId);
-      final isActive = status['onboarding_complete'] == true;
-
-      if (!context.mounted) return;
-      final goToOnboarding = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Stripe Connect'),
-          content: Text(isActive
-              ? l10n.expertStripeAlreadyActive
-              : l10n.expertStripeNotActive),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(isActive
-                  ? l10n.expertStripeViewDashboard
-                  : l10n.expertStripeStartOnboarding),
-            ),
-          ],
-        ),
-      );
-
-      if (goToOnboarding == true) {
-        router.push('/payment/stripe-connect/onboarding');
-      }
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
-    }
-  }
 }
 
 class _SectionHeader extends StatelessWidget {

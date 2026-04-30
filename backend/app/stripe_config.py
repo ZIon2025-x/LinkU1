@@ -53,14 +53,22 @@ def configure_stripe(timeout: Optional[int] = None):
 def get_stripe_client():
     """
     获取配置好的 Stripe API 客户端
-    
+
     Returns:
         stripe: Stripe 模块（已配置超时）
     """
     if not _stripe_initialized:
         configure_stripe()
-    
+
     return stripe
+
+
+def ensure_stripe_configured():
+    """幂等确认 Stripe 已配置；多个路由习惯性调用此名称。
+
+    与 configure_stripe() 等价，仅用于让 call site 语义更清晰。"""
+    if not _stripe_initialized:
+        configure_stripe()
 
 
 def reset_stripe_config():

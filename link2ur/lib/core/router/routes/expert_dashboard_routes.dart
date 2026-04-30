@@ -7,6 +7,7 @@ import '../../../features/expert_dashboard/views/management/coupons_view.dart';
 import '../../../features/expert_dashboard/views/management/customer_packages_view.dart';
 import '../../../features/expert_dashboard/views/management/edit_forum_board_view.dart';
 import '../../../features/expert_dashboard/views/management/edit_team_profile_view.dart';
+import '../../../features/expert_dashboard/views/management/expert_team_stripe_connect_view.dart';
 import '../../../features/expert_dashboard/views/management/join_requests_view.dart';
 import '../../../features/expert_dashboard/views/management/management_center_view.dart';
 import '../../../features/expert_dashboard/views/management/members_view.dart';
@@ -114,6 +115,14 @@ List<RouteBase> get expertDashboardRoutes => [
             expertId: id,
             repository: repo,
           );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.expertDashboardManagementStripeConnect,
+        name: 'expertDashboardManagementStripeConnect',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return ExpertTeamStripeConnectView(expertId: id);
         },
       ),
     ];

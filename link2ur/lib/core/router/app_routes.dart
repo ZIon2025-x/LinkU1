@@ -59,6 +59,8 @@ class AppRoutes {
       '/expert-dashboard/:expertId/management/customer-packages';
   static const String expertDashboardManagementPackageRedeem =
       '/expert-dashboard/:expertId/management/package-redeem';
+  static const String expertDashboardManagementStripeConnect =
+      '/expert-dashboard/:expertId/management/stripe-connect';
 
   // 达人团队管理
   static const String expertTeamMyTeams = '/expert-teams';
@@ -191,6 +193,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.expertDashboardManagementPackages,
   AppRoutes.expertDashboardManagementCustomerPackages,
   AppRoutes.expertDashboardManagementPackageRedeem,
+  AppRoutes.expertDashboardManagementStripeConnect,
   AppRoutes.applyLeaderboard,
   AppRoutes.submitLeaderboardItem,
   AppRoutes.fleaMarketRentalDetail,

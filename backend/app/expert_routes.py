@@ -1762,14 +1762,26 @@ async def create_expert_stripe_connect(
         import stripe
         try:
             account = stripe.Account.retrieve(expert.stripe_account_id)
-            return {
+            response = {
                 "account_id": expert.stripe_account_id,
                 "details_submitted": account.details_submitted,
                 "charges_enabled": account.charges_enabled,
                 "message": "已有 Stripe 账户" if account.details_submitted else "请完成 Stripe 设置",
             }
-        except Exception as e:
-            # 账户不存在，清空重建
+            # 未完成 onboarding：补一条新的 AccountLink，让前端能恢复设置流程
+            if not account.details_submitted:
+                from app.stripe_config import ensure_stripe_configured
+                ensure_stripe_configured()
+                account_link = stripe.AccountLink.create(
+                    account=expert.stripe_account_id,
+                    refresh_url=f"https://api.link2ur.com/api/experts/{expert_id}/stripe-connect?country={country}",
+                    return_url=f"https://www.link2ur.com/expert-teams/{expert_id}",
+                    type="account_onboarding",
+                )
+                response["onboarding_url"] = account_link.url
+            return response
+        except stripe.error.StripeError:
+            # Stripe 账户已被删除或不可用，清空字段后落入下方"创建新账户"分支
             expert.stripe_account_id = None
             expert.stripe_onboarding_complete = False
             await db.commit()
