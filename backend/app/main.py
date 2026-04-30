@@ -53,6 +53,7 @@ from app.routes import (
     forum_discovery_routes,
     forum_interactions_routes,
     forum_my_routes,
+    forum_posts_routes,
     forum_replies_routes,
     message_routes,
     payment_inline_routes,
@@ -513,19 +514,15 @@ app.include_router(rental_router)
 from app.multi_participant_routes import router as multi_participant_router
 app.include_router(multi_participant_router)
 
-# 论坛路由
-from app.forum_routes import router as forum_router
-app.include_router(forum_router)
-# 2026-04-26 forum_routes.py split — sub-routers populated commit-by-commit.
-# When _FORUM_ROUTERS reaches 7 entries (final commit), the legacy
-# `forum_router` import + include_router two lines above are deleted.
+# 论坛路由 (2026-04-30 split complete; helpers in app.forum_routes)
 _FORUM_ROUTERS: list[tuple] = [
     (forum_my_routes.router, "论坛-我的"),
     (forum_replies_routes.router, "论坛-回复"),
     (forum_interactions_routes.router, "论坛-互动"),
     (forum_admin_routes.router, "论坛-管理"),
-    (forum_categories_routes.router, "论坛-板块"),
     (forum_discovery_routes.router, "论坛-发现"),
+    (forum_categories_routes.router, "论坛-板块"),
+    (forum_posts_routes.router, "论坛-帖子"),
 ]
 for r, tag in _FORUM_ROUTERS:
     app.include_router(r, prefix="/api/forum", tags=[tag])
