@@ -36,7 +36,6 @@ from sqlalchemy.orm.attributes import NO_VALUE
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
-from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
