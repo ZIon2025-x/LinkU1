@@ -31,7 +31,6 @@ from fastapi import (
     File,
     Form,
     HTTPException,
-    Query,
     Request,
     Response,
     UploadFile,
@@ -63,7 +62,7 @@ from app.utils.time_utils import get_utc_time, format_iso_utc
 
 import stripe
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, and_, select, func, update
+from sqlalchemy import and_, update
 
 from app.security import verify_password
 from app.security import create_access_token
@@ -890,8 +889,6 @@ def _handle_v2_revoke(db, vip_subscription_service, jws: str):
         return
     tid = info.get("transaction_id")
     vip_subscription_service.process_refund(db, tid, "Apple撤销")
-
-
 
 
 # 已迁移到 admin_system_routes.py: /admin/cleanup/completed-tasks, /admin/cleanup/all-old-tasks, /admin/cleanup/duplicate-device-tokens, /admin/cleanup/old-inactive-device-tokens
