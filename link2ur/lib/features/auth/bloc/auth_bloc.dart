@@ -310,8 +310,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) {
     emit(state.copyWith(user: event.user));
-    // 同步写入本地缓存，确保下次启动时 getCurrentUser() 读到最新状态
-    StorageService.instance.saveUserInfo(event.user.toJson());
+    // 写入本地缓存（异步，不 await）。容错：StorageService 未初始化（如单测环境）时仅记录不抛。
+    StorageService.instance.saveUserInfo(event.user.toJson()).catchError((Object e) {
+      AppLogger.warning('saveUserInfo failed in _onUserUpdated: $e');
+    });
   }
 
   /// 强制登出（Token过期/刷新失败）
