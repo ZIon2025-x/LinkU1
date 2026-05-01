@@ -4,13 +4,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/router/go_router_extensions.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/helpers.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/skill_category.dart';
 import '../../../data/models/skill_leaderboard_entry.dart';
 import '../../../data/repositories/skill_leaderboard_repository.dart';
+import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/skill_leaderboard_bloc.dart';
 import 'widgets/leaderboard_item_widget.dart';
 
@@ -22,8 +26,8 @@ class SkillLeaderboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => SkillLeaderboardBloc(
-        skillLeaderboardRepository:
-            context.read<SkillLeaderboardRepository>(),
+        skillLeaderboardRepository: context.read<SkillLeaderboardRepository>(),
+        taskExpertRepository: context.read<TaskExpertRepository>(),
       )..add(const LeaderboardLoadRequested()),
       child: const _SkillLeaderboardBody(),
     );
@@ -92,7 +96,14 @@ class _SkillLeaderboardBody extends StatelessWidget {
         Expanded(
           child: isLoading && state.entries.isEmpty
               ? const LoadingView()
-              : _LeaderboardList(state: state),
+              : ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _ExpertsForCategorySection(state: state),
+                    _ServicesForCategorySection(state: state),
+                    _LeaderboardList(state: state),
+                  ],
+                ),
         ),
       ],
     );
@@ -259,20 +270,20 @@ class _LeaderboardList extends StatelessWidget {
           ),
         ),
 
-        // Top 10 list
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            itemCount: state.entries.length,
-            itemBuilder: (context, index) {
-              return LeaderboardItemWidget(
-                key: ValueKey(state.entries[index].userId),
-                entry: state.entries[index],
-                isCurrentUser: myRank != null &&
-                    state.entries[index].userId == myRank.userId,
-              );
-            },
-          ),
+        // Top 10 list (shrinkWrap because parent is a ListView)
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          itemCount: state.entries.length,
+          itemBuilder: (context, index) {
+            return LeaderboardItemWidget(
+              key: ValueKey(state.entries[index].userId),
+              entry: state.entries[index],
+              isCurrentUser: myRank != null &&
+                  state.entries[index].userId == myRank.userId,
+            );
+          },
         ),
 
         // "My rank" section at bottom if user is not in top list
@@ -337,6 +348,174 @@ class _MyRankFooter extends StatelessWidget {
             AppSpacing.vXs,
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExpertsForCategorySection extends StatelessWidget {
+  const _ExpertsForCategorySection({required this.state});
+  final SkillLeaderboardState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.expertsStatus != SkillSectionStatus.loaded) {
+      return const SizedBox.shrink();
+    }
+    if (state.experts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenHorizontal,
+            ),
+            child: Text(
+              context.l10n.skillSectionExpertsTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          AppSpacing.vSm,
+          SizedBox(
+            height: 140,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenHorizontal,
+              ),
+              itemCount: state.experts.length,
+              separatorBuilder: (_, __) => AppSpacing.hSm,
+              itemBuilder: (context, idx) {
+                final expert = state.experts[idx];
+                return SizedBox(
+                  width: 120,
+                  child: GestureDetector(
+                    onTap: () => context.goToTaskExpertDetail(expert.id),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 32,
+                              backgroundImage: (expert.avatar != null &&
+                                      expert.avatar!.isNotEmpty)
+                                  ? NetworkImage(expert.avatar!)
+                                  : null,
+                              child: (expert.avatar == null ||
+                                      expert.avatar!.isEmpty)
+                                  ? const Icon(Icons.person)
+                                  : null,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              expert.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServicesForCategorySection extends StatelessWidget {
+  const _ServicesForCategorySection({required this.state});
+  final SkillLeaderboardState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.servicesStatus != SkillSectionStatus.loaded) {
+      return const SizedBox.shrink();
+    }
+    if (state.services.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenHorizontal,
+            ),
+            child: Text(
+              context.l10n.skillSectionServicesTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          AppSpacing.vSm,
+          SizedBox(
+            height: 140,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenHorizontal,
+              ),
+              itemCount: state.services.length,
+              separatorBuilder: (_, __) => AppSpacing.hSm,
+              itemBuilder: (context, idx) {
+                final service = state.services[idx];
+                final priceStr =
+                    '${Helpers.currencySymbolFor(service.currency)}${service.basePrice.toStringAsFixed(2)}';
+                return SizedBox(
+                  width: 160,
+                  child: Card(
+                    child: InkWell(
+                      onTap: () => context.goToServiceDetail(service.id),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              service.serviceName,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              priceStr,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

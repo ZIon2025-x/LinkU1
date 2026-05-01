@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/skill_category.dart';
 import '../../../data/models/skill_leaderboard_entry.dart';
+import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/skill_leaderboard_repository.dart';
+import '../../../data/repositories/task_expert_repository.dart';
 
 part 'skill_leaderboard_event.dart';
 part 'skill_leaderboard_state.dart';
@@ -15,14 +17,19 @@ class SkillLeaderboardBloc
     extends Bloc<SkillLeaderboardEvent, SkillLeaderboardState> {
   SkillLeaderboardBloc({
     required SkillLeaderboardRepository skillLeaderboardRepository,
+    required TaskExpertRepository taskExpertRepository,
   })  : _repository = skillLeaderboardRepository,
+        _expertRepository = taskExpertRepository,
         super(const SkillLeaderboardState()) {
     on<LeaderboardLoadRequested>(_onLoadRequested);
     on<LeaderboardCategorySelected>(_onCategorySelected);
     on<LeaderboardMyRankRequested>(_onMyRankRequested);
+    on<SkillExpertsLoadRequested>(_onExpertsLoadRequested);
+    on<SkillServicesLoadRequested>(_onServicesLoadRequested);
   }
 
   final SkillLeaderboardRepository _repository;
+  final TaskExpertRepository _expertRepository;
 
   /// Load categories; if any exist, select the first one and load its entries
   Future<void> _onLoadRequested(
@@ -69,6 +76,8 @@ class SkillLeaderboardBloc
         myRank: myRank,
         clearMyRank: myRank == null,
       ));
+      add(SkillExpertsLoadRequested(firstCategory));
+      add(SkillServicesLoadRequested(firstCategory));
     } catch (e) {
       AppLogger.error('Failed to load leaderboard categories', e);
       emit(state.copyWith(
@@ -109,6 +118,8 @@ class SkillLeaderboardBloc
         myRank: myRank,
         clearMyRank: myRank == null,
       ));
+      add(SkillExpertsLoadRequested(event.category));
+      add(SkillServicesLoadRequested(event.category));
     } catch (e) {
       AppLogger.error('Failed to load leaderboard for ${event.category}', e);
       emit(state.copyWith(
@@ -133,6 +144,52 @@ class SkillLeaderboardBloc
       emit(state.copyWith(
         errorMessage: 'leaderboard_my_rank_failed',
         clearMyRank: true,
+      ));
+    }
+  }
+
+  Future<void> _onExpertsLoadRequested(
+    SkillExpertsLoadRequested event,
+    Emitter<SkillLeaderboardState> emit,
+  ) async {
+    emit(state.copyWith(expertsStatus: SkillSectionStatus.loading));
+    try {
+      final result = await _expertRepository.getExperts(
+        category: event.category,
+        pageSize: 10,
+      );
+      emit(state.copyWith(
+        experts: result.experts,
+        expertsStatus: SkillSectionStatus.loaded,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load experts for ${event.category}', e);
+      emit(state.copyWith(
+        expertsStatus: SkillSectionStatus.error,
+        experts: const [],
+      ));
+    }
+  }
+
+  Future<void> _onServicesLoadRequested(
+    SkillServicesLoadRequested event,
+    Emitter<SkillLeaderboardState> emit,
+  ) async {
+    emit(state.copyWith(servicesStatus: SkillSectionStatus.loading));
+    try {
+      final services = await _expertRepository.listServicesByCategory(
+        event.category,
+        limit: 10,
+      );
+      emit(state.copyWith(
+        services: services,
+        servicesStatus: SkillSectionStatus.loaded,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load services for ${event.category}', e);
+      emit(state.copyWith(
+        servicesStatus: SkillSectionStatus.error,
+        services: const [],
       ));
     }
   }

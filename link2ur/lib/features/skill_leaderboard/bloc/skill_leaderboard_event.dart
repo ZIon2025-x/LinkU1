@@ -31,3 +31,21 @@ class LeaderboardMyRankRequested extends SkillLeaderboardEvent {
   @override
   List<Object?> get props => [category];
 }
+
+/// 加载某 category 下的达人团队
+class SkillExpertsLoadRequested extends SkillLeaderboardEvent {
+  const SkillExpertsLoadRequested(this.category);
+  final String category;
+
+  @override
+  List<Object?> get props => [category];
+}
+
+/// 加载某 category 下的服务
+class SkillServicesLoadRequested extends SkillLeaderboardEvent {
+  const SkillServicesLoadRequested(this.category);
+  final String category;
+
+  @override
+  List<Object?> get props => [category];
+}

@@ -4,6 +4,9 @@ part of 'skill_leaderboard_bloc.dart';
 
 enum LeaderboardStatus { initial, loading, loaded, error }
 
+/// 该 category 下达人列表 / 服务列表的加载状态
+enum SkillSectionStatus { idle, loading, loaded, error }
+
 class SkillLeaderboardState extends Equatable {
   const SkillLeaderboardState({
     this.status = LeaderboardStatus.initial,
@@ -12,6 +15,10 @@ class SkillLeaderboardState extends Equatable {
     this.selectedCategory,
     this.myRank,
     this.errorMessage,
+    this.experts = const [],
+    this.services = const [],
+    this.expertsStatus = SkillSectionStatus.idle,
+    this.servicesStatus = SkillSectionStatus.idle,
   });
 
   final LeaderboardStatus status;
@@ -20,6 +27,10 @@ class SkillLeaderboardState extends Equatable {
   final String? selectedCategory;
   final SkillLeaderboardEntry? myRank;
   final String? errorMessage;
+  final List<TaskExpert> experts;
+  final List<TaskExpertService> services;
+  final SkillSectionStatus expertsStatus;
+  final SkillSectionStatus servicesStatus;
 
   bool get isLoading => status == LeaderboardStatus.loading;
 
@@ -32,6 +43,10 @@ class SkillLeaderboardState extends Equatable {
     String? errorMessage,
     bool clearError = false,
     bool clearMyRank = false,
+    List<TaskExpert>? experts,
+    List<TaskExpertService>? services,
+    SkillSectionStatus? expertsStatus,
+    SkillSectionStatus? servicesStatus,
   }) {
     return SkillLeaderboardState(
       status: status ?? this.status,
@@ -40,6 +55,10 @@ class SkillLeaderboardState extends Equatable {
       selectedCategory: selectedCategory ?? this.selectedCategory,
       myRank: clearMyRank ? null : (myRank ?? this.myRank),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      experts: experts ?? this.experts,
+      services: services ?? this.services,
+      expertsStatus: expertsStatus ?? this.expertsStatus,
+      servicesStatus: servicesStatus ?? this.servicesStatus,
     );
   }
 
@@ -51,5 +70,9 @@ class SkillLeaderboardState extends Equatable {
         selectedCategory,
         myRank,
         errorMessage,
+        experts,
+        services,
+        expertsStatus,
+        servicesStatus,
       ];
 }

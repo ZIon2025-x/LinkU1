@@ -5,13 +5,18 @@ import 'package:mocktail/mocktail.dart';
 import 'package:link2ur/features/skill_leaderboard/bloc/skill_leaderboard_bloc.dart';
 import 'package:link2ur/data/models/skill_category.dart';
 import 'package:link2ur/data/models/skill_leaderboard_entry.dart';
+import 'package:link2ur/data/models/task_expert.dart';
 import 'package:link2ur/data/repositories/skill_leaderboard_repository.dart';
+import 'package:link2ur/data/repositories/task_expert_repository.dart';
 
 class MockSkillLeaderboardRepository extends Mock
     implements SkillLeaderboardRepository {}
 
+class MockTaskExpertRepository extends Mock implements TaskExpertRepository {}
+
 void main() {
   late MockSkillLeaderboardRepository mockRepository;
+  late MockTaskExpertRepository mockExpertRepository;
   late SkillLeaderboardBloc bloc;
 
   // Mock data
@@ -68,7 +73,25 @@ void main() {
 
   setUp(() {
     mockRepository = MockSkillLeaderboardRepository();
-    bloc = SkillLeaderboardBloc(skillLeaderboardRepository: mockRepository);
+    mockExpertRepository = MockTaskExpertRepository();
+    // 让 _onLoadRequested / _onCategorySelected 触发的 expert/service 加载默认返回空，避免污染断言
+    when(() => mockExpertRepository.getExperts(
+          category: any(named: 'category'),
+          pageSize: any(named: 'pageSize'),
+        )).thenAnswer((_) async => TaskExpertListResponse(
+          experts: const [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+        ));
+    when(() => mockExpertRepository.listServicesByCategory(
+          any(),
+          limit: any(named: 'limit'),
+        )).thenAnswer((_) async => const []);
+    bloc = SkillLeaderboardBloc(
+      skillLeaderboardRepository: mockRepository,
+      taskExpertRepository: mockExpertRepository,
+    );
   });
 
   tearDown(() {
@@ -110,6 +133,15 @@ void main() {
               .having(
                   (s) => s.selectedCategory, 'selectedCategory', 'Programming')
               .having((s) => s.myRank, 'myRank', expectedMyRank),
+          // SkillExpertsLoadRequested + SkillServicesLoadRequested 额外 emit
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loaded),
+          isA<SkillLeaderboardState>().having(
+              (s) => s.servicesStatus, 'servicesStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>().having(
+              (s) => s.servicesStatus, 'servicesStatus', SkillSectionStatus.loaded),
         ],
         verify: (_) {
           verify(() => mockRepository.getCategories()).called(1);
@@ -183,6 +215,15 @@ void main() {
               .having((s) => s.status, 'status', LeaderboardStatus.loaded)
               .having((s) => s.entries, 'entries', expectedEntries)
               .having((s) => s.myRank, 'myRank', expectedMyRank),
+          // SkillExpertsLoadRequested + SkillServicesLoadRequested 额外 emit
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loaded),
+          isA<SkillLeaderboardState>().having(
+              (s) => s.servicesStatus, 'servicesStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>().having(
+              (s) => s.servicesStatus, 'servicesStatus', SkillSectionStatus.loaded),
         ],
         verify: (_) {
           verify(() => mockRepository.getLeaderboard('Design')).called(1);
@@ -244,6 +285,33 @@ void main() {
               .having((s) => s.errorMessage, 'errorMessage',
                   'leaderboard_my_rank_failed')
               .having((s) => s.myRank, 'myRank', isNull),
+        ],
+      );
+    });
+
+    // ==================== Skill Section ====================
+
+    group('SkillExpertsLoadRequested', () {
+      blocTest<SkillLeaderboardBloc, SkillLeaderboardState>(
+        'emits expertsStatus loading→loaded when SkillExpertsLoadRequested succeeds',
+        setUp: () {
+          when(() => mockExpertRepository.getExperts(
+                category: 'shopping',
+                pageSize: 10,
+              )).thenAnswer((_) async => TaskExpertListResponse(
+                experts: const [],
+                page: 1,
+                pageSize: 10,
+                total: 0,
+              ));
+        },
+        build: () => bloc,
+        act: (b) => b.add(const SkillExpertsLoadRequested('shopping')),
+        expect: () => [
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loaded),
         ],
       );
     });

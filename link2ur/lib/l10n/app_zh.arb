@@ -1860,6 +1860,8 @@
   "expertCategoryRentalHousing": "租房协助",
   "expertCategoryCampusLife": "校园生活",
   "expertCategorySecondHand": "二手交易",
+  "skillSectionExpertsTitle": "本类别下的达人",
+  "skillSectionServicesTitle": "本类别下的服务",
   "serviceCategory": "技能分类",
   "serviceCategoryHint": "选择分类",
   "cityLondon": "伦敦",

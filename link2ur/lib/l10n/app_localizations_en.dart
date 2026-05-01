@@ -3645,6 +3645,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertCategorySecondHand => 'Second-hand';
 
   @override
+  String get skillSectionExpertsTitle => 'Experts in this category';
+
+  @override
+  String get skillSectionServicesTitle => 'Services in this category';
+
+  @override
   String get serviceCategory => 'Skill Category';
 
   @override

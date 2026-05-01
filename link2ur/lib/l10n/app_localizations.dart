@@ -6747,6 +6747,18 @@ abstract class AppLocalizations {
   /// **'Second-hand'**
   String get expertCategorySecondHand;
 
+  /// Title for experts section in skill leaderboard
+  ///
+  /// In en, this message translates to:
+  /// **'Experts in this category'**
+  String get skillSectionExpertsTitle;
+
+  /// Title for services section in skill leaderboard
+  ///
+  /// In en, this message translates to:
+  /// **'Services in this category'**
+  String get skillSectionServicesTitle;
+
   /// No description provided for @serviceCategory.
   ///
   /// In en, this message translates to:

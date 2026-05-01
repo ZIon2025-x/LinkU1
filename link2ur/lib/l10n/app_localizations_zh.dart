@@ -3499,6 +3499,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertCategorySecondHand => '二手交易';
 
   @override
+  String get skillSectionExpertsTitle => '本类别下的达人';
+
+  @override
+  String get skillSectionServicesTitle => '本类别下的服务';
+
+  @override
   String get serviceCategory => '技能分类';
 
   @override
@@ -16786,6 +16792,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertCategorySecondHand => '二手交易';
+
+  @override
+  String get skillSectionExpertsTitle => '本類別下的達人';
+
+  @override
+  String get skillSectionServicesTitle => '本類別下的服務';
 
   @override
   String get serviceCategory => '技能分類';
