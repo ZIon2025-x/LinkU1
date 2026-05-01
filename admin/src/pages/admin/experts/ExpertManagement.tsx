@@ -96,6 +96,23 @@ const CATEGORY_OPTIONS = [
   { value: 'social_entertainment', label: '社交娱乐 Social & Entertainment' },
   { value: 'beauty_skincare', label: '美容护肤 Beauty & Skincare' },
   { value: 'handicraft', label: '手工 Handicraft' },
+  { value: 'shopping', label: '代购 Shopping' },
+  { value: 'design', label: '设计 Design' },
+  { value: 'writing', label: '写作 Writing' },
+  { value: 'moving', label: '搬家 Moving' },
+  { value: 'cleaning', label: '清洁 Cleaning' },
+  { value: 'repair', label: '维修 Repair' },
+  { value: 'pickup_dropoff', label: '接送 Pickup & Dropoff' },
+  { value: 'cooking', label: '烹饪 Cooking' },
+  { value: 'language_help', label: '语言陪同 Language Help' },
+  { value: 'government', label: '政务办理 Government' },
+  { value: 'pet_care', label: '宠物照顾 Pet Care' },
+  { value: 'errand', label: '跑腿 Errand' },
+  { value: 'accompany', label: '陪伴 Accompany' },
+  { value: 'digital', label: '数码/IT Digital / IT' },
+  { value: 'rental_housing', label: '租房协助 Rental Housing' },
+  { value: 'campus_life', label: '校园生活 Campus Life' },
+  { value: 'second_hand', label: '二手交易 Second-hand' },
 ];
 
 const initialEditForm: ExpertEditForm = {

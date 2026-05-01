@@ -143,7 +143,24 @@ const TaskExperts: React.FC = () => {
     { value: 'errand_transport', label: t('taskExperts.errandTransport') },
     { value: 'social_entertainment', label: t('taskExperts.socialEntertainment') },
     { value: 'beauty_skincare', label: t('taskExperts.beautySkincare') },
-    { value: 'handicraft', label: t('taskExperts.handicraft') }
+    { value: 'handicraft', label: t('taskExperts.handicraft') },
+    { value: 'shopping', label: t('taskExperts.shopping') },
+    { value: 'design', label: t('taskExperts.design') },
+    { value: 'writing', label: t('taskExperts.writing') },
+    { value: 'moving', label: t('taskExperts.moving') },
+    { value: 'cleaning', label: t('taskExperts.cleaning') },
+    { value: 'repair', label: t('taskExperts.repair') },
+    { value: 'pickup_dropoff', label: t('taskExperts.pickupDropoff') },
+    { value: 'cooking', label: t('taskExperts.cooking') },
+    { value: 'language_help', label: t('taskExperts.languageHelp') },
+    { value: 'government', label: t('taskExperts.government') },
+    { value: 'pet_care', label: t('taskExperts.petCare') },
+    { value: 'errand', label: t('taskExperts.errand') },
+    { value: 'accompany', label: t('taskExperts.accompany') },
+    { value: 'digital', label: t('taskExperts.digital') },
+    { value: 'rental_housing', label: t('taskExperts.rentalHousing') },
+    { value: 'campus_life', label: t('taskExperts.campusLife') },
+    { value: 'second_hand', label: t('taskExperts.secondHand') }
   ];
 
   const sortOptions = [
