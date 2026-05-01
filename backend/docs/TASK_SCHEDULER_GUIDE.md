@@ -120,6 +120,16 @@ TaskScheduler 是 Link2Ur 后端的进程内定时任务调度器，替代原先
 |---|--------|----------|--------|------|
 | 26 | `anonymize_old_data` | 每周日 UTC 3:00 | `data_anonymization.anonymize_old_interactions` + `anonymize_old_feedback` | 匿名化 90 天以上的交互记录和反馈数据（隐私合规） |
 
+### 提醒/兜底任务（2026-05-01 接入）
+
+> 这批任务的 Celery 包装器已在 `app/celery_tasks.py` 中就位；`beat_schedule` 注册在后续单独 commit 中启用，分离便于回滚。
+
+- `send-deadline-reminders-24h` / `send-deadline-reminders-6h`：每 10 分钟扫一次未来 24h±5min / 6h±5min 内截止的进行中任务，发提醒；±5min 窗口 + 1h 去重。
+- `send-payment-reminders-6h` / `send-payment-reminders-1h`：每 10 分钟扫一次未来 6h±5min / 1h±5min 内支付到期的待支付任务，发提醒。
+- `check-stale-disputes`：每天 02:20 检查 7 天未处理的 pending dispute 并通知所有 admin。
+
+> **历史背景**：上述提醒原本只在 `scheduled_tasks.run_scheduled_tasks()`（已于 2026-05-01 删除）这个旧"统一入口"里被调用；后端转 Celery 后该入口长期没运行，提醒静默丢失。新方案直接挂 beat_schedule，去掉旧的统一入口。
+
 ---
 
 ## 待开发功能：自动转账（Auto-Transfer）

@@ -1416,45 +1416,13 @@ async def startup_event():
 
         # 在迁移完成后启动 TaskScheduler，确保所有列已存在
         if celery_available:
-            pass  # Celery 可用，不启动 TaskScheduler
+            pass  # Celery 是主调度器
         else:
             logger.info("📋 启动 TaskScheduler 作为备用调度器...")
-            try:
-                from app.task_scheduler import init_scheduler
-                scheduler = init_scheduler()
-                scheduler.start()
-                logger.info("✅ 细粒度定时任务调度器（TaskScheduler）已启动（备用方案）")
-            except Exception as e:
-                logger.error(f"❌ 启动任务调度器失败，回退到旧方案: {e}", exc_info=True)
-                from app.scheduled_tasks import run_scheduled_tasks
-
-                def run_tasks_periodically():
-                    """每5分钟执行一次定时任务（回退方案）"""
-                    global _shutdown_flag
-                    from app.state import is_app_shutting_down
-
-                    while not _shutdown_flag and not is_app_shutting_down():
-                        try:
-                            run_scheduled_tasks()
-                        except Exception as e:
-                            error_str = str(e)
-                            if is_app_shutting_down() and (
-                                "Event loop is closed" in error_str
-                                or "loop is closed" in error_str
-                                or "attached to a different loop" in error_str
-                            ):
-                                logger.debug(f"定时任务在关闭时跳过: {e}")
-                                break
-                            logger.error(f"定时任务执行失败: {e}", exc_info=True)
-
-                        for _ in range(300):  # 5分钟 = 300秒
-                            if _shutdown_flag or is_app_shutting_down():
-                                break
-                            time.sleep(1)
-
-                scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
-                scheduler_thread.start()
-                logger.info("✅ 定时任务已启动（回退方案，每5分钟执行一次）")
+            from app.task_scheduler import init_scheduler
+            scheduler = init_scheduler()
+            scheduler.start()
+            logger.info("✅ TaskScheduler 已启动")
 
         # 自动初始化大学数据（如果表为空）
         try:

@@ -1773,3 +1773,108 @@ if CELERY_AVAILABLE:
         finally:
             db.close()
             release_redis_distributed_lock(lock_key)
+
+    # ── send_deadline_reminders_task / send_payment_reminders_task / check_stale_disputes_task ──
+    # spec 2026-04-30-zombie-cleanup-and-scheduler-fix Phase B — 把原来只在
+    # run_scheduled_tasks() 里被调用的 3 个定时函数迁到 Celery beat。
+
+    @celery_app.task(
+        name='app.celery_tasks.send_deadline_reminders_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60,
+    )
+    def send_deadline_reminders_task(self, hours_before: int):
+        """发送任务截止日期提醒 - Celery 任务包装。
+
+        hours_before 由 beat_schedule 通过 kwargs 传入（24/6 两档）。
+        函数内部用 ±5min 时间窗 + 1h 去重，安全地每 10 分钟运行一次。
+        """
+        start_time = time.time()
+        task_name = f'send_deadline_reminders_task_{hours_before}'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import send_deadline_reminders
+            send_deadline_reminders(db, hours_before=hours_before)
+            duration = time.time() - start_time
+            logger.info(f"{task_name} 完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "hours_before": hours_before}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{task_name} 失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+
+    @celery_app.task(
+        name='app.celery_tasks.send_payment_reminders_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60,
+    )
+    def send_payment_reminders_task(self, hours_before: int):
+        """发送支付到期前提醒 - Celery 任务包装。
+
+        hours_before 由 beat_schedule 通过 kwargs 传入（6/1 两档）。
+        函数内部用 ±5min 时间窗 + 1h 去重。
+        """
+        start_time = time.time()
+        task_name = f'send_payment_reminders_task_{hours_before}'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import send_payment_reminders
+            send_payment_reminders(db, hours_before=hours_before)
+            duration = time.time() - start_time
+            logger.info(f"{task_name} 完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "hours_before": hours_before}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{task_name} 失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+
+    @celery_app.task(
+        name='app.celery_tasks.check_stale_disputes_task',
+        bind=True,
+        max_retries=2,
+        default_retry_delay=300,
+    )
+    def check_stale_disputes_task(self, days: int = 7):
+        """检查长期未处理争议 - Celery 任务包装。
+
+        每天凌晨 02:20 跑一次。函数无去重保护——首次启用前已通过 dry-count 验证
+        见 spec §3.B6（积压数 = 0，安全）。
+        """
+        start_time = time.time()
+        task_name = 'check_stale_disputes_task'
+        logger.info(f"🔄 开始执行定时任务: {task_name} (days={days})")
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import check_stale_disputes
+            result = check_stale_disputes(db, days=days)
+            duration = time.time() - start_time
+            logger.info(f"{task_name} 完成 (耗时: {duration:.2f}秒, 结果: {result})")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "result": result}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{task_name} 失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
