@@ -6645,6 +6645,108 @@ abstract class AppLocalizations {
   /// **'Housekeeping'**
   String get expertCategoryHousekeeping;
 
+  /// Expert category: Shopping
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping'**
+  String get expertCategoryShopping;
+
+  /// Expert category: Design
+  ///
+  /// In en, this message translates to:
+  /// **'Design'**
+  String get expertCategoryDesign;
+
+  /// Expert category: Writing
+  ///
+  /// In en, this message translates to:
+  /// **'Writing'**
+  String get expertCategoryWriting;
+
+  /// Expert category: Moving
+  ///
+  /// In en, this message translates to:
+  /// **'Moving'**
+  String get expertCategoryMoving;
+
+  /// Expert category: Cleaning
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaning'**
+  String get expertCategoryCleaning;
+
+  /// Expert category: Repair
+  ///
+  /// In en, this message translates to:
+  /// **'Repair'**
+  String get expertCategoryRepair;
+
+  /// Expert category: Pickup & Dropoff
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup & Dropoff'**
+  String get expertCategoryPickupDropoff;
+
+  /// Expert category: Cooking
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking'**
+  String get expertCategoryCooking;
+
+  /// Expert category: Language Help
+  ///
+  /// In en, this message translates to:
+  /// **'Language Help'**
+  String get expertCategoryLanguageHelp;
+
+  /// Expert category: Government affairs
+  ///
+  /// In en, this message translates to:
+  /// **'Government'**
+  String get expertCategoryGovernment;
+
+  /// Expert category: Pet Care
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Care'**
+  String get expertCategoryPetCare;
+
+  /// Expert category: Errand
+  ///
+  /// In en, this message translates to:
+  /// **'Errand'**
+  String get expertCategoryErrand;
+
+  /// Expert category: Accompany
+  ///
+  /// In en, this message translates to:
+  /// **'Accompany'**
+  String get expertCategoryAccompany;
+
+  /// Expert category: Digital / IT
+  ///
+  /// In en, this message translates to:
+  /// **'Digital / IT'**
+  String get expertCategoryDigital;
+
+  /// Expert category: Rental Housing assistance
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Housing'**
+  String get expertCategoryRentalHousing;
+
+  /// Expert category: Campus Life
+  ///
+  /// In en, this message translates to:
+  /// **'Campus Life'**
+  String get expertCategoryCampusLife;
+
+  /// Expert category: Second-hand
+  ///
+  /// In en, this message translates to:
+  /// **'Second-hand'**
+  String get expertCategorySecondHand;
+
   /// No description provided for @serviceCategory.
   ///
   /// In en, this message translates to:

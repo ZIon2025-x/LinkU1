@@ -3448,6 +3448,57 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertCategoryHousekeeping => '家政';
 
   @override
+  String get expertCategoryShopping => '代购';
+
+  @override
+  String get expertCategoryDesign => '设计';
+
+  @override
+  String get expertCategoryWriting => '写作';
+
+  @override
+  String get expertCategoryMoving => '搬家';
+
+  @override
+  String get expertCategoryCleaning => '清洁';
+
+  @override
+  String get expertCategoryRepair => '维修';
+
+  @override
+  String get expertCategoryPickupDropoff => '接送';
+
+  @override
+  String get expertCategoryCooking => '烹饪';
+
+  @override
+  String get expertCategoryLanguageHelp => '语言陪同';
+
+  @override
+  String get expertCategoryGovernment => '政务办理';
+
+  @override
+  String get expertCategoryPetCare => '宠物照顾';
+
+  @override
+  String get expertCategoryErrand => '跑腿';
+
+  @override
+  String get expertCategoryAccompany => '陪伴';
+
+  @override
+  String get expertCategoryDigital => '数码/IT';
+
+  @override
+  String get expertCategoryRentalHousing => '租房协助';
+
+  @override
+  String get expertCategoryCampusLife => '校园生活';
+
+  @override
+  String get expertCategorySecondHand => '二手交易';
+
+  @override
   String get serviceCategory => '技能分类';
 
   @override
@@ -16684,6 +16735,57 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertCategoryHousekeeping => '家政';
+
+  @override
+  String get expertCategoryShopping => '代購';
+
+  @override
+  String get expertCategoryDesign => '設計';
+
+  @override
+  String get expertCategoryWriting => '寫作';
+
+  @override
+  String get expertCategoryMoving => '搬家';
+
+  @override
+  String get expertCategoryCleaning => '清潔';
+
+  @override
+  String get expertCategoryRepair => '維修';
+
+  @override
+  String get expertCategoryPickupDropoff => '接送';
+
+  @override
+  String get expertCategoryCooking => '烹飪';
+
+  @override
+  String get expertCategoryLanguageHelp => '語言陪同';
+
+  @override
+  String get expertCategoryGovernment => '政務辦理';
+
+  @override
+  String get expertCategoryPetCare => '寵物照顧';
+
+  @override
+  String get expertCategoryErrand => '跑腿';
+
+  @override
+  String get expertCategoryAccompany => '陪伴';
+
+  @override
+  String get expertCategoryDigital => '數碼/IT';
+
+  @override
+  String get expertCategoryRentalHousing => '租房協助';
+
+  @override
+  String get expertCategoryCampusLife => '校園生活';
+
+  @override
+  String get expertCategorySecondHand => '二手交易';
 
   @override
   String get serviceCategory => '技能分類';

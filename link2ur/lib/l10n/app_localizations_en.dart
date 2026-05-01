@@ -3594,6 +3594,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertCategoryHousekeeping => 'Housekeeping';
 
   @override
+  String get expertCategoryShopping => 'Shopping';
+
+  @override
+  String get expertCategoryDesign => 'Design';
+
+  @override
+  String get expertCategoryWriting => 'Writing';
+
+  @override
+  String get expertCategoryMoving => 'Moving';
+
+  @override
+  String get expertCategoryCleaning => 'Cleaning';
+
+  @override
+  String get expertCategoryRepair => 'Repair';
+
+  @override
+  String get expertCategoryPickupDropoff => 'Pickup & Dropoff';
+
+  @override
+  String get expertCategoryCooking => 'Cooking';
+
+  @override
+  String get expertCategoryLanguageHelp => 'Language Help';
+
+  @override
+  String get expertCategoryGovernment => 'Government';
+
+  @override
+  String get expertCategoryPetCare => 'Pet Care';
+
+  @override
+  String get expertCategoryErrand => 'Errand';
+
+  @override
+  String get expertCategoryAccompany => 'Accompany';
+
+  @override
+  String get expertCategoryDigital => 'Digital / IT';
+
+  @override
+  String get expertCategoryRentalHousing => 'Rental Housing';
+
+  @override
+  String get expertCategoryCampusLife => 'Campus Life';
+
+  @override
+  String get expertCategorySecondHand => 'Second-hand';
+
+  @override
   String get serviceCategory => 'Skill Category';
 
   @override
