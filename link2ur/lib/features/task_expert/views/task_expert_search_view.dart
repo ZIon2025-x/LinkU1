@@ -110,6 +110,40 @@ class _TaskExpertSearchContentState
         return l10n.expertCategoryPhotography;
       case 'housekeeping':
         return l10n.expertCategoryHousekeeping;
+      case 'shopping':
+        return l10n.expertCategoryShopping;
+      case 'design':
+        return l10n.expertCategoryDesign;
+      case 'writing':
+        return l10n.expertCategoryWriting;
+      case 'moving':
+        return l10n.expertCategoryMoving;
+      case 'cleaning':
+        return l10n.expertCategoryCleaning;
+      case 'repair':
+        return l10n.expertCategoryRepair;
+      case 'pickup_dropoff':
+        return l10n.expertCategoryPickupDropoff;
+      case 'cooking':
+        return l10n.expertCategoryCooking;
+      case 'language_help':
+        return l10n.expertCategoryLanguageHelp;
+      case 'government':
+        return l10n.expertCategoryGovernment;
+      case 'pet_care':
+        return l10n.expertCategoryPetCare;
+      case 'errand':
+        return l10n.expertCategoryErrand;
+      case 'accompany':
+        return l10n.expertCategoryAccompany;
+      case 'digital':
+        return l10n.expertCategoryDigital;
+      case 'rental_housing':
+        return l10n.expertCategoryRentalHousing;
+      case 'campus_life':
+        return l10n.expertCategoryCampusLife;
+      case 'second_hand':
+        return l10n.expertCategorySecondHand;
       default:
         return key;
     }
