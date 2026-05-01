@@ -443,6 +443,18 @@ PUSH_NOTIFICATION_TEMPLATES = {
         }
     },
 
+    # 任务支付到期提醒
+    "payment_reminder": {
+        "en": {
+            "title": "💳 Payment Due Soon",
+            "body_template": "Task「{task_title}」requires payment within {hours_remaining} hour(s). Please complete payment soon."
+        },
+        "zh": {
+            "title": "💳 任务支付即将到期",
+            "body_template": "任务「{task_title}」需要在{hours_remaining}小时后完成支付，请尽快处理。"
+        }
+    },
+
     # 任务取消
     "task_cancelled": {
         "en": {
