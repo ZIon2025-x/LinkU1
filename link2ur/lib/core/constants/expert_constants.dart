@@ -4,6 +4,7 @@ class ExpertConstants {
   /// Expert category keys — aligned with backend FeaturedTaskExpert.category
   static const List<String> categoryKeys = [
     'all',
+    // 老 13 个
     'programming',
     'translation',
     'tutoring',
@@ -17,10 +18,29 @@ class ExpertConstants {
     'gaming',
     'photography',
     'housekeeping',
+    // 新 17 个（与 skill_categories.task_type 同名，技能板块共有）
+    'shopping',
+    'design',
+    'writing',
+    'moving',
+    'cleaning',
+    'repair',
+    'pickup_dropoff',
+    'cooking',
+    'language_help',
+    'government',
+    'pet_care',
+    'errand',
+    'accompany',
+    'digital',
+    'rental_housing',
+    'campus_life',
+    'second_hand',
   ];
 
   /// Service category keys (excludes 'all')
   static const List<String> serviceCategoryKeys = [
+    // 老 13 个
     'programming',
     'translation',
     'tutoring',
@@ -34,6 +54,24 @@ class ExpertConstants {
     'gaming',
     'photography',
     'housekeeping',
+    // 新 17 个
+    'shopping',
+    'design',
+    'writing',
+    'moving',
+    'cleaning',
+    'repair',
+    'pickup_dropoff',
+    'cooking',
+    'language_help',
+    'government',
+    'pet_care',
+    'errand',
+    'accompany',
+    'digital',
+    'rental_housing',
+    'campus_life',
+    'second_hand',
   ];
 
   /// Expert service currencies
