@@ -432,6 +432,39 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.check_expired_rental_approvals_task',
         'schedule': 1800.0,
     },
+
+    # ========== 提醒/兜底任务（2026-05-01 接入，详见 spec 2026-04-30-zombie-cleanup-and-scheduler-fix-design.md）==========
+
+    # 任务截止提醒：24h / 6h 两档；每 10 分钟扫窗口（函数内 ±5min + 1h 去重）
+    'send-deadline-reminders-24h': {
+        'task': 'app.celery_tasks.send_deadline_reminders_task',
+        'schedule': crontab(minute='*/10'),
+        'kwargs': {'hours_before': 24},
+    },
+    'send-deadline-reminders-6h': {
+        'task': 'app.celery_tasks.send_deadline_reminders_task',
+        'schedule': crontab(minute='*/10'),
+        'kwargs': {'hours_before': 6},
+    },
+
+    # 支付到期前提醒：6h / 1h 两档；同样每 10 分钟
+    'send-payment-reminders-6h': {
+        'task': 'app.celery_tasks.send_payment_reminders_task',
+        'schedule': crontab(minute='*/10'),
+        'kwargs': {'hours_before': 6},
+    },
+    'send-payment-reminders-1h': {
+        'task': 'app.celery_tasks.send_payment_reminders_task',
+        'schedule': crontab(minute='*/10'),
+        'kwargs': {'hours_before': 1},
+    },
+
+    # 争议超时检查：每天凌晨 02:20（与其他 daily 任务错峰）
+    'check-stale-disputes': {
+        'task': 'app.celery_tasks.check_stale_disputes_task',
+        'schedule': crontab(hour=2, minute=20),
+        'kwargs': {'days': 7},
+    },
 }
 
 # 如果使用内存后端，禁用结果存储
