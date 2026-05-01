@@ -60,6 +60,7 @@ SMOKE_PROBES: list[tuple[str, str, str, tuple[int, ...], tuple[str, ...]]] = [
     ("forum_my",           "GET",  "/forum/my/posts",        (401,),            _API_ONLY),
     ("forum_discovery",    "GET",  "/forum/hot-posts",       (200, 401, 500),   _API_ONLY),
     ("forum_admin",        "GET",  "/forum/admin/stats",     (401, 403),        _API_ONLY),
+    ("service_public",  "GET",  "/services",              (200, 401, 500),  _API_ONLY),
 ]
 
 

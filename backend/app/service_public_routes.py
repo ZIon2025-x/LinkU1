@@ -88,6 +88,66 @@ async def _is_service_owner(
     return False
 
 
+# ==================== GET /api/services (cross-expert listing) ====================
+
+@service_public_router.get(
+    "/api/services",
+    response_model=list,
+)
+async def list_services_by_category(
+    category: Optional[str] = Query(None, description="按 TaskExpertService.category 精确筛选"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """跨达人列出 active 状态的服务，可选 category 筛选。供技能板块/聚合页使用。"""
+    query = select(models.TaskExpertService).where(
+        models.TaskExpertService.status == "active"
+    )
+    if category:
+        query = query.where(models.TaskExpertService.category == category)
+
+    query = query.order_by(
+        models.TaskExpertService.display_order.asc(),
+        models.TaskExpertService.created_at.desc(),
+    ).offset(offset).limit(limit)
+
+    result = await db.execute(query)
+    services = result.scalars().all()
+
+    # 复用 display_identity 的批量身份解析（避免 N+1）
+    from app.services.display_identity import batch_resolve_async
+    identities = [(s.owner_type or "user", s.owner_id or "") for s in services]
+    identity_map = await batch_resolve_async(db, identities)
+
+    response = []
+    for s in services:
+        otype = s.owner_type or "user"
+        oid = s.owner_id or ""
+        display_name, display_avatar = identity_map.get((otype, oid), ("", None))
+        response.append({
+            "id": s.id,
+            "service_name": s.service_name,
+            "service_name_en": s.service_name_en,
+            "service_name_zh": s.service_name_zh,
+            "name": s.service_name,
+            "name_en": s.service_name_en,
+            "name_zh": s.service_name_zh,
+            "description": s.description,
+            "base_price": float(s.base_price) if s.base_price else 0,
+            "package_price": float(s.package_price) if s.package_price else None,
+            "price": float(s.package_price or s.base_price) if (s.package_price or s.base_price) else 0,
+            "currency": s.currency,
+            "category": s.category,
+            "images": s.images,
+            "owner_type": otype,
+            "owner_id": oid,
+            "display_name": display_name,
+            "display_avatar": display_avatar,
+        })
+    return response
+
+
 # ==================== GET /api/services/{service_id} ====================
 
 @service_public_router.get(
