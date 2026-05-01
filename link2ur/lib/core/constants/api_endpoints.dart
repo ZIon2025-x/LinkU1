@@ -225,6 +225,8 @@ class ApiEndpoints {
       '/api/services/$serviceId/time-slots';
   static String publicServiceDetail(int serviceId) =>
       '/api/services/$serviceId'; // Phase B1: service_public_routes
+  /// 跨达人服务列表（供技能板块按 category 聚合）
+  static const String servicesPublic = '/api/services';
 
   // 服务申请/咨询（不需要 expertId，用 serviceId/applicationId）
   static String applyForService(int serviceId) =>

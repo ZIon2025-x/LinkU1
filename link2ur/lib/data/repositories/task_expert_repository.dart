@@ -224,6 +224,39 @@ class TaskExpertRepository {
     }
   }
 
+  /// 跨达人列出某 category 下的 active 服务，供技能板块使用
+  Future<List<TaskExpertService>> listServicesByCategory(
+    String category, {
+    int limit = 20,
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.servicesPublic,
+      queryParameters: {
+        'category': category,
+        'limit': limit,
+        'offset': offset,
+      },
+      cancelToken: cancelToken,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(
+        response.errorCode ?? response.message ?? '获取服务列表失败',
+        errorCode: response.errorCode,
+      );
+    }
+
+    final data = response.data;
+    if (data is List) {
+      return data
+          .map((e) => TaskExpertService.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
   /// 获取服务详情（原始 Map 格式）
   Future<Map<String, dynamic>> getServiceDetail(int serviceId,
       {bool forceRefresh = false}) async {
