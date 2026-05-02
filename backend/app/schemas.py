@@ -1,13 +1,38 @@
 import datetime
 from enum import Enum
-from typing import List, Literal, Optional, Dict, Any
+from typing import Annotated, List, Literal, Optional, Dict, Any
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 from pydantic import condecimal, conlist
+
+from app.constants.expert_categories import EXPERT_CATEGORIES_SET
 
 
 SUPPORTED_CURRENCIES = ("GBP", "EUR")
+
+
+def _validate_expert_category(value: Optional[str]) -> Optional[str]:
+    """校验 Expert/TaskExpertService/PersonalService 的 category 字段.
+
+    None / 空字符串放行（许多老服务 category 为 NULL）。非空时必须是
+    `EXPERT_CATEGORIES` 之一（30 keys，见 app/constants/expert_categories.py）。
+    """
+    if value is None:
+        return value
+    stripped = value.strip()
+    if not stripped:
+        return None
+    if stripped not in EXPERT_CATEGORIES_SET:
+        raise ValueError(
+            f"category must be one of the 30 supported keys, got '{stripped}'. "
+            f"See app/constants/expert_categories.py for the full list."
+        )
+    return stripped
+
+
+# Reusable typed alias — drop into any Pydantic schema as `category: ExpertCategoryStr = None`
+ExpertCategoryStr = Annotated[Optional[str], AfterValidator(_validate_expert_category)]
 
 
 class UserBrief(BaseModel):
@@ -2301,7 +2326,7 @@ class TaskExpertServiceCreate(BaseModel):
     description: Optional[str] = None
     description_en: Optional[str] = None
     description_zh: Optional[str] = None
-    category: Optional[str] = None
+    category: ExpertCategoryStr = None
     images: Optional[List[str]] = None
     base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # bundle/议价 可空,其他类型由 validator 强制 > 0
     currency: Literal["GBP", "EUR"] = "GBP"  # 统一为Literal类型
@@ -2376,7 +2401,7 @@ class TaskExpertServiceUpdate(BaseModel):
     description: Optional[str] = None
     description_en: Optional[str] = None
     description_zh: Optional[str] = None
-    category: Optional[str] = None
+    category: ExpertCategoryStr = None
     images: Optional[List[str]] = None
     base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 使用condecimal与DB的DECIMAL一致，避免精度丢失
     currency: Optional[Literal["GBP", "EUR"]] = None  # 统一为Literal类型
@@ -2446,7 +2471,7 @@ class PersonalServiceCreate(BaseModel):
     description: str = Field(..., max_length=2000)
     description_en: Optional[str] = Field(None, max_length=2000)
     description_zh: Optional[str] = Field(None, max_length=2000)
-    category: Optional[str] = Field(None, max_length=50)
+    category: ExpertCategoryStr = None
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: str = Field(default="GBP", max_length=10)
     pricing_type: str = Field(default="fixed", pattern="^(fixed|negotiable)$")
@@ -2477,7 +2502,7 @@ class PersonalServiceUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     description_en: Optional[str] = Field(None, max_length=2000)
     description_zh: Optional[str] = Field(None, max_length=2000)
-    category: Optional[str] = Field(None, max_length=50)
+    category: ExpertCategoryStr = None
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: Optional[str] = Field(None, max_length=10)
     pricing_type: Optional[str] = Field(None, pattern="^(fixed|negotiable)$")

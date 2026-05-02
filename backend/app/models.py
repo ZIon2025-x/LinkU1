@@ -1696,6 +1696,8 @@ class TaskExpertService(Base):
         Index("ix_task_expert_services_expert_status", expert_id, status),
         Index("ix_services_owner", "owner_type", "owner_id",
               postgresql_where=text("owner_type IS NOT NULL")),
+        # migration 222: 加速 GET /api/services?category=X 跨达人按 category 列服务
+        Index("ix_task_expert_services_category", category),
     )
 
 

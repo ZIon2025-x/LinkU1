@@ -2042,17 +2042,7 @@ async def _prepare_task_draft(executor: ToolExecutor, input: dict) -> dict:
     }
 
 
-_VALID_SERVICE_CATEGORIES = [
-    # 老 13 个（保留，data 已存在）
-    "programming", "translation", "tutoring", "food", "beverage", "cake",
-    "errand_transport", "social_entertainment", "beauty_skincare",
-    "handicraft", "gaming", "photography", "housekeeping",
-    # 新 17 个（与 skill_categories.task_type 同名）
-    "shopping", "design", "writing", "moving", "cleaning",
-    "repair", "pickup_dropoff", "cooking", "language_help",
-    "government", "pet_care", "errand", "accompany",
-    "digital", "rental_housing", "campus_life", "second_hand",
-]
+from app.constants.expert_categories import EXPERT_CATEGORIES as _VALID_SERVICE_CATEGORIES  # noqa: E402
 
 _VALID_PRICING_TYPES = ["fixed", "negotiable"]
 _VALID_LOCATION_TYPES = ["online", "in_person", "both"]
