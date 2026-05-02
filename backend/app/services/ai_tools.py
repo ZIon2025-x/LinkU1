@@ -2043,9 +2043,15 @@ async def _prepare_task_draft(executor: ToolExecutor, input: dict) -> dict:
 
 
 _VALID_SERVICE_CATEGORIES = [
+    # 老 13 个（保留，data 已存在）
     "programming", "translation", "tutoring", "food", "beverage", "cake",
     "errand_transport", "social_entertainment", "beauty_skincare",
     "handicraft", "gaming", "photography", "housekeeping",
+    # 新 17 个（与 skill_categories.task_type 同名）
+    "shopping", "design", "writing", "moving", "cleaning",
+    "repair", "pickup_dropoff", "cooking", "language_help",
+    "government", "pet_care", "errand", "accompany",
+    "digital", "rental_housing", "campus_life", "second_hand",
 ]
 
 _VALID_PRICING_TYPES = ["fixed", "negotiable"]
@@ -2072,7 +2078,16 @@ _VALID_LOCATION_TYPES = ["online", "in_person", "both"]
             },
             "category": {
                 "type": "string",
-                "description": "服务分类，必须是以下之一: programming, translation, tutoring, food, beverage, cake, errand_transport, social_entertainment, beauty_skincare, handicraft, gaming, photography, housekeeping",
+                "description": (
+                    "服务分类，必须是以下之一: "
+                    "programming, translation, tutoring, food, beverage, cake, "
+                    "errand_transport, social_entertainment, beauty_skincare, "
+                    "handicraft, gaming, photography, housekeeping, "
+                    "shopping, design, writing, moving, cleaning, repair, "
+                    "pickup_dropoff, cooking, language_help, government, "
+                    "pet_care, errand, accompany, digital, rental_housing, "
+                    "campus_life, second_hand"
+                ),
             },
             "pricing_type": {
                 "type": "string",
@@ -2154,28 +2169,30 @@ async def _prepare_service_draft(executor: ToolExecutor, input: dict) -> dict:
 
 
 # 任务类型 → 推荐服务分类的映射
+# 2026-05-02：达人 category 已扩到 30 个，21 个非-other task_type 全部 1:1 映射
+# 到同名 expert category；只有 'other' 不推荐（达人需要明确专业方向）。
 _TASK_TYPE_TO_SERVICE_CATEGORY = {
-    "programming": "programming",
-    "design": "programming",
-    "writing": "programming",
-    "translation": "programming",
+    "shopping": "shopping",
     "tutoring": "tutoring",
-    "cleaning": "housekeeping",
-    "repair": "housekeeping",
-    "cooking": "housekeeping",
-    "errand": "errand_transport",
-    "shopping": "errand_transport",
-    "pickup_dropoff": "errand_transport",
-    "moving": "errand_transport",
-    "campus_life": "tutoring",
-    "accompany": "social_entertainment",
-    "pet_care": "housekeeping",
-    "digital": "programming",
-    "photography": "programming",
-    "language_help": "tutoring",
-    "government": None,
-    "second_hand": None,
-    "rental_housing": None,
+    "translation": "translation",
+    "design": "design",
+    "programming": "programming",
+    "writing": "writing",
+    "photography": "photography",
+    "moving": "moving",
+    "cleaning": "cleaning",
+    "repair": "repair",
+    "pickup_dropoff": "pickup_dropoff",
+    "cooking": "cooking",
+    "language_help": "language_help",
+    "government": "government",
+    "pet_care": "pet_care",
+    "errand": "errand",
+    "accompany": "accompany",
+    "digital": "digital",
+    "rental_housing": "rental_housing",
+    "campus_life": "campus_life",
+    "second_hand": "second_hand",
     "other": None,
 }
 
