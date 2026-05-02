@@ -1,11 +1,13 @@
 from math import radians, cos, sqrt, sin, atan2
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import and_, or_, select, case, func
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, delete, or_, select, case, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
+from app.async_routers import get_current_user_secure_async_csrf
 from app.deps import get_async_db_dependency
 from app.models_expert import Expert
 from app.forum_routes import get_current_user_optional
@@ -101,32 +103,81 @@ async def browse_services(
     # 匿名或其他排序模式 → 沿用 SQL 层排序+分页（高效，无个性化）
     use_python_recommend = sort == "recommended" and current_user is not None
 
+    # 已登录时, outerjoin ServiceFavorite 让"收藏置顶"作为最高优先级 ORDER BY。
+    # count_query 已在 line 96 snapshot, 所以加 join 不影响 total。
+    favorited_first = None
+    if current_user is not None:
+        SF = models.ServiceFavorite
+        query = query.outerjoin(SF, and_(
+            SF.service_id == S.id,
+            SF.user_id == current_user.id,
+        ))
+        favorited_first = case((SF.id.isnot(None), 0), else_=1)
+
     if use_python_recommend:
         # 用 created_at DESC + 达人优先做候选筛选，限制总量后在 Python 层重排
-        query = query.order_by(
+        order_clauses = [
             case((S.service_type == "expert", 0), else_=1),
             S.created_at.desc(),
-        ).limit(_RECOMMEND_CANDIDATE_CAP)
+        ]
+        if favorited_first is not None:
+            order_clauses.insert(0, favorited_first)
+        query = query.order_by(*order_clauses).limit(_RECOMMEND_CANDIDATE_CAP)
     else:
+        order_clauses = []
+        if favorited_first is not None:
+            order_clauses.append(favorited_first)
         if sort == "recommended":
-            query = query.order_by(
+            order_clauses.extend([
                 case((S.service_type == "expert", 0), else_=1),
                 S.created_at.desc(),
-            )
+            ])
         elif sort == "newest":
-            query = query.order_by(S.created_at.desc())
+            order_clauses.append(S.created_at.desc())
         elif sort == "price_asc":
-            query = query.order_by(S.base_price.asc())
+            order_clauses.append(S.base_price.asc())
         elif sort == "price_desc":
-            query = query.order_by(S.base_price.desc())
+            order_clauses.append(S.base_price.desc())
         elif sort == "nearby":
-            query = query.order_by(distance_sq.asc())
+            order_clauses.append(distance_sq.asc())
+
+        query = query.order_by(*order_clauses)
 
         offset = (page - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
     result = await db.execute(query)
     services = result.scalars().all()
+
+    service_ids = [s.id for s in services]
+
+    # Batch-load review counts (Task.expert_service_id IN service_ids
+    # + Task.status='completed' + Review 未删除).
+    # Review 表绑 task_id, 通过 Task.expert_service_id 反查到服务维度。
+    review_counts_map = {}
+    if service_ids:
+        rc_rows = await db.execute(
+            select(models.Task.expert_service_id, func.count(models.Review.id))
+            .join(models.Review, models.Review.task_id == models.Task.id)
+            .where(
+                models.Task.expert_service_id.in_(service_ids),
+                models.Task.status == "completed",
+                models.Review.is_deleted.is_(False),
+            )
+            .group_by(models.Task.expert_service_id)
+        )
+        review_counts_map = {row[0]: row[1] for row in rc_rows.all()}
+
+    # Batch-load 当前用户已收藏的 service_ids (匿名时跳过)
+    favorited_set: set[int] = set()
+    if current_user is not None and service_ids:
+        fav_rows = await db.execute(
+            select(models.ServiceFavorite.service_id).where(
+                models.ServiceFavorite.user_id == current_user.id,
+                models.ServiceFavorite.service_id.in_(service_ids),
+            )
+        )
+        favorited_set = {row[0] for row in fav_rows.all()}
 
     # Batch-load owner user info for personal services (avoid N+1)
     user_owner_ids = {s.owner_id for s in services if s.owner_type == 'user' and s.owner_id}
@@ -219,6 +270,8 @@ async def browse_services(
             "package_type": s.package_type,
             "total_sessions": s.total_sessions,
             "linked_service_id": s.linked_service_id,
+            "review_count": int(review_counts_map.get(s.id, 0)),
+            "is_favorited": s.id in favorited_set,
         }
         if lat is not None and lng is not None and eff_lat is not None and eff_lng is not None:
             # Haversine formula — consistent with task distance calculation
@@ -260,7 +313,8 @@ async def browse_services(
             if rc:
                 it["reason_code"] = rc
 
-        items.sort(key=lambda it: it.get("_score", 0), reverse=True)
+        # 收藏置顶 + _score DESC (元组排序: False < True, 已收藏在前用 not is_favorited)
+        items.sort(key=lambda it: (not it.get("is_favorited", False), -it.get("_score", 0)))
         for it in items:
             it.pop("_score", None)
 
@@ -272,3 +326,52 @@ async def browse_services(
         items = items[offset:offset + page_size]
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+# ==================== POST /api/services/{service_id}/favorite ====================
+
+@service_browse_router.post("/{service_id}/favorite")
+async def toggle_service_favorite(
+    service_id: int,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """切换服务收藏状态。返回新的 is_favorited + favorite_count。"""
+    service = await db.get(models.TaskExpertService, service_id)
+    if service is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+
+    SF = models.ServiceFavorite
+    existing = await db.execute(
+        select(SF).where(
+            SF.user_id == current_user.id,
+            SF.service_id == service_id,
+        )
+    )
+    existing_row = existing.scalar_one_or_none()
+
+    if existing_row is not None:
+        await db.delete(existing_row)
+        await db.commit()
+        is_favorited = False
+    else:
+        try:
+            db.add(SF(user_id=current_user.id, service_id=service_id))
+            await db.commit()
+            is_favorited = True
+        except IntegrityError:
+            # 并发场景: 另一个请求刚好插入了同一行 → 视为已收藏
+            await db.rollback()
+            is_favorited = True
+
+    fav_count_row = await db.execute(
+        select(func.count(SF.id)).where(SF.service_id == service_id)
+    )
+    favorite_count = int(fav_count_row.scalar() or 0)
+
+    return {
+        "is_favorited": is_favorited,
+        "favorite_count": favorite_count,
+    }

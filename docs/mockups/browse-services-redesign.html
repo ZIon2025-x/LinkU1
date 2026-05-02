@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>技能服务页 — 视觉方案对比</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root {
+    --primary: #5E6AD2;
+    --primary-soft: #EEF0FB;
+    --accent: #F59E0B;
+    --accent-soft: #FEF3C7;
+    --pink: #F472B6;
+    --pink-soft: #FCE7F3;
+    --green: #10B981;
+    --green-soft: #D1FAE5;
+    --bg: #F4F5F8;
+    --card: #FFFFFF;
+    --text: #1A1B25;
+    --muted: #6B7280;
+    --line: #E5E7EB;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(180deg, #FAFBFD 0%, #EEF1F6 100%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 16px 64px;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .page-header h1 {
+    font-size: 24px; margin: 0 0 6px;
+    color: #111;
+  }
+  .page-header p {
+    font-size: 13px; color: var(--muted); margin: 0;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 36px;
+    max-width: 1400px;
+    margin: 0 auto;
+    align-items: start;
+  }
+
+  /* Phone frame ==================================================== */
+  .phone {
+    width: 380px;
+    margin: 0 auto;
+    border-radius: 36px;
+    background: var(--bg);
+    box-shadow:
+      0 20px 60px rgba(0,0,0,.18),
+      0 4px 12px rgba(0,0,0,.06);
+    overflow: hidden;
+    border: 8px solid #1a1a1a;
+    position: relative;
+  }
+  .phone-label {
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    font-weight: 600;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+  }
+  .phone-label .sub {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 38px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 22px 6px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--card);
+  }
+
+  /* App bar */
+  .app-bar {
+    background: var(--card);
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .app-bar .icon-btn {
+    width: 36px; height: 36px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    color: #333;
+    cursor: pointer;
+  }
+  .app-bar .icon-btn:hover { background: rgba(0,0,0,.05); }
+  .app-bar h2 {
+    font-size: 16px; margin: 0;
+    flex: 1;
+  }
+
+  /* Search */
+  .search {
+    display: flex; align-items: center;
+    background: #F1F2F6;
+    border-radius: 24px;
+    padding: 8px 14px;
+    margin: 10px 12px;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .search svg { flex-shrink: 0; }
+
+  /* Chips */
+  .chips {
+    display: flex; gap: 8px;
+    padding: 4px 12px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chip {
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-size: 12px;
+    background: var(--card);
+    color: #444;
+    border: 1px solid var(--line);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .chip.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    font-weight: 600;
+  }
+
+  /* SVG icons inline */
+  .ic { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; }
+
+  /* ========== Variant A — 小红书瀑布流 ============================= */
+  .variant-a .feed {
+    columns: 2;
+    column-gap: 8px;
+    padding: 4px 8px 24px;
+  }
+  .variant-a .v-card {
+    break-inside: avoid;
+    background: var(--card);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .variant-a .v-cover {
+    position: relative;
+    width: 100%;
+    background: #ddd;
+  }
+  .variant-a .v-cover .badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: rgba(0,0,0,.55);
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    backdrop-filter: blur(4px);
+    font-weight: 500;
+  }
+  .variant-a .v-cover .badge.expert {
+    background: linear-gradient(135deg, #F59E0B, #F472B6);
+  }
+  .variant-a .v-body {
+    padding: 8px 10px 10px;
+  }
+  .variant-a .v-title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: #222;
+    margin: 0 0 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .variant-a .v-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .variant-a .v-meta .av {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C7D2FE, #FDA4AF);
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .variant-a .v-meta .name {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .variant-a .v-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 8px;
+  }
+  .variant-a .price {
+    color: #EE5A24;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .variant-a .price .ccy { font-size: 11px; font-weight: 500; margin-right: 1px; }
+  .variant-a .likes {
+    font-size: 11px; color: var(--muted);
+    display: flex; align-items: center; gap: 3px;
+  }
+
+  /* image placeholders */
+  .img-grad-1 { background: linear-gradient(135deg,#a8edea,#fed6e3); }
+  .img-grad-2 { background: linear-gradient(135deg,#ffecd2,#fcb69f); }
+  .img-grad-3 { background: linear-gradient(135deg,#84fab0,#8fd3f4); }
+  .img-grad-4 { background: linear-gradient(135deg,#fbc2eb,#a6c1ee); }
+  .img-grad-5 { background: linear-gradient(135deg,#fdcbf1,#e6dee9); }
+  .img-grad-6 { background: linear-gradient(135deg,#a1c4fd,#c2e9fb); }
+  .img-grad-7 { background: linear-gradient(135deg,#d4fc79,#96e6a1); }
+  .img-grad-8 { background: linear-gradient(135deg,#ff9a9e,#fecfef); }
+
+  .img-placeholder {
+    display: grid; place-items: center;
+    color: rgba(255,255,255,.85);
+    font-weight: 700;
+    font-size: 28px;
+  }
+
+  /* ========== Variant B — Airbnb 大卡片 =========================== */
+  .variant-b .feed {
+    padding: 8px 14px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .variant-b .b-card {
+    background: transparent;
+    cursor: pointer;
+  }
+  .variant-b .b-cover {
+    border-radius: 16px;
+    aspect-ratio: 5/4;
+    overflow: hidden;
+    position: relative;
+    background: #ddd;
+  }
+  .variant-b .b-cover .save {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 30px; height: 30px;
+    background: rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    color: white;
+  }
+  .variant-b .b-cover .tag {
+    position: absolute;
+    top: 12px; left: 12px;
+    background: white;
+    color: #111;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .variant-b .b-cover .tag.expert {
+    background: linear-gradient(135deg, #FCD34D, #F472B6);
+    color: white;
+  }
+  .variant-b .b-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .variant-b .b-title {
+    font-size: 15px; font-weight: 600; margin: 0;
+    color: #111;
+  }
+  .variant-b .b-rating {
+    display: flex; align-items: center; gap: 3px;
+    font-size: 13px; color: #111;
+  }
+  .variant-b .b-rating svg { color: #111; }
+  .variant-b .b-sub {
+    font-size: 13px; color: var(--muted); margin: 2px 0 0;
+  }
+  .variant-b .b-price {
+    margin-top: 6px;
+    font-size: 14px;
+  }
+  .variant-b .b-price b {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+
+  /* ========== Variant C — Fiverr 服务市场 ========================== */
+  .variant-c .feed {
+    padding: 8px 12px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .variant-c .c-card {
+    background: var(--card);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    display: flex;
+    flex-direction: column;
+  }
+  .variant-c .c-author {
+    display: flex; align-items: center;
+    padding: 12px 14px 8px;
+    gap: 8px;
+  }
+  .variant-c .c-author .av {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C7D2FE, #FDA4AF);
+    display: grid; place-items: center;
+    color: white;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .variant-c .c-author .name {
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1;
+  }
+  .variant-c .c-author .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .variant-c .badge.expert {
+    background: linear-gradient(135deg, #FEF3C7, #FCE7F3);
+    color: #B45309;
+  }
+  .variant-c .badge.personal {
+    background: var(--primary-soft);
+    color: var(--primary);
+  }
+  .variant-c .c-cover {
+    aspect-ratio: 16/10;
+    background: #ddd;
+    position: relative;
+  }
+  .variant-c .c-body {
+    padding: 10px 14px 4px;
+  }
+  .variant-c .c-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin: 0 0 8px;
+    color: #222;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .variant-c .c-rating {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .variant-c .c-rating .star { color: #F59E0B; }
+  .variant-c .c-rating b { color: #111; font-weight: 700; }
+  .variant-c .c-foot {
+    border-top: 1px solid var(--line);
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .variant-c .c-foot .label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .variant-c .c-foot .price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+  }
+  .variant-c .c-foot .price .ccy {
+    font-size: 12px; font-weight: 500;
+  }
+  .variant-c .c-fav {
+    width: 22px; height: 22px;
+    color: var(--muted);
+  }
+
+  /* small UI bits */
+  .pill {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 8px;
+    background: var(--green-soft);
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  /* Note panel */
+  .notes {
+    max-width: 1400px;
+    margin: 48px auto 0;
+    background: white;
+    border-radius: 16px;
+    padding: 24px 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  }
+  .notes h3 { margin: 0 0 12px; font-size: 16px; }
+  .notes ul { margin: 0; padding-left: 20px; line-height: 1.7; font-size: 13px; color: #444; }
+  .notes b { color: #111; }
+
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>技能服务页 — 三个视觉方向</h1>
+  <p>用同一份假数据对比三种风格，挑你喜欢的。</p>
+</div>
+
+<div class="gallery">
+
+  <!-- ============ Variant A — 小红书瀑布流风 ============ -->
+  <div>
+    <div class="phone-label">A · 小红书瀑布流
+      <span class="sub">大图为主 · 视觉浏览 · 双列</span>
+    </div>
+    <div class="phone variant-a">
+      <div class="status-bar"><span>9:41</span><span>● ● ●</span></div>
+
+      <div class="app-bar">
+        <div class="icon-btn">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <h2>技能服务</h2>
+        <div class="icon-btn">
+          <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </div>
+      </div>
+
+      <div class="chips">
+        <div class="chip active">全部</div>
+        <div class="chip">个人</div>
+        <div class="chip">达人</div>
+        <div class="chip">📍 附近</div>
+        <div class="chip">⚡ 在线</div>
+      </div>
+
+      <div class="feed">
+        <!-- card 1 -->
+        <div class="v-card">
+          <div class="v-cover img-grad-1 img-placeholder" style="height:180px;">📸</div>
+          <div class="v-body">
+            <div class="v-title">专业人像摄影 / 写真 / 旅拍约拍</div>
+            <div class="v-meta">
+              <div class="av">L</div>
+              <div class="name">Lily 摄影工作室</div>
+            </div>
+            <div class="v-foot">
+              <div class="price"><span class="ccy">£</span>180<span style="font-size:11px;font-weight:400;color:#999;">/小时起</span></div>
+              <div class="likes">❤ 234</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- card 2 -->
+        <div class="v-card">
+          <div class="v-cover img-grad-2 img-placeholder" style="height:120px;">🎨</div>
+          <div class="v-body">
+            <div class="v-title">手绘插画 / 头像定制</div>
+            <div class="v-meta">
+              <div class="av" style="background:linear-gradient(135deg,#FBBF24,#F472B6);">阿</div>
+              <div class="name">阿圆</div>
+            </div>
+            <div class="v-foot">
+              <div class="price"><span class="ccy">£</span>45</div>
+              <div class="likes">❤ 89</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- card 3 -->
+        <div class="v-card">
+          <div class="v-cover img-grad-3 img-placeholder" style="height:200px;">🏠</div>
+          <div class="v-body">
+            <div class="v-title">伦敦本地搬家·家具拆装·钢琴搬运</div>
+            <div class="v-meta">
+              <div class="av" style="background:linear-gradient(135deg,#10B981,#84FAB0);">移</div>
+              <div class="name">移得快</div>
+            </div>
+            <div class="v-foot">
+              <div class="price"><span class="ccy">£</span>80<span style="font-size:11px;font-weight:400;color:#999;">起</span></div>
+              <div class="likes">❤ 156</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- card 4 -->
+        <div class="v-card">
+          <div class="v-cover img-grad-4 img-placeholder" style="height:140px;">💄</div>
+          <div class="v-body">
+            <div class="v-title">新娘跟妆 · 上门化妆 · 派对妆面</div>
+            <div class="v-meta">
+              <div class="av" style="background:linear-gradient(135deg,#F472B6,#A78BFA);">M</div>
+              <div class="name">Mia Beauty</div>
+            </div>
+            <div class="v-foot">
+              <div class="price"><span class="ccy">£</span>120</div>
+              <div class="likes">❤ 312</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- card 5 -->
+        <div class="v-card">
+          <div class="v-cover img-grad-5 img-placeholder" style="height:170px;">📚</div>
+          <div class="v-body">
+            <div class="v-title">A-Level / GCSE 数学 1对1</div>
+            <div class="v-meta">
+              <div class="av" style="background:linear-gradient(135deg,#3B82F6,#06B6D4);">T</div>
+              <div class="name">Tom · 剑桥数学</div>
+            </div>
+            <div class="v-foot">
+              <div class="price">面议</div>
+              <div class="likes">❤ 67</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- card 6 -->
+        <div class="v-card">
+          <div class="v-cover img-grad-6 img-placeholder" style="height:130px;">💻</div>
+          <div class="v-body">
+            <div class="v-title">网站搭建 / 小程序开发</div>
+            <div class="v-meta">
+              <div class="av" style="background:linear-gradient(135deg,#6366F1,#06B6D4);">D</div>
+              <div class="name">Dev Studio</div>
+            </div>
+            <div class="v-foot">
+              <div class="price"><span class="ccy">£</span>500<span style="font-size:11px;font-weight:400;color:#999;">起</span></div>
+              <div class="likes">❤ 45</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Variant B — Airbnb 大卡片风 ============ -->
+  <div>
+    <div class="phone-label">B · Airbnb 大卡片
+      <span class="sub">单列大图 · 优雅克制 · 信任感强</span>
+    </div>
+    <div class="phone variant-b">
+      <div class="status-bar"><span>9:41</span><span>● ● ●</span></div>
+
+      <div class="app-bar">
+        <div class="icon-btn">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <h2>技能服务</h2>
+      </div>
+
+      <!-- Airbnb 风：搜索条更显眼 -->
+      <div class="search" style="background:white;border:1px solid var(--line);box-shadow:0 2px 6px rgba(0,0,0,.04);padding:10px 16px;">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <div style="flex:1;color:#111;font-weight:600;">想找点什么？</div>
+        <div style="font-size:11px;color:var(--muted);">全部 · 任意价</div>
+      </div>
+
+      <div class="chips" style="padding-top:8px;">
+        <div class="chip active">🌟 全部</div>
+        <div class="chip">📷 摄影</div>
+        <div class="chip">🎨 设计</div>
+        <div class="chip">📚 家教</div>
+        <div class="chip">💻 编程</div>
+        <div class="chip">🚚 搬运</div>
+      </div>
+
+      <div class="feed">
+        <!-- card 1 -->
+        <div class="b-card">
+          <div class="b-cover img-grad-1 img-placeholder">
+            <span class="tag expert">⭐ 达人服务</span>
+            <div class="save">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            </div>
+            📸
+          </div>
+          <div class="b-meta">
+            <h3 class="b-title">Lily 摄影工作室 · 伦敦</h3>
+            <div class="b-rating">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              4.92<span style="color:var(--muted);">(128)</span>
+            </div>
+          </div>
+          <p class="b-sub">专业人像 · 写真 · 旅拍约拍</p>
+          <p class="b-sub">距你 2.3 km</p>
+          <p class="b-price"><b>£180</b> / 小时起</p>
+        </div>
+
+        <!-- card 2 -->
+        <div class="b-card">
+          <div class="b-cover img-grad-3 img-placeholder">
+            <span class="tag">个人服务</span>
+            <div class="save">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            </div>
+            🏠
+          </div>
+          <div class="b-meta">
+            <h3 class="b-title">移得快 · 全伦敦上门</h3>
+            <div class="b-rating">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              4.85<span style="color:var(--muted);">(56)</span>
+            </div>
+          </div>
+          <p class="b-sub">本地搬家 · 家具拆装 · 钢琴搬运</p>
+          <p class="b-sub">服务半径 全城</p>
+          <p class="b-price"><b>£80</b> 起</p>
+        </div>
+
+        <!-- card 3 -->
+        <div class="b-card">
+          <div class="b-cover img-grad-5 img-placeholder">
+            <span class="tag expert">⭐ 达人服务</span>
+            <div class="save">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            </div>
+            📚
+          </div>
+          <div class="b-meta">
+            <h3 class="b-title">Tom · 剑桥数学家教</h3>
+            <div class="b-rating">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              5.00<span style="color:var(--muted);">(34)</span>
+            </div>
+          </div>
+          <p class="b-sub">A-Level · GCSE · 1 对 1 辅导</p>
+          <p class="b-sub">线上 / 上门</p>
+          <p class="b-price"><b>面议</b></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Variant C — Fiverr 服务市场风 ============ -->
+  <div>
+    <div class="phone-label">C · Fiverr 服务市场
+      <span class="sub">作者优先 · 强评分 · 商务感</span>
+    </div>
+    <div class="phone variant-c">
+      <div class="status-bar"><span>9:41</span><span>● ● ●</span></div>
+
+      <div class="app-bar">
+        <div class="icon-btn">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <h2>技能服务</h2>
+        <div class="icon-btn">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </div>
+      </div>
+
+      <div class="search">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span>搜索服务...</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip active">推荐</div>
+        <div class="chip">个人</div>
+        <div class="chip">达人</div>
+        <div class="chip">最新</div>
+        <div class="chip">价格 ↑</div>
+      </div>
+
+      <div class="feed">
+        <!-- card 1 -->
+        <div class="c-card">
+          <div class="c-author">
+            <div class="av">L</div>
+            <div class="name">Lily 摄影</div>
+            <div class="badge expert">达人</div>
+          </div>
+          <div class="c-cover img-grad-1 img-placeholder">📸</div>
+          <div class="c-body">
+            <p class="c-title">专业人像摄影 / 写真 / 旅拍约拍 — 伦敦地区</p>
+            <div class="c-rating">
+              <span class="star">★</span><b>4.9</b>
+              <span>(128)</span>
+              <span style="margin-left:auto;" class="pill">在线</span>
+            </div>
+          </div>
+          <div class="c-foot">
+            <div>
+              <div class="label">起价</div>
+              <div class="price"><span class="ccy">£</span>180</div>
+            </div>
+            <svg class="c-fav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- card 2 -->
+        <div class="c-card">
+          <div class="c-author">
+            <div class="av" style="background:linear-gradient(135deg,#10B981,#84FAB0);">移</div>
+            <div class="name">移得快</div>
+            <div class="badge personal">个人</div>
+          </div>
+          <div class="c-cover img-grad-3 img-placeholder">🏠</div>
+          <div class="c-body">
+            <p class="c-title">伦敦本地搬家 · 家具拆装 · 钢琴搬运</p>
+            <div class="c-rating">
+              <span class="star">★</span><b>4.8</b>
+              <span>(56)</span>
+              <span style="margin-left:auto;color:var(--muted);">📍 2.3 km</span>
+            </div>
+          </div>
+          <div class="c-foot">
+            <div>
+              <div class="label">起价</div>
+              <div class="price"><span class="ccy">£</span>80</div>
+            </div>
+            <svg class="c-fav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- card 3 -->
+        <div class="c-card">
+          <div class="c-author">
+            <div class="av" style="background:linear-gradient(135deg,#3B82F6,#06B6D4);">T</div>
+            <div class="name">Tom · 剑桥数学</div>
+            <div class="badge expert">达人</div>
+          </div>
+          <div class="c-cover img-grad-5 img-placeholder">📚</div>
+          <div class="c-body">
+            <p class="c-title">A-Level / GCSE 数学家教 1 对 1</p>
+            <div class="c-rating">
+              <span class="star">★</span><b>5.0</b>
+              <span>(34)</span>
+              <span style="margin-left:auto;" class="pill">认证</span>
+            </div>
+          </div>
+          <div class="c-foot">
+            <div>
+              <div class="label">价格</div>
+              <div class="price">面议</div>
+            </div>
+            <svg class="c-fav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes">
+  <h3>三个方案的取舍</h3>
+  <ul>
+    <li><b>A · 小红书瀑布流</b>：图最大、信息最少，<b>视觉冲击强</b>，适合个人摄影/手绘/化妆这类"颜值即卖点"的服务。<b>缺点</b>：服务半径、评分等关键决策信息要点进详情才能看到，对家教/编程这类偏理性的品类不友好。</li>
+    <li><b>B · Airbnb 大卡片</b>：单列大图 + 评分 + 距离 + 起价，<b>信任感最强</b>，每个卡片都像一次"严肃推荐"。<b>缺点</b>：滑动一屏只能看到 1-1.5 个卡片，浏览效率低，更像精选不像市场。</li>
+    <li><b>C · Fiverr 服务市场</b>：<b>作者头像 + 评分 + 起价</b>三件套，强调"我跟谁打交道、值不值"，最贴合"技能服务"的商务语义；信息密度也居中。<b>缺点</b>：观感最朴素，没有 A/B 那种"想滑下去"的感觉。</li>
+  </ul>
+  <p style="margin:12px 0 0;font-size:13px;color:#444;"><b>我的建议：C 为骨架，吸收 B 的大图。</b>因为 LinkU 是"技能互助"，本质偏服务交易，决策要素是"谁、几分、多少钱"，C 把这三件抬到了第一层；但 C 当前的封面图比例(16:10) 可以再大一点（比如 4:3），并把作者条移到图下方，这样观感会接近 Airbnb 但保留 Fiverr 的信息结构。要不要我再画一个"C+B 混合版"？</p>
+</div>
+
+</body>
+</html>

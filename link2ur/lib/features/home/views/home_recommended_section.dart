@@ -181,6 +181,7 @@ class _StoryRow extends StatelessWidget {
       _StoryEntry(emoji: '\u{1F4CB}', label: l10n.menuTaskHall, route: '/tasks'),
       _StoryEntry(emoji: '\u{1F389}', label: l10n.homeActivities, route: '/activities'),
       _StoryEntry(emoji: '\u{1F31F}', label: l10n.homeExperts, route: '/task-experts'),
+      _StoryEntry(emoji: '\u{1F4A1}', label: l10n.homeSkillServices, route: '/services/browse'),
       _StoryEntry(emoji: '\u{1F6D2}', label: l10n.homeSecondHandMarket, route: '/flea-market'),
     ];
 

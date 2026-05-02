@@ -14297,6 +14297,12 @@ abstract class AppLocalizations {
   /// **'Second-hand Market'**
   String get homeSecondHandMarket;
 
+  /// No description provided for @homeSkillServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Services'**
+  String get homeSkillServices;
+
   /// No description provided for @homeSecondHandSubtitle.
   ///
   /// In en, this message translates to:

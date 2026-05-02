@@ -7792,6 +7792,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSecondHandMarket => 'Second-hand Market';
 
   @override
+  String get homeSkillServices => 'Skill Services';
+
+  @override
   String get homeSecondHandSubtitle => 'Pre-owned items at great prices';
 
   @override

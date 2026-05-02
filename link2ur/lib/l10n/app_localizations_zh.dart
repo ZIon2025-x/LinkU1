@@ -7464,6 +7464,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeSecondHandMarket => '二手市场';
 
   @override
+  String get homeSkillServices => '技能服务';
+
+  @override
   String get homeSecondHandSubtitle => '闲置物品，低价出售';
 
   @override
@@ -20757,6 +20760,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeSecondHandMarket => '二手市場';
+
+  @override
+  String get homeSkillServices => '技能服務';
 
   @override
   String get homeSecondHandSubtitle => '閒置物品，低價出售';

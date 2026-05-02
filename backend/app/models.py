@@ -1821,6 +1821,26 @@ class ServiceApplication(Base):
     )
 
 
+class ServiceFavorite(Base):
+    """技能服务收藏（task_expert_services 维度，含 personal + expert）"""
+    __tablename__ = "service_favorites"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    user = relationship("User", backref="service_favorites")
+    service = relationship("TaskExpertService", backref="favorites")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "service_id", name="uix_user_service_favorite"),
+        Index("idx_service_favorites_user_id", user_id),
+        Index("idx_service_favorites_service_id", service_id),
+        Index("idx_service_favorites_created_at", created_at),
+    )
+
+
 class FleaMarketItem(Base):
     """跳蚤市场商品表"""
     __tablename__ = "flea_market_items"
