@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -16,7 +15,7 @@ import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost;
+import '../../../data/models/user.dart' show User, UserProfileReview, UserProfileForumPost;
 import '../../../data/models/task.dart' show CreateTaskRequest;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -25,6 +24,7 @@ import '../../../data/repositories/follow_repository.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
+import 'widgets/b_section_card.dart';
 import 'widgets/personal_services_section.dart';
 import 'widgets/user_profile_hero_card.dart';
 
@@ -70,9 +70,17 @@ class UserProfileView extends StatelessWidget {
             final isPageError = state.errorMessage != null &&
                 state.errorMessage != 'follow_failed' &&
                 state.errorMessage != 'unfollow_failed';
+            final isDark = Theme.of(context).brightness == Brightness.dark;
             return Scaffold(
+              extendBodyBehindAppBar: true,
               appBar: AppBar(
                 title: Text(l10n.profileUserProfile),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                surfaceTintColor: Colors.transparent,
+                foregroundColor:
+                    isDark ? Colors.white : const Color(0xFF1A1D1F),
               ),
               body: state.isLoading
                   ? const LoadingView()
@@ -130,8 +138,8 @@ class UserProfileView extends StatelessWidget {
                                             );
                                           },
                                         ),
-                                        const SizedBox(height: AppSpacing.lg),
-                                        // 合作记录
+                                        const SizedBox(height: AppSpacing.md),
+                                        // 你和 TA 的合作（老用户决策核心，置顶）
                                         BlocBuilder<ProfileBloc, ProfileState>(
                                           buildWhen: (prev, curr) =>
                                               prev.sharedTasks != curr.sharedTasks ||
@@ -149,12 +157,17 @@ class UserProfileView extends StatelessWidget {
                                         ),
                                         // 收到的评价
                                         if (state.publicProfileDetail?.reviews.isNotEmpty == true)
-                                          _buildReviewsSection(context, state.publicProfileDetail!.reviews),
-                                        // 近期任务（后端 recent_tasks，该用户近期发布或参与的任务，最多 5 条）
-                                        _buildRecentTasksSection(context, state.publicProfileDetail),
-                                        // 近期论坛帖子
+                                          _buildReviewsSection(
+                                            context,
+                                            state.publicProfileDetail!.reviews,
+                                            avgRating: state.publicUser?.avgRating,
+                                            totalReviews:
+                                                state.publicProfileDetail?.stats.totalReviews ?? 0,
+                                          ),
+                                        // TA 的论坛动态
                                         if (state.publicProfileDetail?.recentForumPosts.isNotEmpty == true)
-                                          _buildRecentForumPostsSection(context, state.publicProfileDetail!.recentForumPosts),
+                                          _buildRecentForumPostsSection(
+                                              context, state.publicProfileDetail!.recentForumPosts),
                                         const SizedBox(height: AppSpacing.xxl),
                                       ],
                                     ),
@@ -172,94 +185,56 @@ class UserProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentTasksSection(
-    BuildContext context,
-    UserProfileDetail? profileDetail,
-  ) {
-    final l10n = context.l10n;
-    final tasks = profileDetail?.recentTasks ?? [];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.list, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              Text(l10n.profileRecentTasks,
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          if (tasks.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl, horizontal: AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(AppRadius.medium),
-              ),
-              child: Center(
-                child: Text(
-                  l10n.profileNoRecentTasks,
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
-              ),
-            )
-          else
-            ...tasks
-                .where((t) => t.status == 'completed')
-                .take(3)
-                .map((t) => Padding(
-                  key: ValueKey('task_${t.id}'),
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                    title: Text(t.displayTitle(Localizations.localeOf(context)),
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '${t.status} · ${Helpers.formatPrice(t.reward, currency: t.currency)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.medium),
-                    ),
-                    onTap: () => context.goToTaskDetail(t.id),
-                  ),
-                )),
-        ],
-      ),
-    );
-  }
-
-  /// 底部固定：发布任务请求按钮
+  /// 底部固定：发布任务请求按钮（紫蓝渐变 CTA · 对齐 Plan B）
   Widget _buildBottomRequestButton(BuildContext context, User user) {
     final l10n = context.l10n;
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => _showDirectRequestSheet(context, user),
-            icon: const Icon(Icons.send, size: 20),
-            label: Text(l10n.profileDirectRequest),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.medium),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => _showDirectRequestSheet(context, user),
+            child: Ink(
+              height: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF5B6CFF), Color(0xFF8B5BFF)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF5B6CFF).withValues(alpha: 0.45),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.send_rounded,
+                      size: 20, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.profileDirectRequest,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -610,101 +585,84 @@ class UserProfileView extends StatelessWidget {
     ];
   }
 
-  /// 近期论坛帖子
+  /// TA 的论坛动态（Plan B section）
   Widget _buildRecentForumPostsSection(
     BuildContext context,
     List<UserProfileForumPost> posts,
   ) {
     final l10n = context.l10n;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.forum, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              Text(l10n.profileRecentPosts,
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w600)),
-            ],
+    final visiblePosts = posts.take(5).toList();
+    return BSectionCard(
+      title: l10n.profileRecentPosts,
+      subtitle: l10n.profileForumPostsCount(posts.length),
+      children: [
+        for (var i = 0; i < visiblePosts.length; i++)
+          _ForumPostRow(
+            post: visiblePosts[i],
+            colorIndex: i,
+            showDivider: i > 0,
           ),
-          const SizedBox(height: AppSpacing.lg),
-          ...posts.take(5).map((p) => Padding(
-                key: ValueKey('post_${p.id}'),
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                  title: Text(p.displayTitle(Localizations.localeOf(context)),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (p.contentPreview != null && p.contentPreview!.isNotEmpty)
-                        Text(
-                          p.contentPreview!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.thumb_up_outlined, size: 12, color: AppColors.textTertiary),
-                          const SizedBox(width: 4),
-                          Text('${p.likeCount}', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-                          const SizedBox(width: 12),
-                          const Icon(Icons.comment_outlined, size: 12, color: AppColors.textTertiary),
-                          const SizedBox(width: 4),
-                          Text('${p.replyCount}', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
-                  ),
-                  onTap: () => context.goToForumPostDetail(p.id),
-                ),
-              )),
-        ],
-      ),
+      ],
     );
   }
 
+  /// 你和 TA 的合作（Plan B 置顶 section）
   Widget _buildSharedTasksSection(
       BuildContext context, List<Map<String, dynamic>> tasks) {
     final l10n = context.l10n;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.handshake_outlined, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(l10n.sharedTasksTitle, style: AppTypography.title3),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          ...tasks.map((task) => _buildSharedTaskItem(context, task, isDark)),
-          const SizedBox(height: AppSpacing.section),
-        ],
-      ),
+    return BSectionCard(
+      title: l10n.profileSharedWithYou,
+      subtitle: l10n.profileSharedTasksCount(tasks.length),
+      children: [
+        for (var i = 0; i < tasks.length; i++)
+          _SharedTaskRow(task: tasks[i], showDivider: i > 0),
+      ],
     );
   }
 
-  Widget _buildSharedTaskItem(
-      BuildContext context, Map<String, dynamic> task, bool isDark) {
+  /// 收到的评价（Plan B section · 头像 + 姓名 + 星级 + 时间 + 评论 + 标签）
+  Widget _buildReviewsSection(
+    BuildContext context,
+    List<UserProfileReview> reviews, {
+    double? avgRating,
+    int totalReviews = 0,
+  }) {
+    final l10n = context.l10n;
+    final ratingText = avgRating != null
+        ? avgRating.toStringAsFixed(1)
+        : '-';
+    final shownCount = totalReviews > 0 ? totalReviews : reviews.length;
+    final visibleReviews = reviews.take(3).toList();
+
+    return BSectionCard(
+      title: l10n.profileUserReviews,
+      subtitle: l10n.profileReviewsSubtitle(ratingText, shownCount),
+      children: [
+        for (var i = 0; i < visibleReviews.length; i++)
+          _ReviewMini(
+            review: visibleReviews[i],
+            showDivider: i > 0,
+          ),
+        if (shownCount > visibleReviews.length) ...[
+          const SizedBox(height: 12),
+          _ViewAllReviewsButton(
+            label: l10n.profileViewAllReviewsCount(shownCount),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// 单条合作记录行（b-task-row）：彩色图标块 + 标题 + 角色 tag + 价格右贴。
+class _SharedTaskRow extends StatelessWidget {
+  const _SharedTaskRow({required this.task, required this.showDivider});
+
+  final Map<String, dynamic> task;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final title = task['title'] as String? ?? '';
     final status = task['status'] as String? ?? '';
@@ -712,166 +670,402 @@ class UserProfileView extends StatelessWidget {
     final isPoster = task['is_poster'] as bool? ?? false;
     final taskId = task['id'];
 
-    return GestureDetector(
+    return InkWell(
       onTap: () {
-        if (taskId != null) {
-          final id = taskId is int ? taskId : int.tryParse(taskId.toString());
-          if (id != null) context.goToTaskDetail(id);
-        }
+        if (taskId == null) return;
+        final id = taskId is int ? taskId : int.tryParse(taskId.toString());
+        if (id != null) context.goToTaskDetail(id);
       },
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allMedium,
+          border: showDivider
+              ? const Border(
+                  top: BorderSide(color: Color(0xFFF0F1F4)),
+                )
+              : null,
         ),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF0FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.description_outlined,
+                  color: Color(0xFF4F46E5), size: 18),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.1,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isPoster
-                              ? AppColors.primary.withValues(alpha: 0.1)
-                              : AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          isPoster ? l10n.sharedTasksRolePoster : l10n.sharedTasksRoleTaker,
-                          style: AppTypography.caption2.copyWith(
-                            color: isPoster ? AppColors.primary : AppColors.success,
+                      _RoleTag(
+                        label: isPoster
+                            ? l10n.sharedTasksRolePoster
+                            : l10n.sharedTasksRoleTaker,
+                        isPoster: isPoster,
+                      ),
+                      if (status.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '· $status',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9A9FA5),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        status,
-                        style: AppTypography.caption.copyWith(color: Colors.grey),
-                      ),
+                      ],
                     ],
                   ),
                 ],
               ),
             ),
-            if (reward > 0)
+            if (reward > 0) ...[
+              const SizedBox(width: 8),
               Text(
-                '${Helpers.currencySymbolFor(task['currency'] as String? ?? 'GBP')}${(reward / 100).toStringAsFixed(2)}',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
+                '${Helpers.currencySymbolFor(task['currency'] as String? ?? 'GBP')}${(reward / 100).toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleTag extends StatelessWidget {
+  const _RoleTag({required this.label, required this.isPoster});
+  final String label;
+  final bool isPoster;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isPoster ? const Color(0xFFEEF0FF) : const Color(0xFFD1FAE5);
+    final fg = isPoster ? const Color(0xFF4338CA) : const Color(0xFF047857);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+/// 单条评价（b-review-mini）：32 头像 + 姓名 + 星级 + 时间 + 评论。
+class _ReviewMini extends StatelessWidget {
+  const _ReviewMini({required this.review, required this.showDivider});
+
+  final UserProfileReview review;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final reviewerName = (review.reviewerName?.isNotEmpty ?? false)
+        ? review.reviewerName!
+        : (review.isAnonymous ? '匿名用户' : '用户');
+    final initial = reviewerName.characters.isNotEmpty
+        ? reviewerName.characters.first
+        : '?';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: showDivider
+            ? const Border(
+                top: BorderSide(color: Color(0xFFF0F1F4)),
+              )
+            : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: _avatarGradient(reviewerName),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        reviewerName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    AnimatedStarRating(
+                      rating: review.rating,
+                      size: 11,
+                      spacing: 1,
+                    ),
+                    const Spacer(),
+                    if (review.createdAt.isNotEmpty)
+                      Text(
+                        _formatReviewTime(context, review.createdAt),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF9A9FA5),
+                        ),
+                      ),
+                  ],
+                ),
+                if ((review.comment ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    review.comment!,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      height: 1.55,
+                      color: Color(0xFF4D5560),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatReviewTime(BuildContext context, String createdAt) {
+    final dt = DateTime.tryParse(createdAt);
+    if (dt == null) return createdAt;
+    return DateFormatter.formatRelative(dt, l10n: context.l10n);
+  }
+
+  static const _palette = <List<Color>>[
+    [Color(0xFFFFD6A5), Color(0xFFFF9A3C)],
+    [Color(0xFFA8EDEA), Color(0xFF67D4FF)],
+    [Color(0xFFC8B6FF), Color(0xFF9484FF)],
+    [Color(0xFFFFC1CC), Color(0xFFFF6A88)],
+    [Color(0xFFB8E994), Color(0xFF26A65B)],
+  ];
+
+  LinearGradient _avatarGradient(String name) {
+    final hash = name.codeUnits.fold<int>(0, (a, b) => a + b);
+    final pair = _palette[hash % _palette.length];
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: pair,
+    );
+  }
+}
+
+/// "查看全部 X 条评价" 按钮（b-review-all-btn）。
+class _ViewAllReviewsButton extends StatelessWidget {
+  const _ViewAllReviewsButton({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 40,
+      child: OutlinedButton(
+        onPressed: () {
+          // TODO: navigate to a future "all reviews" page when available.
+        },
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          side: const BorderSide(color: Color(0xFFE5E7EB)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: EdgeInsets.zero,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4D5560),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right,
+                size: 14, color: Color(0xFF4D5560)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 论坛动态行（b-task-row）：彩色图标块 + 标题 + 赞/评论/时间。
+class _ForumPostRow extends StatelessWidget {
+  const _ForumPostRow({
+    required this.post,
+    required this.colorIndex,
+    required this.showDivider,
+  });
+
+  final UserProfileForumPost post;
+  final int colorIndex;
+  final bool showDivider;
+
+  static const _iconPalette = <List<Color>>[
+    [Color(0xFFFEF3C7), Color(0xFFD97706)],
+    [Color(0xFFDCFCE7), Color(0xFF059669)],
+    [Color(0xFFEEF0FF), Color(0xFF4F46E5)],
+    [Color(0xFFFCE7F3), Color(0xFFDB2777)],
+    [Color(0xFFCFFAFE), Color(0xFF0891B2)],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final pair = _iconPalette[colorIndex % _iconPalette.length];
+    final timeText = (post.createdAt != null && post.createdAt!.isNotEmpty)
+        ? _formatTime(context, post.createdAt!)
+        : null;
+
+    return InkWell(
+      onTap: () => context.goToForumPostDetail(post.id),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        decoration: BoxDecoration(
+          border: showDivider
+              ? const Border(
+                  top: BorderSide(color: Color(0xFFF0F1F4)),
+                )
+              : null,
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: pair[0],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Icon(Icons.forum_outlined, color: pair[1], size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post.displayTitle(Localizations.localeOf(context)),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.1,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.thumb_up_outlined,
+                          size: 11, color: Color(0xFF9A9FA5)),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${post.likeCount}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF9A9FA5),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.mode_comment_outlined,
+                          size: 11, color: Color(0xFF9A9FA5)),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${post.replyCount}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF9A9FA5),
+                        ),
+                      ),
+                      if (timeText != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '· $timeText',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9A9FA5),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildReviewsSection(
-    BuildContext context,
-    List<UserProfileReview> reviews,
-  ) {
-    final l10n = context.l10n;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.star, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              Text(l10n.profileUserReviews,
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          ...reviews.take(10).map((r) => Padding(
-                key: ValueKey('review_${r.createdAt}_${r.rating}'),
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: _ReviewItem(review: r),
-              )),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReviewItem extends StatelessWidget {
-  const _ReviewItem({required this.review});
-  final UserProfileReview review;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              AnimatedStarRating(
-                rating: review.rating,
-                size: 14,
-                spacing: 2,
-              ),
-              if (review.createdAt.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Text(
-                  _formatReviewTime(context, review.createdAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          if (review.comment != null && review.comment!.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              review.comment!,
-              style: const TextStyle(fontSize: 14),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatReviewTime(BuildContext context, String createdAt) {
+  static String _formatTime(BuildContext context, String createdAt) {
     final dt = DateTime.tryParse(createdAt);
     if (dt == null) return createdAt;
     return DateFormatter.formatRelative(dt, l10n: context.l10n);

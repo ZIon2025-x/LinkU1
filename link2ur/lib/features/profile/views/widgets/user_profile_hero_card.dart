@@ -330,12 +330,20 @@ class _TrustStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: AppColors.dividerLight),
-          bottom: BorderSide(color: AppColors.dividerLight),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? const [Color(0xFF26262E), Color(0xFF2C232A)]
+              : const [Color(0xFFFAFAFF), Color(0xFFFEF5F5)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -344,7 +352,7 @@ class _TrustStrip extends StatelessWidget {
             child: _TrustStat(
               big: avgRating != null ? avgRating!.toStringAsFixed(1) : '-',
               label: '${l10n.profileRating} · $totalReviews',
-              gold: true,
+              isRating: true,
             ),
           ),
           const _TrustDivider(),
@@ -374,7 +382,17 @@ class _TrustDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 28,
-      color: AppColors.dividerLight,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0x00000000),
+            Color(0x14000000),
+            Color(0x00000000),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -383,28 +401,44 @@ class _TrustStat extends StatelessWidget {
   const _TrustStat({
     required this.big,
     required this.label,
-    this.gold = false,
+    this.isRating = false,
   });
   final String big;
   final String label;
-  final bool gold;
+  final bool isRating;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          big,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: gold ? AppColors.gold : null,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              big,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.6,
+                color: isRating ? const Color(0xFFD97706) : null,
+              ),
+            ),
+            if (isRating) ...[
+              const SizedBox(width: 2),
+              const Icon(Icons.star_rounded,
+                  size: 18, color: Color(0xFFF59E0B)),
+            ],
+          ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.textTertiary,
+            fontWeight: FontWeight.w500,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
