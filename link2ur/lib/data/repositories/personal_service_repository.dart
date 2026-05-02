@@ -134,6 +134,19 @@ class PersonalServiceRepository {
     }
   }
 
+  // ==================== 收藏切换 ====================
+
+  /// Toggle 收藏。返回 {is_favorited: bool, favorite_count: int}。
+  Future<Map<String, dynamic>> toggleServiceFavorite(int serviceId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.toggleServiceFavorite(serviceId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.errorCode ?? response.message ?? 'toggle_favorite_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
   // ==================== 服务状态开关 ====================
 
   Future<Map<String, dynamic>> toggleServiceStatus(String id) async {

@@ -6,13 +6,15 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/localized_string.dart';
 import '../../../core/widgets/app_select_sheet.dart';
-import '../../../core/widgets/publisher_identity.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/personal_service_repository.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/personal_service_bloc.dart';
 
 /// 浏览所有服务（个人服务 + 达人服务）
@@ -98,12 +100,63 @@ class _ContentState extends State<_Content> {
         );
   }
 
+  void _onFavoriteTap(Map<String, dynamic> service) {
+    final auth = context.read<AuthBloc>().state;
+    if (auth.status != AuthStatus.authenticated) {
+      _showLoginPrompt();
+      return;
+    }
+    final id = (service['id'] as num?)?.toInt();
+    if (id == null) return;
+    context
+        .read<PersonalServiceBloc>()
+        .add(PersonalServiceFavoriteToggled(id));
+  }
+
+  void _showLoginPrompt() {
+    final l10n = context.l10n;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.loginRequired),
+        content: Text(l10n.loginRequiredForFavorite),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.push('/login');
+            },
+            child: Text(l10n.loginLoginNow),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return BlocListener<PersonalServiceBloc, PersonalServiceState>(
+      // 收藏失败时弹 SnackBar (status==error 路径已有全屏 retry, 此处只处理 transient)
+      listenWhen: (prev, curr) =>
+          curr.errorMessage == 'toggle_favorite_failed' &&
+          prev.errorMessage != curr.errorMessage,
+      listener: (context, state) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.localizeError(state.errorMessage)),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(l10n.browseServicesTitle),
       ),
@@ -264,7 +317,7 @@ class _ContentState extends State<_Content> {
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md, 0, AppSpacing.md, 100),
+                        AppSpacing.md, AppSpacing.xs, AppSpacing.md, 100),
                     itemCount: state.browseResults.length +
                         (_currentPage < state.browseTotalPages ? 1 : 0),
                     itemBuilder: (context, index) {
@@ -280,8 +333,7 @@ class _ContentState extends State<_Content> {
                       final service = state.browseResults[index];
                       return Padding(
                         key: ValueKey(service['id']),
-                        padding:
-                            const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.only(bottom: 12),
                         child: _BrowseServiceCard(
                           service: service,
                           onTap: () {
@@ -290,6 +342,7 @@ class _ContentState extends State<_Content> {
                             final extra = withinArea == false ? '?within_service_area=false' : '';
                             context.push('/service/$id$extra');
                           },
+                          onFavoriteTap: () => _onFavoriteTap(service),
                         ),
                       );
                     },
@@ -299,6 +352,7 @@ class _ContentState extends State<_Content> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -332,210 +386,340 @@ class _TypeChip extends StatelessWidget {
   }
 }
 
+/// Fiverr 风格服务卡片
+/// 结构: 作者条 → 16:10 大封面 → 标题 → 评分行 → 分割线 → 起价 + 收藏图标
 class _BrowseServiceCard extends StatelessWidget {
   const _BrowseServiceCard({
     required this.service,
     required this.onTap,
+    required this.onFavoriteTap,
   });
 
   final Map<String, dynamic> service;
   final VoidCallback onTap;
+  final VoidCallback onFavoriteTap;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
+    final l10n = context.l10n;
+
     final name = localizedString(
       service['service_name_zh'] as String?,
       service['service_name_en'] as String?,
       (service['service_name'] as String?) ?? '',
       locale,
     );
-    final description = localizedString(
-      service['description_zh'] as String?,
-      service['description_en'] as String?,
-      (service['description'] as String?) ?? '',
-      locale,
-    );
     final price = (service['base_price'] as num?)?.toDouble() ?? 0.0;
     final currency = (service['currency'] as String?) ?? 'GBP';
     final pricingType = (service['pricing_type'] as String?) ?? 'fixed';
     final serviceType = (service['service_type'] as String?) ?? 'personal';
+    final isExpert = serviceType == 'expert';
+
     final ownerName = (service['owner_name'] as String?) ?? '';
     final ownerAvatar = service['owner_avatar'] as String?;
-    final ownerType = service['owner_type'] as String?;
-    final ownerId = service['owner_id'] as String?;
     final displayName = service['display_name'] as String?;
     final displayAvatar = service['display_avatar'] as String?;
-    final hasOwnerIdentity =
-        ownerName.isNotEmpty || (displayName?.isNotEmpty ?? false);
-    final serviceRadiusKm = service['service_radius_km'] as int?;
+    final shownName = (displayName?.isNotEmpty ?? false) ? displayName! : ownerName;
+    final shownAvatar = displayAvatar ?? ownerAvatar;
+
+    final rating = (service['owner_rating'] as num?)?.toDouble();
+    final reviewCount = (service['review_count'] as num?)?.toInt() ?? 0;
+    final distanceKm = (service['distance_km'] as num?)?.toDouble();
+    final isFavorited = (service['is_favorited'] as bool?) ?? false;
+
     final images = service['images'] as List<dynamic>?;
     final firstImage =
         (images != null && images.isNotEmpty) ? images.first as String? : null;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.allMedium,
-        side: BorderSide(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.08),
+    final cardBg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    final divider = isDark ? Colors.white12 : const Color(0xFFEEEEEE);
+    final mutedColor =
+        isDark ? AppColors.textSecondaryDark : const Color(0xFF6B7280);
+
+    final priceText = pricingType == 'negotiable'
+        ? l10n.personalServicePricingNegotiable
+        : l10n.servicePriceFrom(
+            '${Helpers.currencySymbolFor(currency)}${price.toStringAsFixed(0)}',
+          );
+
+    return Material(
+      color: cardBg,
+      borderRadius: AppRadius.allMedium,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.allMedium,
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
-      ),
-      child: InkWell(
-        borderRadius: AppRadius.allMedium,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              // Thumbnail
-              ClipRRect(
-                borderRadius: AppRadius.allSmall,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.05),
-                  child: firstImage != null
-                      ? Image.network(
-                          firstImage,
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.handyman_outlined,
-                            size: 28,
-                            color: AppColors.primary,
+        child: ClipRRect(
+          borderRadius: AppRadius.allMedium,
+          child: InkWell(
+            onTap: onTap,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ───── 1. 作者条 ─────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                  child: Row(
+                    children: [
+                      AvatarView(
+                        imageUrl: shownAvatar,
+                        name: shownName,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          shownName.isNotEmpty ? shownName : '—',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
-                        )
-                      : const Icon(
-                          Icons.handyman_outlined,
-                          size: 28,
-                          color: AppColors.primary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      _TypeBadge(isExpert: isExpert, l10n: l10n),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              // Details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (description.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.xs),
+                // ───── 2. 大封面 16:10 ─────
+                AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: Container(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : const Color(0xFFF1F2F6),
+                    child: firstImage != null
+                        ? Image.network(
+                            firstImage,
+                            fit: BoxFit.cover,
+                            cacheWidth: 800,
+                            errorBuilder: (_, __, ___) =>
+                                const _CoverPlaceholder(),
+                          )
+                        : const _CoverPlaceholder(),
+                  ),
+                ),
+                // ───── 3. 标题 + 评分行 ─────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        description,
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: isDark
-                                      ? AppColors.textSecondaryDark
-                                      : AppColors.textSecondaryLight,
-                                ),
+                        name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Text(
-                          pricingType == 'negotiable'
-                              ? context.l10n.personalServicePricingNegotiable
-                              : '${Helpers.currencySymbolFor(currency)}${price.toStringAsFixed(2)}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const Spacer(),
-                        // Service type badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: serviceType == 'expert'
-                                ? AppColors.accent.withValues(alpha: 0.1)
-                                : AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: AppRadius.allTiny,
-                          ),
-                          child: Text(
-                            serviceType == 'expert'
-                                ? context.l10n.browseServicesFilterExpert
-                                : context.l10n.browseServicesFilterPersonal,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: serviceType == 'expert'
-                                  ? AppColors.accent
-                                  : AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (hasOwnerIdentity) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      PublisherIdentity(
-                        ownerType: ownerType,
-                        ownerId: ownerId,
-                        displayName: displayName,
-                        displayAvatar: displayAvatar,
-                        fallbackName: ownerName,
-                        fallbackAvatar: ownerAvatar,
-                        avatarSize: 16,
-                        showBadge: false,
-                        nameStyle: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
-                              fontSize: 11,
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
-                            ),
+                      const SizedBox(height: 6),
+                      _RatingRow(
+                        rating: rating,
+                        reviewCount: reviewCount,
+                        distanceKm: distanceKm,
+                        isExpert: isExpert,
+                        mutedColor: mutedColor,
+                        l10n: l10n,
                       ),
                     ],
-                    if (serviceRadiusKm != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondaryContainer,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          serviceRadiusKm == 0
-                              ? context.l10n.serviceRadiusWholeCity
-                              : context.l10n.serviceRadiusKm(serviceRadiusKm),
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                // ───── 4. 分割线 + 起价 + 收藏 ─────
+                Container(height: 1, color: divider),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          priceText,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onFavoriteTap,
+                        icon: Icon(
+                          isFavorited
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: isFavorited
+                              ? const Color(0xFFE53935)
+                              : mutedColor,
+                          size: 22,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TypeBadge extends StatelessWidget {
+  const _TypeBadge({required this.isExpert, required this.l10n});
+  final bool isExpert;
+  final dynamic l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = isExpert ? const Color(0xFFB45309) : AppColors.primary;
+    final bg = isExpert
+        ? const Color(0xFFFEF3C7)
+        : AppColors.primary.withValues(alpha: 0.1);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        isExpert
+            ? l10n.browseServicesFilterExpert
+            : l10n.browseServicesFilterPersonal,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+class _RatingRow extends StatelessWidget {
+  const _RatingRow({
+    required this.rating,
+    required this.reviewCount,
+    required this.distanceKm,
+    required this.isExpert,
+    required this.mutedColor,
+    required this.l10n,
+  });
+  final double? rating;
+  final int reviewCount;
+  final double? distanceKm;
+  final bool isExpert;
+  final Color mutedColor;
+  final dynamic l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRating = rating != null && rating! > 0;
+    final children = <Widget>[];
+
+    if (hasRating) {
+      children.addAll([
+        const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
+        const SizedBox(width: 2),
+        Text(
+          rating!.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (reviewCount > 0) ...[
+          const SizedBox(width: 3),
+          Text(
+            '($reviewCount)',
+            style: TextStyle(fontSize: 12, color: mutedColor),
+          ),
+        ],
+      ]);
+    }
+
+    // 右侧 pill: 距离 优先于 认证
+    Widget? rightPill;
+    if (distanceKm != null) {
+      rightPill = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.place_outlined, size: 12, color: mutedColor),
+          const SizedBox(width: 2),
+          Text(
+            '${distanceKm!.toStringAsFixed(1)} km',
+            style: TextStyle(fontSize: 11, color: mutedColor),
+          ),
+        ],
+      );
+    } else if (isExpert) {
+      rightPill = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFD1FAE5),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: const Text(
+          '✓',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF10B981),
+          ),
+        ),
+      );
+    }
+
+    if (rightPill != null) {
+      if (children.isNotEmpty) children.add(const Spacer());
+      children.add(rightPill);
+    }
+
+    if (children.isEmpty) {
+      // 无评分无距离时, 给一个占位文案避免行高跳动
+      return SizedBox(
+        height: 16,
+        child: Text(
+          l10n.browseServicesEmptyMessage,
+          style: TextStyle(fontSize: 11, color: mutedColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 16,
+      child: Row(children: children),
+    );
+  }
+}
+
+class _CoverPlaceholder extends StatelessWidget {
+  const _CoverPlaceholder();
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Icon(
+        Icons.handyman_outlined,
+        size: 36,
+        color: AppColors.primary,
       ),
     );
   }

@@ -194,6 +194,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please login to view points and coupons';
 
   @override
+  String get loginRequiredForFavorite => 'Please log in to favorite services';
+
+  @override
   String get loginRequiredForVerification =>
       'Please login to verify student status';
 

@@ -392,6 +392,8 @@ class ApiEndpoints {
   static const String myPersonalServices = '/api/services/me';
   static String myPersonalServiceById(String id) => '/api/services/me/$id';
   static const String browseServices = '/api/services/browse';
+  static String toggleServiceFavorite(int serviceId) =>
+      '/api/services/$serviceId/favorite';
   static String personalServiceToggleStatus(String id) =>
       '/api/services/me/$id/status';
   static String serviceReviews(int serviceId) =>

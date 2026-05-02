@@ -80,6 +80,7 @@
   },
   "loginRequired": "Login Required",
   "loginRequiredForPoints": "Please login to view points and coupons",
+  "loginRequiredForFavorite": "Please log in to favorite services",
   "loginRequiredForVerification": "Please login to verify student status",
   "loginLoginNow": "Login Now",
   "authSendCode": "Send Code",

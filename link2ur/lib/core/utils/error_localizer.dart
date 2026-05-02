@@ -104,6 +104,7 @@ class ErrorLocalizer {
       case 'qa_ask_failed':
       case 'qa_reply_failed':
       case 'qa_delete_failed':
+      case 'toggle_favorite_failed':
         return context.l10n.actionOperationFailed;
       case 'qa_cannot_ask_own':
         return context.l10n.qaCannotAskOwn;

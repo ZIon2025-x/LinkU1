@@ -192,6 +192,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loginRequiredForPoints => '请登录后查看积分与优惠券';
 
   @override
+  String get loginRequiredForFavorite => '请登录后才能收藏服务';
+
+  @override
   String get loginRequiredForVerification => '请登录后进行学生认证';
 
   @override
@@ -13488,6 +13491,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get loginRequiredForPoints => '請登入後查看積分與優惠券';
+
+  @override
+  String get loginRequiredForFavorite => '請登入後才能收藏服務';
 
   @override
   String get loginRequiredForVerification => '請登入後進行學生認證';

@@ -93,6 +93,7 @@
   },
   "loginRequired": "需要登入",
   "loginRequiredForPoints": "請登入後查看積分與優惠券",
+  "loginRequiredForFavorite": "請登入後才能收藏服務",
   "loginRequiredForVerification": "請登入後進行學生認證",
   "loginLoginNow": "立即登入",
   "authSendCode": "發送驗證碼",

@@ -122,6 +122,14 @@ class PersonalServiceBrowse extends PersonalServiceEvent {
   List<Object?> get props => [type, query, sort, page];
 }
 
+// --- 收藏切换 ---
+class PersonalServiceFavoriteToggled extends PersonalServiceEvent {
+  const PersonalServiceFavoriteToggled(this.serviceId);
+  final int serviceId;
+  @override
+  List<Object?> get props => [serviceId];
+}
+
 // --- 服务评价 ---
 class PersonalServiceLoadReviews extends PersonalServiceEvent {
   const PersonalServiceLoadReviews(this.serviceId, {this.page = 1});
@@ -237,6 +245,7 @@ class PersonalServiceBloc
     on<PersonalServiceCancelApplication>(_onCancelApplication);
     on<PersonalServiceToggleStatus>(_onToggleStatus);
     on<PersonalServiceBrowse>(_onBrowse);
+    on<PersonalServiceFavoriteToggled>(_onFavoriteToggled);
     on<PersonalServiceLoadReviews>(_onLoadReviews);
   }
 
@@ -569,6 +578,41 @@ class PersonalServiceBloc
       emit(state.copyWith(
         status: PersonalServiceStatus.error,
         errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  // ==================== 收藏切换（乐观更新） ====================
+
+  Future<void> _onFavoriteToggled(
+    PersonalServiceFavoriteToggled event,
+    Emitter<PersonalServiceState> emit,
+  ) async {
+    final original = state.browseResults;
+    List<Map<String, dynamic>> withFavorited(bool? force) {
+      return original.map((item) {
+        if ((item['id'] as num?)?.toInt() == event.serviceId) {
+          final next = force ?? !((item['is_favorited'] as bool?) ?? false);
+          return {...item, 'is_favorited': next};
+        }
+        return item;
+      }).toList();
+    }
+
+    // 1) 立即翻转
+    emit(state.copyWith(browseResults: withFavorited(null)));
+
+    try {
+      final result = await _repository.toggleServiceFavorite(event.serviceId);
+      final serverFavorited = (result['is_favorited'] as bool?) ?? false;
+      // 2) 用服务端权威值修正
+      emit(state.copyWith(browseResults: withFavorited(serverFavorited)));
+    } catch (e) {
+      AppLogger.error('Failed to toggle favorite', e);
+      // 3) 回滚 + 错误码
+      emit(state.copyWith(
+        browseResults: original,
+        errorMessage: 'toggle_favorite_failed',
       ));
     }
   }

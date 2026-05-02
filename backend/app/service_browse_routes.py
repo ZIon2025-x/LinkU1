@@ -2,7 +2,7 @@ from math import radians, cos, sqrt, sin, atan2
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, delete, or_, select, case, func
+from sqlalchemy import and_, or_, select, case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 

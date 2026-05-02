@@ -453,6 +453,12 @@ abstract class AppLocalizations {
   /// **'Please login to view points and coupons'**
   String get loginRequiredForPoints;
 
+  /// No description provided for @loginRequiredForFavorite.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to favorite services'**
+  String get loginRequiredForFavorite;
+
   /// No description provided for @loginRequiredForVerification.
   ///
   /// In en, this message translates to:

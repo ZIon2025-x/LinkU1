@@ -93,6 +93,7 @@
   },
   "loginRequired": "需要登录",
   "loginRequiredForPoints": "请登录后查看积分与优惠券",
+  "loginRequiredForFavorite": "请登录后才能收藏服务",
   "loginRequiredForVerification": "请登录后进行学生认证",
   "loginLoginNow": "立即登录",
   "authSendCode": "发送验证码",
