@@ -92,10 +92,16 @@ class SkillLeaderboardBloc
     LeaderboardCategorySelected event,
     Emitter<SkillLeaderboardState> emit,
   ) async {
+    // 切类别时同步重置 experts/services + 标 loading,
+    // 避免 view 短暂渲染上一个 category 的旧达人/服务卡片。
     emit(state.copyWith(
       status: LeaderboardStatus.loading,
       selectedCategory: event.category,
       clearError: true,
+      experts: const [],
+      services: const [],
+      expertsStatus: SkillSectionStatus.loading,
+      servicesStatus: SkillSectionStatus.loading,
     ));
 
     try {

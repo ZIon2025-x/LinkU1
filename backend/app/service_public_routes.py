@@ -100,9 +100,14 @@ async def list_services_by_category(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """跨达人列出 active 状态的服务，可选 category 筛选。供技能板块/聚合页使用。"""
+    """跨达人列出 active 状态的达人服务，可选 category 筛选。供技能板块/聚合页使用。
+
+    只返回达人团队服务 (owner_type='expert')，不含个人服务，与 spec
+    "显示该 category 下的达人/达人服务" 语义一致。
+    """
     query = select(models.TaskExpertService).where(
-        models.TaskExpertService.status == "active"
+        models.TaskExpertService.status == "active",
+        models.TaskExpertService.owner_type == "expert",
     )
     if category:
         query = query.where(models.TaskExpertService.category == category)

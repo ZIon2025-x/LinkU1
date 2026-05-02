@@ -207,21 +207,27 @@ void main() {
         },
         act: (bloc) => bloc.add(const LeaderboardCategorySelected('Design')),
         expect: () => [
+          // 切类别时同步把 experts/services 重置成 loading（避免视图闪旧数据）
           isA<SkillLeaderboardState>()
               .having((s) => s.status, 'status', LeaderboardStatus.loading)
               .having(
-                  (s) => s.selectedCategory, 'selectedCategory', 'Design'),
+                  (s) => s.selectedCategory, 'selectedCategory', 'Design')
+              .having((s) => s.experts, 'experts', isEmpty)
+              .having((s) => s.services, 'services', isEmpty)
+              .having((s) => s.expertsStatus, 'expertsStatus',
+                  SkillSectionStatus.loading)
+              .having((s) => s.servicesStatus, 'servicesStatus',
+                  SkillSectionStatus.loading),
+          // 排行榜返回 → 主 status 切到 loaded
           isA<SkillLeaderboardState>()
               .having((s) => s.status, 'status', LeaderboardStatus.loaded)
               .having((s) => s.entries, 'entries', expectedEntries)
               .having((s) => s.myRank, 'myRank', expectedMyRank),
-          // SkillExpertsLoadRequested + SkillServicesLoadRequested 额外 emit
-          isA<SkillLeaderboardState>().having(
-              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loading),
+          // SkillExpertsLoadRequested handler 完成 → expertsStatus = loaded
+          // (handler 内 emit loading 因 Equatable 相等被吞，所以只看到 loaded)
           isA<SkillLeaderboardState>().having(
               (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loaded),
-          isA<SkillLeaderboardState>().having(
-              (s) => s.servicesStatus, 'servicesStatus', SkillSectionStatus.loading),
+          // 同上：servicesStatus = loaded 是这次 dispatch 唯一有效 emit
           isA<SkillLeaderboardState>().having(
               (s) => s.servicesStatus, 'servicesStatus', SkillSectionStatus.loaded),
         ],

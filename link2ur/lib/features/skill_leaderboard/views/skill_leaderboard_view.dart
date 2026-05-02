@@ -84,6 +84,10 @@ class _SkillLeaderboardBody extends StatelessWidget {
     SkillLeaderboardState state, {
     bool isLoading = false,
   }) {
+    final myRank = state.myRank;
+    final showMyRankFooter = myRank != null &&
+        !state.entries.any((e) => e.userId == myRank.userId);
+
     return Column(
       children: [
         // Category tabs
@@ -92,7 +96,7 @@ class _SkillLeaderboardBody extends StatelessWidget {
           selectedCategory: state.selectedCategory,
         ),
 
-        // Leaderboard list
+        // Leaderboard list (with experts/services sections above)
         Expanded(
           child: isLoading && state.entries.isEmpty
               ? const LoadingView()
@@ -105,6 +109,9 @@ class _SkillLeaderboardBody extends StatelessWidget {
                   ],
                 ),
         ),
+
+        // Sticky my-rank footer (outside scrollable area to stay pinned)
+        if (showMyRankFooter) _MyRankFooter(myRank: myRank),
       ],
     );
   }
@@ -213,10 +220,8 @@ class _LeaderboardList extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    // Check if current user is already in the top list
+    // Check if current user is already in the top list (used to highlight rows)
     final myRank = state.myRank;
-    final isInTopList = myRank != null &&
-        state.entries.any((e) => e.userId == myRank.userId);
 
     return Column(
       children: [
@@ -285,9 +290,6 @@ class _LeaderboardList extends StatelessWidget {
             );
           },
         ),
-
-        // "My rank" section at bottom if user is not in top list
-        if (myRank != null && !isInTopList) _MyRankFooter(myRank: myRank),
       ],
     );
   }
