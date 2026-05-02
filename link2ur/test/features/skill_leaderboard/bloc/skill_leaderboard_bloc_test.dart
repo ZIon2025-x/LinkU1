@@ -320,6 +320,78 @@ void main() {
               (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loaded),
         ],
       );
+
+      blocTest<SkillLeaderboardBloc, SkillLeaderboardState>(
+        'populates experts list with non-empty data on success',
+        setUp: () {
+          final fakeExperts = [
+            const TaskExpert(id: 'EXP01', expertName: 'Code Wizard'),
+            const TaskExpert(id: 'EXP02', expertName: 'Translator'),
+          ];
+          when(() => mockExpertRepository.getExperts(
+                category: 'programming',
+                pageSize: 10,
+              )).thenAnswer((_) async => TaskExpertListResponse(
+                experts: fakeExperts,
+                page: 1,
+                pageSize: 10,
+                total: 2,
+              ));
+        },
+        build: () => bloc,
+        act: (b) => b.add(const SkillExpertsLoadRequested('programming')),
+        expect: () => [
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>()
+              .having((s) => s.expertsStatus, 'expertsStatus',
+                  SkillSectionStatus.loaded)
+              .having((s) => s.experts.length, 'experts.length', 2)
+              .having((s) => s.experts.first.id, 'experts[0].id', 'EXP01'),
+        ],
+      );
+
+      blocTest<SkillLeaderboardBloc, SkillLeaderboardState>(
+        'emits expertsStatus error and clears experts on repository failure',
+        setUp: () {
+          when(() => mockExpertRepository.getExperts(
+                category: 'broken',
+                pageSize: 10,
+              )).thenThrow(Exception('network error'));
+        },
+        build: () => bloc,
+        act: (b) => b.add(const SkillExpertsLoadRequested('broken')),
+        expect: () => [
+          isA<SkillLeaderboardState>().having(
+              (s) => s.expertsStatus, 'expertsStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>()
+              .having((s) => s.expertsStatus, 'expertsStatus',
+                  SkillSectionStatus.error)
+              .having((s) => s.experts, 'experts', isEmpty),
+        ],
+      );
+    });
+
+    group('SkillServicesLoadRequested', () {
+      blocTest<SkillLeaderboardBloc, SkillLeaderboardState>(
+        'emits servicesStatus error and clears services on repository failure',
+        setUp: () {
+          when(() => mockExpertRepository.listServicesByCategory(
+                'broken',
+                limit: any(named: 'limit'),
+              )).thenThrow(Exception('boom'));
+        },
+        build: () => bloc,
+        act: (b) => b.add(const SkillServicesLoadRequested('broken')),
+        expect: () => [
+          isA<SkillLeaderboardState>().having(
+              (s) => s.servicesStatus, 'servicesStatus', SkillSectionStatus.loading),
+          isA<SkillLeaderboardState>()
+              .having((s) => s.servicesStatus, 'servicesStatus',
+                  SkillSectionStatus.error)
+              .having((s) => s.services, 'services', isEmpty),
+        ],
+      );
     });
   });
 }

@@ -89,6 +89,9 @@ async def _is_service_owner(
 
 
 # ==================== GET /api/services (cross-expert listing) ====================
+# IMPORTANT: keep this route DECLARED BEFORE "/api/services/{service_id}" below.
+# FastAPI matches routes in declaration order, and reordering would cause
+# /api/services to fall through to /api/services/{service_id} and 422.
 
 @service_public_router.get(
     "/api/services",
@@ -139,11 +142,18 @@ async def list_services_by_category(
             "name_en": s.service_name_en,
             "name_zh": s.service_name_zh,
             "description": s.description,
+            "description_en": s.description_en,
+            "description_zh": s.description_zh,
             "base_price": float(s.base_price) if s.base_price else 0,
             "package_price": float(s.package_price) if s.package_price else None,
             "price": float(s.package_price or s.base_price) if (s.package_price or s.base_price) else 0,
             "currency": s.currency,
             "category": s.category,
+            "service_type": s.service_type,
+            "pricing_type": s.pricing_type,
+            "location_type": s.location_type,
+            "location": s.location,
+            "skills": s.skills,
             "images": s.images,
             "owner_type": otype,
             "owner_id": oid,
