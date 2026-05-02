@@ -424,7 +424,7 @@ class _BrowseServiceCard extends StatelessWidget {
     final shownName = (displayName?.isNotEmpty ?? false) ? displayName! : ownerName;
     final shownAvatar = displayAvatar ?? ownerAvatar;
 
-    final rating = (service['owner_rating'] as num?)?.toDouble();
+    final rating = (service['service_rating'] as num?)?.toDouble();
     final reviewCount = (service['review_count'] as num?)?.toInt() ?? 0;
     final distanceKm = (service['distance_km'] as num?)?.toDouble();
     final isFavorited = (service['is_favorited'] as bool?) ?? false;
@@ -692,11 +692,11 @@ class _RatingRow extends StatelessWidget {
     }
 
     if (children.isEmpty) {
-      // 无评分无距离时, 给一个占位文案避免行高跳动
+      // 无评分无距离时显示「暂无评价」, 避免行高跳动
       return SizedBox(
         height: 16,
         child: Text(
-          l10n.browseServicesEmptyMessage,
+          l10n.noReviewsYet,
           style: TextStyle(fontSize: 11, color: mutedColor),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

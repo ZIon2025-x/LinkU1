@@ -17327,6 +17327,36 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{·1 item} other{·{count} items}}'**
   String profilePersonalServicesCount(int count);
 
+  /// No description provided for @profileSharedWithYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Worked together'**
+  String get profileSharedWithYou;
+
+  /// No description provided for @profileSharedTasksCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{·1 time} other{·{count} times}}'**
+  String profileSharedTasksCount(int count);
+
+  /// No description provided for @profileForumPostsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{·1 post} other{·{count} posts}}'**
+  String profileForumPostsCount(int count);
+
+  /// No description provided for @profileReviewsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{rating} · {count} reviews'**
+  String profileReviewsSubtitle(String rating, int count);
+
+  /// No description provided for @profileViewAllReviewsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'View all {count} reviews'**
+  String profileViewAllReviewsCount(int count);
+
   /// No description provided for @profileServicePriceFrom.
   ///
   /// In en, this message translates to:

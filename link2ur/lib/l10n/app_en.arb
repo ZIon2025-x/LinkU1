@@ -81,6 +81,7 @@
   "loginRequired": "Login Required",
   "loginRequiredForPoints": "Please login to view points and coupons",
   "loginRequiredForFavorite": "Please log in to favorite services",
+  "noReviewsYet": "No reviews yet",
   "loginRequiredForVerification": "Please login to verify student status",
   "loginLoginNow": "Login Now",
   "authSendCode": "Send Code",
@@ -4371,6 +4372,26 @@
   "profilePersonalServices": "Personal Services",
   "profilePersonalServicesCount": "{count, plural, =1{·1 item} other{·{count} items}}",
   "@profilePersonalServicesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileSharedWithYou": "Worked together",
+  "profileSharedTasksCount": "{count, plural, =1{·1 time} other{·{count} times}}",
+  "@profileSharedTasksCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileForumPostsCount": "{count, plural, =1{·1 post} other{·{count} posts}}",
+  "@profileForumPostsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileReviewsSubtitle": "{rating} · {count} reviews",
+  "@profileReviewsSubtitle": {
+    "placeholders": {
+      "rating": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "profileViewAllReviewsCount": "View all {count} reviews",
+  "@profileViewAllReviewsCount": {
     "placeholders": { "count": { "type": "int" } }
   },
   "profileServicePriceFrom": "from",

@@ -94,6 +94,7 @@
   "loginRequired": "需要登入",
   "loginRequiredForPoints": "請登入後查看積分與優惠券",
   "loginRequiredForFavorite": "請登入後才能收藏服務",
+  "noReviewsYet": "暫無評價",
   "loginRequiredForVerification": "請登入後進行學生認證",
   "loginLoginNow": "立即登入",
   "authSendCode": "發送驗證碼",
@@ -4193,6 +4194,26 @@
   "profilePersonalServices": "個人服務",
   "profilePersonalServicesCount": "· {count} 項",
   "@profilePersonalServicesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileSharedWithYou": "你和 TA 的合作",
+  "profileSharedTasksCount": "· {count} 次",
+  "@profileSharedTasksCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileForumPostsCount": "· {count} 篇",
+  "@profileForumPostsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileReviewsSubtitle": "{rating} · {count} 條",
+  "@profileReviewsSubtitle": {
+    "placeholders": {
+      "rating": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "profileViewAllReviewsCount": "查看全部 {count} 條評價",
+  "@profileViewAllReviewsCount": {
     "placeholders": { "count": { "type": "int" } }
   },
   "profileServicePriceFrom": "起",

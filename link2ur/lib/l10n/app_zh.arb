@@ -94,6 +94,7 @@
   "loginRequired": "需要登录",
   "loginRequiredForPoints": "请登录后查看积分与优惠券",
   "loginRequiredForFavorite": "请登录后才能收藏服务",
+  "noReviewsYet": "暂无评价",
   "loginRequiredForVerification": "请登录后进行学生认证",
   "loginLoginNow": "立即登录",
   "authSendCode": "发送验证码",
@@ -4254,6 +4255,26 @@
   "profilePersonalServices": "个人服务",
   "profilePersonalServicesCount": "· {count} 项",
   "@profilePersonalServicesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileSharedWithYou": "你和 TA 的合作",
+  "profileSharedTasksCount": "· {count} 次",
+  "@profileSharedTasksCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileForumPostsCount": "· {count} 篇",
+  "@profileForumPostsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileReviewsSubtitle": "{rating} · {count} 条",
+  "@profileReviewsSubtitle": {
+    "placeholders": {
+      "rating": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "profileViewAllReviewsCount": "查看全部 {count} 条评价",
+  "@profileViewAllReviewsCount": {
     "placeholders": { "count": { "type": "int" } }
   },
   "profileServicePriceFrom": "起",

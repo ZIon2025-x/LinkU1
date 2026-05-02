@@ -9455,6 +9455,41 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get profileSharedWithYou => 'Worked together';
+
+  @override
+  String profileSharedTasksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '·$count times',
+      one: '·1 time',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileForumPostsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '·$count posts',
+      one: '·1 post',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileReviewsSubtitle(String rating, int count) {
+    return '$rating · $count reviews';
+  }
+
+  @override
+  String profileViewAllReviewsCount(int count) {
+    return 'View all $count reviews';
+  }
+
+  @override
   String get profileServicePriceFrom => 'from';
 
   @override

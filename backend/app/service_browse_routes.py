@@ -151,13 +151,17 @@ async def browse_services(
 
     service_ids = [s.id for s in services]
 
-    # Batch-load review counts (Task.expert_service_id IN service_ids
-    # + Task.status='completed' + Review 未删除).
+    # Batch-load 服务维度的 (review_count, avg_rating).
     # Review 表绑 task_id, 通过 Task.expert_service_id 反查到服务维度。
-    review_counts_map = {}
+    # 一次 SQL 同时拿 count + avg, 避免两次 round trip。
+    service_stats_map: dict[int, tuple[int, float | None]] = {}
     if service_ids:
-        rc_rows = await db.execute(
-            select(models.Task.expert_service_id, func.count(models.Review.id))
+        stats_rows = await db.execute(
+            select(
+                models.Task.expert_service_id,
+                func.count(models.Review.id),
+                func.avg(models.Review.rating),
+            )
             .join(models.Review, models.Review.task_id == models.Task.id)
             .where(
                 models.Task.expert_service_id.in_(service_ids),
@@ -166,7 +170,12 @@ async def browse_services(
             )
             .group_by(models.Task.expert_service_id)
         )
-        review_counts_map = {row[0]: row[1] for row in rc_rows.all()}
+        for row in stats_rows.all():
+            sid, cnt, avg = row[0], row[1], row[2]
+            service_stats_map[sid] = (
+                int(cnt or 0),
+                float(avg) if avg is not None else None,
+            )
 
     # Batch-load 当前用户已收藏的 service_ids (匿名时跳过)
     favorited_set: set[int] = set()
@@ -270,7 +279,8 @@ async def browse_services(
             "package_type": s.package_type,
             "total_sessions": s.total_sessions,
             "linked_service_id": s.linked_service_id,
-            "review_count": int(review_counts_map.get(s.id, 0)),
+            "review_count": service_stats_map.get(s.id, (0, None))[0],
+            "service_rating": service_stats_map.get(s.id, (0, None))[1],
             "is_favorited": s.id in favorited_set,
         }
         if lat is not None and lng is not None and eff_lat is not None and eff_lng is not None:

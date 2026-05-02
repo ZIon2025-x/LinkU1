@@ -9069,6 +9069,29 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get profileSharedWithYou => '你和 TA 的合作';
+
+  @override
+  String profileSharedTasksCount(int count) {
+    return '· $count 次';
+  }
+
+  @override
+  String profileForumPostsCount(int count) {
+    return '· $count 篇';
+  }
+
+  @override
+  String profileReviewsSubtitle(String rating, int count) {
+    return '$rating · $count 条';
+  }
+
+  @override
+  String profileViewAllReviewsCount(int count) {
+    return '查看全部 $count 条评价';
+  }
+
+  @override
   String get profileServicePriceFrom => '起';
 
   @override
@@ -22367,6 +22390,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String profilePersonalServicesCount(int count) {
     return '· $count 項';
+  }
+
+  @override
+  String get profileSharedWithYou => '你和 TA 的合作';
+
+  @override
+  String profileSharedTasksCount(int count) {
+    return '· $count 次';
+  }
+
+  @override
+  String profileForumPostsCount(int count) {
+    return '· $count 篇';
+  }
+
+  @override
+  String profileReviewsSubtitle(String rating, int count) {
+    return '$rating · $count 條';
+  }
+
+  @override
+  String profileViewAllReviewsCount(int count) {
+    return '查看全部 $count 條評價';
   }
 
   @override
