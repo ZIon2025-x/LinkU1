@@ -22,6 +22,7 @@ import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../bloc/payment_bloc.dart';
 import 'wechat_pay_webview.dart';
+import 'widgets/refund_policy_footer.dart';
 
 part 'payment_widgets.dart';
 
@@ -1140,12 +1141,18 @@ class _PaymentContentState extends State<_PaymentContent> {
         ],
       ),
       child: SafeArea(
-        child: PrimaryButton(
-          text: buttonText,
-          isLoading: state.isProcessing,
-          onPressed: (state.isProcessing || _alreadyPaid) ? null : _processPayment,
-          icon: isWalletOnly ? Icons.account_balance_wallet : _payButtonIconData(),
-          leading: isWalletOnly ? null : _payButtonLeadingWidget(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PrimaryButton(
+              text: buttonText,
+              isLoading: state.isProcessing,
+              onPressed: (state.isProcessing || _alreadyPaid) ? null : _processPayment,
+              icon: isWalletOnly ? Icons.account_balance_wallet : _payButtonIconData(),
+              leading: isWalletOnly ? null : _payButtonLeadingWidget(),
+            ),
+            const RefundPolicyFooter(),
+          ],
         ),
       ),
     );
