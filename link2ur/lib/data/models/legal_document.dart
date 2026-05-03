@@ -84,6 +84,14 @@ class LegalDocument extends Equatable {
           'aiServiceTerms', 'vipSubscriptionTerms', 'accountDeletion',
           'studentVerificationTerms', 'importantNotice',
         ];
+      case 'refund_policy':
+        return [
+          'title', 'lastUpdated', 'version', 'effectiveDate',
+          'intro', 'eligibility', 'fullRefund', 'partialRefund',
+          'nonRefundable', 'refundProcess', 'refundTime',
+          'walletAndCoupon', 'disputeResolution', 'vipSubscription',
+          'specialCases', 'contactUs', 'importantNotice',
+        ];
       case 'community_guidelines':
         return [
           'title', 'version', 'effectiveDate', 'intro', 'contentStandards',
