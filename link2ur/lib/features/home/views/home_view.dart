@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -102,7 +103,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       // 懒加载数据触发
       final homeBloc = context.read<HomeBloc>();
       if (index == 0 && homeBloc.state.followFeedItems.isEmpty) {
-        homeBloc.add(const HomeLoadFollowFeed());
+        homeBloc.add(HomeLoadFollowFeed());
       }
     }
   }
@@ -218,7 +219,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                       final homeBloc = context.read<HomeBloc>();
                       homeBloc.add(HomeTabChanged(index));
                       if (index == 0 && homeBloc.state.followFeedItems.isEmpty) {
-                        homeBloc.add(const HomeLoadFollowFeed());
+                        homeBloc.add(HomeLoadFollowFeed());
                       }
                     },
                     children: [
@@ -603,14 +604,10 @@ class _FollowTab extends StatelessWidget {
         if (displayItems.isEmpty) {
           // 空状态：支持下拉刷新重试
           return RefreshIndicator(
-            onRefresh: () async {
-              final bloc = context.read<HomeBloc>();
-              bloc.add(const HomeLoadFollowFeed());
-              await bloc.stream.firstWhere(
-                (s) => !s.isLoadingFollowFeed,
-                orElse: () => state,
-              );
-            },
+            onRefresh: () => awaitRefresh(
+              context.read<HomeBloc>(),
+              (c) => HomeLoadFollowFeed(refreshCompleter: c),
+            ),
             child: CustomScrollView(
               slivers: [
                 SliverFillRemaining(
@@ -641,14 +638,10 @@ class _FollowTab extends StatelessWidget {
         }
 
         return RefreshIndicator(
-          onRefresh: () async {
-            final bloc = context.read<HomeBloc>();
-            bloc.add(const HomeLoadFollowFeed());
-            await bloc.stream.firstWhere(
-              (s) => !s.isLoadingFollowFeed,
-              orElse: () => state,
-            );
-          },
+          onRefresh: () => awaitRefresh(
+            context.read<HomeBloc>(),
+            (c) => HomeLoadFollowFeed(refreshCompleter: c),
+          ),
           child: CustomScrollView(
             slivers: [
               // 未关注时的提示标题 + 热门 fallback
@@ -697,7 +690,7 @@ class _FollowTab extends StatelessWidget {
                       if (index == displayItems.length) {
                         if (hasFollowContent) {
                           context.read<HomeBloc>().add(
-                              const HomeLoadFollowFeed(loadMore: true));
+                              HomeLoadFollowFeed(loadMore: true));
                         }
                         return const Center(
                           child: Padding(

@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/auth_guard.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
@@ -492,13 +493,10 @@ class _FleaMarketDetailContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return RefreshIndicator(
-      onRefresh: () async {
-        final bloc = context.read<FleaMarketBloc>();
-        bloc.add(FleaMarketLoadDetailRequested(item.id));
-        await bloc.stream.firstWhere((s) =>
-            s.isDetailLoaded || s.detailStatus == FleaMarketStatus.error)
-            .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
-      },
+      onRefresh: () => awaitRefresh(
+        context.read<FleaMarketBloc>(),
+        (c) => FleaMarketLoadDetailRequested(item.id, refreshCompleter: c),
+      ),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(

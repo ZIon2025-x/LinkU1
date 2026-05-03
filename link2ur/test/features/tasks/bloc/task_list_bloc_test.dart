@@ -121,7 +121,7 @@ void main() {
           tasks: [testTask],
           total: 1,
         ),
-        act: (bloc) => bloc.add(const TaskListRefreshRequested()),
+        act: (bloc) => bloc.add(TaskListRefreshRequested()),
         expect: () => [
           isA<TaskListState>()
               .having((s) => s.isRefreshing, 'isRefreshing', true),
@@ -149,7 +149,7 @@ void main() {
           tasks: [testTask],
           total: 1,
         ),
-        act: (bloc) => bloc.add(const TaskListRefreshRequested()),
+        act: (bloc) => bloc.add(TaskListRefreshRequested()),
         expect: () => [
           isA<TaskListState>()
               .having((s) => s.isRefreshing, 'isRefreshing', true),

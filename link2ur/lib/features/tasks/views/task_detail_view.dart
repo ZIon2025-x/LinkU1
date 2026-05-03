@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/utils/auth_guard.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -225,7 +226,8 @@ class _TaskDetailContent extends StatelessWidget {
           child: Scaffold(
           extendBodyBehindAppBar: true,
           appBar: _buildAppBar(context, state),
-          body: Center(
+          body: Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
               child: _buildBody(context, state, isPoster, isTaker, currentUserId),
@@ -512,11 +514,10 @@ class _TaskDetailContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return RefreshIndicator(
-      onRefresh: () async {
-        final bloc = context.read<TaskDetailBloc>();
-        bloc.add(TaskDetailLoadRequested(task.id));
-        await bloc.stream.firstWhere((s) => s.isLoaded || s.status == TaskDetailStatus.error);
-      },
+      onRefresh: () => awaitRefresh(
+        context.read<TaskDetailBloc>(),
+        (c) => TaskDetailLoadRequested(task.id, refreshCompleter: c),
+      ),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(

@@ -95,17 +95,21 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     TaskListRefreshRequested event,
     Emitter<TaskListState> emit,
   ) async {
-    emit(state.copyWith(isRefreshing: true));
+    try {
+      emit(state.copyWith(isRefreshing: true));
 
-    // 下拉刷新前失效缓存，确保获取最新数据
-    await CacheManager.shared.invalidateTasksCache();
+      // 下拉刷新前失效缓存，确保获取最新数据
+      await CacheManager.shared.invalidateTasksCache();
 
-    await _fetchTasks(
-      emit: emit,
-      category: state.selectedCategory,
-      keyword: state.searchQuery,
-      sortBy: state.sortBy,
-    );
+      await _fetchTasks(
+        emit: emit,
+        category: state.selectedCategory,
+        keyword: state.searchQuery,
+        sortBy: state.sortBy,
+      );
+    } finally {
+      event.refreshCompleter?.complete();
+    }
   }
 
   Future<void> _onLoadMore(

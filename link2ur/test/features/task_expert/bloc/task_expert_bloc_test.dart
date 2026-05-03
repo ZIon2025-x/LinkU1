@@ -635,7 +635,7 @@ void main() {
           page: 3,
         ),
         act: (bloc) =>
-            bloc.add(const TaskExpertRefreshRequested()),
+            bloc.add(TaskExpertRefreshRequested()),
         // _onRefresh does NOT emit loading state — goes straight to loaded
         expect: () => [
           isA<TaskExpertState>()

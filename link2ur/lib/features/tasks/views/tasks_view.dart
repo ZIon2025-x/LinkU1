@@ -9,6 +9,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -135,7 +136,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
           await context.push('/tasks/create');
           _isNavigating = false;
           if (context.mounted) {
-            context.read<TaskListBloc>().add(const TaskListRefreshRequested());
+            context.read<TaskListBloc>().add(TaskListRefreshRequested());
           }
         },
         backgroundColor: AppColors.primary,
@@ -397,7 +398,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
               onAction: () async {
                 await context.push('/tasks/create');
                 if (context.mounted) {
-                  context.read<TaskListBloc>().add(const TaskListRefreshRequested());
+                  context.read<TaskListBloc>().add(TaskListRefreshRequested());
                 }
               },
             ),
@@ -405,16 +406,10 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         }
 
         return RefreshIndicator(
-          onRefresh: () async {
-            context
-                .read<TaskListBloc>()
-                .add(const TaskListRefreshRequested());
-            // 等待 BLoC 状态变化而非人为延迟
-            await context.read<TaskListBloc>().stream.firstWhere(
-                  (s) => !s.isLoading,
-                  orElse: () => state,
-                ).timeout(const Duration(seconds: 10), onTimeout: () => state);
-          },
+          onRefresh: () => awaitRefresh(
+            context.read<TaskListBloc>(),
+            (c) => TaskListRefreshRequested(refreshCompleter: c),
+          ),
           key: const ValueKey('content'),
           child: Builder(
             builder: (context) {
@@ -716,7 +711,7 @@ class _TaskGridCard extends StatelessWidget {
           AppHaptics.selection();
           await context.push('/tasks/${task.id}');
           if (context.mounted) {
-            context.read<TaskListBloc>().add(const TaskListRefreshRequested());
+            context.read<TaskListBloc>().add(TaskListRefreshRequested());
           }
         },
         child: Container(

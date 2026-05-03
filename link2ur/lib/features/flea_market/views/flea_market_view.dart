@@ -4,6 +4,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -333,7 +334,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
           await context.push('/flea-market/create');
           _isNavigating = false;
           if (context.mounted) {
-            context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
+            context.read<FleaMarketBloc>().add(FleaMarketRefreshRequested());
           }
         },
         backgroundColor: AppColors.primary,
@@ -376,14 +377,10 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
     final columnCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.fleaMarket);
     return RefreshIndicator(
       key: const ValueKey('content'),
-      onRefresh: () async {
-        final bloc = context.read<FleaMarketBloc>();
-        bloc.add(const FleaMarketRefreshRequested());
-        await bloc.stream.firstWhere(
-          (s) => !s.isRefreshing,
-          orElse: () => state,
-        ).timeout(const Duration(seconds: 10), onTimeout: () => state);
-      },
+      onRefresh: () => awaitRefresh(
+        context.read<FleaMarketBloc>(),
+        (c) => FleaMarketRefreshRequested(refreshCompleter: c),
+      ),
       child: MasonryGridView.count(
         crossAxisCount: columnCount,
         mainAxisSpacing: 8,
@@ -438,7 +435,7 @@ class _FleaMarketItemCard extends StatelessWidget {
             // 用户可能在详情页中购买/支付，返回后列表需要反映最新状态
             await context.push('/flea-market/${item.id}');
             if (context.mounted) {
-              context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
+              context.read<FleaMarketBloc>().add(FleaMarketRefreshRequested());
             }
           }
         },

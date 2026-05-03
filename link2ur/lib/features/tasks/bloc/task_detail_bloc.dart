@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
@@ -10,6 +12,7 @@ import '../../../data/models/task_question.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../data/repositories/question_repository.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/logger.dart';
 
@@ -22,10 +25,13 @@ abstract class TaskDetailEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class TaskDetailLoadRequested extends TaskDetailEvent {
-  const TaskDetailLoadRequested(this.taskId);
+class TaskDetailLoadRequested extends TaskDetailEvent with RefreshSignal {
+  TaskDetailLoadRequested(this.taskId, {this.refreshCompleter});
 
   final int taskId;
+
+  @override
+  final Completer<void>? refreshCompleter;
 
   @override
   List<Object?> get props => [taskId];
@@ -618,6 +624,8 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         status: TaskDetailStatus.error,
         errorMessage: 'task_detail_load_failed',
       ));
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 

@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
+
+import '../../../core/utils/bloc_refresh.dart';
 
 /// 首页事件
 abstract class HomeEvent extends Equatable {
@@ -14,8 +18,14 @@ class HomeLoadRequested extends HomeEvent {
 }
 
 /// 刷新首页数据
-class HomeRefreshRequested extends HomeEvent {
-  const HomeRefreshRequested();
+class HomeRefreshRequested extends HomeEvent with RefreshSignal {
+  HomeRefreshRequested({this.refreshCompleter});
+
+  @override
+  final Completer<void>? refreshCompleter;
+
+  @override
+  List<Object?> get props => const [];
 }
 
 /// 加载推荐任务
@@ -92,9 +102,11 @@ class HomeRecommendedFilterChanged extends HomeEvent {
 }
 
 /// 加载关注 Feed
-class HomeLoadFollowFeed extends HomeEvent {
-  const HomeLoadFollowFeed({this.loadMore = false});
+class HomeLoadFollowFeed extends HomeEvent with RefreshSignal {
+  HomeLoadFollowFeed({this.loadMore = false, this.refreshCompleter});
   final bool loadMore;
+  @override
+  final Completer<void>? refreshCompleter;
   @override
   List<Object?> get props => [loadMore];
 }

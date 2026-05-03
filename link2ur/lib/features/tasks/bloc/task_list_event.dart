@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
+
+import '../../../core/utils/bloc_refresh.dart';
 
 /// 任务列表事件
 abstract class TaskListEvent extends Equatable {
@@ -14,8 +18,14 @@ class TaskListLoadRequested extends TaskListEvent {
 }
 
 /// 刷新任务列表
-class TaskListRefreshRequested extends TaskListEvent {
-  const TaskListRefreshRequested();
+class TaskListRefreshRequested extends TaskListEvent with RefreshSignal {
+  TaskListRefreshRequested({this.refreshCompleter});
+
+  @override
+  final Completer<void>? refreshCompleter;
+
+  @override
+  List<Object?> get props => const [];
 }
 
 /// 加载更多任务

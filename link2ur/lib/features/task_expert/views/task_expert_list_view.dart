@@ -9,6 +9,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/constants/expert_constants.dart';
 import '../../../core/constants/uk_cities.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -171,14 +172,10 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
 
             // List with pull-to-refresh and infinite scroll
             return RefreshIndicator(
-              onRefresh: () async {
-                final bloc = context.read<TaskExpertBloc>();
-                bloc.add(const TaskExpertRefreshRequested());
-                await bloc.stream.firstWhere(
-                  (s) => !s.isLoading,
-                  orElse: () => state,
-                );
-              },
+              onRefresh: () => awaitRefresh(
+                context.read<TaskExpertBloc>(),
+                (c) => TaskExpertRefreshRequested(refreshCompleter: c),
+              ),
               child: ListView.separated(
                 cacheExtent: 500,
                 padding: AppSpacing.allMd,

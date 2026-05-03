@@ -1,8 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_assets.dart';
 import '../../../core/utils/system_context_menu.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -10,6 +11,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/ai_chat.dart';
+import 'linker_avatar.dart';
 
 /// AI 消息气泡
 class AIMessageBubble extends StatelessWidget {
@@ -42,7 +44,7 @@ class AIMessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            _AIAvatar(isDark: isDark),
+            const LinkerAvatar(),
             const SizedBox(width: AppSpacing.sm),
           ],
           Flexible(
@@ -56,11 +58,26 @@ class AIMessageBubble extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
+                    gradient: isUser
+                        ? const LinearGradient(
+                            colors: AppColors.gradientPrimary,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
                     color: isUser
-                        ? AppColors.primary
+                        ? null
                         : isDark
                             ? const Color(0xFF2C2C2E)
-                            : const Color(0xFFF2F2F7),
+                            : Colors.white,
+                    border: isUser
+                        ? null
+                        : Border.all(
+                            color: isDark
+                                ? Colors.white12
+                                : const Color(0xFFE5E5EA),
+                            width: 0.5,
+                          ),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(AppRadius.large),
                       topRight: const Radius.circular(AppRadius.large),
@@ -71,6 +88,21 @@ class AIMessageBubble extends StatelessWidget {
                           ? const Radius.circular(AppRadius.tiny)
                           : const Radius.circular(AppRadius.large),
                     ),
+                    boxShadow: isUser
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.22),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 1,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                   ),
                   child: isUser
                       ? SelectableText(
@@ -140,26 +172,6 @@ class AIMessageBubble extends StatelessWidget {
   }
 }
 
-/// AI 头像（使用 any 图标）
-class _AIAvatar extends StatelessWidget {
-  const _AIAvatar({required this.isDark});
-
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.medium),
-      child: Image.asset(
-        AppAssets.any,
-        width: 32,
-        height: 32,
-        fit: BoxFit.cover,
-      ),
-    );
-  }
-}
-
 /// 流式回复气泡（打字机效果：一字一字出现 + 闪烁光标）
 class StreamingBubble extends StatelessWidget {
   const StreamingBubble({
@@ -182,24 +194,35 @@ class StreamingBubble extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _AIAvatar(isDark: isDark),
+          const LinkerAvatar(),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: 10,
+              padding: EdgeInsets.symmetric(
+                horizontal: content.isEmpty ? AppSpacing.md + 2 : AppSpacing.md,
+                vertical: content.isEmpty ? 14 : 10,
               ),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF2C2C2E)
-                    : const Color(0xFFF2F2F7),
+                    : Colors.white,
+                border: Border.all(
+                  color: isDark ? Colors.white12 : const Color(0xFFE5E5EA),
+                  width: 0.5,
+                ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppRadius.large),
                   topRight: Radius.circular(AppRadius.large),
                   bottomLeft: Radius.circular(AppRadius.tiny),
                   bottomRight: Radius.circular(AppRadius.large),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 1,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
               child: content.isEmpty
                   ? _ThinkingIndicator(isDark: isDark)
@@ -327,7 +350,6 @@ class _ActionButton extends StatelessWidget {
 class _ThinkingIndicatorState extends State<_ThinkingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _dotsAnimation;
 
   int _hintIndex = 0;
 
@@ -336,10 +358,8 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-    _dotsAnimation =
-        Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
 
     // 每 3 秒切换一条提示
     Future.delayed(const Duration(seconds: 3), _cycleHint);
@@ -357,6 +377,12 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator>
     super.dispose();
   }
 
+  /// Bounce envelope: t∈[0,1) → rises and falls in the first 60% of the cycle, idle after.
+  double _bounce(double t) {
+    if (t < 0.6) return math.sin(t / 0.6 * math.pi);
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -366,32 +392,41 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator>
       l10n.aiThinkingHint3,
     ];
     final hint = hints[_hintIndex % hints.length];
-    final hintColor =
-        widget.isDark ? Colors.white38 : Colors.black26;
+    final hintColor = widget.isDark ? Colors.white38 : Colors.black26;
+    final dotColor = widget.isDark ? Colors.white54 : const Color(0xFFA1A1A6);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        FadeTransition(
-          opacity: _dotsAnimation,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (int i = 0; i < 3; i++) ...[
-                if (i > 0) const SizedBox(width: 4),
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color:
-                        widget.isDark ? Colors.white54 : Colors.black38,
-                    shape: BoxShape.circle,
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(3, (i) {
+                final t = (_controller.value + i * 0.16) % 1.0;
+                final v = _bounce(t);
+                return Padding(
+                  padding: EdgeInsets.only(left: i == 0 ? 0 : 5),
+                  child: Transform.translate(
+                    offset: Offset(0, -5 * v),
+                    child: Opacity(
+                      opacity: 0.4 + 0.6 * v,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: dotColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ],
-          ),
+                );
+              }),
+            );
+          },
         ),
         const SizedBox(height: 6),
         AnimatedSwitcher(

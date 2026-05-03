@@ -33,14 +33,10 @@ class _RecommendedTab extends StatelessWidget {
             return false;
           },
           child: RefreshIndicator(
-            onRefresh: () async {
-              final bloc = context.read<HomeBloc>();
-              bloc.add(const HomeRefreshRequested());
-              await bloc.stream.firstWhere(
-                (s) => !s.isRefreshing,
-                orElse: () => state,
-              );
-            },
+            onRefresh: () => awaitRefresh(
+              context.read<HomeBloc>(),
+              (c) => HomeRefreshRequested(refreshCompleter: c),
+            ),
             child: CustomScrollView(
               slivers: [
                 // 1. Story Row — 水平圆形入口

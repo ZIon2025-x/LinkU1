@@ -100,20 +100,15 @@ class _ServiceDetailContent extends StatelessWidget {
               if (service == null || !service.isPersonalService) return const SizedBox.shrink();
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 160),
-                  child: PublisherIdentity(
-                    ownerType: service.ownerType,
-                    ownerId: service.ownerId ?? service.userId,
-                    displayName: service.displayName,
-                    displayAvatar: service.displayAvatar,
-                    fallbackName: service.ownerName,
-                    fallbackAvatar: service.ownerAvatar,
-                    showBadge: false,
-                    nameStyle: AppTypography.subheadlineBold.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
+                child: PublisherIdentity(
+                  ownerType: service.ownerType,
+                  ownerId: service.ownerId ?? service.userId,
+                  displayName: service.displayName,
+                  displayAvatar: service.displayAvatar,
+                  fallbackName: service.ownerName,
+                  fallbackAvatar: service.ownerAvatar,
+                  showBadge: false,
+                  showName: false,
                 ),
               );
             },

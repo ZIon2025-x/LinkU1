@@ -271,7 +271,7 @@ void main() {
           return bloc;
         },
         act: (bloc) => bloc.add(
-            const FleaMarketLoadDetailRequested('1')),
+            FleaMarketLoadDetailRequested('1')),
         expect: () => [
           isA<FleaMarketState>()
               .having((s) => s.detailStatus, 'detailStatus',
@@ -431,7 +431,7 @@ void main() {
           page: 3,
         ),
         act: (bloc) =>
-            bloc.add(const FleaMarketRefreshRequested()),
+            bloc.add(FleaMarketRefreshRequested()),
         expect: () => [
           isA<FleaMarketState>()
               .having(

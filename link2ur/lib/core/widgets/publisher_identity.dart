@@ -29,6 +29,7 @@ class PublisherIdentity extends StatelessWidget {
     this.fallbackName,
     this.fallbackAvatar,
     this.showBadge = true,
+    this.showName = true,
     this.avatarSize = 32,
     this.nameStyle,
     this.isAnonymous = false,
@@ -55,6 +56,9 @@ class PublisherIdentity extends StatelessWidget {
 
   /// 是否显示达人团队徽章（仅 expert 时生效）
   final bool showBadge;
+
+  /// 是否显示名称文本；false 时只渲染头像（仍可点击跳转）
+  final bool showName;
 
   /// 头像尺寸
   final double avatarSize;
@@ -104,52 +108,56 @@ class PublisherIdentity extends StatelessWidget {
 
     final effectiveNameStyle = nameStyle ?? AppTypography.subheadlineBold;
 
-    final content = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AvatarView(
-          imageUrl: avatar,
-          name: name,
-          size: avatarSize,
-          isAnonymous: isAnonymous,
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final avatarView = AvatarView(
+      imageUrl: avatar,
+      name: name,
+      size: avatarSize,
+      isAnonymous: isAnonymous,
+    );
+
+    final Widget content = showName
+        ? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                name,
-                style: effectiveNameStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (showBadge && _isExpert)
-                Container(
-                  margin: const EdgeInsets.only(top: 2),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    context.l10n.expertTeamLabel,
-                    style: AppTypography.caption2.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
+              avatarView,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      style: effectiveNameStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                    if (showBadge && _isExpert)
+                      Container(
+                        margin: const EdgeInsets.only(top: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          context.l10n.expertTeamLabel,
+                          style: AppTypography.caption2.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    if (subtitle != null) subtitle!,
+                  ],
                 ),
-              if (subtitle != null) subtitle!,
+              ),
             ],
-          ),
-        ),
-      ],
-    );
+          )
+        : avatarView;
 
     if (!_isTappable) return content;
     return Semantics(

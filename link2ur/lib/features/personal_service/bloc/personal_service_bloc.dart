@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/service_application.dart';
 import '../../../data/repositories/personal_service_repository.dart';
@@ -39,9 +42,12 @@ class PersonalServiceDeleteRequested extends PersonalServiceEvent {
 }
 
 // --- 收到的申请管理 ---
-class PersonalServiceLoadReceivedApplications extends PersonalServiceEvent {
-  const PersonalServiceLoadReceivedApplications({this.statusFilter});
+class PersonalServiceLoadReceivedApplications extends PersonalServiceEvent
+    with RefreshSignal {
+  PersonalServiceLoadReceivedApplications({this.statusFilter, this.refreshCompleter});
   final String? statusFilter;
+  @override
+  final Completer<void>? refreshCompleter;
   @override
   List<Object?> get props => [statusFilter];
 }
@@ -75,9 +81,12 @@ class PersonalServiceCounterOffer extends PersonalServiceEvent {
 }
 
 // --- 申请者端：我的申请列表 ---
-class PersonalServiceLoadMyApplications extends PersonalServiceEvent {
-  const PersonalServiceLoadMyApplications({this.statusFilter});
+class PersonalServiceLoadMyApplications extends PersonalServiceEvent
+    with RefreshSignal {
+  PersonalServiceLoadMyApplications({this.statusFilter, this.refreshCompleter});
   final String? statusFilter;
+  @override
+  final Completer<void>? refreshCompleter;
   @override
   List<Object?> get props => [statusFilter];
 }
@@ -341,6 +350,8 @@ class PersonalServiceBloc
         status: PersonalServiceStatus.error,
         errorMessage: e.toString(),
       ));
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 
@@ -457,6 +468,8 @@ class PersonalServiceBloc
         status: PersonalServiceStatus.error,
         errorMessage: e.toString(),
       ));
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 
@@ -479,7 +492,7 @@ class PersonalServiceBloc
         actionMessage:
             event.accept ? 'counter_offer_accepted' : 'counter_offer_rejected',
       ));
-      add(const PersonalServiceLoadMyApplications());
+      add(PersonalServiceLoadMyApplications());
     } catch (e) {
       AppLogger.error('Failed to respond counter offer', e);
       emit(state.copyWith(
@@ -505,7 +518,7 @@ class PersonalServiceBloc
         isSubmitting: false,
         actionMessage: 'application_cancelled',
       ));
-      add(const PersonalServiceLoadMyApplications());
+      add(PersonalServiceLoadMyApplications());
     } catch (e) {
       AppLogger.error('Failed to cancel application', e);
       emit(state.copyWith(

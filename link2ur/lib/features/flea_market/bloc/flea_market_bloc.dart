@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
@@ -28,8 +30,14 @@ class FleaMarketLoadRequested extends FleaMarketEvent {
   const FleaMarketLoadRequested();
 }
 
-class FleaMarketRefreshRequested extends FleaMarketEvent {
-  const FleaMarketRefreshRequested();
+class FleaMarketRefreshRequested extends FleaMarketEvent with RefreshSignal {
+  FleaMarketRefreshRequested({this.refreshCompleter});
+
+  @override
+  final Completer<void>? refreshCompleter;
+
+  @override
+  List<Object?> get props => const [];
 }
 
 class FleaMarketLoadMore extends FleaMarketEvent {
@@ -112,10 +120,13 @@ class FleaMarketUpdateItem extends FleaMarketEvent {
       [itemId, title, description, price, location, category, images];
 }
 
-class FleaMarketLoadDetailRequested extends FleaMarketEvent {
-  const FleaMarketLoadDetailRequested(this.itemId);
+class FleaMarketLoadDetailRequested extends FleaMarketEvent with RefreshSignal {
+  FleaMarketLoadDetailRequested(this.itemId, {this.refreshCompleter});
 
   final String itemId;
+
+  @override
+  final Completer<void>? refreshCompleter;
 
   @override
   List<Object?> get props => [itemId];
@@ -540,6 +551,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isRefreshing: false,
         errorMessage: e.toString(),
       ));
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 
@@ -647,7 +660,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         actionMessage: 'item_published',
       ));
       // 刷新列表
-      add(const FleaMarketRefreshRequested());
+      add(FleaMarketRefreshRequested());
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
@@ -907,31 +920,35 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketLoadDetailRequested event,
     Emitter<FleaMarketState> emit,
   ) async {
-    if (event.itemId.trim().isEmpty) {
-      emit(state.copyWith(
-        detailStatus: FleaMarketStatus.error,
-        errorMessage: 'flea_market_error_invalid_item_id',
-      ));
-      return;
-    }
-
-    emit(state.copyWith(detailStatus: FleaMarketStatus.loading));
-
     try {
-      final item = await _fleaMarketRepository.getItemById(event.itemId);
-      if (emit.isDone) return;
-      emit(state.copyWith(
-        detailStatus: FleaMarketStatus.loaded,
-        selectedItem: item,
-        isFavorited: item.isFavorited ?? false,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to load flea market item detail', e);
-      if (emit.isDone) return;
-      emit(state.copyWith(
-        detailStatus: FleaMarketStatus.error,
-        errorMessage: e.toString(),
-      ));
+      if (event.itemId.trim().isEmpty) {
+        emit(state.copyWith(
+          detailStatus: FleaMarketStatus.error,
+          errorMessage: 'flea_market_error_invalid_item_id',
+        ));
+        return;
+      }
+
+      emit(state.copyWith(detailStatus: FleaMarketStatus.loading));
+
+      try {
+        final item = await _fleaMarketRepository.getItemById(event.itemId);
+        if (emit.isDone) return;
+        emit(state.copyWith(
+          detailStatus: FleaMarketStatus.loaded,
+          selectedItem: item,
+          isFavorited: item.isFavorited ?? false,
+        ));
+      } catch (e) {
+        AppLogger.error('Failed to load flea market item detail', e);
+        if (emit.isDone) return;
+        emit(state.copyWith(
+          detailStatus: FleaMarketStatus.error,
+          errorMessage: e.toString(),
+        ));
+      }
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 

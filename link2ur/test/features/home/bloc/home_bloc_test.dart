@@ -344,7 +344,7 @@ void main() {
           status: HomeStatus.loaded,
           recommendedTasks: [testTask],
         ),
-        act: (bloc) => bloc.add(const HomeRefreshRequested()),
+        act: (bloc) => bloc.add(HomeRefreshRequested()),
         expect: () => [
           isA<HomeState>()
               .having(

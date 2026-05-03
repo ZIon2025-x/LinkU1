@@ -237,6 +237,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
       // 立即清除 refreshError，避免重复触发 BlocListener
       emit(state.copyWith(clearRefreshError: true));
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 
@@ -467,23 +469,27 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeLoadFollowFeed event,
     Emitter<HomeState> emit,
   ) async {
-    if (_followRepository == null) return;
-    if (state.isLoadingFollowFeed) return;
-    final page = event.loadMore ? state.followFeedPage + 1 : 1;
-    emit(state.copyWith(isLoadingFollowFeed: true));
     try {
-      final response = await _followRepository.getFollowFeed(page: page);
-      final items = event.loadMore
-          ? [...state.followFeedItems, ...response.items]
-          : response.items;
-      emit(state.copyWith(
-        followFeedItems: items,
-        followFeedPage: page,
-        hasMoreFollowFeed: response.hasMore,
-        isLoadingFollowFeed: false,
-      ));
-    } catch (e) {
-      emit(state.copyWith(isLoadingFollowFeed: false, errorMessage: e.toString()));
+      if (_followRepository == null) return;
+      if (state.isLoadingFollowFeed) return;
+      final page = event.loadMore ? state.followFeedPage + 1 : 1;
+      emit(state.copyWith(isLoadingFollowFeed: true));
+      try {
+        final response = await _followRepository.getFollowFeed(page: page);
+        final items = event.loadMore
+            ? [...state.followFeedItems, ...response.items]
+            : response.items;
+        emit(state.copyWith(
+          followFeedItems: items,
+          followFeedPage: page,
+          hasMoreFollowFeed: response.hasMore,
+          isLoadingFollowFeed: false,
+        ));
+      } catch (e) {
+        emit(state.copyWith(isLoadingFollowFeed: false, errorMessage: e.toString()));
+      }
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 

@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/helpers.dart';
@@ -27,7 +28,7 @@ class MyServiceApplicationsListView extends StatelessWidget {
     return BlocProvider(
       create: (context) => PersonalServiceBloc(
         repository: context.read<PersonalServiceRepository>(),
-      )..add(const PersonalServiceLoadMyApplications()),
+      )..add(PersonalServiceLoadMyApplications()),
       child: const _Content(),
     );
   }
@@ -185,12 +186,13 @@ class _ContentState extends State<_Content> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () async {
-                    _reload(context);
-                    await context.read<PersonalServiceBloc>().stream.firstWhere(
-                          (s) => s.status != PersonalServiceStatus.loading,
-                        );
-                  },
+                  onRefresh: () => awaitRefresh(
+                    context.read<PersonalServiceBloc>(),
+                    (c) => PersonalServiceLoadMyApplications(
+                      statusFilter: _selectedFilter.isEmpty ? null : _selectedFilter,
+                      refreshCompleter: c,
+                    ),
+                  ),
                   child: ListView.separated(
                     clipBehavior: Clip.none,
                     padding: const EdgeInsets.all(AppSpacing.md),

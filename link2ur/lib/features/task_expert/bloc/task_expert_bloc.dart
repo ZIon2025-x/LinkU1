@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -7,6 +9,7 @@ import '../../../data/models/task_question.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import '../../../core/utils/bloc_refresh.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -31,8 +34,16 @@ class TaskExpertLoadMore extends TaskExpertEvent {
   const TaskExpertLoadMore();
 }
 
-class TaskExpertRefreshRequested extends TaskExpertEvent {
-  const TaskExpertRefreshRequested();
+class TaskExpertRefreshRequested extends TaskExpertEvent with RefreshSignal {
+  TaskExpertRefreshRequested({this.refreshCompleter});
+
+  @override
+  final Completer<void>? refreshCompleter;
+
+  // refreshCompleter 故意不进 props：每次下拉都是新对象，不能因 Equatable
+  // 把它判成相等而被 transformer dedup 掉。
+  @override
+  List<Object?> get props => const [];
 }
 
 class TaskExpertLoadDetail extends TaskExpertEvent {
@@ -898,6 +909,13 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh experts', e);
+      // 必须 emit：否则下拉刷新等不到 stream 发射，UI 也看不到错误
+      emit(state.copyWith(
+        status: TaskExpertStatus.loaded,
+        errorMessage: 'task_expert_refresh_failed',
+      ));
+    } finally {
+      event.refreshCompleter?.complete();
     }
   }
 

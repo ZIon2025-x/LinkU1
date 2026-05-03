@@ -226,11 +226,13 @@ class CustomerServiceBloc
           CustomerServiceAssignResponse.fromJson(response);
 
       if (assignResponse.error != null) {
-        // 可能正在排队
+        // 后端返回 no_available_service / all_services_busy 等错误码：
+        // 没有人工可分配，回退到 error 状态，UnifiedChatBloc 会切回 AI 模式并显示文案。
+        // queue_status 仍透传给 legacy CS 视图的排队 banner 使用。
         emit(state.copyWith(
-          status: CustomerServiceStatus.connecting,
+          status: CustomerServiceStatus.error,
           queueStatus: assignResponse.queueStatus,
-          errorMessage: assignResponse.message,
+          errorMessage: assignResponse.error,
         ));
         return;
       }

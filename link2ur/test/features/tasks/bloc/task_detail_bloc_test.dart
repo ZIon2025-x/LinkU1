@@ -90,7 +90,7 @@ void main() {
               .thenAnswer((_) async => testTask);
           return taskDetailBloc;
         },
-        act: (bloc) => bloc.add(const TaskDetailLoadRequested(42)),
+        act: (bloc) => bloc.add(TaskDetailLoadRequested(42)),
         expect: () => [
           const TaskDetailState(status: TaskDetailStatus.loading),
           isA<TaskDetailState>()
@@ -112,7 +112,7 @@ void main() {
               .thenThrow(Exception('Not found'));
           return taskDetailBloc;
         },
-        act: (bloc) => bloc.add(const TaskDetailLoadRequested(42)),
+        act: (bloc) => bloc.add(TaskDetailLoadRequested(42)),
         expect: () => [
           const TaskDetailState(status: TaskDetailStatus.loading),
           const TaskDetailState(

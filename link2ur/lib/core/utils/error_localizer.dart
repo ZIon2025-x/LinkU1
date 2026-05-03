@@ -248,7 +248,9 @@ class ErrorLocalizer {
       case 'refund_not_found':
         return context.l10n.refundNotFound;
       case 'customer_service_no_available_agent':
-        return context.l10n.errorSomethingWentWrong;
+      case 'no_available_service':
+      case 'all_services_busy':
+        return context.l10n.supportChatHumanOffline;
       case 'ai_chat_load_conversations_failed':
         return context.l10n.aiChatLoadConversationsFailed;
       case 'ai_chat_create_conversation_failed':
@@ -355,6 +357,8 @@ class ErrorLocalizer {
         return context.l10n.errorActivityLoadMoreFailed;
       case 'activity_refresh_failed':
         return context.l10n.errorActivityRefreshFailed;
+      case 'task_expert_refresh_failed':
+        return context.l10n.taskExpertLoadFailed;
       case 'activity_apply_failed':
         return context.l10n.errorActivityApplyFailed;
       case 'activity_detail_load_failed':

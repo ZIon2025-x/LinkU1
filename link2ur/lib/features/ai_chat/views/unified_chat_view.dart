@@ -24,6 +24,7 @@ import '../../../data/services/ai_chat_service.dart';
 import '../../tasks/views/create_task_view.dart' show TaskDraftData;
 import '../bloc/unified_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
+import '../widgets/linker_avatar.dart';
 import '../widgets/service_draft_card.dart';
 import '../widgets/task_draft_card.dart';
 import '../widgets/task_result_cards.dart';
@@ -69,7 +70,18 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
   final _focusNode = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  void _handleFocusChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -449,8 +461,6 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
         appBar: _buildAppBar(isDark),
         body: Column(
           children: [
-            // CS 连接横幅
-            _buildCSBanner(isDark),
             // 消息列表（键盘弹起时被顶起，不遮挡）；RepaintBoundary 减少点击输入框时整列表重绘
             Expanded(
               child: RepaintBoundary(child: _buildMessageList(isDark)),
@@ -493,12 +503,13 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
       child: BlocBuilder<UnifiedChatBloc, UnifiedChatState>(
         buildWhen: (prev, curr) =>
             prev.mode != curr.mode ||
-            prev.csServiceName != curr.csServiceName,
+            prev.csServiceName != curr.csServiceName ||
+            prev.csOnlineStatus != curr.csOnlineStatus,
         builder: (context, state) {
-          final (title, actions) = switch (state.mode) {
+          final (titleWidget, actions) = switch (state.mode) {
             ChatMode.ai => (
-                context.l10n.supportChatTitle,
-                [
+                _buildLinkerTitle(state.csOnlineStatus),
+                <Widget>[
                   IconButton(
                     icon: const Icon(Icons.add_comment_outlined),
                     tooltip: 'New conversation',
@@ -506,15 +517,16 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                         .read<UnifiedChatBloc>()
                         .add(const UnifiedChatInit()),
                   ),
-                ]
+                ],
               ),
             ChatMode.transferring => (
-                context.l10n.supportChatConnecting,
-                <Widget>[]
+                Text(context.l10n.supportChatConnecting),
+                <Widget>[],
               ),
             ChatMode.csConnected => (
-                '${context.l10n.supportChatConnected} — ${state.csServiceName ?? ""}',
-                [
+                Text(
+                    '${context.l10n.supportChatConnected} — ${state.csServiceName ?? ""}'),
+                <Widget>[
                   IconButton(
                     icon: const Icon(Icons.close),
                     tooltip: context.l10n.customerServiceEndConversation,
@@ -535,22 +547,22 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                       );
                     },
                   ),
-                ]
+                ],
               ),
             ChatMode.csEnded => (
-                context.l10n.supportChatEnded,
-                [
+                Text(context.l10n.supportChatEnded),
+                <Widget>[
                   IconButton(
                     icon: const Icon(Icons.star_outline),
                     tooltip: 'Rate',
                     onPressed: _showRatingDialog,
                   ),
-                ]
+                ],
               ),
           };
 
           return AppBar(
-            title: Text(title),
+            title: titleWidget,
             centerTitle: true,
             actions: actions,
           );
@@ -559,35 +571,40 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  /// 顶部仅展示人工客服在线状态（连接按钮已移至下方快捷操作行）
-  Widget _buildCSBanner(bool isDark) {
-    return BlocBuilder<UnifiedChatBloc, UnifiedChatState>(
-      buildWhen: (prev, curr) =>
-          prev.csOnlineStatus != curr.csOnlineStatus ||
-          prev.mode != curr.mode,
-      builder: (context, state) {
-        if (state.mode != ChatMode.ai || state.csOnlineStatus != true) {
-          return const SizedBox.shrink();
-        }
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          color: AppColors.primary.withValues(alpha: 0.08),
-          child: Row(
+  /// AI 模式下的渐变 "Linker" 标题；客服在线时下方追加脉冲点 + 在线副标题
+  Widget _buildLinkerTitle(bool? csOnline) {
+    final showSubtitle = csOnline == true;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        LinkerGradientText(
+          context.l10n.supportChatTitle,
+          style: TextStyle(
+            fontSize: showSubtitle ? 16 : 17,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+            color: Colors.white,
+          ),
+        ),
+        if (showSubtitle) ...[
+          const SizedBox(height: 1),
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.support_agent, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  context.l10n.supportChatHumanOnline,
-                  style: AppTypography.subheadline.copyWith(
-                    color: AppColors.primary,
-                  ),
+              const _PulseDot(),
+              const SizedBox(width: 5),
+              Text(
+                context.l10n.supportChatHumanOnline,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFFA1A1A6),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-        );
-      },
+        ],
+      ],
     );
   }
 
@@ -735,123 +752,101 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  /// Linker 欢迎气泡：自我介绍 + 快捷问题（与 ai_chat_view 一致）
+  /// Linker 欢迎区：发光头像 + 渐变标题 + 介绍 + 2×3 建议网格
   Widget _buildLinkerWelcome(bool isDark) {
     final theme = Theme.of(context);
-    final bubbleBg = isDark
-        ? const Color(0xFF2C2C2E)
-        : const Color(0xFFF2F2F7);
+    final bloc = context.read<UnifiedChatBloc>();
+    final l10n = context.l10n;
+
+    void send(String text) =>
+        requireAuth(context, () => bloc.add(UnifiedChatSendMessage(text)));
+
+    final suggestions = <_Suggestion>[
+      _Suggestion(
+        label: l10n.aiChatViewMyTasks,
+        icon: Icons.task_alt,
+        gradient: const [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+        onTap: () => send(l10n.aiChatViewMyTasks),
+      ),
+      _Suggestion(
+        label: l10n.aiChatSearchTasks,
+        icon: Icons.search,
+        gradient: const [Color(0xFF7359F2), Color(0xFFFF4D80)],
+        onTap: () => send(l10n.aiChatSearchTasks),
+      ),
+      _Suggestion(
+        label: l10n.aiChatPostTask,
+        icon: Icons.add_circle_outline,
+        gradient: const [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+        onTap: () => send(l10n.aiChatPostTask),
+      ),
+      _Suggestion(
+        label: l10n.aiChatMyPoints,
+        icon: Icons.monetization_on_outlined,
+        gradient: const [Color(0xFFFF8033), Color(0xFFFFD700)],
+        onTap: () => send(l10n.aiChatMyPoints),
+      ),
+      _Suggestion(
+        label: l10n.aiChatActivities,
+        icon: Icons.event_outlined,
+        gradient: const [Color(0xFF26BF73), Color(0xFF5AC8FA)],
+        onTap: () => send(l10n.aiChatActivities),
+      ),
+      _Suggestion(
+        label: l10n.aiChatContactSupport,
+        icon: Icons.support_agent,
+        gradient: const [Color(0xFFFF8033), Color(0xFFFF4D80)],
+        onTap: () => send(l10n.aiChatContactSupport),
+      ),
+    ];
 
     return Padding(
-      padding: const EdgeInsets.only(
-        top: AppSpacing.md,
-        left: AppSpacing.md,
-        right: AppSpacing.md,
-        bottom: AppSpacing.sm,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.md,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.medium),
-            child: Image.asset(
-              AppAssets.any,
-              width: 36,
-              height: 36,
-              fit: BoxFit.cover,
+          const LinkerAvatar(size: 76, withGlow: true),
+          const SizedBox(height: AppSpacing.md),
+          LinkerGradientText(
+            l10n.aiChatWelcomeTitle,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Text(
+              l10n.aiChatWelcomeIntro,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontSize: 13,
+                height: 1.55,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              decoration: BoxDecoration(
-                color: bubbleBg,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppRadius.large),
-                  topRight: Radius.circular(AppRadius.large),
-                  bottomLeft: Radius.circular(AppRadius.tiny),
-                  bottomRight: Radius.circular(AppRadius.large),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    context.l10n.aiChatWelcomeTitle,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    context.l10n.aiChatWelcomeIntro,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      height: 1.45,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    context.l10n.aiChatQuickStart,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: isDark ? Colors.white54 : Colors.black45,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Builder(builder: (context) {
-                    final bloc = context.read<UnifiedChatBloc>();
-                    return Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        _UnifiedQuickAction(
-                          label: context.l10n.aiChatViewMyTasks,
-                          onTap: () => requireAuth(context, () => bloc.add(
-                              UnifiedChatSendMessage(
-                                  context.l10n.aiChatViewMyTasks))),
-                        ),
-                        _UnifiedQuickAction(
-                          label: context.l10n.aiChatSearchTasks,
-                          onTap: () => requireAuth(context, () => bloc.add(
-                              UnifiedChatSendMessage(
-                                  context.l10n.aiChatSearchTasks))),
-                        ),
-                        _UnifiedQuickAction(
-                          label: context.l10n.aiChatPostTask,
-                          onTap: () => requireAuth(context, () => bloc.add(
-                              UnifiedChatSendMessage(
-                                  context.l10n.aiChatPostTask))),
-                        ),
-                        _UnifiedQuickAction(
-                          label: context.l10n.aiChatMyPoints,
-                          onTap: () => requireAuth(context, () => bloc.add(
-                              UnifiedChatSendMessage(
-                                  context.l10n.aiChatMyPoints))),
-                        ),
-                        _UnifiedQuickAction(
-                          label: context.l10n.aiChatActivities,
-                          onTap: () => requireAuth(context, () => bloc.add(
-                              UnifiedChatSendMessage(
-                                  context.l10n.aiChatActivities))),
-                        ),
-                        _UnifiedQuickAction(
-                          label: context.l10n.aiChatContactSupport,
-                          onTap: () => requireAuth(context, () => bloc.add(
-                              UnifiedChatSendMessage(
-                                  context.l10n.aiChatContactSupport))),
-                        ),
-                      ],
-                    );
-                  }),
-                ],
-              ),
-            ),
+          const SizedBox(height: AppSpacing.lg),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 2.6,
+            children: suggestions
+                .map((s) => _SuggestionCard(s: s, isDark: isDark))
+                .toList(),
           ),
         ],
       ),
@@ -859,32 +854,70 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
   }
 
   Widget _buildDivider(bool isDark) {
+    final lineColor = isDark ? AppColors.dividerDark : AppColors.dividerLight;
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.md,
-        horizontal: AppSpacing.lg,
+        horizontal: AppSpacing.md,
       ),
       child: Row(
         children: [
           Expanded(
-            child: Divider(
-              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+            child: Container(
+              height: 0.5,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [lineColor.withValues(alpha: 0), lineColor],
+                ),
+              ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              context.l10n.supportChatDivider,
-              style: AppTypography.caption.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFFFF8033).withValues(alpha: 0.10),
+                    const Color(0xFFFF4D80).withValues(alpha: 0.10),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFFF8033).withValues(alpha: 0.25),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.support_agent,
+                    size: 11,
+                    color: Color(0xFFB35628),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    context.l10n.supportChatDivider,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFB35628),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           Expanded(
-            child: Divider(
-              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+            child: Container(
+              height: 0.5,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [lineColor, lineColor.withValues(alpha: 0)],
+                ),
+              ),
             ),
           ),
         ],
@@ -932,14 +965,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isFromUser) ...[
-            ClipOval(
-              child: Image.asset(
-                AppAssets.logo,
-                width: 32,
-                height: 32,
-                fit: BoxFit.cover,
-              ),
-            ),
+            const CSAvatar(),
             AppSpacing.hSm,
           ],
           Flexible(
@@ -947,36 +973,69 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.sizeOf(context).width * 0.7,
               ),
-              padding: AppSpacing.allSm,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 10,
+              ),
               decoration: BoxDecoration(
                 gradient: isFromUser
                     ? const LinearGradient(
                         colors: AppColors.gradientPrimary,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       )
-                    : null,
+                    : (isDark
+                        ? null
+                        : const LinearGradient(
+                            colors: [Color(0xFFFFF7E6), Color(0xFFFFF1D6)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )),
                 color: isFromUser
                     ? null
-                    : (isDark
-                        ? AppColors.cardBackgroundDark
-                        : AppColors.cardBackgroundLight),
-                borderRadius: AppRadius.allMedium,
+                    : (isDark ? AppColors.cardBackgroundDark : null),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(AppRadius.large),
+                  topRight: const Radius.circular(AppRadius.large),
+                  bottomLeft: isFromUser
+                      ? const Radius.circular(AppRadius.large)
+                      : const Radius.circular(AppRadius.tiny),
+                  bottomRight: isFromUser
+                      ? const Radius.circular(AppRadius.tiny)
+                      : const Radius.circular(AppRadius.large),
+                ),
                 border: isFromUser
                     ? null
                     : Border.all(
                         color: isDark
                             ? AppColors.dividerDark
-                            : AppColors.dividerLight,
+                            : const Color(0xFFFFD9A8),
                         width: 0.5,
                       ),
+                boxShadow: isFromUser
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.22),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 1,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
               ),
               child: Text(
                 message.content,
                 style: AppTypography.body.copyWith(
                   color: isFromUser
                       ? Colors.white
-                      : (isDark
+                      : isDark
                           ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight),
+                          : const Color(0xFF6B4500),
                 ),
               ),
             ),
@@ -1129,67 +1188,71 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
               child: SafeArea(
                 top: false,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: TextField(
-                    controller: _messageController,
-                    focusNode: _focusNode,
-                    enabled: !isDisabled,
-                    decoration: InputDecoration(
-                      hintText: hintText,
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadius.allSmall,
-                        borderSide: BorderSide(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        decoration: BoxDecoration(
                           color: isDark
-                              ? AppColors.dividerDark
-                              : AppColors.dividerLight,
+                              ? const Color(0xFF2C2C2E)
+                              : const Color(0xFFF2F2F7),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: _focusNode.hasFocus
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.18),
+                                    spreadRadius: 2,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: TextField(
+                          controller: _messageController,
+                          focusNode: _focusNode,
+                          enabled: !isDisabled,
+                          maxLines: 4,
+                          minLines: 1,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          decoration: InputDecoration(
+                            hintText: hintText,
+                            hintStyle: const TextStyle(
+                              color: Color(0xFFA1A1A6),
+                              fontSize: 15,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 11,
+                            ),
+                            isDense: true,
+                          ),
                         ),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: AppRadius.allSmall,
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.dividerDark
-                              : AppColors.dividerLight,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      isDense: true,
                     ),
-                    maxLines: 4,
-                    minLines: 1,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
+                    const SizedBox(width: 8),
+                    _SendButton(
+                      onTap: isDisabled ? null : _sendMessage,
+                      isLoading: isDisabled,
+                    ),
+                  ],
                 ),
-                AppSpacing.hSm,
-                IconButton(
-                  onPressed: isDisabled ? null : _sendMessage,
-                  tooltip: 'Send',
-                  icon: isDisabled
-                      ? const LoadingIndicator(size: 20)
-                      : const Icon(
-                          Icons.arrow_upward,
-                          color: AppColors.primary,
-                        ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
           ],
         );
       },
     );
   }
 
-  /// 快捷操作行：历史记录、连接人工（与任务聊天框一致：仅 padding，无容器背景）
+  /// 快捷操作行：历史记录（普通） + 连接人工（渐变主推）
   Widget _buildQuickActionsRow(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -1203,11 +1266,73 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
             _UnifiedQuickActionChip(
               label: context.l10n.supportChatConnectButton,
               icon: Icons.support_agent,
+              featured: true,
               onTap: () => context
                   .read<UnifiedChatBloc>()
                   .add(const UnifiedChatRequestHumanCS()),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 输入栏右侧渐变发送按钮
+class _SendButton extends StatelessWidget {
+  const _SendButton({required this.onTap, required this.isLoading});
+
+  final VoidCallback? onTap;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    return Semantics(
+      button: true,
+      label: 'Send',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: disabled
+                ? null
+                : const LinearGradient(
+                    colors: AppColors.gradientPrimary,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            color: disabled ? const Color(0xFFD1D1D6) : null,
+            boxShadow: disabled
+                ? null
+                : [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                : const Icon(
+                    Icons.arrow_upward_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+          ),
         ),
       ),
     );
@@ -1264,41 +1389,85 @@ class _ChatListItem {
       _ChatListItem._(type: _ChatItemType.cs, csMessage: msg, index: index);
 }
 
-/// 输入框上快捷操作 Chip（与任务聊天 _QuickActionChip 样式一致）
+/// 输入框上快捷操作 Chip（外观分两档：普通 outline / 主推 gradient featured）
 class _UnifiedQuickActionChip extends StatelessWidget {
   const _UnifiedQuickActionChip({
     required this.label,
     required this.onTap,
     this.icon,
+    this.featured = false,
   });
 
   final String label;
   final VoidCallback onTap;
   final IconData? icon;
+  final bool featured;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Semantics(
       button: true,
       label: label,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+            gradient: featured
+                ? const LinearGradient(
+                    colors: AppColors.taskTypeBadgeGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: featured
+                ? null
+                : (isDark
+                    ? AppColors.cardBackgroundDark
+                    : AppColors.cardBackgroundLight),
+            border: featured
+                ? null
+                : Border.all(
+                    color: isDark
+                        ? Colors.white12
+                        : const Color(0xFFE5E5EA),
+                    width: 0.5,
+                  ),
             borderRadius: AppRadius.allPill,
+            boxShadow: featured
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.32),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 14, color: AppColors.primary),
-                const SizedBox(width: 4),
+                Icon(
+                  icon,
+                  size: 14,
+                  color: featured
+                      ? Colors.white
+                      : (isDark ? Colors.white70 : Colors.black87),
+                ),
+                const SizedBox(width: 6),
               ],
               Text(
                 label,
-                style: const TextStyle(fontSize: 12, color: AppColors.primary),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: featured
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
+                ),
               ),
             ],
           ),
@@ -1308,42 +1477,158 @@ class _UnifiedQuickActionChip extends StatelessWidget {
   }
 }
 
-/// 合并聊天页内的快捷问题按钮
-class _UnifiedQuickAction extends StatelessWidget {
-  const _UnifiedQuickAction({
+/// 欢迎页建议条目数据
+class _Suggestion {
+  const _Suggestion({
     required this.label,
+    required this.icon,
+    required this.gradient,
     required this.onTap,
   });
 
   final String label;
+  final IconData icon;
+  final List<Color> gradient;
   final VoidCallback onTap;
+}
+
+/// 欢迎页建议卡片：左侧渐变小图标块 + 右侧文字
+class _SuggestionCard extends StatelessWidget {
+  const _SuggestionCard({required this.s, required this.isDark});
+
+  final _Suggestion s;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.large),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isDark ? Colors.white24 : Colors.black12,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: s.onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? Colors.white12 : const Color(0xFFE5E5EA),
+              width: 0.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(AppRadius.large),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: isDark ? Colors.white70 : Colors.black54,
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: s.gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(s.icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  s.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 脉冲呼吸圆点 — AppBar 副标题左侧的"在线"指示器。
+class _PulseDot extends StatefulWidget {
+  const _PulseDot();
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        // 0..0.7 期间环逐渐变大变淡，之后停顿
+        final t = _ctrl.value;
+        final ringScale = t < 0.7 ? 1.0 + (t / 0.7) * 1.6 : 2.6;
+        final ringOpacity = t < 0.7 ? (1 - t / 0.7) * 0.55 : 0.0;
+        return SizedBox(
+          width: 14,
+          height: 14,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.scale(
+                scale: ringScale,
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.success.withValues(alpha: ringOpacity),
+                  ),
+                ),
+              ),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.success,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
