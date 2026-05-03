@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -11,6 +10,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../data/models/ai_chat.dart';
 import '../../../data/services/ai_chat_service.dart';
 import '../bloc/ai_chat_bloc.dart';
+import '../widgets/linker_avatar.dart';
 
 /// AI 对话列表页面
 class AIChatListView extends StatelessWidget {
@@ -119,15 +119,7 @@ class _ConversationTile extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.medium),
-          child: Image.asset(
-            AppAssets.any,
-            width: 40,
-            height: 40,
-            fit: BoxFit.cover,
-          ),
-        ),
+        leading: const LinkerAvatar(size: 40),
         title: Text(
           title,
           maxLines: 1,
@@ -172,15 +164,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.large),
-            child: Image.asset(
-              AppAssets.any,
-              width: 64,
-              height: 64,
-              fit: BoxFit.cover,
-            ),
-          ),
+          const LinkerAvatar(size: 72, withGlow: true),
           const SizedBox(height: AppSpacing.md),
           Text(
             context.l10n.aiChatNoConversations,

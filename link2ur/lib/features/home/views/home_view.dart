@@ -40,6 +40,7 @@ import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
 import '../../../data/repositories/ticker_repository.dart';
 import '../linker_quotes.dart';
+import '../../ai_chat/widgets/linker_avatar.dart';
 
 part 'home_recommended_section.dart';
 part 'home_widgets.dart';

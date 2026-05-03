@@ -123,14 +123,7 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
                 label: 'Open support chat',
                 child: GestureDetector(
                   onTap: () => context.push('/support-chat'),
-                  child: ClipOval(
-                    child: Image.asset(
-                      AppAssets.any,
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                  child: const LinkerAvatar(size: 44),
                 ),
               ),
             ],
@@ -226,14 +219,7 @@ class _GreetingSectionState extends State<_GreetingSection> {
             label: 'Open support chat',
             child: GestureDetector(
               onTap: () => context.push('/support-chat'),
-              child: ClipOval(
-                child: Image.asset(
-                  AppAssets.any,
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.cover,
-                ),
-              ),
+              child: const LinkerAvatar(size: 44),
             ),
           ),
         ],

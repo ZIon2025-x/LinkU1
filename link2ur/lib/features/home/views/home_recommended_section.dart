@@ -158,9 +158,14 @@ class _RecommendedTab extends StatelessWidget {
 // =============================================================================
 
 class _StoryEntry {
-  const _StoryEntry({this.emoji, this.assetImage, required this.label, this.route});
+  const _StoryEntry({
+    this.emoji,
+    this.isLinker = false,
+    required this.label,
+    this.route,
+  });
   final String? emoji;
-  final String? assetImage; // local asset path (e.g. AppAssets.appIcon)
+  final bool isLinker; // 渲染为渐变 LinkerAvatar 而非图片
   final String label;
   final String? route;
 }
@@ -173,7 +178,7 @@ class _StoryRow extends StatelessWidget {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final entries = [
-      const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/support-chat'),
+      const _StoryEntry(isLinker: true, label: 'Linker AI', route: '/support-chat'),
       _StoryEntry(emoji: '\u{1F4CB}', label: l10n.menuTaskHall, route: '/tasks'),
       _StoryEntry(emoji: '\u{1F389}', label: l10n.homeActivities, route: '/activities'),
       _StoryEntry(emoji: '\u{1F31F}', label: l10n.homeExperts, route: '/task-experts'),
@@ -216,9 +221,10 @@ class _StoryRow extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     clipBehavior: Clip.antiAlias,
-                    child: e.assetImage != null
-                        ? Image.asset(e.assetImage!, width: 36, height: 36, fit: BoxFit.cover)
-                        : Text(e.emoji ?? '', style: const TextStyle(fontSize: 24)),
+                    child: e.isLinker
+                        ? const LinkerAvatar(size: 40)
+                        : Text(e.emoji ?? '',
+                            style: const TextStyle(fontSize: 24)),
                   ),
                 ),
                 const SizedBox(height: 6),

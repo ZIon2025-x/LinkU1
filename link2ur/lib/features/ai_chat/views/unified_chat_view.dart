@@ -11,7 +11,6 @@ import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
-import '../../../core/constants/app_assets.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -210,16 +209,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                               ? _formatConvTime(conv.updatedAt!)
                               : '';
                           return ListTile(
-                            leading: ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.medium),
-                              child: Image.asset(
-                                AppAssets.any,
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                            leading: const LinkerAvatar(size: 40),
                             title: Text(
                               title,
                               maxLines: 1,
