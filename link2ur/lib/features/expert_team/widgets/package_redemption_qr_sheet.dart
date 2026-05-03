@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/package_purchase_repository.dart';
 
 /// Buyer 端套餐核销 QR 显示 sheet
@@ -116,7 +117,7 @@ class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              '请将此二维码出示给达人扫描',
+              context.l10n.packageRedemptionShowQrHint,
               style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
             ),
             const SizedBox(height: 24),
@@ -138,7 +139,7 @@ class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
                       const SizedBox(height: 12),
                       ElevatedButton(
                         onPressed: _fetch,
-                        child: const Text('重试'),
+                        child: Text(context.l10n.commonRetry),
                       ),
                     ],
                   ),
@@ -170,7 +171,7 @@ class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '$_secondsLeft 秒后自动刷新',
+                    context.l10n.packageRedemptionAutoRefresh(_secondsLeft),
                     style: TextStyle(
                       color: _secondsLeft < 10 ? Colors.red : Colors.grey,
                       fontSize: 12,
@@ -189,9 +190,9 @@ class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      '扫码失败?让达人手动输入',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    Text(
+                      context.l10n.packageRedemptionScanFailedHint,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -213,7 +214,7 @@ class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
                 child: OutlinedButton.icon(
                   onPressed: _fetch,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('立即刷新'),
+                  label: Text(context.l10n.packageRedemptionRefreshNow),
                 ),
               ),
             ],

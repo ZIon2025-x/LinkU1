@@ -99,7 +99,7 @@ class _InvitationCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        invitation.expertName ?? '未知团队',
+                        invitation.expertName ?? context.l10n.expertTeamUnknownTeam,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       if (invitation.createdAt != null)

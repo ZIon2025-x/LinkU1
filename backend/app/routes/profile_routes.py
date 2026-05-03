@@ -349,6 +349,21 @@ def user_profile(
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 
+    # 「全部评价」section sub 的真实总数(reviews 上面 limit=10 是预览,这里要用真实 count)
+    # ((Task.poster_id == user_id) & (Review.user_id == Task.taker_id))
+    # | ((Task.taker_id == user_id) & (Review.user_id == Task.poster_id))
+    from app.models import Task as _Task
+    total_reviews_count = (
+        db.query(Review)
+        .join(_Task, Review.task_id == _Task.id)
+        .filter(
+            Review.is_deleted.is_(False),
+            ((_Task.poster_id == user_id) & (Review.user_id == _Task.taker_id))
+            | ((_Task.taker_id == user_id) & (Review.user_id == _Task.poster_id)),
+        )
+        .count()
+    )
+
     # 检查用户是否是任务达人:老的 task_experts 或新的 expert_members 任一即可
     # 详见 get_my_profile 同名注释
     from app.utils.expert_helpers import is_user_expert_sync
@@ -403,6 +418,24 @@ def user_profile(
 
     # 获取用户近期论坛帖子（已发布的，最多5条）
     from app.models import ForumPost
+    # 「TA 的论坛动态」section preview:取该用户最热门的 3 篇
+    # 热度算法 = 点赞*5 + 收藏*4 + 评论*3 + 浏览*0.1,带时间衰减
+    # 与 forum_discovery_routes.get_user_hot_posts 一致,这里同步使用
+    from sqlalchemy import func as _sa_func
+
+    _active_time = _sa_func.coalesce(
+        ForumPost.last_reply_at, ForumPost.created_at
+    )
+    _hours_active = (
+        _sa_func.extract("epoch", _sa_func.now() - _active_time) / 3600.0
+    )
+    _hot_score = (
+        ForumPost.like_count * 5.0
+        + ForumPost.favorite_count * 4.0
+        + ForumPost.reply_count * 3.0
+        + ForumPost.view_count * 0.1
+    ) / _sa_func.pow((_hours_active / 24.0) + 1.0, 1.2)
+
     recent_forum_posts = (
         db.query(ForumPost)
         .filter(
@@ -410,8 +443,8 @@ def user_profile(
             ForumPost.is_deleted == False,
             ForumPost.is_visible == True,
         )
-        .order_by(ForumPost.created_at.desc())
-        .limit(5)
+        .order_by(_hot_score.desc())
+        .limit(3)
         .all()
     )
 
@@ -429,22 +462,35 @@ def user_profile(
         .all()
     )
 
-    # 获取用户「个人服务」(service_type='personal' + owner_type='user', 仅 active, 按 display_order 升序最多 5 条)
+    # 获取用户「个人服务」section preview:取最多 3 条
+    # 排序: 用户自定义 display_order 优先,其次按热度(view_count desc)再 fallback 创建时间
     from app.models import TaskExpertService
+    _personal_services_base = db.query(TaskExpertService).filter(
+        TaskExpertService.owner_type == "user",
+        TaskExpertService.owner_id == user_id,
+        TaskExpertService.service_type == "personal",
+        TaskExpertService.status == "active",
+    )
+    total_personal_services = _personal_services_base.count()
     personal_service_rows = (
-        db.query(TaskExpertService)
-        .filter(
-            TaskExpertService.owner_type == "user",
-            TaskExpertService.owner_id == user_id,
-            TaskExpertService.service_type == "personal",
-            TaskExpertService.status == "active",
-        )
-        .order_by(
+        _personal_services_base.order_by(
             TaskExpertService.display_order.asc(),
+            TaskExpertService.view_count.desc(),
             TaskExpertService.created_at.desc(),
         )
-        .limit(5)
+        .limit(3)
         .all()
+    )
+
+    # 论坛动态总数(用于 section 副标题 "· N 篇" + 决定是否显示「全部 >」)
+    total_forum_posts = (
+        db.query(ForumPost)
+        .filter(
+            ForumPost.author_id == user_id,
+            ForumPost.is_deleted == False,
+            ForumPost.is_visible == True,
+        )
+        .count()
     )
 
     def _serialize_personal_service(s: TaskExpertService) -> dict:
@@ -476,7 +522,9 @@ def user_profile(
             "taken_tasks": taken_tasks_count,  # 真实数据：所有接取的任务
             "completed_tasks": completed_tasks_count,  # 真实数据：所有完成的任务
             "completion_rate": round(completion_rate, 1),
-            "total_reviews": len(reviews),
+            "total_reviews": total_reviews_count,
+            "total_personal_services": total_personal_services,
+            "total_forum_posts": total_forum_posts,
         },
         "recent_tasks": [
             {
@@ -1128,4 +1176,75 @@ def get_user_task_statistics(
         "statistics": statistics,
         "upgrade_conditions": upgrade_conditions,
         "current_level": current_user.user_level,
+    }
+
+
+@router.get("/users/{user_id}/personal-services")
+@measure_api_performance("get_user_personal_services")
+@cache_response(ttl=180, key_prefix="user_personal_services")
+def get_user_personal_services(
+    user_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    db: Session = Depends(get_db),
+):
+    """获取指定用户发布的全部「个人服务」(分页)。
+
+    用于他人主页「个人服务」section 底部「查看全部 N 项」按钮跳转的独立页。
+
+    - 排序: 用户自定义 display_order asc → view_count desc → created_at desc
+    - 默认 page_size=20,最大 50
+    - 仅返回 status='active' 的服务
+    """
+    from app.models import TaskExpertService
+
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 50:
+        page_size = 20
+
+    base = db.query(TaskExpertService).filter(
+        TaskExpertService.owner_type == "user",
+        TaskExpertService.owner_id == user_id,
+        TaskExpertService.service_type == "personal",
+        TaskExpertService.status == "active",
+    )
+    total = base.count()
+    rows = (
+        base.order_by(
+            TaskExpertService.display_order.asc(),
+            TaskExpertService.view_count.desc(),
+            TaskExpertService.created_at.desc(),
+        )
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    items = [
+        {
+            "id": s.id,
+            "service_name": s.service_name,
+            "service_name_en": s.service_name_en,
+            "service_name_zh": s.service_name_zh,
+            "description": s.description,
+            "description_en": s.description_en,
+            "description_zh": s.description_zh,
+            "category": s.category,
+            "base_price": float(s.base_price) if s.base_price else 0.0,
+            "currency": s.currency or "GBP",
+            "pricing_type": s.pricing_type or "fixed",
+            "location_type": s.location_type or "online",
+            "location": s.location,
+            "images": s.images or [],
+            "status": s.status,
+            "view_count": s.view_count or 0,
+            "application_count": s.application_count or 0,
+        }
+        for s in rows
+    ]
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
     }

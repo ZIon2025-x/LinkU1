@@ -104,7 +104,7 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('保存失败，请重试')),
+          SnackBar(content: Text(context.l10n.taskPreferencesSaveFailedRetry)),
         );
       }
     }

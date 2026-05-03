@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/helpers.dart';
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../../core/widgets/async_image_view.dart';
@@ -8,10 +9,20 @@ import 'b_section_card.dart';
 
 /// 普通用户主页的「个人服务」section（对齐 user_profile_redesign.html · Plan B）。
 /// 服务列表为空时整体折叠为 SizedBox.shrink，不留空白卡。
+///
+/// 后端只返回前 3 条 preview;[totalServices] 为真实总数,用于副标题与
+/// 决定是否展示「全部 >」入口跳转独立页。
 class PersonalServicesSection extends StatelessWidget {
-  const PersonalServicesSection({super.key, required this.services});
+  const PersonalServicesSection({
+    super.key,
+    required this.userId,
+    required this.services,
+    this.totalServices = 0,
+  });
 
+  final String userId;
   final List<UserProfilePersonalService> services;
+  final int totalServices;
 
   @override
   Widget build(BuildContext context) {
@@ -19,16 +30,25 @@ class PersonalServicesSection extends StatelessWidget {
 
     final l10n = context.l10n;
     final locale = Localizations.localeOf(context);
+    final shownCount = totalServices > 0 ? totalServices : services.length;
+    final hasMore = shownCount > services.length;
 
     return BSectionCard(
       title: l10n.profilePersonalServices,
-      subtitle: l10n.profilePersonalServicesCount(services.length),
+      subtitle: l10n.profilePersonalServicesCount(shownCount),
+      moreLabel: hasMore ? l10n.commonViewAll : null,
+      onTapMore: hasMore
+          ? () => context.goToUserPersonalServices(
+                userId,
+                totalServices: shownCount,
+              )
+          : null,
       children: [
         for (var i = 0; i < services.length; i++)
           Padding(
             key: ValueKey('personal_service_${services[i].id}'),
             padding: EdgeInsets.only(bottom: i == services.length - 1 ? 0 : 10),
-            child: _PersonalServiceCard(
+            child: PersonalServiceCard(
               service: services[i],
               locale: locale,
             ),
@@ -38,8 +58,12 @@ class PersonalServicesSection extends StatelessWidget {
   }
 }
 
-class _PersonalServiceCard extends StatelessWidget {
-  const _PersonalServiceCard({
+/// 单条个人服务卡片 (b-service-card): 缩略图 + 标题 + 描述 + 类目 pill + 价格。
+///
+/// 复用于他人主页 section 内联预览以及独立「全部个人服务」页面。
+class PersonalServiceCard extends StatelessWidget {
+  const PersonalServiceCard({
+    super.key,
     required this.service,
     required this.locale,
   });
@@ -49,25 +73,25 @@ class _PersonalServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(service.displayName(locale))),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAFBFC),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFF0F1F4)),
-        ),
-        child: Row(
-          children: [
-            _Thumb(service: service),
-            const SizedBox(width: 14),
-            Expanded(child: _Info(service: service, locale: locale)),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => context.goToServiceDetail(service.id),
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFAFBFC),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFF0F1F4)),
+          ),
+          child: Row(
+            children: [
+              _Thumb(service: service),
+              const SizedBox(width: 14),
+              Expanded(child: _Info(service: service, locale: locale)),
+            ],
+          ),
         ),
       ),
     );

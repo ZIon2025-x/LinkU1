@@ -37,8 +37,13 @@ def get_reviews_received_by_user(db: Session, user_id: str, limit: int = 5):
     )
 
 
-def get_user_reviews_with_reviewer_info(db: Session, user_id: str, limit: int = 5):
-    """获取用户收到的评价，包含评价者信息（用于个人主页显示）"""
+def get_user_reviews_with_reviewer_info(
+    db: Session, user_id: str, limit: int = 20, skip: int = 0
+):
+    """获取用户收到的评价，包含评价者信息（用于个人主页显示）。
+
+    支持分页:`skip` + `limit`,默认页大小 20,适配「全部评价」独立页。
+    """
     reviews = (
         db.query(models.Review, models.User, models.Task)
         .join(models.User, models.Review.user_id == models.User.id)
@@ -49,6 +54,7 @@ def get_user_reviews_with_reviewer_info(db: Session, user_id: str, limit: int = 
             | ((models.Task.taker_id == user_id) & (models.Review.user_id == models.Task.poster_id))
         )
         .order_by(models.Review.created_at.desc())
+        .offset(skip)
         .limit(limit)
         .all()
     )

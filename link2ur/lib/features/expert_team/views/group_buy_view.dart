@@ -66,7 +66,7 @@ class _GroupBuyBodyState extends State<_GroupBuyBody> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _status == null
-                ? const Center(child: Text('无法加载拼单信息'))
+                ? Center(child: Text(context.l10n.groupBuyCannotLoad))
                 : _buildContent(context),
       ),
     );
@@ -105,20 +105,20 @@ class _GroupBuyBodyState extends State<_GroupBuyBody> {
                   children: [
                     Text('$current / $min',
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-                    Text('人', style: Theme.of(context).textTheme.bodySmall),
+                    Text(context.l10n.groupBuyPersonUnit, style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          Text(current >= min ? '拼单成功！' : '还差 ${min - current} 人成单',
+          Text(current >= min ? context.l10n.groupBuySuccess : context.l10n.groupBuyNeedMore(min - current),
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           if (deadline != null)
-            Text('截止: ${deadline.substring(0, 16)}',
+            Text(context.l10n.groupBuyDeadline(deadline.substring(0, 16)),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
-          Text('第 $round 轮', style: Theme.of(context).textTheme.bodySmall),
+          Text(context.l10n.groupBuyRoundN(round), style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 32),
           // Action button
           SizedBox(
@@ -131,7 +131,7 @@ class _GroupBuyBodyState extends State<_GroupBuyBody> {
                             ExpertTeamCancelGroupBuy(widget.activityId),
                           );
                     },
-                    child: const Text('取消报名'),
+                    child: Text(context.l10n.groupBuyCancelEnrollment),
                   )
                 : ElevatedButton(
                     onPressed: current >= min ? null : () {
@@ -139,7 +139,7 @@ class _GroupBuyBodyState extends State<_GroupBuyBody> {
                             ExpertTeamJoinGroupBuy(widget.activityId),
                           );
                     },
-                    child: Text(current >= min ? '已成单' : '立即报名'),
+                    child: Text(current >= min ? context.l10n.groupBuyAlreadyClosed : context.l10n.groupBuyEnrollNow),
                   ),
           ),
         ],

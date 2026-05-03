@@ -53,7 +53,7 @@ class _MyTeamsContent extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      state.errorMessage ?? '加载失败',
+                      state.errorMessage ?? context.l10n.expertTeamLoadFailedDefault,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -61,7 +61,7 @@ class _MyTeamsContent extends StatelessWidget {
                     ElevatedButton(
                       onPressed: () =>
                           context.read<ExpertTeamBloc>().add(ExpertTeamLoadMyTeams()),
-                      child: const Text('重试'),
+                      child: Text(context.l10n.commonRetry),
                     ),
                   ],
                 ),
@@ -190,7 +190,7 @@ class _TeamCard extends StatelessWidget {
                         const Icon(Icons.people_outline, size: 14, color: Colors.grey),
                         const SizedBox(width: 4),
                         Text(
-                          '${team.memberCount} 位成员',
+                          context.l10n.expertTeamMemberCount(team.memberCount),
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall

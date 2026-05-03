@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/profile_setup_bloc.dart';
 
@@ -40,28 +41,28 @@ class _ModeOption {
     required this.icon,
   });
   final String value;
-  final String label;
-  final String description;
+  final String Function(BuildContext) label;
+  final String Function(BuildContext) description;
   final IconData icon;
 }
 
-const List<_ModeOption> _modeOptions = [
+final List<_ModeOption> _modeOptions = [
   _ModeOption(
     value: 'online',
-    label: '线上任务',
-    description: '通过视频、文字或远程方式完成任务',
+    label: (c) => c.l10n.profileSetupOnlineLabel,
+    description: (c) => c.l10n.profileSetupOnlineDesc,
     icon: Icons.laptop_mac,
   ),
   _ModeOption(
     value: 'offline',
-    label: '线下任务',
-    description: '面对面、实地协助完成任务',
+    label: (c) => c.l10n.profileSetupOfflineLabel,
+    description: (c) => c.l10n.profileSetupOfflineDesc,
     icon: Icons.location_on,
   ),
   _ModeOption(
     value: 'both',
-    label: '都可以',
-    description: '线上线下均可，灵活接单',
+    label: (c) => c.l10n.preferenceModeBoth,
+    description: (c) => c.l10n.profileSetupBothDesc,
     icon: Icons.swap_horiz,
   ),
 ];
@@ -166,7 +167,7 @@ class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
         } else if (state.status == ProfileSetupStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage ?? '提交失败，请重试'),
+              content: Text(state.errorMessage ?? context.l10n.profileSetupSubmitFailedDefault),
               backgroundColor: AppColors.error,
             ),
           );
@@ -219,7 +220,7 @@ class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
                       TextButton(
                         onPressed: _skip,
                         child: Text(
-                          '跳过',
+                          context.l10n.profileSetupSkip,
                           style: AppTypography.body.copyWith(
                             color: isDark
                                 ? AppColors.textSecondaryDark
@@ -286,8 +287,8 @@ class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
                                   )
                                 : Text(
                                     _currentPage < _totalPages - 1
-                                        ? '下一步'
-                                        : '完成',
+                                        ? context.l10n.profileSetupNext
+                                        : context.l10n.profileSetupFinish,
                                     style: AppTypography.button.copyWith(
                                       color: Colors.white,
                                     ),
@@ -328,7 +329,7 @@ class _SkillsPage extends StatelessWidget {
 
           // Title
           Text(
-            '你擅长什么？',
+            context.l10n.profileSetupSkillsTitle,
             style: AppTypography.largeTitle.copyWith(
               color:
                   isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
@@ -336,7 +337,7 @@ class _SkillsPage extends StatelessWidget {
           ),
           AppSpacing.vSm,
           Text(
-            '选择你的技能领域',
+            context.l10n.profileSetupSkillsSubtitle,
             style: AppTypography.body.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -505,7 +506,7 @@ class _ModePage extends StatelessWidget {
 
           // Title
           Text(
-            '你更喜欢什么类型的任务？',
+            context.l10n.profileSetupTaskTypeTitle,
             style: AppTypography.title.copyWith(
               color:
                   isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
@@ -608,7 +609,7 @@ class _ModeCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    option.label,
+                    option.label(context),
                     style: AppTypography.title3.copyWith(
                       color: isSelected
                           ? AppColors.primary
@@ -619,7 +620,7 @@ class _ModeCard extends StatelessWidget {
                   ),
                   AppSpacing.vXs,
                   Text(
-                    option.description,
+                    option.description(context),
                     style: AppTypography.caption.copyWith(
                       color: isDark
                           ? AppColors.textSecondaryDark

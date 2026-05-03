@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -7,13 +8,12 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/native_share.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../core/widgets/animated_star_rating.dart';
-import '../../../core/utils/date_formatter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/user.dart' show User, UserProfileReview, UserProfileForumPost;
 import '../../../data/models/task.dart' show CreateTaskRequest;
@@ -25,7 +25,9 @@ import '../../../core/router/app_router.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
 import 'widgets/b_section_card.dart';
+import 'widgets/forum_post_row.dart';
 import 'widgets/personal_services_section.dart';
+import 'widgets/review_mini.dart';
 import 'widgets/user_profile_hero_card.dart';
 
 /// 公开用户资料页
@@ -71,16 +73,45 @@ class UserProfileView extends StatelessWidget {
                 state.errorMessage != 'follow_failed' &&
                 state.errorMessage != 'unfollow_failed';
             final isDark = Theme.of(context).brightness == Brightness.dark;
+            final fg = isDark ? Colors.white : const Color(0xFF1A1D1F);
             return Scaffold(
               extendBodyBehindAppBar: true,
               appBar: AppBar(
-                title: Text(l10n.profileUserProfile),
+                title: const SizedBox.shrink(),
                 backgroundColor: Colors.transparent,
                 elevation: 0,
                 scrolledUnderElevation: 0,
                 surfaceTintColor: Colors.transparent,
-                foregroundColor:
-                    isDark ? Colors.white : const Color(0xFF1A1D1F),
+                foregroundColor: fg,
+                actions: state.publicUser == null
+                    ? null
+                    : [
+                        IconButton(
+                          icon: const Icon(Icons.ios_share_rounded),
+                          tooltip: l10n.commonShare,
+                          onPressed: () =>
+                              _shareUserProfile(context, state.publicUser!),
+                        ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_horiz_rounded),
+                          tooltip: l10n.commonMore,
+                          onSelected: (value) =>
+                              _onMoreSelected(context, value, state.publicUser!),
+                          itemBuilder: (ctx) => [
+                            PopupMenuItem(
+                              value: 'copy_link',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.link, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(l10n.commonCopyLink),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 4),
+                      ],
               ),
               body: state.isLoading
                   ? const LoadingView()
@@ -153,13 +184,16 @@ class UserProfileView extends StatelessWidget {
                                         ),
                                         // 个人服务（widget 内部判空，无服务时折叠）
                                         PersonalServicesSection(
+                                          userId: userId,
                                           services: state.publicProfileDetail?.personalServices ?? const [],
+                                          totalServices: state.publicProfileDetail?.stats.totalPersonalServices ?? 0,
                                         ),
                                         // 收到的评价
                                         if (state.publicProfileDetail?.reviews.isNotEmpty == true)
-                                          _buildReviewsSection(
-                                            context,
-                                            state.publicProfileDetail!.reviews,
+                                          _ReviewsBlock(
+                                            userId: userId,
+                                            reviews:
+                                                state.publicProfileDetail!.reviews,
                                             avgRating: state.publicUser?.avgRating,
                                             totalReviews:
                                                 state.publicProfileDetail?.stats.totalReviews ?? 0,
@@ -167,7 +201,10 @@ class UserProfileView extends StatelessWidget {
                                         // TA 的论坛动态
                                         if (state.publicProfileDetail?.recentForumPosts.isNotEmpty == true)
                                           _buildRecentForumPostsSection(
-                                              context, state.publicProfileDetail!.recentForumPosts),
+                                            context,
+                                            posts: state.publicProfileDetail!.recentForumPosts,
+                                            totalPosts: state.publicProfileDetail?.stats.totalForumPosts ?? 0,
+                                          ),
                                         const SizedBox(height: AppSpacing.xxl),
                                       ],
                                     ),
@@ -183,6 +220,31 @@ class UserProfileView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _profileUrl(String userId) =>
+      'https://link2ur.com/user/$userId';
+
+  Future<void> _shareUserProfile(BuildContext context, User user) async {
+    final url = _profileUrl(user.id);
+    final name = user.displayNameWith(context.l10n);
+    await NativeShare.share(
+      title: name,
+      description: user.bio ?? '',
+      url: url,
+    );
+  }
+
+  void _onMoreSelected(BuildContext context, String value, User user) {
+    final l10n = context.l10n;
+    switch (value) {
+      case 'copy_link':
+        Clipboard.setData(ClipboardData(text: _profileUrl(user.id)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.commonLinkCopied)),
+        );
+        break;
+    }
   }
 
   /// 底部固定：发布任务请求按钮（紫蓝渐变 CTA · 对齐 Plan B）
@@ -586,18 +648,29 @@ class UserProfileView extends StatelessWidget {
   }
 
   /// TA 的论坛动态（Plan B section）
+  /// 后端只返回前 3 条最热帖子;[totalPosts] 是真实总数,用于副标题 + 决定 "全部 >"。
   Widget _buildRecentForumPostsSection(
-    BuildContext context,
-    List<UserProfileForumPost> posts,
-  ) {
+    BuildContext context, {
+    required List<UserProfileForumPost> posts,
+    required int totalPosts,
+  }) {
     final l10n = context.l10n;
-    final visiblePosts = posts.take(5).toList();
+    final visiblePosts = posts.take(3).toList();
+    final shownCount = totalPosts > 0 ? totalPosts : posts.length;
+    final hasMore = shownCount > visiblePosts.length;
     return BSectionCard(
       title: l10n.profileRecentPosts,
-      subtitle: l10n.profileForumPostsCount(posts.length),
+      subtitle: l10n.profileForumPostsCount(shownCount),
+      moreLabel: hasMore ? l10n.commonViewAll : null,
+      onTapMore: hasMore
+          ? () => context.goToUserForumPosts(
+                userId,
+                totalPosts: shownCount,
+              )
+          : null,
       children: [
         for (var i = 0; i < visiblePosts.length; i++)
-          _ForumPostRow(
+          ForumPostRow(
             post: visiblePosts[i],
             colorIndex: i,
             showDivider: i > 0,
@@ -620,33 +693,57 @@ class UserProfileView extends StatelessWidget {
     );
   }
 
-  /// 收到的评价（Plan B section · 头像 + 姓名 + 星级 + 时间 + 评论 + 标签）
-  Widget _buildReviewsSection(
-    BuildContext context,
-    List<UserProfileReview> reviews, {
-    double? avgRating,
-    int totalReviews = 0,
-  }) {
+}
+
+/// 收到的评价（Plan B section · 头像 + 姓名 + 星级 + 时间 + 评论）。
+/// 默认展示 3 条；点击底部按钮展开至最多 10 条，再次点击折叠。
+class _ReviewsBlock extends StatelessWidget {
+  const _ReviewsBlock({
+    required this.userId,
+    required this.reviews,
+    required this.avgRating,
+    required this.totalReviews,
+  });
+
+  final String userId;
+  final List<UserProfileReview> reviews;
+  final double? avgRating;
+  final int totalReviews;
+
+  static const _previewCount = 3;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final ratingText = avgRating != null
-        ? avgRating.toStringAsFixed(1)
-        : '-';
+    final ratingText =
+        avgRating != null ? avgRating!.toStringAsFixed(1) : '-';
     final shownCount = totalReviews > 0 ? totalReviews : reviews.length;
-    final visibleReviews = reviews.take(3).toList();
+    final visible = reviews.take(_previewCount).toList();
+    final hasMore = shownCount > visible.length;
 
     return BSectionCard(
       title: l10n.profileUserReviews,
       subtitle: l10n.profileReviewsSubtitle(ratingText, shownCount),
+      moreLabel: hasMore ? l10n.commonViewAll : null,
+      onTapMore: hasMore
+          ? () => context.goToUserReviews(
+                userId,
+                totalReviews: shownCount,
+                avgRating: avgRating,
+              )
+          : null,
       children: [
-        for (var i = 0; i < visibleReviews.length; i++)
-          _ReviewMini(
-            review: visibleReviews[i],
-            showDivider: i > 0,
-          ),
-        if (shownCount > visibleReviews.length) ...[
+        for (var i = 0; i < visible.length; i++)
+          ReviewMini(review: visible[i], showDivider: i > 0),
+        if (hasMore) ...[
           const SizedBox(height: 12),
           _ViewAllReviewsButton(
             label: l10n.profileViewAllReviewsCount(shownCount),
+            onTap: () => context.goToUserReviews(
+              userId,
+              totalReviews: shownCount,
+              avgRating: avgRating,
+            ),
           ),
         ],
       ],
@@ -784,136 +881,18 @@ class _RoleTag extends StatelessWidget {
   }
 }
 
-/// 单条评价（b-review-mini）：32 头像 + 姓名 + 星级 + 时间 + 评论。
-class _ReviewMini extends StatelessWidget {
-  const _ReviewMini({required this.review, required this.showDivider});
-
-  final UserProfileReview review;
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) {
-    final reviewerName = (review.reviewerName?.isNotEmpty ?? false)
-        ? review.reviewerName!
-        : (review.isAnonymous ? '匿名用户' : '用户');
-    final initial = reviewerName.characters.isNotEmpty
-        ? reviewerName.characters.first
-        : '?';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: showDivider
-            ? const Border(
-                top: BorderSide(color: Color(0xFFF0F1F4)),
-              )
-            : null,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: _avatarGradient(reviewerName),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        reviewerName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    AnimatedStarRating(
-                      rating: review.rating,
-                      size: 11,
-                      spacing: 1,
-                    ),
-                    const Spacer(),
-                    if (review.createdAt.isNotEmpty)
-                      Text(
-                        _formatReviewTime(context, review.createdAt),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9A9FA5),
-                        ),
-                      ),
-                  ],
-                ),
-                if ((review.comment ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    review.comment!,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      height: 1.55,
-                      color: Color(0xFF4D5560),
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _formatReviewTime(BuildContext context, String createdAt) {
-    final dt = DateTime.tryParse(createdAt);
-    if (dt == null) return createdAt;
-    return DateFormatter.formatRelative(dt, l10n: context.l10n);
-  }
-
-  static const _palette = <List<Color>>[
-    [Color(0xFFFFD6A5), Color(0xFFFF9A3C)],
-    [Color(0xFFA8EDEA), Color(0xFF67D4FF)],
-    [Color(0xFFC8B6FF), Color(0xFF9484FF)],
-    [Color(0xFFFFC1CC), Color(0xFFFF6A88)],
-    [Color(0xFFB8E994), Color(0xFF26A65B)],
-  ];
-
-  LinearGradient _avatarGradient(String name) {
-    final hash = name.codeUnits.fold<int>(0, (a, b) => a + b);
-    final pair = _palette[hash % _palette.length];
-    return LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: pair,
-    );
-  }
-}
+// _ReviewMini 已迁移到 widgets/review_mini.dart 作为公共组件 ReviewMini，
+// 供他人主页 section 内联预览与「全部评价」独立页共用。
 
 /// "查看全部 X 条评价" 按钮（b-review-all-btn）。
 class _ViewAllReviewsButton extends StatelessWidget {
-  const _ViewAllReviewsButton({required this.label});
+  const _ViewAllReviewsButton({
+    required this.label,
+    required this.onTap,
+  });
+
   final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -921,9 +900,7 @@ class _ViewAllReviewsButton extends StatelessWidget {
       width: double.infinity,
       height: 40,
       child: OutlinedButton(
-        onPressed: () {
-          // TODO: navigate to a future "all reviews" page when available.
-        },
+        onPressed: onTap,
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
           side: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -944,8 +921,11 @@ class _ViewAllReviewsButton extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right,
-                size: 14, color: Color(0xFF4D5560)),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: Color(0xFF4D5560),
+            ),
           ],
         ),
       ),
@@ -953,121 +933,5 @@ class _ViewAllReviewsButton extends StatelessWidget {
   }
 }
 
-/// 论坛动态行（b-task-row）：彩色图标块 + 标题 + 赞/评论/时间。
-class _ForumPostRow extends StatelessWidget {
-  const _ForumPostRow({
-    required this.post,
-    required this.colorIndex,
-    required this.showDivider,
-  });
-
-  final UserProfileForumPost post;
-  final int colorIndex;
-  final bool showDivider;
-
-  static const _iconPalette = <List<Color>>[
-    [Color(0xFFFEF3C7), Color(0xFFD97706)],
-    [Color(0xFFDCFCE7), Color(0xFF059669)],
-    [Color(0xFFEEF0FF), Color(0xFF4F46E5)],
-    [Color(0xFFFCE7F3), Color(0xFFDB2777)],
-    [Color(0xFFCFFAFE), Color(0xFF0891B2)],
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final pair = _iconPalette[colorIndex % _iconPalette.length];
-    final timeText = (post.createdAt != null && post.createdAt!.isNotEmpty)
-        ? _formatTime(context, post.createdAt!)
-        : null;
-
-    return InkWell(
-      onTap: () => context.goToForumPostDetail(post.id),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        decoration: BoxDecoration(
-          border: showDivider
-              ? const Border(
-                  top: BorderSide(color: Color(0xFFF0F1F4)),
-                )
-              : null,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: pair[0],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: Icon(Icons.forum_outlined, color: pair[1], size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    post.displayTitle(Localizations.localeOf(context)),
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.1,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.thumb_up_outlined,
-                          size: 11, color: Color(0xFF9A9FA5)),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${post.likeCount}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9A9FA5),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.mode_comment_outlined,
-                          size: 11, color: Color(0xFF9A9FA5)),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${post.replyCount}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9A9FA5),
-                        ),
-                      ),
-                      if (timeText != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '· $timeText',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF9A9FA5),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static String _formatTime(BuildContext context, String createdAt) {
-    final dt = DateTime.tryParse(createdAt);
-    if (dt == null) return createdAt;
-    return DateFormatter.formatRelative(dt, l10n: context.l10n);
-  }
-}
+// _ForumPostRow 已迁移到 widgets/forum_post_row.dart 作为公共组件 ForumPostRow，
+// 供他人主页 section 内联预览与「TA 的论坛动态」独立页共用。

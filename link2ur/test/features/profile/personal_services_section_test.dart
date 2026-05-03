@@ -20,7 +20,10 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('zh'),
         home: Scaffold(
-          body: PersonalServicesSection(services: services),
+          body: PersonalServicesSection(
+            userId: 'u1',
+            services: services,
+          ),
         ),
       );
 

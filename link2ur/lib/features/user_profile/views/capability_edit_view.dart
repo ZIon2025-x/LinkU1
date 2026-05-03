@@ -6,6 +6,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/user_profile_bloc.dart';
 
@@ -69,17 +70,17 @@ class _CapabilityEditContentState extends State<_CapabilityEditContent> {
     showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除技能'),
-        content: Text('确认删除「$skillName」吗？'),
+        title: Text(ctx.l10n.profileDeleteSkill),
+        content: Text(ctx.l10n.profileDeleteSkillConfirm(skillName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(ctx.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('删除'),
+            child: Text(ctx.l10n.commonDelete),
           ),
         ],
       ),
@@ -96,12 +97,12 @@ class _CapabilityEditContentState extends State<_CapabilityEditContent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('管理技能'),
+        title: Text(context.l10n.profileManageSkills),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSkillDialog,
         icon: const Icon(Icons.add),
-        label: const Text('添加技能'),
+        label: Text(context.l10n.profileAddSkill),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
@@ -125,27 +126,27 @@ class _CapabilityEditContentState extends State<_CapabilityEditContent> {
           final capabilities = state.summary?.capabilities ?? [];
 
           if (capabilities.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.psychology_outlined,
                     size: 64,
                     color: AppColors.textSecondary,
                   ),
                   AppSpacing.vMd,
                   Text(
-                    '还没有技能',
-                    style: TextStyle(
+                    context.l10n.profileNoSkillsTitle,
+                    style: const TextStyle(
                       fontSize: 16,
                       color: AppColors.textSecondary,
                     ),
                   ),
                   AppSpacing.vSm,
                   Text(
-                    '点击右下角按钮添加你的第一个技能',
-                    style: TextStyle(
+                    context.l10n.profileNoSkillsSubtitle,
+                    style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
@@ -218,7 +219,7 @@ class _CapabilityEditContentState extends State<_CapabilityEditContent> {
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),
                     color: AppColors.error,
-                    tooltip: '删除',
+                    tooltip: context.l10n.commonDelete,
                     onPressed: () => _confirmDelete(cap.id, cap.skillName),
                   ),
                 ),
@@ -248,15 +249,15 @@ class _ProficiencyBadge extends StatelessWidget {
     }
   }
 
-  String get _label {
+  String _label(BuildContext context) {
     switch (proficiency) {
       case 'expert':
-        return '精通';
+        return context.l10n.skillLevelExpert;
       case 'intermediate':
-        return '熟练';
+        return context.l10n.skillLevelIntermediate;
       case 'beginner':
       default:
-        return '入门';
+        return context.l10n.skillLevelBeginner;
     }
   }
 
@@ -270,7 +271,7 @@ class _ProficiencyBadge extends StatelessWidget {
         border: Border.all(color: _color.withValues(alpha: 0.3)),
       ),
       child: Text(
-        _label,
+        _label(context),
         style: TextStyle(
           fontSize: 11,
           color: _color,
@@ -289,16 +290,17 @@ class _AddSkillDialog extends StatefulWidget {
   final void Function(Map<String, dynamic> skillData) onSave;
   final List<(int, String)> categories;
 
-  /// Fallback categories when backend fetch fails
+  /// Fallback categories when backend fetch fails (English-first; localized on display where needed).
+  /// NOTE: Display-side prefers backend `name_zh`/`name_en`; this list is a last-resort fallback only.
   static const _fallbackCategories = [
-    (1, '学业辅导'),
-    (2, '技术开发'),
-    (3, '设计创意'),
-    (4, '语言翻译'),
-    (5, '生活服务'),
-    (6, '音乐艺术'),
-    (7, '运动健身'),
-    (8, '其他'),
+    (1, 'Academic'),
+    (2, 'Technical'),
+    (3, 'Design'),
+    (4, 'Language'),
+    (5, 'Lifestyle'),
+    (6, 'Music & Art'),
+    (7, 'Sports'),
+    (8, 'Other'),
   ];
 
   @override
@@ -318,11 +320,11 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
     _selectedCategoryId = widget.categories.isNotEmpty ? widget.categories.first.$1 : 1;
   }
 
-  static const _proficiencies = [
-    ('beginner', '入门'),
-    ('intermediate', '熟练'),
-    ('expert', '精通'),
-  ];
+  List<(String, String)> _proficiencies(BuildContext c) => [
+        ('beginner', c.l10n.skillLevelBeginner),
+        ('intermediate', c.l10n.skillLevelIntermediate),
+        ('expert', c.l10n.skillLevelExpert),
+      ];
 
   @override
   void dispose() {
@@ -343,7 +345,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('添加技能'),
+      title: Text(context.l10n.profileAddSkill),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -352,9 +354,9 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 分类选择
-              const Text(
-                '技能分类',
-                style: TextStyle(
+              Text(
+                context.l10n.profileSkillCategory,
+                style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                 ),
@@ -362,8 +364,8 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
               const SizedBox(height: AppSpacing.xs),
               AppSelectField<int>(
                 value: _selectedCategoryId,
-                hint: '技能分类',
-                sheetTitle: '技能分类',
+                hint: context.l10n.profileSkillCategory,
+                sheetTitle: context.l10n.profileSkillCategory,
                 options: widget.categories
                     .map((cat) => SelectOption(value: cat.$1, label: cat.$2))
                     .toList(),
@@ -374,9 +376,9 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
               AppSpacing.vMd,
 
               // 技能名称
-              const Text(
-                '技能名称',
-                style: TextStyle(
+              Text(
+                context.l10n.profileSkillName,
+                style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                 ),
@@ -385,7 +387,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
               TextFormField(
                 controller: _skillNameController,
                 decoration: InputDecoration(
-                  hintText: '例如：Python、平面设计、英语口语',
+                  hintText: context.l10n.profileSkillNameHint,
                   border: OutlineInputBorder(
                     borderRadius: AppRadius.allMedium,
                   ),
@@ -396,10 +398,10 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
-                    return '请输入技能名称';
+                    return context.l10n.profileSkillNameRequired;
                   }
                   if (val.trim().length > 30) {
-                    return '技能名称不超过30字';
+                    return context.l10n.profileSkillNameTooLong;
                   }
                   return null;
                 },
@@ -408,16 +410,16 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
               AppSpacing.vMd,
 
               // 熟练度选择
-              const Text(
-                '熟练度',
-                style: TextStyle(
+              Text(
+                context.l10n.profileSkillProficiency,
+                style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Row(
-                children: _proficiencies.map((p) {
+                children: _proficiencies(context).map((p) {
                   final isSelected = _selectedProficiency == p.$1;
                   return Expanded(
                     child: Padding(
@@ -465,7 +467,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(context.l10n.commonCancel),
         ),
         ElevatedButton(
           onPressed: _save,
@@ -473,7 +475,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
           ),
-          child: const Text('添加'),
+          child: Text(context.l10n.commonAdd),
         ),
       ],
     );

@@ -118,7 +118,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     if (task == null || task.takerDisplay == null || !task.takerDisplay!.isTeam) {
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('该任务未关联达人团队')),
+          SnackBar(content: Text(context.l10n.chatNoExpertTeamForTask)),
         );
       }
       return;
@@ -140,7 +140,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('加载成员列表失败: $e')),
+          SnackBar(content: Text(context.l10n.chatLoadMembersFailed(e.toString()))),
         );
       }
       return;
@@ -164,7 +164,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
 
     if (invitable.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('所有团队成员都已在聊天中')),
+        SnackBar(content: Text(context.l10n.chatAllMembersInChat)),
       );
       return;
     }
@@ -180,13 +180,13 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             await repo.inviteToTaskChat(widget.taskId, member.userId);
             if (mounted) {
               messenger.showSnackBar(
-                SnackBar(content: Text('已邀请 ${member.userName ?? member.userId} 加入聊天')),
+                SnackBar(content: Text(context.l10n.chatInviteSuccess(member.userName ?? member.userId))),
               );
             }
           } catch (e) {
             if (mounted) {
               messenger.showSnackBar(
-                SnackBar(content: Text('邀请失败: $e')),
+                SnackBar(content: Text(context.l10n.chatInviteFailed(e.toString()))),
               );
             }
           }

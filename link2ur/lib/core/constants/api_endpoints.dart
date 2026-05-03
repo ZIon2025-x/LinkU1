@@ -47,6 +47,18 @@ class ApiEndpoints {
       '/api/users/shared-tasks/$userId';
   static String userReceivedReviews(String userId) =>
       '/api/users/$userId/received-reviews';
+  // 全部评价分页(task_routes.py 挂载在 /api/users 前缀):
+  // GET /api/users/{user_id}/reviews?page=&page_size=
+  static String userReviews(String userId) =>
+      '/api/users/$userId/reviews';
+  // 用户「全部个人服务」分页 (profile_routes.py · /api/users):
+  // GET /api/users/{user_id}/personal-services?page=&page_size=
+  static String userPersonalServices(String userId) =>
+      '/api/users/$userId/personal-services';
+  // 用户「全部论坛帖子」分页 (forum_discovery_routes.py · /api/forum):
+  // GET /api/forum/users/{user_id}/hot-posts?page=&limit=
+  static String userHotForumPosts(String userId) =>
+      '/api/forum/users/$userId/hot-posts';
 
   // ==================== 任务相关 ====================
   // 后端: routers.py (prefix: /api) + multi_participant_routes.py (prefix: /api)

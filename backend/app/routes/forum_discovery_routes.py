@@ -733,12 +733,18 @@ async def get_user_forum_stats(
 @router.get("/users/{user_id}/hot-posts", response_model=schemas.ForumPostListResponse)
 async def get_user_hot_posts(
     user_id: str,
-    limit: int = Query(3, ge=1, le=10, description="返回数量"),
+    limit: int = Query(3, ge=1, le=50, description="返回数量"),
+    page: int = Query(1, ge=1, description="页码,从 1 开始"),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     request: Request = None,  # FastAPI injects; Optional[Request] breaks Pydantic field detection
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取用户发布的最热门帖子"""
+    """获取用户发布的最热门帖子(支持分页)。
+
+    - 默认 `limit=3`(用于他人主页 section 预览),最大 50
+    - `page=N` 翻页(用于「全部论坛动态」独立页);响应中 `total` 为该用户全部
+      可见帖子总数,前端据此判断是否还有下一页
+    """
     # 检查是否为管理员
     is_admin = False
     try:
@@ -798,8 +804,13 @@ async def get_user_hot_posts(
     )
     query = query.order_by(hot_score.desc())
 
-    # 限制数量
-    query = query.limit(limit)
+    # 总数(用于分页指示是否还有下一页)
+    count_query = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_query)).scalar() or 0
+
+    # 分页 offset + limit
+    offset = (page - 1) * limit
+    query = query.offset(offset).limit(limit)
 
     # 加载关联数据
     query = query.options(
@@ -875,9 +886,9 @@ async def get_user_hot_posts(
 
     return {
         "posts": post_items,
-        "total": len(post_items),
-        "page": 1,
-        "page_size": limit
+        "total": total,
+        "page": page,
+        "page_size": limit,
     }
 
 

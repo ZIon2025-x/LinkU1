@@ -77,6 +77,88 @@ class UserRepository {
     return detail.user;
   }
 
+  /// 获取用户收到的全部评价（分页）。
+  /// 后端: GET /api/users/{user_id}/reviews?page=&page_size=
+  Future<List<UserProfileReview>> getUserReviews(
+    String userId, {
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _apiService.get<List<dynamic>>(
+      ApiEndpoints.userReviews(userId),
+      queryParameters: {'page': page, 'page_size': pageSize},
+      cancelToken: cancelToken,
+    );
+    if (!response.isSuccess) {
+      throw UserException(
+        response.errorCode ?? response.message ?? '获取评价失败',
+        code: response.errorCode,
+      );
+    }
+    final list = response.data ?? const [];
+    return list
+        .whereType<Map>()
+        .map((e) => UserProfileReview.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  /// 获取用户全部「个人服务」(分页)。
+  /// 后端: GET /api/users/{user_id}/personal-services?page=&page_size=
+  Future<List<UserProfilePersonalService>> getUserPersonalServices(
+    String userId, {
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.userPersonalServices(userId),
+      queryParameters: {'page': page, 'page_size': pageSize},
+      cancelToken: cancelToken,
+    );
+    if (!response.isSuccess) {
+      throw UserException(
+        response.errorCode ?? response.message ?? '获取服务失败',
+        code: response.errorCode,
+      );
+    }
+    final raw = (response.data?['items'] as List<dynamic>?) ?? const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => UserProfilePersonalService.fromJson(
+              Map<String, dynamic>.from(e),
+            ))
+        .toList();
+  }
+
+  /// 获取用户全部「论坛动态」(分页,按热度排序)。
+  /// 后端: GET /api/forum/users/{user_id}/hot-posts?page=&limit=
+  Future<List<UserProfileForumPost>> getUserHotForumPosts(
+    String userId, {
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.userHotForumPosts(userId),
+      queryParameters: {'page': page, 'limit': pageSize},
+      cancelToken: cancelToken,
+    );
+    if (!response.isSuccess) {
+      throw UserException(
+        response.errorCode ?? response.message ?? '获取帖子失败',
+        code: response.errorCode,
+      );
+    }
+    final raw = (response.data?['posts'] as List<dynamic>?) ?? const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => UserProfileForumPost.fromJson(
+              Map<String, dynamic>.from(e),
+            ))
+        .toList();
+  }
+
   /// 获取其他用户完整资料（含统计、近期任务、收到的评价）
   Future<UserProfileDetail> getPublicProfileDetail(
     String userId, {

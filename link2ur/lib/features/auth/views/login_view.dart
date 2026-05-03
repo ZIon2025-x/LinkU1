@@ -1536,11 +1536,8 @@ class _StyledTextField extends StatelessWidget {
 // ==================== 登录方式枚举 ====================
 
 enum LoginMethod {
-  password('密码登录'),
-  emailCode('邮箱登录'),
-  phoneCode('手机登录');
-
-  const LoginMethod(this.label);
-  final String label;
+  password,
+  emailCode,
+  phoneCode,
 }
 

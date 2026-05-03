@@ -366,6 +366,8 @@ class UserProfileStats {
     this.takenTasks = 0,
     this.completedTasks = 0,
     this.totalReviews = 0,
+    this.totalPersonalServices = 0,
+    this.totalForumPosts = 0,
     this.completionRate,
   });
 
@@ -374,6 +376,8 @@ class UserProfileStats {
   final int takenTasks;
   final int completedTasks;
   final int totalReviews;
+  final int totalPersonalServices;
+  final int totalForumPosts;
   final double? completionRate;
 
   factory UserProfileStats.fromJson(Map<String, dynamic> json) {
@@ -383,6 +387,8 @@ class UserProfileStats {
       takenTasks: json['taken_tasks'] as int? ?? 0,
       completedTasks: json['completed_tasks'] as int? ?? 0,
       totalReviews: json['total_reviews'] as int? ?? 0,
+      totalPersonalServices: json['total_personal_services'] as int? ?? 0,
+      totalForumPosts: json['total_forum_posts'] as int? ?? 0,
       completionRate: (json['completion_rate'] as num?)?.toDouble(),
     );
   }

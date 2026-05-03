@@ -377,7 +377,12 @@ class IconActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ScaleTapWrapper(
       scaleDown: 0.9,
-      onTap: onPressed,
+      onTap: onPressed == null
+          ? null
+          : () {
+              AppHaptics.selection();
+              onPressed!();
+            },
       child: SizedBox(
         width: size,
         height: size,

@@ -101,6 +101,51 @@ extension GoRouterExtension on BuildContext {
     }
   }
 
+  /// 跳转到用户「全部评价」独立页 (`/user/{userId}/reviews`)。
+  /// 可选传 [totalReviews] / [avgRating] 走 extra,作为 AppBar 副标题。
+  void goToUserReviews(
+    String userId, {
+    int? totalReviews,
+    double? avgRating,
+  }) {
+    if (!_NavigationThrottle.acquire()) return;
+    push(
+      '/user/$userId/reviews',
+      extra: {
+        if (totalReviews != null) 'totalReviews': totalReviews,
+        if (avgRating != null) 'avgRating': avgRating,
+      },
+    );
+  }
+
+  /// 跳转到用户「全部个人服务」独立页 (`/user/{userId}/services`)。
+  void goToUserPersonalServices(
+    String userId, {
+    int? totalServices,
+  }) {
+    if (!_NavigationThrottle.acquire()) return;
+    push(
+      '/user/$userId/services',
+      extra: {
+        if (totalServices != null) 'totalServices': totalServices,
+      },
+    );
+  }
+
+  /// 跳转到用户「全部论坛动态」独立页 (`/user/{userId}/forum-posts`)。
+  void goToUserForumPosts(
+    String userId, {
+    int? totalPosts,
+  }) {
+    if (!_NavigationThrottle.acquire()) return;
+    push(
+      '/user/$userId/forum-posts',
+      extra: {
+        if (totalPosts != null) 'totalPosts': totalPosts,
+      },
+    );
+  }
+
   /// 跳转到排行榜条目详情
   void goToLeaderboardItemDetail(int itemId) {
     if (!_NavigationThrottle.acquire()) return;

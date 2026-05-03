@@ -74,7 +74,7 @@ class _MyProfileContentState extends State<_MyProfileContent> {
                     onPressed: () => context
                         .read<UserProfileBloc>()
                         .add(const UserProfileLoadSummary()),
-                    child: const Text('重试'),
+                    child: Text(context.l10n.commonRetry),
                   ),
                 ],
               ),
@@ -83,7 +83,7 @@ class _MyProfileContentState extends State<_MyProfileContent> {
 
           final summary = state.summary;
           if (summary == null) {
-            return const Center(child: Text('暂无数据'));
+            return Center(child: Text(context.l10n.commonNoData));
           }
 
           return RefreshIndicator(
@@ -126,7 +126,7 @@ class _CapabilityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
-      title: '能力画像',
+      title: context.l10n.profileCapabilityProfile,
       icon: Icons.psychology_outlined,
       iconColor: AppColors.primary,
       action: TextButton.icon(
@@ -145,10 +145,10 @@ class _CapabilityCard extends StatelessWidget {
           });
         },
         icon: const Icon(Icons.settings_outlined, size: 16),
-        label: const Text('管理'),
+        label: Text(context.l10n.commonManage),
       ),
       child: capabilities.isEmpty
-          ? const _EmptyHint(message: '还未添加技能，点击"管理"添加')
+          ? _EmptyHint(message: context.l10n.profileNoSkillsHint)
           : Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
@@ -177,15 +177,15 @@ class _SkillChip extends StatelessWidget {
     }
   }
 
-  String get _proficiencyLabel {
+  String _proficiencyLabel(BuildContext context) {
     switch (capability.proficiency) {
       case 'expert':
-        return '精通';
+        return context.l10n.skillLevelExpert;
       case 'intermediate':
-        return '熟练';
+        return context.l10n.skillLevelIntermediate;
       case 'beginner':
       default:
-        return '入门';
+        return context.l10n.skillLevelBeginner;
     }
   }
 
@@ -217,7 +217,7 @@ class _SkillChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              _proficiencyLabel,
+              _proficiencyLabel(context),
               style: TextStyle(
                 fontSize: 10,
                 color: _proficiencyColor,
@@ -239,46 +239,46 @@ class _PreferenceCard extends StatelessWidget {
   final UserProfilePreference preference;
   final UserDemand? demand;
 
-  String _modeLabel(String mode) {
+  String _modeLabel(BuildContext context, String mode) {
     switch (mode) {
       case 'online':
-        return '线上';
+        return context.l10n.preferenceModeOnline;
       case 'offline':
-        return '线下';
+        return context.l10n.preferenceModeOffline;
       case 'both':
       default:
-        return '都可以';
+        return context.l10n.preferenceModeBoth;
     }
   }
 
-  String _durationLabel(String type) {
+  String _durationLabel(BuildContext context, String type) {
     switch (type) {
       case 'one_time':
-        return '一次性';
+        return context.l10n.preferenceDurationOneTime;
       case 'long_term':
-        return '长期';
+        return context.l10n.preferenceDurationLongTerm;
       case 'both':
       default:
-        return '都可以';
+        return context.l10n.preferenceModeBoth;
     }
   }
 
-  String _rewardLabel(String reward) {
+  String _rewardLabel(BuildContext context, String reward) {
     switch (reward) {
       case 'high_freq_low_amount':
-        return '高频小额';
+        return context.l10n.preferenceRewardHighFreq;
       case 'low_freq_high_amount':
-        return '低频高价';
+        return context.l10n.preferenceRewardLowFreq;
       case 'no_preference':
       default:
-        return '无偏好';
+        return context.l10n.preferenceRewardNoPreference;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
-      title: '偏好画像',
+      title: context.l10n.profilePreferenceProfile,
       icon: Icons.tune_outlined,
       iconColor: AppColors.accent,
       action: TextButton.icon(
@@ -297,18 +297,18 @@ class _PreferenceCard extends StatelessWidget {
           });
         },
         icon: const Icon(Icons.edit_outlined, size: 16),
-        label: const Text('编辑'),
+        label: Text(context.l10n.commonEdit),
       ),
       child: Column(
         children: [
-          _InfoRow(label: '协作方式', value: _modeLabel(preference.mode)),
-          _InfoRow(label: '任务周期', value: _durationLabel(preference.durationType)),
-          _InfoRow(label: '报酬偏好', value: _rewardLabel(preference.rewardPreference)),
+          _InfoRow(label: context.l10n.preferenceModeTitle, value: _modeLabel(context, preference.mode)),
+          _InfoRow(label: context.l10n.preferenceDurationTitle, value: _durationLabel(context, preference.durationType)),
+          _InfoRow(label: context.l10n.preferenceRewardTitle, value: _rewardLabel(context, preference.rewardPreference)),
           if (preference.preferredTimeSlots.isNotEmpty)
             _InfoRow(
-              label: '可用时段',
+              label: context.l10n.preferenceTimeTitle,
               value: preference.preferredTimeSlots
-                  .map(_timeSlotLabel)
+                  .map((s) => _timeSlotLabel(context, s))
                   .join('、'),
             ),
         ],
@@ -316,16 +316,16 @@ class _PreferenceCard extends StatelessWidget {
     );
   }
 
-  String _timeSlotLabel(String slot) {
+  String _timeSlotLabel(BuildContext context, String slot) {
     switch (slot) {
       case 'weekday_daytime':
-        return '工作日白天';
+        return context.l10n.preferenceTimeWeekdayDay;
       case 'weekday_evening':
-        return '工作日晚上';
+        return context.l10n.preferenceTimeWeekdayEvening;
       case 'weekend':
-        return '周末';
+        return context.l10n.preferenceTimeWeekend;
       case 'anytime':
-        return '全天';
+        return context.l10n.preferenceTimeAnytime;
       default:
         return slot;
     }
@@ -342,21 +342,21 @@ class _ReliabilityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
-      title: '可靠度画像',
+      title: context.l10n.profileReliabilityProfile,
       icon: Icons.verified_outlined,
       iconColor: AppColors.success,
       child: reliability.insufficientData
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.info_outline,
+                    const Icon(Icons.info_outline,
                         size: 16, color: AppColors.textSecondary),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Text(
-                      '数据不足，完成更多任务后查看',
-                      style: TextStyle(
+                      context.l10n.reliabilityNotEnoughData,
+                      style: const TextStyle(
                           color: AppColors.textSecondary, fontSize: 13),
                     ),
                   ],
@@ -364,8 +364,9 @@ class _ReliabilityCard extends StatelessWidget {
                 if (reliability.totalTasksTaken > 0) ...[
                   AppSpacing.vSm,
                   _InfoRow(
-                    label: '已完成任务',
-                    value: '${reliability.totalTasksTaken} 个',
+                    label: context.l10n.reliabilityCompletedTasks,
+                    value: context.l10n
+                        .reliabilityTaskCountValue(reliability.totalTasksTaken),
                   ),
                 ],
               ],
@@ -376,21 +377,21 @@ class _ReliabilityCard extends StatelessWidget {
                   _ReliabilityScore(score: reliability.reliabilityScore!),
                 AppSpacing.vMd,
                 _InfoRow(
-                  label: '完成率',
+                  label: context.l10n.reliabilityCompletionRate,
                   value:
                       '${(reliability.completionRate * 100).toStringAsFixed(0)}%',
                 ),
                 _InfoRow(
-                  label: '准时率',
+                  label: context.l10n.reliabilityOnTimeRate,
                   value:
                       '${(reliability.onTimeRate * 100).toStringAsFixed(0)}%',
                 ),
                 _InfoRow(
-                  label: '沟通评分',
+                  label: context.l10n.reliabilityCommScore,
                   value: reliability.communicationScore.toStringAsFixed(1),
                 ),
                 _InfoRow(
-                  label: '重复合作率',
+                  label: context.l10n.reliabilityRepeatRate,
                   value:
                       '${(reliability.repeatRate * 100).toStringAsFixed(0)}%',
                 ),
@@ -415,9 +416,9 @@ class _ReliabilityScore extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Text(
-          '可靠度评分',
-          style: TextStyle(
+        Text(
+          context.l10n.reliabilityScore,
+          style: const TextStyle(
               fontSize: 13, color: AppColors.textSecondary),
         ),
         const Spacer(),
@@ -428,7 +429,7 @@ class _ReliabilityScore extends StatelessWidget {
             borderRadius: AppRadius.allMedium,
           ),
           child: Text(
-            '${score.toStringAsFixed(0)}分',
+            context.l10n.reliabilityScoreValue(score.toStringAsFixed(0)),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -448,16 +449,16 @@ class _DemandCard extends StatelessWidget {
 
   final UserDemand demand;
 
-  String _stageLabel(String stage) {
+  String _stageLabel(BuildContext context, String stage) {
     switch (stage) {
       case 'new_arrival':
-        return '初来乍到';
+        return context.l10n.userStageNewArrival;
       case 'settling':
-        return '安顿中';
+        return context.l10n.userStageSettling;
       case 'established':
-        return '融入校园';
+        return context.l10n.userStageEstablished;
       case 'experienced':
-        return '经验丰富';
+        return context.l10n.userStageExperienced;
       default:
         return stage;
     }
@@ -483,7 +484,7 @@ class _DemandCard extends StatelessWidget {
     final primaryStage = demand.userStages.isNotEmpty ? demand.userStages.first : '';
     final stageColor = _stageColor(primaryStage);
     return _SectionCard(
-      title: '需求预测',
+      title: context.l10n.profileDemandPrediction,
       icon: Icons.lightbulb_outlined,
       iconColor: AppColors.warning,
       child: Column(
@@ -491,8 +492,8 @@ class _DemandCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('当前阶段',
-                  style: TextStyle(
+              Text(context.l10n.demandCurrentStage,
+                  style: const TextStyle(
                       fontSize: 13, color: AppColors.textSecondary)),
               const SizedBox(width: 8),
               Container(
@@ -504,7 +505,7 @@ class _DemandCard extends StatelessWidget {
                   border: Border.all(color: stageColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  _stageLabel(primaryStage),
+                  _stageLabel(context, primaryStage),
                   style: TextStyle(
                     fontSize: 12,
                     color: stageColor,
@@ -516,8 +517,8 @@ class _DemandCard extends StatelessWidget {
           ),
           if (demand.predictedNeeds.isNotEmpty) ...[
             AppSpacing.vMd,
-            const Text('预测需求',
-                style: TextStyle(
+            Text(context.l10n.demandPredicted,
+                style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary)),
             AppSpacing.vSm,
@@ -526,7 +527,7 @@ class _DemandCard extends StatelessWidget {
             ),
           ] else ...[
             AppSpacing.vSm,
-            const _EmptyHint(message: '暂无需求预测数据'),
+            _EmptyHint(message: context.l10n.demandNoData),
           ],
         ],
       ),

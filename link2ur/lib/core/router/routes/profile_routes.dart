@@ -7,7 +7,10 @@ import '../../../features/profile/views/profile_view.dart';
 import '../../../features/profile/views/edit_profile_view.dart';
 import '../../../features/profile/views/my_tasks_view.dart';
 import '../../../features/profile/views/my_posts_view.dart';
+import '../../../features/profile/views/user_forum_posts_view.dart';
+import '../../../features/profile/views/user_personal_services_view.dart';
 import '../../../features/profile/views/user_profile_view.dart';
+import '../../../features/profile/views/user_reviews_view.dart';
 import '../../../features/profile/views/task_statistics_view.dart';
 import '../../../features/user_profile/views/my_profile_view.dart';
 import '../../../features/user_profile/views/capability_edit_view.dart';
@@ -77,6 +80,50 @@ List<RouteBase> get profileRoutes => [
           final id = state.pathParameters['id'] ?? '';
           if (id.isEmpty) return const SizedBox.shrink();
           return UserProfileView(userId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.userReviews,
+        name: 'userReviews',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const SizedBox.shrink();
+          final extra = state.extra as Map<String, dynamic>?;
+          final total = (extra?['totalReviews'] as num?)?.toInt();
+          final avg = (extra?['avgRating'] as num?)?.toDouble();
+          return UserReviewsView(
+            userId: id,
+            totalReviews: total,
+            avgRating: avg,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.userPersonalServices,
+        name: 'userPersonalServices',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const SizedBox.shrink();
+          final extra = state.extra as Map<String, dynamic>?;
+          final total = (extra?['totalServices'] as num?)?.toInt();
+          return UserPersonalServicesView(
+            userId: id,
+            totalServices: total,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.userForumPosts,
+        name: 'userForumPosts',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const SizedBox.shrink();
+          final extra = state.extra as Map<String, dynamic>?;
+          final total = (extra?['totalPosts'] as num?)?.toInt();
+          return UserForumPostsView(
+            userId: id,
+            totalPosts: total,
+          );
         },
       ),
       GoRoute(

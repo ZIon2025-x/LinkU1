@@ -796,10 +796,26 @@ def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
 @router.get("/{user_id}/reviews")
 @measure_api_performance("get_user_reviews")
 @cache_response(ttl=300, key_prefix="user_reviews_alt")  # 缓存5分钟
-def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
-    """获取用户收到的评价（用于个人主页显示）"""
+def get_user_reviews(
+    user_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    db: Session = Depends(get_db),
+):
+    """获取用户收到的评价（用于个人主页 + 全部评价分页）。
+
+    - 不传 `page`/`page_size`:返回前 20 条(向后兼容,旧前端按 list 解析)。
+    - 传 `page=N&page_size=M`:返回第 N 页,共 M 条。
+    """
     try:
-        reviews = crud.get_user_reviews_with_reviewer_info(db, user_id)
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 20
+        skip = (page - 1) * page_size
+        reviews = crud.get_user_reviews_with_reviewer_info(
+            db, user_id, limit=page_size, skip=skip
+        )
         return reviews
     except Exception as e:
         import traceback

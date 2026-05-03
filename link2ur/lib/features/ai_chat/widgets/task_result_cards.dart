@@ -221,7 +221,7 @@ class _ResultCard extends StatelessWidget {
       case _CardType.service:
         final type = data['service_type'] as String? ?? '';
         final category = data['category'] as String? ?? '';
-        final label = type == 'personal' ? '个人' : (type == 'expert' ? '达人' : '');
+        final label = type == 'personal' ? context.l10n.aiChatLabelPersonal : (type == 'expert' ? context.l10n.aiChatLabelExpert : '');
         if (label.isNotEmpty) {
           chips.addAll([
             Icon(Icons.badge_outlined, size: 12, color: subtextColor),

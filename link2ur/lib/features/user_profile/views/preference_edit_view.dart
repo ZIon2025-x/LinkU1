@@ -51,30 +51,30 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
   late Set<String> _selectedInterests;
   late TextEditingController _cityController;
 
-  static const _modes = [
-    ('online', '线上'),
-    ('offline', '线下'),
-    ('both', '都可以'),
-  ];
+  List<(String, String)> _modes(BuildContext c) => [
+        ('online', c.l10n.preferenceModeOnline),
+        ('offline', c.l10n.preferenceModeOffline),
+        ('both', c.l10n.preferenceModeBoth),
+      ];
 
-  static const _durationTypes = [
-    ('one_time', '一次性'),
-    ('long_term', '长期'),
-    ('both', '都可以'),
-  ];
+  List<(String, String)> _durationTypes(BuildContext c) => [
+        ('one_time', c.l10n.preferenceDurationOneTime),
+        ('long_term', c.l10n.preferenceDurationLongTerm),
+        ('both', c.l10n.preferenceModeBoth),
+      ];
 
-  static const _rewardPreferences = [
-    ('high_freq_low_amount', '高频小额'),
-    ('low_freq_high_amount', '低频高价'),
-    ('no_preference', '无偏好'),
-  ];
+  List<(String, String)> _rewardPreferences(BuildContext c) => [
+        ('high_freq_low_amount', c.l10n.preferenceRewardHighFreq),
+        ('low_freq_high_amount', c.l10n.preferenceRewardLowFreq),
+        ('no_preference', c.l10n.preferenceRewardNoPreference),
+      ];
 
-  static const _timeSlots = [
-    ('weekday_daytime', '工作日白天'),
-    ('weekday_evening', '工作日晚上'),
-    ('weekend', '周末'),
-    ('anytime', '全天'),
-  ];
+  List<(String, String)> _timeSlots(BuildContext c) => [
+        ('weekday_daytime', c.l10n.preferenceTimeWeekdayDay),
+        ('weekday_evening', c.l10n.preferenceTimeWeekdayEvening),
+        ('weekend', c.l10n.preferenceTimeWeekend),
+        ('anytime', c.l10n.preferenceTimeAnytime),
+      ];
 
   @override
   void initState() {
@@ -142,7 +142,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('偏好设置'),
+        title: Text(context.l10n.preferenceTitle),
       ),
       body: BlocConsumer<UserProfileBloc, UserProfileState>(
         listenWhen: (prev, curr) =>
@@ -152,7 +152,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
         listener: (context, state) {
           if (state.status == UserProfileStatus.loaded) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('偏好已保存')),
+              SnackBar(content: Text(context.l10n.preferenceSaved)),
             );
             Navigator.of(context).pop();
           } else if (state.status == UserProfileStatus.error) {
@@ -174,10 +174,10 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
               children: [
                 // 协作方式
                 _PreferenceSection(
-                  title: '协作方式',
-                  description: '你更倾向于线上还是线下完成任务？',
+                  title: context.l10n.preferenceModeTitle,
+                  description: context.l10n.preferenceModeDesc,
                   child: _SingleChoiceChips(
-                    options: _modes,
+                    options: _modes(context),
                     selected: _mode,
                     onChanged: (val) => setState(() => _mode = val),
                   ),
@@ -186,10 +186,10 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
 
                 // 任务周期
                 _PreferenceSection(
-                  title: '任务周期',
-                  description: '你偏好一次性还是长期合作任务？',
+                  title: context.l10n.preferenceDurationTitle,
+                  description: context.l10n.preferenceDurationDesc,
                   child: _SingleChoiceChips(
-                    options: _durationTypes,
+                    options: _durationTypes(context),
                     selected: _durationType,
                     onChanged: (val) => setState(() => _durationType = val),
                   ),
@@ -198,10 +198,10 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
 
                 // 报酬偏好
                 _PreferenceSection(
-                  title: '报酬偏好',
-                  description: '你更倾向于哪种报酬模式？',
+                  title: context.l10n.preferenceRewardTitle,
+                  description: context.l10n.preferenceRewardDesc,
                   child: _SingleChoiceChips(
-                    options: _rewardPreferences,
+                    options: _rewardPreferences(context),
                     selected: _rewardPreference,
                     onChanged: (val) =>
                         setState(() => _rewardPreference = val),
@@ -211,12 +211,12 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
 
                 // 可用时段（多选）
                 _PreferenceSection(
-                  title: '可用时段',
-                  description: '你通常什么时候有空？（可多选）',
+                  title: context.l10n.preferenceTimeTitle,
+                  description: context.l10n.preferenceTimeDesc,
                   child: Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
-                    children: _timeSlots.map((slot) {
+                    children: _timeSlots(context).map((slot) {
                       final isSelected =
                           _preferredTimeSlots.contains(slot.$1);
                       return _ToggleChip(
@@ -327,14 +327,14 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                               result == LocationPermission.deniedForever) {
                             if (!mounted) return;
                             messenger.showSnackBar(
-                              const SnackBar(content: Text('需要定位权限才能开启附近任务提醒')),
+                              SnackBar(content: Text(context.l10n.preferenceLocationPermissionRequired)),
                             );
                             return;
                           }
                         } else if (permission == LocationPermission.deniedForever) {
                           if (!mounted) return;
                           messenger.showSnackBar(
-                            const SnackBar(content: Text('请在系统设置中开启定位权限')),
+                            SnackBar(content: Text(context.l10n.preferenceLocationPermissionDenied)),
                           );
                           return;
                         }
@@ -367,9 +367,9 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text(
-                            '保存设置',
-                            style: TextStyle(
+                        : Text(
+                            context.l10n.preferenceSaveSettings,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
