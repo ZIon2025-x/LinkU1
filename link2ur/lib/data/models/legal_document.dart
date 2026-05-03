@@ -11,7 +11,7 @@ class LegalDocument extends Equatable {
     this.contentJson,
   });
 
-  final String type; // "terms", "privacy", "cookie", "community_guidelines"
+  final String type; // "terms", "privacy", "cookie", "community_guidelines", "refund_policy"
   final String lang;
   final String? version;
   final String? effectiveAt;
