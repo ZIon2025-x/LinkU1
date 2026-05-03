@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_routes.dart';
 import '../../../core/utils/app_version.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../bloc/settings_bloc.dart';
@@ -330,6 +331,12 @@ class _SettingsViewState extends State<SettingsView> {
                             'https://link2ur.com/cookies',
                             context.l10n.settingsCookiePolicy,
                           ),
+                        ),
+                        _settingsDivider(isDark),
+                        _SettingsNavRow(
+                          icon: Icons.account_balance_outlined,
+                          title: context.l10n.refundPolicyTitle,
+                          onTap: () => context.push(AppRoutes.refundPolicy),
                         ),
                         _settingsDivider(isDark),
                         _SettingsNavRow(
