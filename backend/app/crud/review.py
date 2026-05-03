@@ -38,11 +38,19 @@ def get_reviews_received_by_user(db: Session, user_id: str, limit: int = 5):
 
 
 def get_user_reviews_with_reviewer_info(
-    db: Session, user_id: str, limit: int = 20, skip: int = 0
+    db: Session,
+    user_id: str,
+    limit: int = 20,
+    skip: int = 0,
+    anonymize_reviewers: bool = False,
 ):
     """获取用户收到的评价，包含评价者信息（用于个人主页显示）。
 
     支持分页:`skip` + `limit`,默认页大小 20,适配「全部评价」独立页。
+
+    `anonymize_reviewers=True` 时(他人主页/未登录访客)所有评价者强制匿名:
+    `is_anonymous=True` + `reviewer_name=""` + `reviewer_avatar=""` +
+    不再透出 `user_id`,前端按空名字 + 匿名标志走 l10n 文案。
     """
     reviews = (
         db.query(models.Review, models.User, models.Task)
@@ -60,8 +68,23 @@ def get_user_reviews_with_reviewer_info(
     )
     result = []
     for review, reviewer, task in reviews:
-        result.append(
-            {
+        if anonymize_reviewers:
+            # 他人主页:统一匿名(隐私加固)。reviewer_name/avatar 留空,前端按
+            # is_anonymous=True 走 l10n 渲染;user_id 不透出,防止反查评价者主页。
+            entry = {
+                "id": review.id,
+                "task_id": review.task_id,
+                "rating": review.rating,
+                "comment": review.comment,
+                "is_anonymous": True,
+                "created_at": review.created_at,
+                "reviewer_name": "",
+                "reviewer_avatar": "",
+                "task_title": task.title,
+            }
+        else:
+            # 自己看自己的评价:尊重 review 表 is_anonymous 字段原始值。
+            entry = {
                 "id": review.id,
                 "task_id": review.task_id,
                 "user_id": review.user_id,
@@ -69,11 +92,11 @@ def get_user_reviews_with_reviewer_info(
                 "comment": review.comment,
                 "is_anonymous": bool(review.is_anonymous),
                 "created_at": review.created_at,
-                "reviewer_name": "匿名用户" if review.is_anonymous else reviewer.name,
+                "reviewer_name": "" if review.is_anonymous else reviewer.name,
                 "reviewer_avatar": reviewer.avatar if not review.is_anonymous else "",
                 "task_title": task.title,
             }
-        )
+        result.append(entry)
     return result
 
 

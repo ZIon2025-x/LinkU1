@@ -281,15 +281,16 @@ class CustomerServiceBloc
       } else {
         emit(state.copyWith(
           status: CustomerServiceStatus.error,
-          errorMessage:
-              assignResponse.message ?? 'customer_service_no_available_agent',
+          errorMessage: 'customer_service_no_available_agent',
         ));
       }
     } catch (e) {
+      // 任何失败（4xx/5xx/网络错误/解析异常）统一回退到"暂无在线客服"友好文案，
+      // 而不是把原始 detail/HTTP 状态码透出给用户。具体错误已 log 给开发者排查。
       AppLogger.error('Failed to connect customer service', e);
       emit(state.copyWith(
         status: CustomerServiceStatus.error,
-        errorMessage: e.toString().replaceAll('CommonException: ', ''),
+        errorMessage: 'customer_service_no_available_agent',
       ));
     }
   }

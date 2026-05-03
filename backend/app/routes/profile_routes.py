@@ -539,18 +539,35 @@ def user_profile(
             }
             for t in recent_tasks_source
         ],
+        # 他人主页评价区:除了被评价者本人,所有访客一律看到匿名(隐私加固)。
+        # reviewer_name/avatar 留空时,前端按 is_anonymous=True 走 l10n 渲染
+        # "匿名用户"/"Anonymous User",自动适配多语言;本人访问保留 review 表
+        # 原始 is_anonymous 字段(尊重评价者意愿),便于看到具名评价者方便后续回复。
         "reviews": [
-            {
-                "id": r.id,
-                "rating": r.rating,
-                "comment": r.comment,
-                "created_at": r.created_at,
-                "task_id": r.task_id,
-                "is_anonymous": bool(r.is_anonymous),
-                "reviewer_name": "匿名用户" if r.is_anonymous else user.name,
-                "reviewer_avatar": "" if r.is_anonymous else (user.avatar or ""),
-            }
-            for r, user in reviews
+            (
+                {
+                    "id": r.id,
+                    "rating": r.rating,
+                    "comment": r.comment,
+                    "created_at": r.created_at,
+                    "task_id": r.task_id,
+                    "is_anonymous": bool(r.is_anonymous),
+                    "reviewer_name": "" if r.is_anonymous else reviewer.name,
+                    "reviewer_avatar": "" if r.is_anonymous else (reviewer.avatar or ""),
+                }
+                if is_self_view
+                else {
+                    "id": r.id,
+                    "rating": r.rating,
+                    "comment": r.comment,
+                    "created_at": r.created_at,
+                    "task_id": r.task_id,
+                    "is_anonymous": True,
+                    "reviewer_name": "",
+                    "reviewer_avatar": "",
+                }
+            )
+            for r, reviewer in reviews
         ],
         "recent_forum_posts": [
             {

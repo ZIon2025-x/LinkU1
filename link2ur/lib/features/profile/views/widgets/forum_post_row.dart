@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/helpers.dart';
 import '../../../../core/utils/l10n_extension.dart';
+import '../../../../core/widgets/async_image_view.dart';
 import '../../../../data/models/user.dart' show UserProfileForumPost;
 
 /// 论坛动态行 (b-task-row): 彩色图标块 + 标题 + 赞/评论/时间。
@@ -58,7 +60,15 @@ class ForumPostRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               alignment: Alignment.center,
-              child: Icon(Icons.forum_outlined, color: pair[1], size: 18),
+              clipBehavior: Clip.antiAlias,
+              child: post.images.isNotEmpty
+                  ? AsyncImageView(
+                      imageUrl: Helpers.getThumbnailUrl(post.images.first),
+                      fallbackUrl: Helpers.getImageUrl(post.images.first),
+                      width: 40,
+                      height: 40,
+                    )
+                  : Icon(Icons.forum_outlined, color: pair[1], size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(

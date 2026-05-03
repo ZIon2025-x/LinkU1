@@ -795,17 +795,19 @@ def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{user_id}/reviews")
 @measure_api_performance("get_user_reviews")
-@cache_response(ttl=300, key_prefix="user_reviews_alt")  # 缓存5分钟
+@cache_response(ttl=300, key_prefix="user_reviews_alt")  # 缓存5分钟(per-viewer,见 cache.py)
 def get_user_reviews(
     user_id: str,
     page: int = 1,
     page_size: int = 20,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """获取用户收到的评价（用于个人主页 + 全部评价分页）。
 
     - 不传 `page`/`page_size`:返回前 20 条(向后兼容,旧前端按 list 解析)。
     - 传 `page=N&page_size=M`:返回第 N 页,共 M 条。
+    - 访客非被评价者本人时,所有评价者强制匿名(他人主页隐私加固)。
     """
     try:
         if page < 1:
@@ -813,8 +815,9 @@ def get_user_reviews(
         if page_size < 1 or page_size > 100:
             page_size = 20
         skip = (page - 1) * page_size
+        is_self_view = bool(current_user and current_user.id == user_id)
         reviews = crud.get_user_reviews_with_reviewer_info(
-            db, user_id, limit=page_size, skip=skip
+            db, user_id, limit=page_size, skip=skip, anonymize_reviewers=not is_self_view
         )
         return reviews
     except Exception as e:
