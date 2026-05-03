@@ -22,6 +22,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/router/page_transitions.dart';
 import '../bloc/task_detail_bloc.dart';
 import '../../payment/views/wechat_pay_webview.dart' show WeChatPayWebView;
+import '../../payment/views/widgets/refund_policy_footer.dart';
 
 /// 支付页（对齐 iOS StripePaymentView）
 /// 布局：导航栏「支付」+ 取消；可滚动区（倒计时 Banner、金额卡片、支付方式选择）；底部固定支付按钮
@@ -982,6 +983,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                         isLoading: _isProcessing,
                         onPressed: (_isProcessing || _alreadyPaid) ? null : _pay,
                       ),
+                      const RefundPolicyFooter(),
                     ],
                   ),
                 ),
