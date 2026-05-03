@@ -29,6 +29,7 @@
   "commonShare": "Share",
   "commonMore": "More",
   "commonViewAll": "View All",
+  "commonCollapse": "Show less",
   "commonLoadingImage": "Loading image...",
   "commonAll": "All",
   "commonFilter": "Filter",
@@ -230,12 +231,12 @@
   "forumForum": "Forum",
   "forumAllPosts": "All Posts",
   "forumNoPosts": "No Posts",
-  "forumNoPostsMessage": "This section has no posts yet. Be the first to post!",
-  "forumSearchPosts": "Search posts",
+  "forumNoPostsMessage": "There are no posts yet. Be the first to post!",
+  "forumSearchPosts": "Search posts...",
   "forumPosts": "Posts",
   "forumPostLoadFailed": "Failed to load post",
   "forumOfficial": "Official",
-  "forumAllReplies": "All Replies",
+  "forumAllReplies": "All Comments",
   "forumReply": "Reply",
   "forumReplyTo": "Reply to",
   "forumWriteReply": "Write your reply...",
@@ -299,9 +300,9 @@
   "leaderboardSortNetVotes": "Net Votes",
   "leaderboardSortUpvotes": "Upvotes",
   "leaderboardSortLatest": "Latest",
-  "leaderboardNoItems": "No Items",
+  "leaderboardNoItems": "No Leaderboards",
   "leaderboardNoItemsMessage": "This leaderboard has no participants yet. Be the first to submit!",
-  "leaderboardItemCount": "items",
+  "leaderboardItemCount": "Entries",
   "leaderboardTotalVotes": "Total Votes",
   "leaderboardViewCount": "Views",
   "leaderboardItemLoadFailed": "Failed to load item",
@@ -322,7 +323,7 @@
   "leaderboardNoComments": "No comments yet, share your thoughts!",
   "leaderboardOppose": "Oppose",
   "leaderboardSupport": "Support",
-  "leaderboardNoImages": "No images",
+  "leaderboardNoImages": "No Images",
   "leaderboardWriteReason": "Write your reason for others to reference...",
   "leaderboardAnonymousVote": "Anonymous Vote",
   "leaderboardSubmitVote": "Submit Vote",
@@ -340,12 +341,12 @@
   "leaderboardBasicInfo": "Basic Information",
   "leaderboardContactInfo": "Contact Information (Optional)",
   "leaderboardImageDisplay": "Image Display (Optional)",
-  "leaderboardItemName": "Item Name",
-  "leaderboardItemDescription": "Item Description",
+  "leaderboardItemName": "Name",
+  "leaderboardItemDescription": "Description",
   "leaderboardItemAddress": "Address",
   "leaderboardItemPhone": "Phone",
   "leaderboardItemWebsite": "Official Website",
-  "leaderboardSubmitItem": "Submit Item",
+  "leaderboardSubmitItem": "Submit Entry",
   "leaderboardSubmitting": "Submitting...",
   "leaderboardNamePlaceholder": "e.g., Most Popular Chinese Restaurant",
   "leaderboardDescriptionPlaceholder": "Please describe the purpose and inclusion criteria of this leaderboard...",
@@ -367,7 +368,7 @@
     }
   },
   "taskExpertCompletionRate": "Completion Rate",
-  "taskExpertNoServices": "This expert has no services available yet",
+  "taskExpertNoServices": "No Services",
   "taskExpertOrder": "order",
   "taskExpertCompletionRatePercent": "{param1}% Completion Rate",
   "@taskExpertCompletionRatePercent": {
@@ -433,7 +434,7 @@
   "leaderboardSortHot": "Hot",
   "leaderboardSortVotes": "Votes",
   "leaderboardAddItem": "Add item",
-  "leaderboardVoteCount": "votes",
+  "leaderboardVoteCount": "Votes",
   "paymentSetupAccount": "Setup Payment Account",
   "paymentPleaseSetupFirst": "Please set up payment account first",
   "paymentPleaseSetupMessage": "You need to set up your payment account before applying for tasks. Please go to Settings to complete setup.",
@@ -831,26 +832,26 @@
   "pointsTypeExpire": "Points Expired",
   "pointsTypeCouponRedeem": "Coupon Redeemed",
   "timeJustNow": "Just now",
-  "timeMinutesAgo": "{param1} minutes ago",
+  "timeMinutesAgo": "{minutes} min ago",
   "@timeMinutesAgo": {
     "placeholders": {
-      "param1": {
+      "minutes": {
         "type": "int"
       }
     }
   },
-  "timeHoursAgo": "{param1} hours ago",
+  "timeHoursAgo": "{hours} hr ago",
   "@timeHoursAgo": {
     "placeholders": {
-      "param1": {
+      "hours": {
         "type": "int"
       }
     }
   },
-  "timeDaysAgo": "{param1} days ago",
+  "timeDaysAgo": "{days}d ago",
   "@timeDaysAgo": {
     "placeholders": {
-      "param1": {
+      "days": {
         "type": "int"
       }
     }
@@ -1071,13 +1072,17 @@
   "taskApplyQuoteAmountHint": "Must be greater than {currencySymbol}1",
   "@taskApplyQuoteAmountHint": {
     "placeholders": {
-      "currencySymbol": {"type": "String"}
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "taskApplyQuoteAmountMin": "Quote amount must be greater than {currencySymbol}1",
   "@taskApplyQuoteAmountMin": {
     "placeholders": {
-      "currencySymbol": {"type": "String"}
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "taskDetailApplyReasonHint": "Explain your application reason to the publisher to improve success rate",
@@ -1138,11 +1143,19 @@
   "taskDetailDesignatedConsult": "Consult",
   "taskChatDealClosedTitle": "Deal closed with {name}",
   "@taskChatDealClosedTitle": {
-    "placeholders": {"name": {"type": "String"}}
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "taskChatDealClosedPrice": "Final price: {price}",
   "@taskChatDealClosedPrice": {
-    "placeholders": {"price": {"type": "String"}}
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
   },
   "taskChatDealClosedCta": "View negotiation history",
   "taskChatHistoryReadOnlyBanner": "History (read-only)",
@@ -1275,7 +1288,6 @@
   "taskApplicationExpectedAmount": "Expected Amount",
   "taskApplicationNegotiatePriceHint": "Tip: Negotiating price may affect the publisher's choice.",
   "taskApplicationSubmitApplication": "Submit Application",
-  "taskApplicationMessage": "Message",
   "taskApplicationMessageToApplicant": "Message to applicant...",
   "taskApplicationIsNegotiatePrice": "Is Negotiate Price",
   "taskApplicationNegotiateAmount": "Negotiate Amount",
@@ -1409,10 +1421,10 @@
   "paymentCurrencyConversionWarning": "Payments on this platform are in GBP. If your account uses a different currency, Stripe will automatically convert at withdrawal, with a conversion fee of approximately 1%.",
   "paymentComplete": "Complete",
   "paymentCountdownExpired": "Expired",
-  "paymentCountdownRemaining": "{param1} left",
+  "paymentCountdownRemaining": "Remaining {time}",
   "@paymentCountdownRemaining": {
     "placeholders": {
-      "param1": {
+      "time": {
         "type": "String"
       }
     }
@@ -1499,10 +1511,10 @@
       }
     }
   },
-  "couponConsecutiveCheckIn": "{param1} days consecutive check-in",
+  "couponConsecutiveCheckIn": "{days}-day streak",
   "@couponConsecutiveCheckIn": {
     "placeholders": {
-      "param1": {
+      "days": {
         "type": "int"
       }
     }
@@ -1547,11 +1559,11 @@
   "createTaskPublishing": "Publishing...",
   "createTaskPublishNow": "Publish Task Now",
   "createTaskPublishTask": "Publish Task",
-  "createTaskTitle": "Task Title",
-  "createTaskTitlePlaceholder": "Briefly describe your needs (e.g., Pick up package)",
+  "createTaskTitle": "Post Task",
+  "createTaskTitlePlaceholder": "Enter task title",
   "createTaskDescription": "Task Details",
   "createTaskDescriptionPlaceholder": "Please describe your needs, time, special requirements, etc. in detail. The more detailed, the easier it is to get accepted...",
-  "createTaskReward": "Task Reward",
+  "createTaskReward": "Reward",
   "createTaskCity": "City",
   "createTaskOnline": "Online",
   "createTaskCampusLifeRestriction": "Only verified students can post campus life tasks",
@@ -1574,7 +1586,7 @@
   "activityStatus": "Status",
   "activityHotRecruiting": "Open",
   "activityLocation": "Location",
-  "activityType": "Activity Type",
+  "activityType": "Type",
   "activityTimeArrangement": "Time Arrangement",
   "activityMultipleTimeSlots": "Supports multiple group deal bookings",
   "activityDeadline": "Deadline",
@@ -1617,13 +1629,13 @@
   "taskCategoryAll": "All",
   "taskCategoryHousekeeping": "Housekeeping",
   "taskCategoryCampusLife": "Campus Life",
-  "taskCategorySecondhandRental": "Second-hand & Rental",
-  "taskCategoryErrandRunning": "Errand Running",
-  "taskCategorySkillService": "Skill Service",
+  "taskCategorySecondhandRental": "Secondhand",
+  "taskCategoryErrandRunning": "Errands",
+  "taskCategorySkillService": "Skills",
   "taskCategorySocialHelp": "Social Help",
-  "taskCategoryTransportation": "Transportation",
+  "taskCategoryTransportation": "Transport",
   "taskCategoryPetCare": "Pet Care",
-  "taskCategoryLifeConvenience": "Life Convenience",
+  "taskCategoryLifeConvenience": "Convenience",
   "taskCategoryOther": "Other",
   "expertCategoryAll": "All",
   "expertCategoryProgramming": "Programming",
@@ -1640,43 +1652,81 @@
   "expertCategoryPhotography": "Photography",
   "expertCategoryHousekeeping": "Housekeeping",
   "expertCategoryShopping": "Shopping",
-  "@expertCategoryShopping": { "description": "Expert category: Shopping" },
+  "@expertCategoryShopping": {
+    "description": "Expert category: Shopping"
+  },
   "expertCategoryDesign": "Design",
-  "@expertCategoryDesign": { "description": "Expert category: Design" },
+  "@expertCategoryDesign": {
+    "description": "Expert category: Design"
+  },
   "expertCategoryWriting": "Writing",
-  "@expertCategoryWriting": { "description": "Expert category: Writing" },
+  "@expertCategoryWriting": {
+    "description": "Expert category: Writing"
+  },
   "expertCategoryMoving": "Moving",
-  "@expertCategoryMoving": { "description": "Expert category: Moving" },
+  "@expertCategoryMoving": {
+    "description": "Expert category: Moving"
+  },
   "expertCategoryCleaning": "Cleaning",
-  "@expertCategoryCleaning": { "description": "Expert category: Cleaning" },
+  "@expertCategoryCleaning": {
+    "description": "Expert category: Cleaning"
+  },
   "expertCategoryRepair": "Repair",
-  "@expertCategoryRepair": { "description": "Expert category: Repair" },
+  "@expertCategoryRepair": {
+    "description": "Expert category: Repair"
+  },
   "expertCategoryPickupDropoff": "Pickup & Dropoff",
-  "@expertCategoryPickupDropoff": { "description": "Expert category: Pickup & Dropoff" },
+  "@expertCategoryPickupDropoff": {
+    "description": "Expert category: Pickup & Dropoff"
+  },
   "expertCategoryCooking": "Cooking",
-  "@expertCategoryCooking": { "description": "Expert category: Cooking" },
+  "@expertCategoryCooking": {
+    "description": "Expert category: Cooking"
+  },
   "expertCategoryLanguageHelp": "Language Help",
-  "@expertCategoryLanguageHelp": { "description": "Expert category: Language Help" },
+  "@expertCategoryLanguageHelp": {
+    "description": "Expert category: Language Help"
+  },
   "expertCategoryGovernment": "Government",
-  "@expertCategoryGovernment": { "description": "Expert category: Government affairs" },
+  "@expertCategoryGovernment": {
+    "description": "Expert category: Government affairs"
+  },
   "expertCategoryPetCare": "Pet Care",
-  "@expertCategoryPetCare": { "description": "Expert category: Pet Care" },
+  "@expertCategoryPetCare": {
+    "description": "Expert category: Pet Care"
+  },
   "expertCategoryErrand": "Errand",
-  "@expertCategoryErrand": { "description": "Expert category: Errand" },
+  "@expertCategoryErrand": {
+    "description": "Expert category: Errand"
+  },
   "expertCategoryAccompany": "Accompany",
-  "@expertCategoryAccompany": { "description": "Expert category: Accompany" },
+  "@expertCategoryAccompany": {
+    "description": "Expert category: Accompany"
+  },
   "expertCategoryDigital": "Digital / IT",
-  "@expertCategoryDigital": { "description": "Expert category: Digital / IT" },
+  "@expertCategoryDigital": {
+    "description": "Expert category: Digital / IT"
+  },
   "expertCategoryRentalHousing": "Rental Housing",
-  "@expertCategoryRentalHousing": { "description": "Expert category: Rental Housing assistance" },
+  "@expertCategoryRentalHousing": {
+    "description": "Expert category: Rental Housing assistance"
+  },
   "expertCategoryCampusLife": "Campus Life",
-  "@expertCategoryCampusLife": { "description": "Expert category: Campus Life" },
+  "@expertCategoryCampusLife": {
+    "description": "Expert category: Campus Life"
+  },
   "expertCategorySecondHand": "Second-hand",
-  "@expertCategorySecondHand": { "description": "Expert category: Second-hand" },
+  "@expertCategorySecondHand": {
+    "description": "Expert category: Second-hand"
+  },
   "skillSectionExpertsTitle": "Experts in this category",
-  "@skillSectionExpertsTitle": { "description": "Title for experts section in skill leaderboard" },
+  "@skillSectionExpertsTitle": {
+    "description": "Title for experts section in skill leaderboard"
+  },
   "skillSectionServicesTitle": "Services in this category",
-  "@skillSectionServicesTitle": { "description": "Title for services section in skill leaderboard" },
+  "@skillSectionServicesTitle": {
+    "description": "Title for services section in skill leaderboard"
+  },
   "serviceCategory": "Skill Category",
   "serviceCategoryHint": "Select a category",
   "cityLondon": "London",
@@ -1785,7 +1835,7 @@
       }
     }
   },
-  "forumNoReplies": "No Replies",
+  "forumNoReplies": "No Comments",
   "forumPostReply": "Post Reply",
   "forumSelectSection": "Select Section",
   "forumPleaseSelectSection": "Please Select Section",
@@ -1921,7 +1971,7 @@
       }
     }
   },
-  "networkOffline": "Offline",
+  "networkOffline": "Network disconnected",
   "networkDisconnected": "Network disconnected",
   "networkCheckSettings": "Please check your network settings",
   "networkRestored": "Network restored",
@@ -2011,8 +2061,8 @@
   "walletPayoutManagementSubtitle": "Manage your payouts",
   "paymentLoadingForm": "Loading payment form...",
   "paymentPreparing": "Preparing...",
-  "paymentSuccess": "Payment Successful!",
-  "paymentSuccessMessage": "Task payment successful, updating status...",
+  "paymentSuccess": "Payment Successful",
+  "paymentSuccessMessage": "Your payment has been successfully processed, the task will start soon.",
   "paymentError": "Payment Error",
   "paymentTaskInfo": "Task Information",
   "paymentTaskTitle": "Task Title",
@@ -2026,7 +2076,7 @@
   "paymentRetryPayment": "Retry Payment",
   "paymentCoupons": "Coupons",
   "paymentCouponDiscount": "Coupon Discount",
-  "paymentNoAvailableCoupons": "No available coupons",
+  "paymentNoAvailableCoupons": "No Available Coupons",
   "paymentDoNotUseCoupon": "Don't use coupon",
   "paymentTimeoutOrRefreshHint": "If you have already paid, close this page and refresh; otherwise please try again",
   "paymentConfirmingDoNotRepeat": "Confirming payment. Please wait and do not pay again.",
@@ -2042,11 +2092,11 @@
   "shareWechat": "WeChat",
   "shareWechatMoments": "Moments",
   "shareQq": "QQ",
-  "shareQzone": "QZone",
+  "shareQzone": "QQ Zone",
   "shareWeibo": "Weibo",
   "shareSms": "SMS",
   "shareCopyLink": "Copy Link",
-  "shareGenerateImage": "Generate Share Image",
+  "shareGenerateImage": "Generate Image",
   "shareShareTo": "Share To",
   "shareGeneratingImage": "Generating share image...",
   "shareImage": "Share Image",
@@ -2056,7 +2106,7 @@
   "translationTranslate": "Translate",
   "translationShowTranslation": "Show Translation",
   "translationShowOriginal": "Show Original",
-  "settingsNotifications": "Notification Settings",
+  "settingsNotifications": "Receive push notifications",
   "settingsAllowNotifications": "Allow Notifications",
   "settingsSuccessSound": "Success Sound",
   "settingsSuccessSoundDescription": "Play a short sound when an action succeeds",
@@ -2137,14 +2187,14 @@
   "applicationStatusNegotiatingDesc": "A quote has been sent, waiting for response",
   "applicationStatusPriceAgreed": "Price Agreed",
   "applicationStatusPriceAgreedDesc": "Both parties have agreed on the price, awaiting payment",
-  "myPostsTitle": "My Items",
+  "myPostsTitle": "My Posts",
   "taskLocationAddress": "Task Address",
   "taskLocationCoordinates": "Coordinates",
   "taskLocationAppleMaps": "Apple Maps",
   "taskLocationMyLocation": "My Location",
   "taskLocationLoadingAddress": "Loading address...",
   "taskLocationDetailAddress": "Detail Address",
-  "fleaMarketPublishItem": "Publish Item",
+  "fleaMarketPublishItem": "List Item",
   "fleaMarketConfirmPurchase": "Confirm Purchase",
   "fleaMarketConfirmPurchaseMessage": "Confirm submitting a purchase request?",
   "fleaMarketBidPurchase": "Bid Purchase",
@@ -2160,7 +2210,7 @@
   "fleaMarketAutoRemovalSoon": "Item will be removed soon",
   "fleaMarketLoading": "Loading...",
   "fleaMarketLoadFailed": "Failed to load item information",
-  "fleaMarketItemDeleted": "This item has been removed",
+  "fleaMarketItemDeleted": "Listing deleted",
   "fleaMarketItemNotFound": "Item not found",
   "refundNotFound": "No refund record found",
   "fleaMarketProductDetail": "Product Detail",
@@ -2243,7 +2293,9 @@
   "taskExpertRelatedActivitiesAvailable": "{count} related activities available",
   "@taskExpertRelatedActivitiesAvailable": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "taskExpertRelatedActivitiesSection": "Expert's Related Activities",
@@ -2278,7 +2330,7 @@
   "leaderboardChangeImage": "Change",
   "leaderboardLoading": "Loading...",
   "notificationNotifications": "Notifications",
-  "notificationNoTaskChat": "No Task Chat",
+  "notificationNoTaskChat": "No task chats",
   "notificationNoTaskChatMessage": "No task-related chat records yet",
   "notificationNoMessages": "No messages yet",
   "notificationStartConversation": "Start a conversation!",
@@ -2503,10 +2555,10 @@
   "errorOperationFailed": "Operation Failed",
   "onboardingSkip": "Skip",
   "onboardingWelcomeTitle": "Welcome to Link²Ur",
-  "onboardingWelcomeSubtitle": "Connect Your World",
+  "onboardingWelcomeSubtitle": "UK Life Mutual Aid Platform",
   "onboardingWelcomeDescription": "Publish tasks, accept tasks, buy and sell second-hand goods, everything is in your hands",
   "onboardingPublishTaskTitle": "Publish Tasks",
-  "onboardingPublishTaskSubtitle": "Easily publish your needs",
+  "onboardingPublishTaskSubtitle": "Easily find help",
   "onboardingPublishTaskDescription": "Need help? Publish a task and let capable users help you complete it",
   "onboardingAcceptTaskTitle": "Accept Tasks",
   "onboardingAcceptTaskSubtitle": "Earn extra income",
@@ -2515,7 +2567,7 @@
   "onboardingSecurePaymentSubtitle": "Platform guarantees transaction security",
   "onboardingSecurePaymentDescription": "Use Stripe secure payment, automatic transfer after task completion, protecting both parties' rights",
   "onboardingCommunityTitle": "Community Interaction",
-  "onboardingCommunitySubtitle": "Forum, Leaderboard, Flea Market",
+  "onboardingCommunitySubtitle": "Connect your world",
   "onboardingCommunityDescription": "Participate in community discussions, view leaderboards, buy and sell second-hand goods, enrich your campus life",
   "onboardingPersonalizationTitle": "Personalization Settings",
   "onboardingPersonalizationSubtitle": "Help us recommend more suitable content for you",
@@ -2564,7 +2616,7 @@
   "profilePaymentAccountSubtitle": "Set up payout account to receive task rewards",
   "profileNoContactInfo": "No contact information",
   "profileUserProfile": "User Profile",
-  "profilePostedTasks": "Posted Tasks",
+  "profilePostedTasks": "Posted",
   "profileTakenTasks": "Taken Tasks",
   "profileCompletedTasks": "Completed Tasks",
   "myItemsSelling": "Selling",
@@ -2588,7 +2640,7 @@
   "forumFeatured": "Featured",
   "forumWriteReplyPlaceholder": "Write your reply...",
   "forumViewThisPost": "Check out this post",
-  "forumBrowse": "views",
+  "forumBrowse": "Views",
   "forumRepliesCount": "replies",
   "fleaMarketStatusActive": "For Sale",
   "fleaMarketStatusDelisted": "Delisted",
@@ -2601,10 +2653,10 @@
   "fleaMarketSaveChanges": "Save Changes",
   "fleaMarketEditItemTitle": "Edit Item",
   "fleaMarketCategoryElectronics": "Electronics",
-  "fleaMarketCategoryClothing": "Clothing & Accessories",
+  "fleaMarketCategoryClothing": "Clothing & Bags",
   "fleaMarketCategoryFurniture": "Furniture & Appliances",
-  "fleaMarketCategoryBooks": "Books & Stationery",
-  "fleaMarketCategorySports": "Sports & Outdoors",
+  "fleaMarketCategoryBooks": "Books & Textbooks",
+  "fleaMarketCategorySports": "Sports & Outdoor",
   "fleaMarketCategoryBeauty": "Beauty & Skincare",
   "fleaMarketCategoryAccessories": "Accessories",
   "fleaMarketCategoryToysGames": "Toys & Games",
@@ -2651,16 +2703,24 @@
   "fleaMarketCounterOfferReceived": "Seller counter-offered {currencySymbol}{price}",
   "@fleaMarketCounterOfferReceived": {
     "placeholders": {
-      "price": { "type": "String" },
-      "currencySymbol": { "type": "String" }
+      "price": {
+        "type": "String"
+      },
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "fleaMarketAcceptCounterOfferConfirmTitle": "Accept Counter Offer",
   "fleaMarketAcceptCounterOfferConfirmMessage": "Are you sure you want to accept the seller's counter offer of {currencySymbol}{price}?",
   "@fleaMarketAcceptCounterOfferConfirmMessage": {
     "placeholders": {
-      "price": { "type": "String" },
-      "currencySymbol": { "type": "String" }
+      "price": {
+        "type": "String"
+      },
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "fleaMarketRejectCounterOfferConfirmTitle": "Decline Counter Offer",
@@ -2978,7 +3038,9 @@
   "refundAmountPound": "Refund amount ({currencySymbol})",
   "@refundAmountPound": {
     "placeholders": {
-      "currencySymbol": {"type": "String"}
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "refundRatioPercent": "Refund ratio (%)",
@@ -3093,13 +3155,11 @@
   "refundDescCancelled": "Refund cancelled.",
   "commonUnknown": "Unknown",
   "commonOr": "or",
-
   "fleaMarketProductTitleHint": "Enter product title",
   "fleaMarketDescriptionHint": "Describe your product in detail",
   "fleaMarketPriceAndTrade": "Price & Transaction",
   "fleaMarketFillRequired": "Please fill in all required fields",
   "fleaMarketLocation": "Transaction Location",
-
   "taskPreferencesTypes": "Preferred Task Types",
   "taskPreferencesTypesDesc": "Select the task types you are interested in",
   "taskPreferencesLocations": "Preferred Locations",
@@ -3107,23 +3167,8 @@
   "taskPreferencesLevels": "Preferred Task Levels",
   "taskPreferencesLevelsDesc": "Select the task levels you want to receive",
   "taskPreferencesMinDeadlineDesc": "Only show tasks with deadline longer than the set days",
-
   "vipPleaseSelect": "Please Select a Plan",
-
-  "forumAllPosts": "All Posts",
-  "forumSearchPosts": "Search posts...",
-  "forumNoPosts": "No Posts",
-  "forumNoPostsMessage": "There are no posts yet. Be the first to post!",
-  "forumPinned": "Pinned",
-
-  "commonFilter": "Filter",
-  "commonDone": "Done",
   "commonNoResults": "No Results",
-  "commonAll": "All",
-
-  "taskFilterCategory": "Category",
-  "taskFilterCity": "City",
-
   "taskExpertSearchHint": "Search experts by name or skill...",
   "taskExpertNoResults": "No experts found matching your search",
   "taskExpertServiceDetail": "Service Detail",
@@ -3143,10 +3188,8 @@
   "taskExpertBenefit2Desc": "Get matched with tasks that match your expertise first",
   "taskExpertBenefit3Title": "Higher Earnings",
   "taskExpertBenefit3Desc": "Experts earn up to 20% more on task completions",
-
   "leaderboardScore": "Score",
   "leaderboardApplySuccess": "Leaderboard application submitted successfully",
-  "leaderboardDescription": "Description",
   "leaderboardDescriptionHint": "Describe this leaderboard",
   "leaderboardTitle": "Title",
   "leaderboardTitleHint": "Enter leaderboard title",
@@ -3159,13 +3202,9 @@
   "leaderboardFillRequired": "Please fill in all required fields",
   "leaderboardSubmitApply": "Submit Application",
   "leaderboardApply": "Apply for Leaderboard",
-  "leaderboardSubmitItem": "Submit Entry",
-  "leaderboardItemName": "Name",
-  "leaderboardItemDescription": "Description",
   "leaderboardItemScore": "Score",
   "leaderboardSubmitSuccess": "Entry submitted successfully",
   "leaderboardSubmit": "Submit",
-
   "paymentStripeConnect": "Stripe Connect Setup",
   "paymentConnectPayments": "Connect Payments",
   "paymentConnectPayouts": "Connect Payouts",
@@ -3175,28 +3214,20 @@
   "paymentNoPayoutsMessage": "You don't have any payout records yet",
   "paymentExpired": "Payment Expired",
   "paymentExpiredMessage": "Payment time has expired, please initiate payment again.",
-  "paymentCountdownExpired": "Expired",
-  "paymentCountdownRemaining": "Remaining {time}",
-  "@paymentCountdownRemaining": {
-    "placeholders": {
-      "time": {"type": "String"}
-    }
-  },
   "paymentCountdownTimeout": "Payment Timed Out",
   "paymentCountdownCompleteInTime": "Please complete payment within the time limit",
   "paymentCountdownTimeLeft": "Time remaining: {time}",
   "@paymentCountdownTimeLeft": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "paymentApplePayIOSOnly": "Apple Pay is only available on iOS devices",
   "paymentApplePayNotSupported": "Your device does not support Apple Pay, please use another payment method",
   "paymentNetworkConnectionFailed": "Network connection failed, please check your network and try again.",
   "paymentRequestTimeout": "Request timeout, please try again later.",
-  "paymentSuccess": "Payment Successful",
-  "paymentSuccessMessage": "Your payment has been successfully processed, the task will start soon.",
-  "paymentConfirmPayment": "Confirm Payment",
   "paymentRemainingTime": "Payment remaining time: {param1}",
   "@paymentRemainingTime": {
     "placeholders": {
@@ -3220,6 +3251,9 @@
   "paymentMethod": "Payment Method",
   "paymentCreditDebitCard": "Credit/Debit Card",
   "paymentFastSecure": "Fast and secure payment",
+  "refundPolicyTitle": "Refund Policy",
+  "refundPolicyFooterPrefix": "By tapping Pay, you agree to our ",
+  "refundPolicyLinkText": "Refund Policy",
   "paymentWeChatPay": "WeChat Pay",
   "paymentAlipay": "Alipay",
   "paymentCouponSelected": "Coupon Selected",
@@ -3237,8 +3271,6 @@
   "paymentCancelPaymentConfirm": "Are you sure you want to cancel payment?",
   "paymentContinuePayment": "Continue Payment",
   "paymentLoadFailed": "Load Failed",
-  "paymentRetry": "Retry",
-  "paymentNoAvailableCoupons": "No Available Coupons",
   "paymentCoupon": "Coupon",
   "paymentApplePayLabel": "Task #{param1}",
   "@paymentApplePayLabel": {
@@ -3248,22 +3280,16 @@
       }
     }
   },
-
   "profileTaskCount": "Tasks",
   "profileRating": "Rating",
   "profileNoRecentTasks": "No recent tasks",
-
-  "notificationMarkAllRead": "Mark All Read",
+  "notificationMarkAllRead": "Mark all read",
   "notificationEmpty": "No Notifications",
   "notificationEmptyMessage": "You're all caught up! No new notifications.",
   "notificationAll": "All Notifications",
   "notificationTask": "Task Notifications",
   "notificationForum": "Forum Notifications",
   "notificationInteraction": "Interaction Messages",
-
-  "infoPrivacyPolicy": "Privacy Policy",
-  "infoTermsOfService": "Terms of Service",
-
   "errorNetworkTimeout": "Network connection timed out",
   "errorRequestFailedGeneric": "Request failed",
   "errorRequestCancelled": "Request cancelled",
@@ -3304,16 +3330,16 @@
   "priceExceedsMaximum": "Price cannot exceed {currencySymbol}50,000",
   "@priceExceedsMaximum": {
     "placeholders": {
-      "currencySymbol": {"type": "String"}
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "errorTaskListLoadFailed": "Failed to load tasks.",
   "errorTaskQuoteFailed": "Failed to submit quote. Please try again.",
   "errorTaskQuoteAcceptFailed": "Quote submitted, but automatic acceptance failed. Please contact support.",
-
   "searchTitle": "Search",
   "searchHint": "Search tasks, posts, items",
-  "searchNoResults": "No results found",
   "searchTryDifferent": "Try searching with different keywords",
   "searchResultCount": "Found {count} results",
   "@searchResultCount": {
@@ -3325,15 +3351,11 @@
   },
   "searchRecentSearches": "Recent searches",
   "searchClearHistory": "Clear search history",
-
-  "networkOffline": "Network disconnected",
   "networkOnline": "Network restored",
-
-  "notificationPermissionTitle": "Enable Push Notifications",
+  "notificationPermissionTitle": "Notification Permission Required",
   "notificationPermissionDescription": "Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications",
   "notificationPermissionEnable": "Enable Notifications",
   "notificationPermissionSkip": "Skip for now",
-
   "feedbackPublishSuccess": "Published successfully",
   "feedbackPublishFailed": "Publish failed",
   "feedbackTaskPublishSuccess": "Task published successfully",
@@ -3356,11 +3378,12 @@
   "feedbackNetworkError": "Network error, please try again",
   "feedbackDeleteSuccess": "Deleted successfully",
   "feedbackCopySuccess": "Copied to clipboard",
-
   "errorPageNotFound": "Page not found: {uri}",
   "@errorPageNotFound": {
     "placeholders": {
-      "uri": { "type": "String" }
+      "uri": {
+        "type": "String"
+      }
     }
   },
   "errorServerTitle": "Server Error",
@@ -3382,7 +3405,9 @@
   "emptyNoSearchResultsWithKeyword": "No results found for \"{keyword}\"",
   "@emptyNoSearchResultsWithKeyword": {
     "placeholders": {
-      "keyword": { "type": "String" }
+      "keyword": {
+        "type": "String"
+      }
     }
   },
   "emptyNoFavoritesDescription": "Your favorites will appear here",
@@ -3397,7 +3422,6 @@
   "locationGetFailed": "Failed to get location",
   "locationEnableLocationService": "Please enable location services on your device first",
   "locationOpenMapFailed": "Failed to open map",
-  "notificationPermissionTitle": "Notification Permission Required",
   "notificationPermissionMessage": "You have denied notification permission. Please enable it in system settings.",
   "notificationPermissionLater": "Maybe Later",
   "permissionRequired": "{permissionName} permission required",
@@ -3405,32 +3429,31 @@
   "permissionRequiredForFeature": "This feature requires {permissionName} permission to work",
   "@permissionRequired": {
     "placeholders": {
-      "permissionName": { "type": "String" }
+      "permissionName": {
+        "type": "String"
+      }
     }
   },
   "@permissionEnableInSettings": {
     "placeholders": {
-      "permissionName": { "type": "String" }
+      "permissionName": {
+        "type": "String"
+      }
     }
   },
   "@permissionRequiredForFeature": {
     "placeholders": {
-      "permissionName": { "type": "String" }
+      "permissionName": {
+        "type": "String"
+      }
     }
   },
   "badgeStudent": "Student",
   "badgeExpert": "Expert",
   "activityCampusActivities": "Campus Activities",
-  "activityNoActivities": "No Activities",
   "activityDetailTitle": "Activity Details",
   "activityInfoTitle": "Activity Info",
-  "activityByAppointment": "By Appointment",
   "activityParticipantCount": "Participants",
-  "activityRemainingSlots": "Remaining Slots",
-  "activityStatus": "Status",
-  "activityLocation": "Location",
-  "activityType": "Type",
-  "activityDeadline": "Deadline",
   "activityDiscount": "Discount",
   "activityRewardType": "Reward Type",
   "activitySignupSuccess": "Registration Successful",
@@ -3449,21 +3472,21 @@
   "authIAgreePrefix": "I have read and agree to the ",
   "authAnd": " and ",
   "forumPostDetail": "Post Detail",
-  "forumAllReplies": "All Comments",
-  "forumNoReplies": "No Comments",
-  "forumPinned": "Pinned",
-  "forumBrowse": "Views",
   "forumWriteComment": "Write a comment...",
   "chatUserTitle": "User {userId}",
   "@chatUserTitle": {
     "placeholders": {
-      "userId": { "type": "String" }
+      "userId": {
+        "type": "String"
+      }
     }
   },
   "chatTaskTitle": "Task {taskId}",
   "@chatTaskTitle": {
     "placeholders": {
-      "taskId": { "type": "int" }
+      "taskId": {
+        "type": "int"
+      }
     }
   },
   "chatInputHint": "Type a message...",
@@ -3518,9 +3541,8 @@
   "fleaMarketCreateTitle": "List Item",
   "fleaMarketTitlePlaceholder": "Enter item title",
   "fleaMarketDescPlaceholder": "Describe your item...",
-  "fleaMarketSelectCategory": "Select Category",
+  "fleaMarketSelectCategory": "Select category",
   "fleaMarketLocationPlaceholder": "e.g. North Campus Gate",
-  "fleaMarketPublishItem": "List Item",
   "fleaMarketSelectImageFailed": "Failed to select image",
   "fleaMarketInvalidPrice": "Please enter a valid price",
   "profileEditProfileTitle": "Edit Profile",
@@ -3528,17 +3550,14 @@
   "profileNamePlaceholder": "Enter name",
   "profileBioPlaceholder": "Tell us about yourself...",
   "profileLocationPlaceholder": "e.g. London",
-  "profileMyForumPosts": "My Posts",
   "profileMyPostsEmpty": "No Posts",
   "profileAcceptedTasks": "Accepted",
-  "profilePostedTasks": "Posted",
   "walletPointsBalance": "Points Balance",
   "walletUnwithdrawnIncome": "Unwithdrawn Income",
   "walletTotalEarned": "Total Earned",
   "walletTotalWithdrawn": "Total Withdrawn",
   "walletTotalSpent": "Total Spent",
   "walletPaymentAccount": "Payment Account",
-  "walletPaymentRecords": "Payment Records",
   "walletPayoutRecords": "Payout Records",
   "walletTransactionRecords": "Transactions",
   "walletNoTransactions": "No Transactions",
@@ -3546,7 +3565,6 @@
   "walletMyCoupons": "My Coupons",
   "walletNoCoupons": "No Coupons",
   "settingsGoLogin": "Login",
-  "settingsNotifications": "Receive push notifications",
   "settingsThemeSystem": "System",
   "settingsThemeLight": "Light",
   "settingsThemeDark": "Dark",
@@ -3569,8 +3587,12 @@
   "couponRedeemConfirmContent": "Use {points} points to redeem \"{couponName}\"?",
   "@couponRedeemConfirmContent": {
     "placeholders": {
-      "points": {"type": "int"},
-      "couponName": {"type": "String"}
+      "points": {
+        "type": "int"
+      },
+      "couponName": {
+        "type": "String"
+      }
     }
   },
   "couponNoPointsRecords": "No Points Records",
@@ -3578,34 +3600,22 @@
   "couponEnterInviteCodeHint": "Enter invite code or redeem code",
   "couponNoCoupons": "No Coupons",
   "couponClaim": "Claim",
-  "couponConsecutiveCheckIn": "{days}-day streak",
-  "@couponConsecutiveCheckIn": {
-    "placeholders": {
-      "days": { "type": "int" }
-    }
-  },
   "customerServiceRateTitle": "Rate Support",
   "customerServiceRateHint": "Leave your feedback (optional)",
   "customerServiceEndTitle": "End Conversation",
   "customerServiceEndMessage": "Are you sure you want to end this conversation?",
   "customerServiceEndButton": "End",
   "customerServiceRefresh": "Refresh",
-  "notificationMarkAllRead": "Mark All Read",
   "notificationSystemTab": "System",
   "notificationInteractionTab": "Interactions",
   "notificationTaskChatTitle": "Task Chat",
   "notificationNoTaskChats": "No Task Chats",
   "onboardingWelcome": "Welcome to Link²Ur",
-  "onboardingWelcomeSubtitle": "UK Life Mutual Aid Platform",
   "onboardingPublishTask": "Post Tasks",
-  "onboardingPublishTaskSubtitle": "Easily find help",
   "onboardingAcceptTask": "Accept Tasks",
-  "onboardingAcceptTaskSubtitle": "Earn extra income",
   "onboardingSafePayment": "Safe Payment",
   "onboardingSafePaymentSubtitle": "Funds are protected",
   "onboardingCommunity": "Community",
-  "onboardingCommunitySubtitle": "Connect your world",
-  "onboardingPrevious": "Previous",
   "searchTasks": "Search Tasks",
   "searchFleaMarket": "Search Items",
   "searchForum": "Search Posts",
@@ -3618,23 +3628,11 @@
   "searchLeaderboardItemsTitle": "Leaderboard Items",
   "searchForumCategoriesTitle": "Forum Categories",
   "searchServicesTitle": "Personal Services",
-  "leaderboardNoItems": "No Leaderboards",
-  "leaderboardSubmitItem": "Submit Entry",
-  "leaderboardItemCount": "Entries",
-  "leaderboardVoteCount": "Votes",
-  "leaderboardViewCount": "Views",
-  "leaderboardCurrentScore": "Current Score",
-  "leaderboardTotalVotes": "Total Votes",
   "leaderboardRankLabel": "Rank",
-  "leaderboardNoImages": "No Images",
   "taskExpertNotFound": "Expert not found",
-  "taskExpertRating": "Rating",
   "taskExpertCompletedOrders": "Completed",
   "taskExpertServices": "Services",
-  "taskExpertNoServices": "No Services",
   "taskExpertBook": "Book",
-  "createTaskTitle": "Create Task",
-  "createTaskTitlePlaceholder": "Enter task title",
   "createTaskDescPlaceholder": "Describe task requirements in detail...",
   "createTaskLocationPlaceholder": "Enter task location",
   "createTaskPublish": "Publish Task",
@@ -3700,7 +3698,11 @@
   "discoveryExpertRatingNew": "New",
   "discoveryExpertCompletedTasks": "{count, plural, =0{Just opened} one{1 completed} other{{count} completed}}",
   "@discoveryExpertCompletedTasks": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "discoveryFeedTypeService": "Expert Service",
   "discoveryFeedTypePersonalSkill": "Personal Skill",
@@ -3732,11 +3734,29 @@
   "homePublishTask": "Post Task",
   "homeDeadlineExpired": "Expired",
   "homeDeadlineDays": "{days}d left",
-  "@homeDeadlineDays": { "placeholders": { "days": { "type": "int" } } },
+  "@homeDeadlineDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "homeDeadlineHours": "{hours}h left",
-  "@homeDeadlineHours": { "placeholders": { "hours": { "type": "int" } } },
+  "@homeDeadlineHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "homeDeadlineMinutes": "{minutes}m left",
-  "@homeDeadlineMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "@homeDeadlineMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "homeDefaultUser": "User",
   "homeClassmate": "Linker",
   "homePostedNewPost": "posted a new topic",
@@ -3749,7 +3769,13 @@
   "homeSearchFleaMarket": "Search marketplace",
   "homeSearchPosts": "Search posts",
   "homeSearchQueryResult": "Search \"{query}\"",
-  "@homeSearchQueryResult": { "placeholders": { "query": { "type": "String" } } },
+  "@homeSearchQueryResult": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "homePressEnterToSearch": "Press Enter to search",
   "taskCategoryPickup": "Pickup",
   "taskCategoryTutoring": "Tutoring",
@@ -3770,36 +3796,50 @@
   "taskSortNearDeadline": "Near Deadline",
   "taskDeadlineExpired": "Expired",
   "taskDeadlineMinutes": "{minutes}m left",
-  "@taskDeadlineMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "@taskDeadlineMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "taskDeadlineHours": "{hours}h left",
-  "@taskDeadlineHours": { "placeholders": { "hours": { "type": "int" } } },
+  "@taskDeadlineHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "taskDeadlineDays": "{days}d left",
-  "@taskDeadlineDays": { "placeholders": { "days": { "type": "int" } } },
+  "@taskDeadlineDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "taskDeadlineDate": "{month}/{day} deadline",
-  "@taskDeadlineDate": { "placeholders": { "month": { "type": "int" }, "day": { "type": "int" } } },
-  "taskCategoryAll": "All",
+  "@taskDeadlineDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "taskCategoryHousekeepingLife": "Housekeeping",
-  "taskCategoryCampusLife": "Campus Life",
-  "taskCategorySecondhandRental": "Secondhand",
-  "taskCategoryErrandRunning": "Errands",
-  "taskCategorySkillService": "Skills",
-  "taskCategorySocialHelp": "Social Help",
-  "taskCategoryTransportation": "Transport",
-  "taskCategoryPetCare": "Pet Care",
-  "taskCategoryLifeConvenience": "Convenience",
-  "taskCategoryOther": "Other",
-  "createTaskTitle": "Post Task",
   "createTaskType": "Task Type",
   "createTaskTitleField": "Task Title",
   "createTaskTitleHint": "Enter task title",
   "createTaskDescHint": "Describe task requirements in detail...",
-  "createTaskReward": "Reward",
   "createTaskRewardToBeQuoted": "To be quoted (leave blank for applicants to quote)",
   "createTaskLocation": "Location",
   "createTaskLocationHint": "Enter task location",
   "createTaskDeadline": "Deadline",
   "createTaskSelectDeadline": "Select deadline",
-  "createTaskAddImages": "Add Images",
   "createTaskCategoryShopping": "Shopping",
   "createTaskCategoryTutoring": "Tutoring",
   "createTaskCategoryTranslation": "Translation",
@@ -3825,7 +3865,9 @@
   "profileDirectRequestValidation": "Please fill in the title and a valid price (≥{currencySymbol}1)",
   "@profileDirectRequestValidation": {
     "placeholders": {
-      "currencySymbol": {"type": "String"}
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "profileDirectRequestHintLocation": "Location",
@@ -3844,15 +3886,14 @@
   "taskTypeFleaMarket": "Flea Market",
   "taskTypeCampusLifeNeedVerify": "Publishing \"Campus Life\" tasks requires student email verification",
   "taskDetailNoImages": "No images",
-  "timeDaysAgo": "{days}d ago",
-  "@timeDaysAgo": { "placeholders": { "days": { "type": "int" } } },
-  "timeHoursAgo": "{hours}h ago",
-  "@timeHoursAgo": { "placeholders": { "hours": { "type": "int" } } },
-  "timeMinutesAgo": "{minutes}m ago",
-  "@timeMinutesAgo": { "placeholders": { "minutes": { "type": "int" } } },
-  "timeJustNow": "Just now",
   "forumUserFallback": "User {userId}",
-  "@forumUserFallback": { "placeholders": { "userId": { "type": "String" } } },
+  "@forumUserFallback": {
+    "placeholders": {
+      "userId": {
+        "type": "String"
+      }
+    }
+  },
   "forumNoLeaderboard": "No leaderboard",
   "forumNoLeaderboardMessage": "No leaderboard available",
   "forumNoPostsHint": "No posts yet. Tap below to create the first one!",
@@ -3889,7 +3930,9 @@
   "walletAvailableBalance": "Available: {amount}",
   "@walletAvailableBalance": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "walletBalanceDeduction": "Wallet deduction",
@@ -3898,14 +3941,15 @@
   "walletPayNow": "Pay with balance {amount}",
   "@walletPayNow": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "myTasksTitle": "My Tasks",
   "myTasksAccepted": "Accepted",
   "myTasksPosted": "Posted",
   "myTasksGoAccept": "Browse Tasks",
-  "commonSave": "Save",
   "profileBio": "Bio",
   "profileBioHint": "Tell us about yourself...",
   "profileCity": "City",
@@ -3913,32 +3957,22 @@
   "profileNameRequired": "Please enter your name",
   "profileNameMinLength": "Name must be at least 3 characters",
   "profileAnonymousUser": "Anonymous",
-  "myPostsTitle": "My Posts",
   "myPostsEmpty": "No posts",
   "myPostsEmptyDesc": "You haven't posted anything yet",
   "fleaMarketSold": "Sold",
   "fleaMarketDelisted": "Delisted",
   "fleaMarketItemReserved": "Item Reserved",
   "fleaMarketCategoryAll": "All",
-  "fleaMarketCategoryElectronics": "Electronics",
-  "fleaMarketCategoryBooks": "Books & Textbooks",
   "fleaMarketCategoryDailyUse": "Daily Use",
-  "fleaMarketCategoryClothing": "Clothing & Bags",
-  "fleaMarketCategorySports": "Sports & Outdoor",
-  "fleaMarketCategoryOther": "Other",
-  "fleaMarketProductImages": "Product Images",
-  "fleaMarketInvalidPrice": "Please enter a valid price",
   "fleaMarketImageSelectFailed": "Failed to select image",
   "fleaMarketTitleMinLength": "Title must be at least 2 characters",
   "fleaMarketTitleRequired": "Please enter a title",
   "fleaMarketDescOptional": "Description (optional)",
   "fleaMarketDescHint": "Describe your item...",
-  "fleaMarketSelectCategory": "Select category",
   "fleaMarketLocationOptional": "Location (optional)",
   "fleaMarketLocationHint": "e.g. Campus North Gate",
   "fleaMarketPriceRequired": "Please enter a price",
   "fleaMarketCategoryLabel": "Category",
-  "fleaMarketSeller": "Seller",
   "fleaMarketNoItemsHint": "No items yet. Tap below to list the first one!",
   "chatNoMessages": "No messages yet. Start a conversation!",
   "chatInProgress": "In Progress",
@@ -3946,7 +3980,6 @@
   "chatTaskClosedHint": "This task has been closed, messages are disabled",
   "chatTaskCompletedConfirm": "Task completed, please confirm.",
   "chatHasIssueMessage": "I encountered some issues:",
-  "activityCampusActivities": "Campus Activities",
   "activityCheckLater": "Check back later",
   "activityNoAvailableActivities": "No activities available yet",
   "activityRegisterSuccess": "Registration successful",
@@ -3968,7 +4001,6 @@
   "activityPublisher": "Publisher",
   "activityViewExpertProfileShort": "View Expert Profile",
   "activityParticipantsCount": "Participants",
-  "activityRemainingSlots": "Remaining Slots",
   "activityStatusLabel": "Status",
   "activityRegistrationDeadline": "Registration deadline: ",
   "activityCurrentApplicants": "Current applicants: ",
@@ -3987,25 +4019,42 @@
   "activityNotWon": "Stay Tuned for Next Event",
   "activityDrawCompleted": "Draw Completed",
   "activityLotteryPending": "Awaiting Draw",
-  "activityActivities": "Activities",
   "activityPersonCount": "{current}/{max}",
-  "@activityPersonCount": { "placeholders": { "current": { "type": "int" }, "max": { "type": "int" } } },
+  "@activityPersonCount": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "leaderboardNoLeaderboards": "No leaderboards",
   "leaderboardNoLeaderboardsMessage": "No leaderboards available",
   "leaderboardNoCompetitorsHint": "No competitors yet. Tap below to submit the first one!",
   "leaderboardNetVotesCount": "Net {count}",
-  "@leaderboardNetVotesCount": { "placeholders": { "count": { "type": "int" } } },
+  "@leaderboardNetVotesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "leaderboardRankFirst": "#1",
   "leaderboardRankSecond": "#2",
   "leaderboardRankThird": "#3",
   "leaderboardDetails": "Details",
   "leaderboardCompletedCount": "{count} completed",
-  "@leaderboardCompletedCount": { "placeholders": { "count": { "type": "int" } } },
-  "notificationMarkAllRead": "Mark all read",
+  "@leaderboardCompletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notificationSystemNotifications": "System",
   "notificationInteractionMessages": "Interactions",
-  "notificationTaskChat": "Task Chat",
-  "notificationNoTaskChat": "No task chats",
   "notificationNoTaskChatDesc": "Accept or post a task to start chatting",
   "taskExpertDetailTitle": "Expert Details",
   "taskExpertExpertNotExist": "Expert not found",
@@ -4021,12 +4070,29 @@
   "taskExpertApplicationApproved": "Your expert application has been approved!",
   "taskExpertApplicationRejected": "Your expert application was not approved",
   "taskExpertServiceCount": "{count} services",
-  "@taskExpertServiceCount": { "placeholders": { "count": { "type": "int" } } },
+  "@taskExpertServiceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "taskExpertShareTitle": "Share Expert - {name}",
-  "@taskExpertShareTitle": { "placeholders": { "name": { "type": "String" } } },
+  "@taskExpertShareTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "taskExpertShareText": "Check out this expert: {name}",
-  "@taskExpertShareText": { "placeholders": { "name": { "type": "String" } } },
-
+  "@taskExpertShareText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "infoFAQAccountQ1": "How do I register an account?",
   "infoFAQAccountA1": "You can register using your email address or phone number. Click 'Register' on the login page and follow the instructions.",
   "infoFAQAccountQ2": "How do I reset my password?",
@@ -4035,7 +4101,6 @@
   "infoFAQAccountA3": "Go to Profile > Edit Profile to update your avatar, nickname, bio and other information.",
   "infoFAQAccountQ4": "How do I delete my account?",
   "infoFAQAccountA4": "Go to Settings > Account Security > Delete Account. Please note this action is irreversible.",
-
   "infoFAQTaskQ1": "How do I publish a task?",
   "infoFAQTaskA1": "Tap the '+' button at the bottom of the screen, select 'Publish Task', fill in the details and submit.",
   "infoFAQTaskQ2": "How do I accept a task?",
@@ -4044,7 +4109,6 @@
   "infoFAQTaskA3": "Go to the task detail page and click 'Cancel Task'. Please note that cancellation policies may apply.",
   "infoFAQTaskQ4": "What if there is a dispute?",
   "infoFAQTaskA4": "You can raise a dispute via the task chat page. Our customer service team will assist in resolving it.",
-
   "infoFAQPaymentQ1": "What payment methods are supported?",
   "infoFAQPaymentA1": "We support Stripe (credit/debit cards), Apple Pay, and WeChat Pay.",
   "infoFAQPaymentQ2": "How does the escrow system work?",
@@ -4053,7 +4117,6 @@
   "infoFAQPaymentA3": "Go to the task detail page and click 'Request Refund'. Provide a reason and our team will review it within 1-3 business days.",
   "infoFAQPaymentQ4": "How do I withdraw my earnings?",
   "infoFAQPaymentA4": "Go to Wallet > Withdraw, connect your Stripe account and withdraw to your bank account.",
-
   "vipPlanFeatureMonthly1": "Priority task recommendation",
   "vipPlanFeatureMonthly2": "Exclusive VIP badge",
   "vipPlanFeatureMonthly3": "Reduced service fees",
@@ -4062,20 +4125,24 @@
   "vipPlanFeatureYearly3": "Points boost & exclusive activities",
   "vipPlanFeatureYearly4": "Data analytics dashboard",
   "vipPlanBadgeBestValue": "Best Value",
-
   "vipRegularUser": "Regular User",
   "infoVersionFormat": "Version {version} ({buildNumber})",
-  "@infoVersionFormat": { "placeholders": { "version": { "type": "String" }, "buildNumber": { "type": "String" } } },
+  "@infoVersionFormat": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
   "infoCopyright": "© 2024 Link²Ur. All rights reserved.",
-
   "chatImagePlaceholder": "[Image]",
-
   "studentVerificationEmailLocked": "Email is locked, please wait for review to complete",
   "studentVerificationPending": "Verification under review, please check your email and complete verification",
-
   "purchaseFailed": "Purchase failed, please try again later.",
   "restorePurchaseFailed": "Restore purchase failed, please try again later.",
-
   "onboardingTaskTypeErrand": "Errand Running",
   "onboardingTaskTypeSkill": "Skill Service",
   "onboardingTaskTypeHousekeeping": "Housekeeping",
@@ -4086,33 +4153,25 @@
   "onboardingTaskTypePetCare": "Pet Care",
   "onboardingTaskTypeConvenience": "Life Convenience",
   "onboardingTaskTypeOther": "Other",
-
   "fleaMarketCategoryKeyElectronics": "electronics",
   "fleaMarketCategoryKeyBooks": "books",
   "fleaMarketCategoryKeyDaily": "daily",
   "fleaMarketCategoryKeyClothing": "clothing",
   "fleaMarketCategoryKeySports": "sports",
   "fleaMarketCategoryKeyOther": "other",
-
   "couponRewardPoints50": "+50 Points",
   "couponRewardPoints100Coupon": "+100 Points + Coupon",
   "couponRewardPoints500Vip": "+500 Points + VIP Trial",
-
   "settingsLanguageEnglish": "English",
   "settingsLanguageChinese": "中文",
-
   "infoTermsContent": "Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a UK life mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.",
   "infoPrivacyContent": "Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com",
   "infoCookieContent": "Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.",
   "infoCommunityGuidelinesContent": "Link²Ur Community Guidelines\n\nEffective Date: March 2026\n\n1. Content Standards\n- Respectful Communication: No personal attacks, insults, or discriminatory speech\n- Truthfulness: No false, misleading, or fraudulent information\n- Legal Compliance: No illegal or infringing content\n- Safety: No content endangering user safety\n\n2. Forum Conduct Rules\n- Post in the appropriate school section\n- Replies should be relevant; no spamming\n- No commercial ads or academic dishonesty content\n\n3. Task and Transaction Rules\n- Task descriptions must be clear and accurate\n- Reviews must be based on genuine experiences\n- No fake positive or malicious negative reviews\n\n4. Reporting and Appeals\n- Click 'Report' to report violating content\n- Appeal penalties within 14 days\n\n5. Enforcement\nReminder/Warning → Content Removal → Temporary Restriction → Account Suspension → Permanent Ban\n\nFor questions contact: info@link2ur.com",
-
-  "settingsUnknown": "Unknown",
-
   "serviceNegotiatePrice": "Price Negotiation",
   "serviceNegotiatePriceHint": "Propose a different price to the expert",
   "serviceSelectDeadline": "Select Deadline",
   "serviceApplyOtherSlot": "Apply for Another Group Deal",
-
   "publishTitle": "Publish",
   "publishTypeSubtitle": "Choose what you want to publish",
   "publishTaskTab": "Post Task",
@@ -4139,7 +4198,6 @@
   "publishTip2": "Clear photos increase views and sales",
   "publishTip3": "State reward or price upfront to save time",
   "publishTip4": "Pick the right category for better exposure",
-
   "profileUpdateFailed": "Update failed",
   "profileAvatarUpdated": "Avatar updated",
   "profileUploadFailed": "Upload failed",
@@ -4147,7 +4205,6 @@
   "commonSuccess": "Success",
   "commonError": "Error",
   "commonSaved": "Saved",
-
   "validatorEmailRequired": "Please enter email address",
   "validatorEmailInvalid": "Please enter a valid email address",
   "validatorPhoneRequired": "Please enter phone number",
@@ -4168,7 +4225,9 @@
   "validatorCodeLength": "Verification code must be {length} digits",
   "@validatorCodeLength": {
     "placeholders": {
-      "length": {"type": "int"}
+      "length": {
+        "type": "int"
+      }
     }
   },
   "validatorCodeDigitsOnly": "Verification code must contain only digits",
@@ -4181,14 +4240,18 @@
   "validatorTitleMaxLength": "Title must be at most {maxLength} characters",
   "@validatorTitleMaxLength": {
     "placeholders": {
-      "maxLength": {"type": "int"}
+      "maxLength": {
+        "type": "int"
+      }
     }
   },
   "validatorDescriptionRequired": "Please enter description",
   "validatorDescriptionMaxLength": "Description must be at most {maxLength} characters",
   "@validatorDescriptionMaxLength": {
     "placeholders": {
-      "maxLength": {"type": "int"}
+      "maxLength": {
+        "type": "int"
+      }
     }
   },
   "validatorAmountRequired": "Please enter amount",
@@ -4197,13 +4260,17 @@
   "validatorAmountMin": "Amount cannot be less than {min}",
   "@validatorAmountMin": {
     "placeholders": {
-      "min": {"type": "double"}
+      "min": {
+        "type": "double"
+      }
     }
   },
   "validatorAmountMax": "Amount cannot be greater than {max}",
   "@validatorAmountMax": {
     "placeholders": {
-      "max": {"type": "double"}
+      "max": {
+        "type": "double"
+      }
     }
   },
   "validatorUrlRequired": "Please enter URL",
@@ -4211,70 +4278,69 @@
   "validatorFieldRequired": "{fieldName} is required",
   "@validatorFieldRequired": {
     "placeholders": {
-      "fieldName": {"type": "String"}
+      "fieldName": {
+        "type": "String"
+      }
     }
   },
   "validatorFieldMinLength": "{fieldName} must be at least {min} characters",
   "@validatorFieldMinLength": {
     "placeholders": {
-      "fieldName": {"type": "String"},
-      "min": {"type": "int"}
+      "fieldName": {
+        "type": "String"
+      },
+      "min": {
+        "type": "int"
+      }
     }
   },
   "validatorFieldMaxLength": "{fieldName} must be at most {max} characters",
   "@validatorFieldMaxLength": {
     "placeholders": {
-      "fieldName": {"type": "String"},
-      "max": {"type": "int"}
-    }
-  },
-
-  "timeJustNow": "Just now",
-  "timeMinutesAgo": "{minutes} min ago",
-  "@timeMinutesAgo": {
-    "placeholders": {
-      "minutes": {"type": "int"}
-    }
-  },
-  "timeHoursAgo": "{hours} hr ago",
-  "@timeHoursAgo": {
-    "placeholders": {
-      "hours": {"type": "int"}
+      "fieldName": {
+        "type": "String"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "timeYesterday": "Yesterday",
   "timeDayBeforeYesterday": "Day before yesterday",
-  "timeExpired": "Expired",
   "timeDeadlineMinutes": "Due in {minutes} min",
   "@timeDeadlineMinutes": {
     "placeholders": {
-      "minutes": {"type": "int"}
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "timeDeadlineHours": "Due in {hours} hr",
   "@timeDeadlineHours": {
     "placeholders": {
-      "hours": {"type": "int"}
+      "hours": {
+        "type": "int"
+      }
     }
   },
   "timeDeadlineDays": "Due in {days} days",
   "@timeDeadlineDays": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "timeDeadlineDate": "Due {date}",
   "@timeDeadlineDate": {
     "placeholders": {
-      "date": {"type": "String"}
+      "date": {
+        "type": "String"
+      }
     }
   },
-
-  "badgeExpert": "Expert",
-  "badgeStudent": "Student",
   "badgeVip": "VIP",
   "badgeSuper": "Super",
-
   "notificationPermTitle": "Enable Push Notifications",
   "notificationPermDesc": "Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task match recommendations\n• Deals & promotions",
   "notificationPermEnable": "Enable Notifications",
@@ -4283,22 +4349,10 @@
   "notificationPermSettingsDesc": "You have denied notification permission. Please enable it manually in system settings.",
   "notificationPermSettingsLater": "Later",
   "notificationPermSettingsGo": "Go to Settings",
-
-  "networkDisconnected": "Network disconnected",
-  "networkRestored": "Network restored",
-
   "shareTitle": "Share to",
   "shareLinkCopied": "Link copied",
-  "shareWechat": "WeChat",
-  "shareWechatMoments": "Moments",
   "shareQQ": "QQ",
-  "shareQzone": "QQ Zone",
-  "shareWeibo": "Weibo",
-  "shareSms": "SMS",
-  "shareCopyLink": "Copy Link",
-  "shareGenerateImage": "Generate Image",
   "shareMore": "More",
-
   "actionItemPublished": "Item published",
   "actionPublishFailed": "Publish failed",
   "actionPurchaseSuccess": "Purchase successful",
@@ -4307,7 +4361,6 @@
   "actionUpdateFailed": "Update failed",
   "actionRefreshSuccess": "Refreshed",
   "actionRefreshFailed": "Refresh failed",
-
   "actionApplicationSubmitted": "Application submitted",
   "actionApplicationFailed": "Application failed",
   "actionApplicationCancelled": "Application cancelled",
@@ -4335,65 +4388,87 @@
   "actionNegotiationRejected": "Negotiation declined",
   "actionApplicationMessageSent": "Message sent",
   "actionApplicationMessageFailed": "Failed to send message",
-
   "actionCheckInSuccess": "Check-in successful!",
   "actionCheckInFailed": "Check-in failed",
-
   "actionVoteFailed": "Vote failed",
   "actionLeaderboardApplied": "Application submitted",
   "actionLeaderboardSubmitted": "Submitted successfully",
-
   "actionVerificationSubmitted": "Submitted, please check your email for verification",
   "actionVerificationSuccess": "Verification successful",
   "actionVerificationFailed": "Verification failed",
   "actionRenewalSuccess": "Renewal successful",
   "actionRenewalFailed": "Renewal failed",
-
   "actionRegistrationSuccess": "Registration successful",
   "actionRegistrationFailed": "Registration failed",
-
   "actionConversationEnded": "Conversation ended",
   "actionEndConversationFailed": "Failed to end conversation",
   "actionFeedbackSuccess": "Thank you for your feedback",
   "actionFeedbackFailed": "Feedback failed",
-
   "actionCouponClaimed": "Coupon claimed",
   "actionCouponRedeemed": "Redeemed successfully",
   "actionInviteCodeUsed": "Invite code applied",
-
   "profileRecentPosts": "Recent Posts",
   "profileNoRecentPosts": "No posts yet",
   "profileSoldItems": "Sold Items",
   "profileMetaJoinedFor": "Joined {months, plural, =1{1 month ago} other{{months} months ago}}",
   "@profileMetaJoinedFor": {
-    "placeholders": { "months": { "type": "int" } }
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
   },
   "profileNoSoldItems": "No sold items yet",
   "profilePersonalServices": "Personal Services",
   "profilePersonalServicesCount": "{count, plural, =1{·1 item} other{·{count} items}}",
   "@profilePersonalServicesCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileSharedWithYou": "Worked together",
   "profileSharedTasksCount": "{count, plural, =1{·1 time} other{·{count} times}}",
   "@profileSharedTasksCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileForumPostsCount": "{count, plural, =1{·1 post} other{·{count} posts}}",
   "@profileForumPostsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileReviewsSubtitle": "{rating} · {count} reviews",
   "@profileReviewsSubtitle": {
     "placeholders": {
-      "rating": { "type": "String" },
-      "count": { "type": "int" }
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "profileViewAllReviewsCount": "View all {count} reviews",
   "@profileViewAllReviewsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
+  "profileNoReviewsYet": "No reviews yet",
+  "profileNoMoreReviews": "No more reviews",
+  "profileNoServicesYet": "No services yet",
+  "profileNoMoreServices": "No more services",
+  "profileNoMorePosts": "No more posts",
   "profileServicePriceFrom": "from",
   "profileServiceNegotiable": "Negotiable",
   "profileFollowers": "Followers",
@@ -4410,21 +4485,17 @@
   "profileDirectRequestSubmit": "Send Request",
   "profileMySoldItems": "My Sold Items",
   "profileMySoldItemsSubtitle": "View your sold flea market items",
-
   "commonDefault": "Default",
-
   "paymentIncorrectCvc": "Incorrect CVC",
   "paymentIncorrectCardNumber": "Incorrect card number",
   "paymentAuthenticationRequired": "Authentication required",
   "paymentProcessingError": "Payment processing error",
   "paymentTooManyRequests": "Too many requests, please try later",
   "paymentInvalidRequest": "Invalid payment request",
-
   "transactionTypePayment": "Payment",
   "transactionTypePayout": "Payout",
   "transactionTypeRefund": "Refund",
   "transactionTypeFee": "Service Fee",
-
   "supportChatTitle": "Linker",
   "supportChatConnecting": "Connecting...",
   "supportChatHumanOnline": "Human agent is online",
@@ -4459,7 +4530,6 @@
       }
     }
   },
-
   "toolCallQueryMyTasks": "Query my tasks",
   "toolCallGetTaskDetail": "Get task details",
   "toolCallSearchTasks": "Search tasks",
@@ -4474,7 +4544,6 @@
   "toolCallSearchFleaMarket": "Search flea market",
   "toolCallGetLeaderboardSummary": "View leaderboard",
   "toolCallListTaskExperts": "Browse experts",
-
   "toolCallLoadingQueryMyTasks": "Checking your tasks…",
   "toolCallLoadingGetTaskDetail": "Fetching task details…",
   "toolCallLoadingSearchTasks": "Searching tasks…",
@@ -4489,7 +4558,6 @@
   "toolCallLoadingSearchFleaMarket": "Searching flea market…",
   "toolCallLoadingGetLeaderboardSummary": "Loading leaderboard…",
   "toolCallLoadingListTaskExperts": "Loading experts…",
-
   "toolCallGetMyWalletSummary": "Wallet summary",
   "toolCallGetMyMessagesSummary": "Chat summary",
   "toolCallGetMyVipStatus": "VIP status",
@@ -4497,7 +4565,6 @@
   "toolCallGetMyCheckinStatus": "Check-in status",
   "toolCallGetMyFleaMarketItems": "My flea market",
   "toolCallSearchForumPosts": "Search forum",
-
   "toolCallLoadingGetMyWalletSummary": "Loading wallet info…",
   "toolCallLoadingGetMyMessagesSummary": "Loading chat summary…",
   "toolCallLoadingGetMyVipStatus": "Checking VIP status…",
@@ -4505,7 +4572,6 @@
   "toolCallLoadingGetMyCheckinStatus": "Checking check-in…",
   "toolCallLoadingGetMyFleaMarketItems": "Loading your items…",
   "toolCallLoadingSearchForumPosts": "Searching forum…",
-
   "toolCallGetActivityDetail": "Activity details",
   "toolCallGetExpertDetail": "Expert details",
   "toolCallGetForumPostDetail": "Post details",
@@ -4515,7 +4581,6 @@
   "toolCallListMyActivities": "My activities",
   "toolCallListForumCategories": "Forum categories",
   "toolCallGetTaskReviews": "Task reviews",
-
   "toolCallLoadingGetActivityDetail": "Loading activity details…",
   "toolCallLoadingGetExpertDetail": "Loading expert details…",
   "toolCallLoadingGetForumPostDetail": "Loading post details…",
@@ -4525,7 +4590,6 @@
   "toolCallLoadingListMyActivities": "Loading your activities…",
   "toolCallLoadingListForumCategories": "Loading forum categories…",
   "toolCallLoadingGetTaskReviews": "Loading task reviews…",
-
   "toolCallPrepareTaskDraft": "Task draft",
   "toolCallLoadingPrepareTaskDraft": "Preparing task draft…",
   "toolCallSearchServices": "Search services",
@@ -4534,7 +4598,6 @@
   "toolCallLoadingGetExpertReviews": "Loading expert reviews…",
   "toolCallPrepareServiceDraft": "Service draft",
   "toolCallLoadingPrepareServiceDraft": "Preparing service draft…",
-
   "aiServiceDraftTitle": "Service Draft",
   "aiServiceDraftName": "Name",
   "aiServiceDraftDesc": "Desc",
@@ -4545,22 +4608,18 @@
   "aiServiceDraftConfirmButton": "Review & Publish",
   "aiServiceDraftNegotiable": "Negotiable",
   "aiServiceDraftHour": "hour",
-
   "toolCallAnalyzeMySkills": "Skill analysis",
   "toolCallLoadingAnalyzeMySkills": "Analyzing your skills…",
   "toolCallRecommendTakers": "Recommend takers",
   "toolCallLoadingRecommendTakers": "Finding suitable helpers…",
   "toolCallGetNextAction": "Next step",
   "toolCallLoadingGetNextAction": "Checking task status…",
-
   "aiThinkingHint1": "Understanding your question…",
   "aiThinkingHint2": "Analyzing information…",
   "aiThinkingHint3": "Organizing response…",
-
   "aiTaskDraftTitle": "Task Draft",
   "aiTaskDraftConfirmButton": "Review & Publish",
   "aiTaskCardViewDetail": "View details →",
-
   "expertApplicationsTitle": "Service Applications",
   "expertApplicationsEmpty": "No Applications",
   "expertApplicationsEmptyMessage": "You haven't received any service applications yet.",
@@ -4595,35 +4654,36 @@
   "expertApplicationBasePrice": "Base Price",
   "expertApplicationViewTask": "View Task",
   "expertApplicationChat": "Chat",
-
   "commonUnnamed": "Unnamed",
   "commonImageUploadFailed": "Image upload failed: {error}",
   "@commonImageUploadFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "commonImageCount": "{current}/{max}",
   "@commonImageCount": {
     "placeholders": {
-      "current": { "type": "int" },
-      "max": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "paymentCardSubtitle": "Visa, Mastercard, AMEX",
   "paymentWeChatPaySubtitle": "WeChat Pay (Stripe)",
   "paymentAlipaySubtitle": "Alipay (Stripe)",
   "commonCurrencySymbol": "£ ",
-
   "forumDeletePostConfirm": "Are you sure you want to delete this post? This action cannot be undone.",
   "forumPostDeleted": "Post deleted",
   "forumPostUpdated": "Post updated",
   "forumReplyDeleted": "Reply deleted",
   "forumDeleteReplyConfirm": "Are you sure you want to delete this reply?",
-
   "fleaMarketDeleteItemConfirm": "Are you sure you want to delete this listing? This action cannot be undone.",
-  "fleaMarketItemDeleted": "Listing deleted",
-
   "taskEvidenceTitle": "Completion Evidence",
   "taskEvidenceHint": "You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.",
   "taskEvidenceTextLabel": "Text description (optional)",
@@ -4632,10 +4692,8 @@
   "taskEvidenceImageLimit": "Max 5MB per image, up to 5 images",
   "taskEvidenceSubmit": "Submit completion",
   "taskEvidenceUploading": "Uploading images...",
-
   "stripeSetupRequired": "Please set up your payout account before applying for tasks.",
   "stripeSetupAction": "Set up now",
-
   "profileSendCode": "Send Code",
   "profileResendCode": "Resend",
   "profileCodeSentSuccess": "Verification code sent",
@@ -4656,21 +4714,26 @@
   "profileEmailCodeRequired": "Please enter the email verification code",
   "profilePhoneCodeRequired": "Please enter the phone verification code",
   "profileNormalizePhoneHint": "Include country code, e.g. +44 7XXX or +33 6XXX",
-
   "forumPdfPreviewTitle": "PDF Preview",
   "forumPdfContentEmpty": "PDF content is empty",
   "forumPdfLoadFailed": "Failed to load PDF: {error}",
   "@forumPdfLoadFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "forumPdfUrlMissing": "Missing PDF URL",
   "forumPdfAttachmentCount": "PDF Attachment ({current}/{max})",
   "@forumPdfAttachmentCount": {
     "placeholders": {
-      "current": { "type": "String" },
-      "max": { "type": "String" }
+      "current": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
     }
   },
   "forumPdfAddPdf": "Add PDF",
@@ -4678,21 +4741,29 @@
   "forumAttachmentOpenFailed": "Cannot open file: {error}",
   "@forumAttachmentOpenFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "forumFileAttachmentCount": "File Attachment ({current}/{max})",
   "@forumFileAttachmentCount": {
     "placeholders": {
-      "current": { "type": "String" },
-      "max": { "type": "String" }
+      "current": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
     }
   },
   "forumFileAddFile": "Add File (PDF)",
   "forumFileTooBig": "File too large, maximum {maxMB}MB",
   "@forumFileTooBig": {
     "placeholders": {
-      "maxMB": { "type": "String" }
+      "maxMB": {
+        "type": "String"
+      }
     }
   },
   "forumFileReadFailed": "Failed to read file, please try again",
@@ -4702,7 +4773,9 @@
   "publishImagesOptional": "Images (optional, max {max})",
   "@publishImagesOptional": {
     "placeholders": {
-      "max": { "type": "String" }
+      "max": {
+        "type": "String"
+      }
     }
   },
   "publishRelatedContentOptional": "Related Content (optional, e.g. services, activities, products, etc.)",
@@ -4727,8 +4800,12 @@
   "locationFallbackCoordinates": "Coordinates obtained ({lat}, {lng})",
   "@locationFallbackCoordinates": {
     "placeholders": {
-      "lat": { "type": "String" },
-      "lng": { "type": "String" }
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
     }
   },
   "locationOnline": "Online",
@@ -4739,14 +4816,20 @@
   "locationCoordinates": "Coordinates: {lat}, {lng}",
   "@locationCoordinates": {
     "placeholders": {
-      "lat": { "type": "String" },
-      "lng": { "type": "String" }
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
     }
   },
   "locationOpenMapsFailed": "Cannot open {provider} Maps",
   "@locationOpenMapsFailed": {
     "placeholders": {
-      "provider": { "type": "String" }
+      "provider": {
+        "type": "String"
+      }
     }
   },
   "taskDetailCounterOffer": "Counter-Offer",
@@ -4773,7 +4856,6 @@
   "contentMaskedHint": "Some content has been automatically processed. Please use in-app chat for communication.",
   "contentUnderReviewHint": "Your content has been submitted and is pending review.",
   "contentRejectedHint": "Your content did not pass review.",
-
   "captchaSecurityVerification": "Security Verification",
   "loginMethodPassword": "Password Login",
   "loginMethodEmailCode": "Email Code",
@@ -4783,7 +4865,6 @@
   "verificationStatusExpired": "Expired",
   "verificationStatusRevoked": "Revoked",
   "verificationStatusUnverified": "Unverified",
-
   "fleaMarketErrorGetListFailed": "Failed to load items",
   "fleaMarketErrorGetCategoriesFailed": "Failed to load categories",
   "fleaMarketErrorInvalidItemId": "Invalid item ID",
@@ -4836,7 +4917,6 @@
   "errorIapLoadProductsFailed": "Failed to load products",
   "errorIapVerificationFailed": "Verification failed, please contact support",
   "errorIapPurchaseFailed": "Purchase failed",
-
   "newbieTaskCenter": "Task Center",
   "newbieTaskStage1": "Complete Profile",
   "newbieTaskStage2": "Start Sharing",
@@ -4911,7 +4991,6 @@
       }
     }
   },
-
   "officialTaskGoPost": "Go Post",
   "officialTaskExpired": "Expired",
   "officialTaskRewardEarned": "Official task completed! Earned {amount} points",
@@ -4932,15 +5011,12 @@
       }
     }
   },
-
   "skillLeaderboard": "Skill Leaderboard",
   "leaderboardTop10": "Top 10",
   "leaderboardMyRank": "My Rank",
   "leaderboardNotRanked": "Not ranked yet",
   "leaderboardTasks": "Tasks",
   "leaderboardRating": "Rating",
-  "leaderboardScore": "Score",
-
   "myBadges": "My Badges",
   "badgeSelector": "Select Display Badge",
   "badgeNone": "No Badge",
@@ -4952,17 +5028,14 @@
       }
     }
   },
-
   "badgesEmptyState": "No badges earned yet",
   "badgeSelectorEmpty": "No badges available",
   "badgeNoClearDescription": "Do not display any badge",
   "badgeViewDetails": "View badge details",
-
   "profileViews": "Profile Views",
   "editBio": "Edit Bio",
   "addSkills": "Add Skills",
   "skillTags": "Skill Tags",
-
   "errorNewbieTaskNotCompleted": "This task is not yet completed",
   "errorNewbieTaskAlreadyClaimed": "This reward has already been claimed",
   "errorNewbieTaskClaimFailed": "Failed to claim reward",
@@ -4972,9 +5045,7 @@
   "errorNewbieTasksLoadFailed": "Failed to load tasks",
   "errorLeaderboardLoadFailed": "Failed to load leaderboard",
   "errorBadgesLoadFailed": "Failed to load badges",
-
   "forumReplyFallbackParent": "↩ Replied to a comment",
-
   "expertOfficialBadge": "Official",
   "expertDashboardTitle": "Expert Centre",
   "expertDashboardManagement": "Management",
@@ -5136,7 +5207,6 @@
   "expertSearchSortRating": "Rating",
   "expertSearchSortCompleted": "Most Completed",
   "expertSearchSortNewest": "Newest",
-
   "couponDetailTitle": "Coupon Details",
   "couponDetailDiscount": "Discount",
   "couponDetailMinAmount": "Minimum Spend",
@@ -5160,8 +5230,12 @@
   "currentPrice": "Current price: {currencySymbol}{price}",
   "@currentPrice": {
     "placeholders": {
-      "price": {"type": "String"},
-      "currencySymbol": {"type": "String"}
+      "price": {
+        "type": "String"
+      },
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "typeMessage": "Type a message...",
@@ -5171,7 +5245,9 @@
   "applicationMessages": "Applications ({count})",
   "@applicationMessages": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "posterReply": "Poster Reply",
@@ -5180,7 +5256,13 @@
   "publicReplyPlaceholder": "Write your reply to this application...",
   "alreadyReplied": "Already replied to this application",
   "qaTitle": "Q&A ({count})",
-  "@qaTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@qaTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "qaAskPlaceholder": "Ask the poster a question...",
   "qaReplyPlaceholder": "Write your reply...",
   "qaAskButton": "Ask",
@@ -5327,13 +5409,24 @@
   "drawerHelpFeedback": "Help & Feedback",
   "drawerLogin": "Log in",
   "nearbyCurrentLocation": "Current location: {city}",
-  "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
+  "@nearbyCurrentLocation": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
   "nearbyLocationFailed": "Location unavailable · showing London",
   "nearbyOpenSettings": "Open Settings",
   "nearbySwitch": "Switch",
   "nearbyApplicants": "{count} applicants",
-  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } },
-
+  "@nearbyApplicants": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "feedLabelPublishedTask": "Published a task",
   "feedLabelPosted": "Posted",
   "feedLabelListedItem": "Listed an item",
@@ -5345,9 +5438,21 @@
   "feedLabelReviewedService": "Reviewed a service",
   "feedLabelCreatedRanking": "Created a ranking",
   "servicePriceFrom": "From {price}",
-  "@servicePriceFrom": { "placeholders": { "price": { "type": "String" } } },
+  "@servicePriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "serviceReviewFrom": "From {title}",
-  "@serviceReviewFrom": { "placeholders": { "title": { "type": "String" } } },
+  "@serviceReviewFrom": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "createTaskPricingFixed": "Fixed Price",
   "createTaskPricingHourly": "Hourly",
   "createTaskPricingNegotiable": "Negotiate",
@@ -5434,7 +5539,6 @@
   "fleaMarketErrorNotRentalItem": "This item is not available for rent",
   "fleaMarketErrorCannotRentOwnItem": "You cannot rent your own item",
   "fleaMarketErrorRentalPaymentExpired": "Rental payment has expired",
-
   "homeFlowTitle": "Safe Transactions, Easy Collaboration",
   "homeFlowSubtitle": "Escrowed funds · Full protection · Dispute refunds",
   "homeFlowStepPost": "Post Task/Skill",
@@ -5445,7 +5549,6 @@
   "homeFlowGuaranteeEscrow": "Fund Escrow",
   "homeFlowGuaranteeRefund": "Full Refund Guarantee",
   "homeFlowGuaranteeDispute": "Dispute Mediation",
-
   "myServiceApplicationsTitle": "My Service Applications",
   "myServiceApplicationsEmpty": "No Applications Yet",
   "myServiceApplicationsEmptyMessage": "You haven't applied to any services yet. Browse available services to get started.",
@@ -5472,13 +5575,14 @@
   "serviceCounterOfferAcceptConfirmMessage": "Accept the counter offer of {price}?",
   "@serviceCounterOfferAcceptConfirmMessage": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": {
+        "type": "String"
+      }
     }
   },
   "serviceCounterOfferRejectConfirm": "Reject Counter Offer",
   "serviceCounterOfferRejectConfirmMessage": "Reject this counter offer? You can continue negotiating.",
   "serviceCounterOfferRespondFailed": "Failed to respond to counter offer",
-
   "browseServicesTitle": "Browse Services",
   "browseServicesSearchHint": "Search services...",
   "browseServicesFilterAll": "All",
@@ -5492,7 +5596,6 @@
   "browseServicesEmptyMessage": "Try adjusting your search or filters.",
   "browseServicesLoadMore": "Load more",
   "browseServicesNoMore": "No more services",
-
   "serviceStatusToggle": "Toggle Status",
   "serviceStatusActivate": "Activate",
   "serviceStatusDeactivate": "Deactivate",
@@ -5501,7 +5604,6 @@
   "serviceStatusToggleFailed": "Failed to update service status",
   "serviceStatusConfirmDeactivate": "Deactivate Service",
   "serviceStatusConfirmDeactivateMessage": "This service will be hidden from browse. You can reactivate it anytime.",
-
   "serviceReviewTitle": "Service Reviews",
   "serviceReviewEmpty": "No Reviews Yet",
   "serviceReviewEmptyMessage": "Be the first to review this service.",
@@ -5513,7 +5615,6 @@
   "serviceReviewSubmitted": "Review submitted successfully",
   "serviceReviewSubmitFailed": "Failed to submit review",
   "serviceReviewAlreadyReviewed": "You have already reviewed this service",
-
   "profileMyServiceApplications": "My Applications",
   "profileMyServiceApplicationsSubtitle": "Track your service applications",
   "profileReceivedApplications": "Received Applications",
@@ -5523,13 +5624,17 @@
   "serviceApplicationCreatedAt": "Applied {time}",
   "@serviceApplicationCreatedAt": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "serviceApplicationApprovedAt": "Approved {time}",
   "@serviceApplicationApprovedAt": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "receivedApplicationsFilterAll": "All",
@@ -5545,7 +5650,9 @@
   "versionUpdateAvailableMessage": "A new version {version} is available.",
   "@versionUpdateAvailableMessage": {
     "placeholders": {
-      "version": {"type": "String"}
+      "version": {
+        "type": "String"
+      }
     }
   },
   "versionUpdateNow": "Update Now",
@@ -5675,26 +5782,42 @@
   "packageRedemptionSuccessTitle": "Redeemed",
   "packageRedemptionSuccessPackageId": "Package ID: {id}",
   "@packageRedemptionSuccessPackageId": {
-    "placeholders": { "id": { "type": "Object" } }
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
   },
   "packageRedemptionSuccessUsage": "Used: {used} / {total}",
   "@packageRedemptionSuccessUsage": {
     "placeholders": {
-      "used": { "type": "Object" },
-      "total": { "type": "Object" }
+      "used": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
     }
   },
   "packageRedemptionSuccessRemaining": "Remaining: {remaining}",
   "@packageRedemptionSuccessRemaining": {
-    "placeholders": { "remaining": { "type": "Object" } }
+    "placeholders": {
+      "remaining": {
+        "type": "Object"
+      }
+    }
   },
-  "packageRedemptionSuccessExhausted": "\u26A0\uFE0F All sessions have been redeemed.",
+  "packageRedemptionSuccessExhausted": "⚠️ All sessions have been redeemed.",
   "packageRedemptionContinueScan": "Continue scanning",
   "packageRedemptionPickSubServiceTitle": "Choose a sub-service",
   "packageRedemptionPickSubServiceHint": "Pick which sub-service to redeem for this customer.",
   "packageRedemptionSubServiceRemaining": "Remaining: {remaining}",
   "@packageRedemptionSubServiceRemaining": {
-    "placeholders": { "remaining": { "type": "Object" } }
+    "placeholders": {
+      "remaining": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchaseDialogTitle": "Buy Package",
   "packagePurchaseTypeLabel": "Type",
@@ -5703,60 +5826,96 @@
   "packagePurchaseTotalSessionsLabel": "Total sessions",
   "packagePurchaseTotalSessionsValue": "{count} sessions",
   "@packagePurchaseTotalSessionsValue": {
-    "placeholders": { "count": { "type": "Object" } }
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchaseBundleSizeLabel": "Included services",
   "packagePurchaseBundleSizeValue": "{count} items",
   "@packagePurchaseBundleSizeValue": {
-    "placeholders": { "count": { "type": "Object" } }
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchasePriceLabel": "Price",
   "packagePurchasePriceValue": "{currency} {amount}",
   "@packagePurchasePriceValue": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "packagePurchasePerSessionLabel": "Per-session avg",
   "packagePurchasePerSessionValue": "{currency} {amount}/session",
   "@packagePurchasePerSessionValue": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "packagePurchaseOriginalPerSession": "Was {currency} {amount}/session",
   "@packagePurchaseOriginalPerSession": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "packagePurchaseSaveAmount": "Save {currency} {amount} ({percent}% off)",
   "@packagePurchaseSaveAmount": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" },
-      "percent": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
     }
   },
   "discountBadge": "{percent}% OFF",
   "@discountBadge": {
     "placeholders": {
-      "percent": { "type": "int" }
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "packagePurchaseLinkedServiceLabel": "Applies to",
   "serviceInactiveSuffix": "inactive",
   "userPackageLinkedServiceLabel": "For {name}",
   "@userPackageLinkedServiceLabel": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "packagePurchaseValidityLabel": "Valid for",
   "packagePurchaseValidityDays": "{days} days after purchase",
   "@packagePurchaseValidityDays": {
-    "placeholders": { "days": { "type": "Object" } }
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchaseValidityForever": "No expiry",
   "packagePurchaseFootnote": "After purchase, open the package from My Packages and show the QR code to redeem.",
@@ -5774,7 +5933,7 @@
   "errorPackagePriceNotSet": "Package price has not been set.",
   "errorServiceNotPackage": "This service is not a package.",
   "errorPersonalServiceNoPackage": "Personal services do not support package purchases.",
-  "errorPackageAlreadyActive": "You already have an active package for this service.",
+  "errorPackageAlreadyActive": "You already have an active package for this service. Use it up before buying another.",
   "errorServiceTeamResolveFailed": "Cannot resolve the team that owns this service.",
   "errorQrOrOtpRequired": "Please provide a QR code or OTP.",
   "errorQrInvalidOrExpired": "QR code is invalid or has expired. Please refresh.",
@@ -5894,7 +6053,9 @@
   "expertTransferConfirmIntro": "You're about to transfer ownership of this team to {newOwnerName}.",
   "@expertTransferConfirmIntro": {
     "placeholders": {
-      "newOwnerName": {"type": "String"}
+      "newOwnerName": {
+        "type": "String"
+      }
     }
   },
   "expertTransferImpactTitle": "After transfer:",
@@ -5904,7 +6065,9 @@
   "expertTransferTypeNameToConfirm": "To confirm, type the team name {teamName} below:",
   "@expertTransferTypeNameToConfirm": {
     "placeholders": {
-      "teamName": {"type": "String"}
+      "teamName": {
+        "type": "String"
+      }
     }
   },
   "expertTransferConfirmButton": "Transfer Ownership",
@@ -5950,22 +6113,47 @@
   "customerPackagesAnonymousUser": "Anonymous user",
   "customerPackagesUsedCount": "Used {used} / {total}",
   "@customerPackagesUsedCount": {
-    "placeholders": { "used": {"type": "int"}, "total": {"type": "int"} }
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "customerPackagesSubServiceProgress": "Sub-service progress:",
   "customerPackagesSubServiceLine": "{id}: {used} / {total}",
   "@customerPackagesSubServiceLine": {
-    "placeholders": { "id": {"type": "String"}, "used": {"type": "int"}, "total": {"type": "int"} }
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "used": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "customerPackagesExpiresOn": "Expires: {date}",
   "@customerPackagesExpiresOn": {
-    "placeholders": { "date": {"type": "String"} }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "customerPackagesManualRedeem": "Redeem",
   "customerPackagesRedeemConfirmTitle": "Confirm Redemption",
   "customerPackagesRedeemConfirmBody": "Redeem 1 session for {userName}?",
   "@customerPackagesRedeemConfirmBody": {
-    "placeholders": { "userName": {"type": "String"} }
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
   },
   "packageStatusActive": "Active",
   "packageStatusExhausted": "All sessions used",
@@ -5989,15 +6177,33 @@
   "packageDisputeSuccess": "Dispute submitted",
   "expertPackageNumber": "Package #{id}",
   "@expertPackageNumber": {
-    "placeholders": { "id": {"type": "String"} }
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
   },
   "expertPackageRemainingCount": "Remaining {remaining} / {total}",
   "@expertPackageRemainingCount": {
-    "placeholders": { "remaining": {"type": "int"}, "total": {"type": "int"} }
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "expertPackageQrTitle": "Package #{id} · {remaining} left",
   "@expertPackageQrTitle": {
-    "placeholders": { "id": {"type": "int"}, "remaining": {"type": "int"} }
+    "placeholders": {
+      "id": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
   },
   "expertPackageShowRedemptionCode": "Show Redemption Code",
   "expertPackageNotRedeemable": "Not redeemable",
@@ -6022,11 +6228,13 @@
   "expertTeamStatRating": "Rating",
   "expertTeamMembersHeader": "Members ({count})",
   "@expertTeamMembersHeader": {
-    "placeholders": { "count": {"type": "int"} }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "expertTeamSeeAll": "See all",
-  "errorPackageAlreadyActive": "You already have an active package for this service. Use it up before buying another.",
-  "errorPackageExpired": "This package has expired.",
   "errorPackageBundleSubRequired": "Please select which sub-service to redeem.",
   "errorTeamNoStripeAccount": "The team has not finished Stripe setup yet.",
   "errorServiceHasActiveActivities": "This service still has active activities. Cancel or finish them before deleting.",
@@ -6035,7 +6243,9 @@
   "serviceRadiusKm": "{radius}km",
   "@serviceRadiusKm": {
     "placeholders": {
-      "radius": { "type": "int" }
+      "radius": {
+        "type": "int"
+      }
     }
   },
   "serviceRadiusWholeCity": "Whole City",
@@ -6064,7 +6274,6 @@
   "@rentalListingStatusOverdue": {
     "description": "Rental item status badge: rental overdue"
   },
-
   "a11yActionButton": "Action button",
   "a11yDeleteItem": "Delete item",
   "a11yRefreshItem": "Refresh item",
@@ -6079,7 +6288,6 @@
   "a11yFilterItems": "Filter items",
   "a11yViewItem": "View item",
   "a11yUploadImage": "Upload image",
-
   "expertEditForumBoard": "Edit Forum Board",
   "expertForumBoardName": "Board Name",
   "expertForumBoardNameEn": "Board Name (English)",
@@ -6089,10 +6297,8 @@
   "expertForumBoardDescZh": "Board Description (Chinese)",
   "expertForumBoardUpdated": "Forum board updated",
   "expertForumBoardValidateName": "Board name is required",
-
   "profileMyPackages": "My Packages",
   "profileMyPackagesSubtitle": "Purchased service packages",
-
   "consultationErrorAlreadyExists": "You already have an ongoing consultation for this item",
   "@consultationErrorAlreadyExists": {},
   "consultationErrorNotFound": "Consultation not found",
@@ -6132,5 +6338,190 @@
   "expertTeamLabel": "Expert Team",
   "@expertTeamLabel": {},
   "unknownUser": "Unknown User",
-  "@unknownUser": {}
+  "@unknownUser": {},
+  "commonNoData": "No data",
+  "commonAdd": "Add",
+  "commonManage": "Manage",
+  "skillLevelBeginner": "Beginner",
+  "skillLevelIntermediate": "Intermediate",
+  "skillLevelExpert": "Expert",
+  "profileCapabilityProfile": "Capabilities",
+  "profilePreferenceProfile": "Preferences",
+  "profileReliabilityProfile": "Reliability",
+  "profileDemandPrediction": "Demand Prediction",
+  "profileNoSkillsHint": "No skills added yet. Tap \"Manage\" to add.",
+  "profileNoSkillsTitle": "No skills yet",
+  "profileNoSkillsSubtitle": "Tap the button to add your first skill",
+  "profileManageSkills": "Manage Skills",
+  "profileAddSkill": "Add Skill",
+  "profileDeleteSkill": "Delete Skill",
+  "profileDeleteSkillConfirm": "Delete \"{name}\"?",
+  "@profileDeleteSkillConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileSkillCategory": "Skill Category",
+  "profileSkillName": "Skill Name",
+  "profileSkillNameHint": "e.g. Python, graphic design, spoken English",
+  "profileSkillNameRequired": "Please enter the skill name",
+  "profileSkillNameTooLong": "Skill name must be ≤ 30 characters",
+  "profileSkillProficiency": "Proficiency",
+  "skillCategoryAcademic": "Academic Tutoring",
+  "skillCategoryTechnical": "Tech & Development",
+  "skillCategoryDesign": "Design & Creative",
+  "skillCategoryLanguageTranslation": "Language & Translation",
+  "skillCategoryLifestyleService": "Lifestyle Services",
+  "skillCategoryMusicArt": "Music & Art",
+  "skillCategorySports": "Sports & Fitness",
+  "skillCategoryOther": "Other",
+  "preferenceModeOnline": "Online",
+  "preferenceModeOffline": "Offline",
+  "preferenceModeBoth": "Either",
+  "preferenceDurationOneTime": "One-time",
+  "preferenceDurationLongTerm": "Long-term",
+  "preferenceRewardHighFreq": "Frequent & Small",
+  "preferenceRewardLowFreq": "Infrequent & Large",
+  "preferenceRewardNoPreference": "No Preference",
+  "preferenceTimeWeekdayDay": "Weekday Daytime",
+  "preferenceTimeWeekdayEvening": "Weekday Evening",
+  "preferenceTimeWeekend": "Weekend",
+  "preferenceTimeAnytime": "Anytime",
+  "preferenceSaved": "Preferences saved",
+  "preferenceModeTitle": "Collaboration Mode",
+  "preferenceModeDesc": "Do you prefer online or in-person tasks?",
+  "preferenceDurationTitle": "Task Duration",
+  "preferenceDurationDesc": "Do you prefer one-time or long-term tasks?",
+  "preferenceRewardTitle": "Reward Preference",
+  "preferenceRewardDesc": "Which reward style do you prefer?",
+  "preferenceTimeTitle": "Available Times",
+  "preferenceTimeDesc": "When are you usually available? (multi-select)",
+  "preferenceLocationPermissionRequired": "Location permission is required to enable nearby task alerts",
+  "preferenceLocationPermissionDenied": "Please enable location permission in system settings",
+  "preferenceSaveSettings": "Save Settings",
+  "reliabilityNotEnoughData": "Not enough data — complete more tasks to view",
+  "reliabilityCompletedTasks": "Completed Tasks",
+  "reliabilityTaskCountValue": "{count}",
+  "@reliabilityTaskCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reliabilityCompletionRate": "Completion Rate",
+  "reliabilityOnTimeRate": "On-time Rate",
+  "reliabilityCommScore": "Communication Score",
+  "reliabilityRepeatRate": "Repeat Rate",
+  "reliabilityScore": "Reliability Score",
+  "reliabilityScoreValue": "{score}",
+  "@reliabilityScoreValue": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "userStageNewArrival": "Just Arrived",
+  "userStageSettling": "Settling In",
+  "userStageEstablished": "Settled",
+  "userStageExperienced": "Experienced",
+  "demandCurrentStage": "Current Stage",
+  "demandPredicted": "Predicted Needs",
+  "demandNoData": "No demand data yet",
+  "chatNoExpertTeamForTask": "This task is not linked to an expert team",
+  "chatLoadMembersFailed": "Failed to load member list: {error}",
+  "@chatLoadMembersFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatAllMembersInChat": "All team members are already in the chat",
+  "chatInviteSuccess": "Invited {name} to the chat",
+  "@chatInviteSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatInviteFailed": "Invite failed: {error}",
+  "@chatInviteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aiChatLabelPersonal": "Personal",
+  "aiChatLabelExpert": "Expert",
+  "packageRedemptionShowQrHint": "Show this QR code to the expert to scan",
+  "packageRedemptionAutoRefresh": "Auto-refresh in {seconds}s",
+  "@packageRedemptionAutoRefresh": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "packageRedemptionScanFailedHint": "Scan failed? Ask the expert to input manually",
+  "packageRedemptionRefreshNow": "Refresh Now",
+  "groupBuyCannotLoad": "Unable to load group-buy info",
+  "groupBuyPersonUnit": "ppl",
+  "groupBuySuccess": "Group buy successful!",
+  "groupBuyNeedMore": "{count} more to close the deal",
+  "@groupBuyNeedMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupBuyDeadline": "Deadline: {time}",
+  "@groupBuyDeadline": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "groupBuyRoundN": "Round {round}",
+  "@groupBuyRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "groupBuyCancelEnrollment": "Cancel enrollment",
+  "groupBuyEnrollNow": "Enroll now",
+  "groupBuyAlreadyClosed": "Closed",
+  "expertTeamLoadFailedDefault": "Failed to load",
+  "expertTeamMemberCount": "{count} members",
+  "@expertTeamMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "expertTeamUnknownTeam": "Unknown team",
+  "homeYouMightNeed": "You might need",
+  "taskPreferencesSaveFailedRetry": "Save failed, please try again",
+  "profileSetupSubmitFailedDefault": "Submit failed, please try again",
+  "profileSetupSkip": "Skip",
+  "profileSetupNext": "Next",
+  "profileSetupFinish": "Finish",
+  "profileSetupSkillsTitle": "What are you good at?",
+  "profileSetupSkillsSubtitle": "Choose your skill areas",
+  "profileSetupTaskTypeTitle": "What kind of tasks do you prefer?",
+  "profileSetupOnlineLabel": "Online tasks",
+  "profileSetupOnlineDesc": "Complete tasks via video, text, or remotely",
+  "profileSetupOfflineLabel": "Offline tasks",
+  "profileSetupOfflineDesc": "In-person, on-site assistance",
+  "profileSetupBothDesc": "Both online & offline, flexible"
 }

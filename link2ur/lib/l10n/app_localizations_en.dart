@@ -96,6 +96,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonViewAll => 'View All';
 
   @override
+  String get commonCollapse => 'Show less';
+
+  @override
   String get commonLoadingImage => 'Loading image...';
 
   @override
@@ -195,6 +198,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loginRequiredForFavorite => 'Please log in to favorite services';
+
+  @override
+  String get noReviewsYet => 'No reviews yet';
 
   @override
   String get loginRequiredForVerification =>
@@ -6805,6 +6811,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentFastSecure => 'Fast and secure payment';
 
   @override
+  String get refundPolicyTitle => 'Refund Policy';
+
+  @override
+  String get refundPolicyFooterPrefix => 'By tapping Pay, you agree to our ';
+
+  @override
+  String get refundPolicyLinkText => 'Refund Policy';
+
+  @override
   String get paymentWeChatPay => 'WeChat Pay';
 
   @override
@@ -9488,6 +9503,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String profileViewAllReviewsCount(int count) {
     return 'View all $count reviews';
   }
+
+  @override
+  String get profileNoReviewsYet => 'No reviews yet';
+
+  @override
+  String get profileNoMoreReviews => 'No more reviews';
+
+  @override
+  String get profileNoServicesYet => 'No services yet';
+
+  @override
+  String get profileNoMoreServices => 'No more services';
+
+  @override
+  String get profileNoMorePosts => 'No more posts';
 
   @override
   String get profileServicePriceFrom => 'from';
@@ -13937,4 +13967,363 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unknownUser => 'Unknown User';
+
+  @override
+  String get commonNoData => 'No data';
+
+  @override
+  String get commonAdd => 'Add';
+
+  @override
+  String get commonManage => 'Manage';
+
+  @override
+  String get skillLevelBeginner => 'Beginner';
+
+  @override
+  String get skillLevelIntermediate => 'Intermediate';
+
+  @override
+  String get skillLevelExpert => 'Expert';
+
+  @override
+  String get profileCapabilityProfile => 'Capabilities';
+
+  @override
+  String get profilePreferenceProfile => 'Preferences';
+
+  @override
+  String get profileReliabilityProfile => 'Reliability';
+
+  @override
+  String get profileDemandPrediction => 'Demand Prediction';
+
+  @override
+  String get profileNoSkillsHint =>
+      'No skills added yet. Tap \"Manage\" to add.';
+
+  @override
+  String get profileNoSkillsTitle => 'No skills yet';
+
+  @override
+  String get profileNoSkillsSubtitle =>
+      'Tap the button to add your first skill';
+
+  @override
+  String get profileManageSkills => 'Manage Skills';
+
+  @override
+  String get profileAddSkill => 'Add Skill';
+
+  @override
+  String get profileDeleteSkill => 'Delete Skill';
+
+  @override
+  String profileDeleteSkillConfirm(String name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get profileSkillCategory => 'Skill Category';
+
+  @override
+  String get profileSkillName => 'Skill Name';
+
+  @override
+  String get profileSkillNameHint =>
+      'e.g. Python, graphic design, spoken English';
+
+  @override
+  String get profileSkillNameRequired => 'Please enter the skill name';
+
+  @override
+  String get profileSkillNameTooLong => 'Skill name must be ≤ 30 characters';
+
+  @override
+  String get profileSkillProficiency => 'Proficiency';
+
+  @override
+  String get skillCategoryAcademic => 'Academic Tutoring';
+
+  @override
+  String get skillCategoryTechnical => 'Tech & Development';
+
+  @override
+  String get skillCategoryDesign => 'Design & Creative';
+
+  @override
+  String get skillCategoryLanguageTranslation => 'Language & Translation';
+
+  @override
+  String get skillCategoryLifestyleService => 'Lifestyle Services';
+
+  @override
+  String get skillCategoryMusicArt => 'Music & Art';
+
+  @override
+  String get skillCategorySports => 'Sports & Fitness';
+
+  @override
+  String get skillCategoryOther => 'Other';
+
+  @override
+  String get preferenceModeOnline => 'Online';
+
+  @override
+  String get preferenceModeOffline => 'Offline';
+
+  @override
+  String get preferenceModeBoth => 'Either';
+
+  @override
+  String get preferenceDurationOneTime => 'One-time';
+
+  @override
+  String get preferenceDurationLongTerm => 'Long-term';
+
+  @override
+  String get preferenceRewardHighFreq => 'Frequent & Small';
+
+  @override
+  String get preferenceRewardLowFreq => 'Infrequent & Large';
+
+  @override
+  String get preferenceRewardNoPreference => 'No Preference';
+
+  @override
+  String get preferenceTimeWeekdayDay => 'Weekday Daytime';
+
+  @override
+  String get preferenceTimeWeekdayEvening => 'Weekday Evening';
+
+  @override
+  String get preferenceTimeWeekend => 'Weekend';
+
+  @override
+  String get preferenceTimeAnytime => 'Anytime';
+
+  @override
+  String get preferenceSaved => 'Preferences saved';
+
+  @override
+  String get preferenceModeTitle => 'Collaboration Mode';
+
+  @override
+  String get preferenceModeDesc => 'Do you prefer online or in-person tasks?';
+
+  @override
+  String get preferenceDurationTitle => 'Task Duration';
+
+  @override
+  String get preferenceDurationDesc =>
+      'Do you prefer one-time or long-term tasks?';
+
+  @override
+  String get preferenceRewardTitle => 'Reward Preference';
+
+  @override
+  String get preferenceRewardDesc => 'Which reward style do you prefer?';
+
+  @override
+  String get preferenceTimeTitle => 'Available Times';
+
+  @override
+  String get preferenceTimeDesc =>
+      'When are you usually available? (multi-select)';
+
+  @override
+  String get preferenceLocationPermissionRequired =>
+      'Location permission is required to enable nearby task alerts';
+
+  @override
+  String get preferenceLocationPermissionDenied =>
+      'Please enable location permission in system settings';
+
+  @override
+  String get preferenceSaveSettings => 'Save Settings';
+
+  @override
+  String get reliabilityNotEnoughData =>
+      'Not enough data — complete more tasks to view';
+
+  @override
+  String get reliabilityCompletedTasks => 'Completed Tasks';
+
+  @override
+  String reliabilityTaskCountValue(int count) {
+    return '$count';
+  }
+
+  @override
+  String get reliabilityCompletionRate => 'Completion Rate';
+
+  @override
+  String get reliabilityOnTimeRate => 'On-time Rate';
+
+  @override
+  String get reliabilityCommScore => 'Communication Score';
+
+  @override
+  String get reliabilityRepeatRate => 'Repeat Rate';
+
+  @override
+  String get reliabilityScore => 'Reliability Score';
+
+  @override
+  String reliabilityScoreValue(String score) {
+    return '$score';
+  }
+
+  @override
+  String get userStageNewArrival => 'Just Arrived';
+
+  @override
+  String get userStageSettling => 'Settling In';
+
+  @override
+  String get userStageEstablished => 'Settled';
+
+  @override
+  String get userStageExperienced => 'Experienced';
+
+  @override
+  String get demandCurrentStage => 'Current Stage';
+
+  @override
+  String get demandPredicted => 'Predicted Needs';
+
+  @override
+  String get demandNoData => 'No demand data yet';
+
+  @override
+  String get chatNoExpertTeamForTask =>
+      'This task is not linked to an expert team';
+
+  @override
+  String chatLoadMembersFailed(String error) {
+    return 'Failed to load member list: $error';
+  }
+
+  @override
+  String get chatAllMembersInChat => 'All team members are already in the chat';
+
+  @override
+  String chatInviteSuccess(String name) {
+    return 'Invited $name to the chat';
+  }
+
+  @override
+  String chatInviteFailed(String error) {
+    return 'Invite failed: $error';
+  }
+
+  @override
+  String get aiChatLabelPersonal => 'Personal';
+
+  @override
+  String get aiChatLabelExpert => 'Expert';
+
+  @override
+  String get packageRedemptionShowQrHint =>
+      'Show this QR code to the expert to scan';
+
+  @override
+  String packageRedemptionAutoRefresh(int seconds) {
+    return 'Auto-refresh in ${seconds}s';
+  }
+
+  @override
+  String get packageRedemptionScanFailedHint =>
+      'Scan failed? Ask the expert to input manually';
+
+  @override
+  String get packageRedemptionRefreshNow => 'Refresh Now';
+
+  @override
+  String get groupBuyCannotLoad => 'Unable to load group-buy info';
+
+  @override
+  String get groupBuyPersonUnit => 'ppl';
+
+  @override
+  String get groupBuySuccess => 'Group buy successful!';
+
+  @override
+  String groupBuyNeedMore(int count) {
+    return '$count more to close the deal';
+  }
+
+  @override
+  String groupBuyDeadline(String time) {
+    return 'Deadline: $time';
+  }
+
+  @override
+  String groupBuyRoundN(int round) {
+    return 'Round $round';
+  }
+
+  @override
+  String get groupBuyCancelEnrollment => 'Cancel enrollment';
+
+  @override
+  String get groupBuyEnrollNow => 'Enroll now';
+
+  @override
+  String get groupBuyAlreadyClosed => 'Closed';
+
+  @override
+  String get expertTeamLoadFailedDefault => 'Failed to load';
+
+  @override
+  String expertTeamMemberCount(int count) {
+    return '$count members';
+  }
+
+  @override
+  String get expertTeamUnknownTeam => 'Unknown team';
+
+  @override
+  String get homeYouMightNeed => 'You might need';
+
+  @override
+  String get taskPreferencesSaveFailedRetry => 'Save failed, please try again';
+
+  @override
+  String get profileSetupSubmitFailedDefault =>
+      'Submit failed, please try again';
+
+  @override
+  String get profileSetupSkip => 'Skip';
+
+  @override
+  String get profileSetupNext => 'Next';
+
+  @override
+  String get profileSetupFinish => 'Finish';
+
+  @override
+  String get profileSetupSkillsTitle => 'What are you good at?';
+
+  @override
+  String get profileSetupSkillsSubtitle => 'Choose your skill areas';
+
+  @override
+  String get profileSetupTaskTypeTitle => 'What kind of tasks do you prefer?';
+
+  @override
+  String get profileSetupOnlineLabel => 'Online tasks';
+
+  @override
+  String get profileSetupOnlineDesc =>
+      'Complete tasks via video, text, or remotely';
+
+  @override
+  String get profileSetupOfflineLabel => 'Offline tasks';
+
+  @override
+  String get profileSetupOfflineDesc => 'In-person, on-site assistance';
+
+  @override
+  String get profileSetupBothDesc => 'Both online & offline, flexible';
 }

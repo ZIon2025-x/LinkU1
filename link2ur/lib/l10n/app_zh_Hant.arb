@@ -45,6 +45,7 @@
   "commonShare": "分享",
   "commonMore": "更多",
   "commonViewAll": "查看全部",
+  "commonCollapse": "收起",
   "commonLoadingImage": "加載圖片中...",
   "commonNotProvided": "未提供",
   "commonPleaseSelect": "請選擇",
@@ -248,7 +249,7 @@
   "forumPosts": "帖子",
   "forumPostLoadFailed": "加載帖子失敗",
   "forumOfficial": "官方",
-  "forumAllReplies": "全部回復",
+  "forumAllReplies": "全部評論",
   "forumReply": "回復",
   "forumReplyTo": "回覆",
   "forumWriteReply": "寫回復...",
@@ -317,7 +318,7 @@
   "fleaMarketNegotiatePriceTooLow": "議價金額必須大於0。",
   "fleaMarketFavorite": "收藏",
   "fleaMarketLoadFailed": "加載商品信息失敗",
-  "fleaMarketItemDeleted": "該商品已下架或已刪除",
+  "fleaMarketItemDeleted": "商品已刪除",
   "fleaMarketItemNotFound": "商品不存在",
   "refundNotFound": "未找到退款記錄",
   "fleaMarketLoading": "加載中...",
@@ -329,7 +330,7 @@
   "fleaMarketPriceAndTransaction": "價格與交易",
   "fleaMarketProductDetail": "商品詳情",
   "fleaMarketProductImages": "商品圖片",
-  "fleaMarketPublishItem": "發布商品",
+  "fleaMarketPublishItem": "發佈商品",
   "fleaMarketTransactionLocation": "交易地點",
   "fleaMarketYourBid": "您的出價",
   "profileProfile": "個人中心",
@@ -358,12 +359,12 @@
   "leaderboardDescription": "描述",
   "leaderboardDescriptionPlaceholder": "簡單介紹一下這個競品...",
   "leaderboardInfo": "榜單信息",
-  "leaderboardItemCount": "競品",
+  "leaderboardItemCount": "競品數",
   "leaderboardLoadFailed": "加載榜單失敗",
   "leaderboardLoading": "加載中...",
   "leaderboardName": "榜單名稱",
   "leaderboardNamePlaceholder": "請輸入名稱",
-  "leaderboardNoItems": "暫無項目",
+  "leaderboardNoItems": "暫無排行榜",
   "leaderboardNoItemsMessage": "此榜單還沒有參與者。成爲第一個提交者吧！",
   "leaderboardReason": "申請理由",
   "leaderboardReasonPlaceholder": "向管理員說明創建此榜單的必要性，有助於加快審核流程...",
@@ -373,7 +374,7 @@
   "leaderboardSortLatest": "最新",
   "leaderboardSortNetVotes": "淨投票",
   "leaderboardSortUpvotes": "支持票",
-  "leaderboardTotalVotes": "總投票",
+  "leaderboardTotalVotes": "總投票數",
   "leaderboardViewCount": "瀏覽量",
   "leaderboardSubmittedBy": "由 {param1} 提交",
   "@leaderboardSubmittedBy": {
@@ -415,7 +416,7 @@
   "leaderboardItemAddress": "地址",
   "leaderboardItemPhone": "電話",
   "leaderboardItemWebsite": "官方網站",
-  "leaderboardSubmitItem": "提交參賽項",
+  "leaderboardSubmitItem": "提交競品",
   "leaderboardSubmitting": "正在提交...",
   "leaderboardAddressPlaceholder": "請輸入詳細地址",
   "leaderboardPhonePlaceholder": "請輸入聯繫電話",
@@ -435,7 +436,7 @@
     }
   },
   "taskExpertCompletionRate": "完成率",
-  "taskExpertNoServices": "該達人暫時沒有上架服務",
+  "taskExpertNoServices": "暫無服務",
   "taskExpertOrder": "單",
   "taskExpertCompletionRatePercent": "{param1}%完成率",
   "@taskExpertCompletionRatePercent": {
@@ -501,7 +502,7 @@
   "leaderboardSortHot": "熱門",
   "leaderboardSortVotes": "投票數",
   "leaderboardAddItem": "添加競品",
-  "leaderboardVoteCount": "投票",
+  "leaderboardVoteCount": "投票數",
   "paymentSetupAccount": "設置收款賬戶",
   "paymentPleaseSetupFirst": "請先設置收款賬戶",
   "paymentPleaseSetupMessage": "申請任務前需要先設置收款賬戶。請前往設置完成。",
@@ -544,7 +545,7 @@
   "activityParticipated": "已參與",
   "searchSearch": "搜尋",
   "searchResults": "結果",
-  "searchNoResults": "沒有找到相關結果",
+  "searchNoResults": "未找到結果",
   "searchTryOtherKeywords": "試試其他關鍵詞",
   "searchPlaceholder": "搜尋任務、達人、商品...",
   "searchTaskPlaceholder": "搜尋任務",
@@ -621,26 +622,26 @@
   "pointsTypeExpire": "積分過期",
   "pointsTypeCouponRedeem": "優惠券兌換",
   "timeJustNow": "剛剛",
-  "timeMinutesAgo": "{param1}分鐘前",
+  "timeMinutesAgo": "{minutes}分鐘前",
   "@timeMinutesAgo": {
     "placeholders": {
-      "param1": {
+      "minutes": {
         "type": "int"
       }
     }
   },
-  "timeHoursAgo": "{param1}小時前",
+  "timeHoursAgo": "{hours}小時前",
   "@timeHoursAgo": {
     "placeholders": {
-      "param1": {
+      "hours": {
         "type": "int"
       }
     }
   },
-  "timeDaysAgo": "{param1}天前",
+  "timeDaysAgo": "{days}天前",
   "@timeDaysAgo": {
     "placeholders": {
-      "param1": {
+      "days": {
         "type": "int"
       }
     }
@@ -872,9 +873,21 @@
   "taskRewardToBeQuoted": "待報價",
   "taskApplyQuoteAmountLabel": "報價金額（必填）",
   "taskApplyQuoteAmountHint": "需大於 {currencySymbol}1",
-  "@taskApplyQuoteAmountHint": {"placeholders": {"currencySymbol": {"type": "String"}}},
+  "@taskApplyQuoteAmountHint": {
+    "placeholders": {
+      "currencySymbol": {
+        "type": "String"
+      }
+    }
+  },
   "taskApplyQuoteAmountMin": "報價金額必須大於 {currencySymbol}1",
-  "@taskApplyQuoteAmountMin": {"placeholders": {"currencySymbol": {"type": "String"}}},
+  "@taskApplyQuoteAmountMin": {
+    "placeholders": {
+      "currencySymbol": {
+        "type": "String"
+      }
+    }
+  },
   "taskDetailApplyReasonHint": "向發布者說明你的申請理由，有助於提高申請成功率",
   "taskDetailSubmitApplication": "提交申請",
   "taskDetailApplicantsList": "申請者列表 ({param1})",
@@ -933,11 +946,19 @@
   "taskDetailDesignatedConsult": "諮詢",
   "taskChatDealClosedTitle": "已選擇 {name} 達成合作",
   "@taskChatDealClosedTitle": {
-    "placeholders": {"name": {"type": "String"}}
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "taskChatDealClosedPrice": "成交金額 {price}",
   "@taskChatDealClosedPrice": {
-    "placeholders": {"price": {"type": "String"}}
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
   },
   "taskChatDealClosedCta": "查看議價記錄",
   "taskChatHistoryReadOnlyBanner": "歷史記錄（唯讀）",
@@ -1074,7 +1095,6 @@
   "taskApplicationExpectedAmount": "期望金額",
   "taskApplicationNegotiatePriceHint": "提示: 協商價格可能會影響發布者的選擇哦。",
   "taskApplicationSubmitApplication": "提交申請",
-  "taskApplicationMessage": "留言",
   "taskApplicationMessageToApplicant": "給申請者留言...",
   "taskApplicationIsNegotiatePrice": "是否議價",
   "taskApplicationNegotiateAmount": "議價金額",
@@ -1431,10 +1451,10 @@
       }
     }
   },
-  "couponConsecutiveCheckIn": "{param1}天連續籤到",
+  "couponConsecutiveCheckIn": "連續簽到{days}天",
   "@couponConsecutiveCheckIn": {
     "placeholders": {
-      "param1": {
+      "days": {
         "type": "int"
       }
     }
@@ -1484,9 +1504,9 @@
   "createTaskDescription": "任務詳情",
   "createTaskDescriptionPlaceholder": "請詳細描述您的需求、時間、特殊要求等。描述越詳細，越容易被接受...",
   "createTaskOnline": "線上",
-  "createTaskReward": "任務獎勵",
-  "createTaskTitle": "任務標題",
-  "createTaskTitlePlaceholder": "簡要描述您的需求（例如：代取包裹）",
+  "createTaskReward": "任務報酬",
+  "createTaskTitle": "發佈任務",
+  "createTaskTitlePlaceholder": "請輸入任務標題",
   "studentVerificationStudentVerification": "學生認證",
   "studentVerificationEmailInfo": "郵箱信息",
   "studentVerificationSchoolEmail": "學校郵箱",
@@ -1563,11 +1583,11 @@
   "activityRemainingSlots": "剩餘名額",
   "activityStatus": "狀態",
   "activityHotRecruiting": "熱招中",
-  "activityLocation": "具體地點",
-  "activityType": "活動類型",
+  "activityLocation": "地點",
+  "activityType": "類型",
   "activityTimeArrangement": "時間安排",
   "activityMultipleTimeSlots": "支持多個拼單預約",
-  "activityDeadline": "截止日期",
+  "activityDeadline": "截止時間",
   "activityExclusiveDiscount": "專享折扣",
   "activityFilter": "篩選",
   "activityAll": "全部",
@@ -1824,11 +1844,11 @@
   "taskCategoryHousekeeping": "清潔家政",
   "taskCategoryCampusLife": "校園生活",
   "taskCategorySecondhandRental": "二手租賃",
-  "taskCategoryErrandRunning": "跑腿代購",
+  "taskCategoryErrandRunning": "跑腿代辦",
   "taskCategorySkillService": "技能服務",
-  "taskCategorySocialHelp": "社交互助",
-  "taskCategoryTransportation": "交通用車",
-  "taskCategoryPetCare": "寵物寄養",
+  "taskCategorySocialHelp": "社交幫助",
+  "taskCategoryTransportation": "交通出行",
+  "taskCategoryPetCare": "寵物照顧",
   "taskCategoryLifeConvenience": "生活便利",
   "taskCategoryOther": "其他",
   "expertCategoryAll": "全部",
@@ -1951,7 +1971,9 @@
   "taskExpertRelatedActivitiesAvailable": "{count} 個相關活動可報名",
   "@taskExpertRelatedActivitiesAvailable": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "taskExpertRelatedActivitiesSection": "達人的相關活動",
@@ -2024,7 +2046,7 @@
       }
     }
   },
-  "forumNoReplies": "暫無回復",
+  "forumNoReplies": "暫無評論",
   "forumPostReply": "發布回復",
   "forumSelectSection": "選擇板塊",
   "forumPleaseSelectSection": "請選擇板塊",
@@ -2160,10 +2182,10 @@
       }
     }
   },
-  "networkOffline": "離線",
-  "networkDisconnected": "網絡連接已斷開",
+  "networkOffline": "網路已斷開",
+  "networkDisconnected": "網路已斷開",
   "networkCheckSettings": "請檢查您的網絡設置",
-  "networkRestored": "網絡已恢復",
+  "networkRestored": "網路已恢復",
   "networkConnectedWifi": "已連接到 Wi-Fi",
   "networkConnectedCellular": "已連接到蜂窩網絡",
   "networkConnectedEthernet": "已連接到以太網",
@@ -2247,9 +2269,9 @@
   "shareQq": "QQ",
   "shareQzone": "QQ空間",
   "shareWeibo": "微博",
-  "shareSms": "短信",
-  "shareCopyLink": "複製鏈接",
-  "shareGenerateImage": "生成分享圖",
+  "shareSms": "簡訊",
+  "shareCopyLink": "複製連結",
+  "shareGenerateImage": "生成圖片",
   "shareShareTo": "分享到",
   "shareGeneratingImage": "正在生成分享圖...",
   "shareImage": "分享圖",
@@ -2260,10 +2282,10 @@
   "walletBalance": "錢包餘額",
   "walletMyWallet": "我的錢包",
   "walletPayoutManagement": "提現管理",
-  "walletPaymentRecords": "支付記錄",
+  "walletPaymentRecords": "收款記錄",
   "walletPaymentRecordsSubtitle": "查看所有支付記錄",
   "walletPayoutManagementSubtitle": "管理您的提現",
-  "settingsNotifications": "通知設置",
+  "settingsNotifications": "接收推播通知",
   "settingsAllowNotifications": "允許通知",
   "settingsSuccessSound": "成功提示音",
   "settingsSuccessSoundDescription": "操作成功時播放短促提示音",
@@ -2380,7 +2402,7 @@
   "paymentTransactionDetails": "交易詳情",
   "paymentComplete": "完成",
   "paymentCountdownExpired": "已過期",
-  "paymentCountdownRemaining": "剩餘 {param1}",
+  "paymentCountdownRemaining": "剩餘 {time}",
   "@paymentCountdownRemaining": {
     "placeholders": {
       "param1": {
@@ -2452,7 +2474,7 @@
   "applicationStatusNegotiatingDesc": "已發送報價，等待對方回應",
   "applicationStatusPriceAgreed": "已達成價格",
   "applicationStatusPriceAgreedDesc": "雙方已就價格達成一致，等待付款",
-  "myPostsTitle": "我的閒置",
+  "myPostsTitle": "我的帖子",
   "taskLocationAddress": "任務地址",
   "taskLocationCoordinates": "坐標",
   "taskLocationAppleMaps": "Apple 地圖",
@@ -2476,10 +2498,10 @@
   "paymentPayoutManagement": "提現管理",
   "onboardingSkip": "跳過",
   "onboardingWelcomeTitle": "歡迎來到 Link²Ur",
-  "onboardingWelcomeSubtitle": "連接你的世界",
+  "onboardingWelcomeSubtitle": "英國生活互助平台",
   "onboardingWelcomeDescription": "發布任務、接受任務、買賣二手商品，一切盡在掌握",
   "onboardingPublishTaskTitle": "發布任務",
-  "onboardingPublishTaskSubtitle": "輕鬆發布你的需求",
+  "onboardingPublishTaskSubtitle": "輕鬆找人幫忙",
   "onboardingPublishTaskDescription": "需要幫助？發布任務，讓有能力的用戶來幫你完成",
   "onboardingAcceptTaskTitle": "接受任務",
   "onboardingAcceptTaskSubtitle": "賺取額外收入",
@@ -2488,7 +2510,7 @@
   "onboardingSecurePaymentSubtitle": "平臺保障交易安全",
   "onboardingSecurePaymentDescription": "使用 Stripe 安全支付，任務完成後自動轉賬，保障雙方權益",
   "onboardingCommunityTitle": "社區互動",
-  "onboardingCommunitySubtitle": "論壇、排行榜、跳蚤市場",
+  "onboardingCommunitySubtitle": "連接你的世界",
   "onboardingCommunityDescription": "參與社區討論，查看排行榜，買賣二手商品，豐富你的校園生活",
   "onboardingPersonalizationTitle": "個性化設置",
   "onboardingPersonalizationSubtitle": "幫助我們爲你推薦更合適的內容",
@@ -2537,7 +2559,7 @@
   "profilePaymentAccountSubtitle": "設置收款賬戶以接收任務報酬",
   "profileNoContactInfo": "未綁定聯繫方式",
   "profileUserProfile": "用戶資料",
-  "profilePostedTasks": "發布任務",
+  "profilePostedTasks": "我發的",
   "profileTakenTasks": "接取任務",
   "profileCompletedTasks": "完成任務",
   "myItemsSelling": "正在出售",
@@ -2574,9 +2596,9 @@
   "fleaMarketSaveChanges": "儲存修改",
   "fleaMarketEditItemTitle": "編輯商品",
   "fleaMarketCategoryElectronics": "電子產品",
-  "fleaMarketCategoryClothing": "服裝配飾",
+  "fleaMarketCategoryClothing": "服飾鞋包",
   "fleaMarketCategoryFurniture": "家具家電",
-  "fleaMarketCategoryBooks": "圖書文具",
+  "fleaMarketCategoryBooks": "書籍教材",
   "fleaMarketCategorySports": "運動戶外",
   "fleaMarketCategoryBeauty": "美妝護膚",
   "fleaMarketCategoryAccessories": "配飾箱包",
@@ -2624,16 +2646,24 @@
   "fleaMarketCounterOfferReceived": "賣家還價 {currencySymbol}{price}",
   "@fleaMarketCounterOfferReceived": {
     "placeholders": {
-      "price": { "type": "String" },
-      "currencySymbol": { "type": "String" }
+      "price": {
+        "type": "String"
+      },
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "fleaMarketAcceptCounterOfferConfirmTitle": "接受還價",
   "fleaMarketAcceptCounterOfferConfirmMessage": "確定接受賣家的還價 {currencySymbol}{price} 嗎？",
   "@fleaMarketAcceptCounterOfferConfirmMessage": {
     "placeholders": {
-      "price": { "type": "String" },
-      "currencySymbol": { "type": "String" }
+      "price": {
+        "type": "String"
+      },
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "fleaMarketRejectCounterOfferConfirmTitle": "拒絕還價",
@@ -2951,7 +2981,9 @@
   "refundAmountPound": "退款金額（{currencySymbol}）",
   "@refundAmountPound": {
     "placeholders": {
-      "currencySymbol": {"type": "String"}
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "refundRatioPercent": "退款比例（%）",
@@ -3125,8 +3157,6 @@
   "paymentNoPayoutsMessage": "您還沒有任何提現記錄",
   "paymentExpired": "支付已過期",
   "paymentExpiredMessage": "支付時間已到，請重新發起支付。",
-  "paymentCountdownExpired": "已過期",
-  "paymentCountdownRemaining": "剩餘 {time}",
   "paymentCountdownTimeout": "支付已逾時",
   "paymentCountdownCompleteInTime": "請在規定時間內完成支付",
   "paymentCountdownTimeLeft": "距離逾時還剩 {time}",
@@ -3143,6 +3173,9 @@
   "paymentMethod": "支付方式",
   "paymentCreditDebitCard": "信用卡/扣帳卡",
   "paymentFastSecure": "快速安全支付",
+  "refundPolicyTitle": "退款政策",
+  "refundPolicyFooterPrefix": "支付即視為已閱讀並同意",
+  "refundPolicyLinkText": "《退款政策》",
   "paymentWeChatPay": "微信支付",
   "paymentAlipay": "支付寶",
   "paymentCouponSelected": "已選擇優惠券",
@@ -3165,7 +3198,6 @@
   "notificationTask": "任務通知",
   "notificationForum": "論壇通知",
   "notificationInteraction": "互動訊息",
-
   "errorNetworkTimeout": "網路連線逾時",
   "errorRequestFailedGeneric": "請求失敗",
   "errorRequestCancelled": "請求已取消",
@@ -3204,14 +3236,18 @@
   "errorTaskProposePriceFailed": "提出報價失敗，請重試",
   "errorTaskConfirmPayFailed": "發起支付失敗，請重試",
   "priceExceedsMaximum": "價格不能超過 {currencySymbol}50,000",
-  "@priceExceedsMaximum": {"placeholders": {"currencySymbol": {"type": "String"}}},
+  "@priceExceedsMaximum": {
+    "placeholders": {
+      "currencySymbol": {
+        "type": "String"
+      }
+    }
+  },
   "errorTaskListLoadFailed": "載入任務列表失敗",
   "errorTaskQuoteFailed": "報價提交失敗，請重試",
   "errorTaskQuoteAcceptFailed": "報價已提交，但自動接單失敗，請聯繫客服",
-
   "searchTitle": "搜尋",
   "searchHint": "搜尋任務、貼文、商品",
-  "searchNoResults": "未找到結果",
   "searchTryDifferent": "嘗試使用不同的關鍵詞搜尋",
   "searchResultCount": "共找到 {count} 個結果",
   "@searchResultCount": {
@@ -3223,15 +3259,11 @@
   },
   "searchRecentSearches": "最近搜尋",
   "searchClearHistory": "清除搜尋記錄",
-
-  "networkOffline": "網路已斷開",
   "networkOnline": "網路已恢復",
-
-  "notificationPermissionTitle": "開啟推送通知",
+  "notificationPermissionTitle": "需要通知權限",
   "notificationPermissionDescription": "開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務配對推薦\n• 優惠活動通知",
   "notificationPermissionEnable": "開啟通知",
   "notificationPermissionSkip": "暫時跳過",
-
   "feedbackPublishSuccess": "發布成功",
   "feedbackPublishFailed": "發布失敗",
   "feedbackTaskPublishSuccess": "任務發布成功",
@@ -3254,11 +3286,12 @@
   "feedbackNetworkError": "網路錯誤，請重試",
   "feedbackDeleteSuccess": "刪除成功",
   "feedbackCopySuccess": "已複製到剪貼簿",
-
   "errorPageNotFound": "頁面不存在: {uri}",
   "@errorPageNotFound": {
     "placeholders": {
-      "uri": { "type": "String" }
+      "uri": {
+        "type": "String"
+      }
     }
   },
   "errorServerTitle": "伺服器錯誤",
@@ -3280,7 +3313,9 @@
   "emptyNoSearchResultsWithKeyword": "沒有找到與「{keyword}」相關的內容",
   "@emptyNoSearchResultsWithKeyword": {
     "placeholders": {
-      "keyword": { "type": "String" }
+      "keyword": {
+        "type": "String"
+      }
     }
   },
   "emptyNoFavoritesDescription": "收藏的內容將顯示在這裡",
@@ -3295,7 +3330,6 @@
   "locationGetFailed": "取得位置失敗",
   "locationEnableLocationService": "請先開啟裝置的定位服務",
   "locationOpenMapFailed": "打開地圖失敗",
-  "notificationPermissionTitle": "需要通知權限",
   "notificationPermissionMessage": "您已拒絕通知權限，請在系統設定中手動開啟。",
   "notificationPermissionLater": "稍後再說",
   "permissionRequired": "需要{permissionName}權限",
@@ -3303,32 +3337,31 @@
   "permissionRequiredForFeature": "此功能需要{permissionName}權限才能正常使用",
   "@permissionRequired": {
     "placeholders": {
-      "permissionName": { "type": "String" }
+      "permissionName": {
+        "type": "String"
+      }
     }
   },
   "@permissionEnableInSettings": {
     "placeholders": {
-      "permissionName": { "type": "String" }
+      "permissionName": {
+        "type": "String"
+      }
     }
   },
   "@permissionRequiredForFeature": {
     "placeholders": {
-      "permissionName": { "type": "String" }
+      "permissionName": {
+        "type": "String"
+      }
     }
   },
   "badgeStudent": "學生",
   "badgeExpert": "達人",
   "activityCampusActivities": "校園活動",
-  "activityNoActivities": "暫無活動",
   "activityDetailTitle": "活動詳情",
   "activityInfoTitle": "活動資訊",
-  "activityByAppointment": "預約制",
   "activityParticipantCount": "參與人數",
-  "activityRemainingSlots": "剩餘名額",
-  "activityStatus": "狀態",
-  "activityLocation": "地點",
-  "activityType": "類型",
-  "activityDeadline": "截止時間",
   "activityDiscount": "折扣",
   "activityRewardType": "獎勵類型",
   "activitySignupSuccess": "報名成功",
@@ -3347,21 +3380,21 @@
   "authIAgreePrefix": "我已閱讀並同意 ",
   "authAnd": " 和 ",
   "forumPostDetail": "帖子詳情",
-  "forumAllReplies": "全部評論",
-  "forumNoReplies": "暫無評論",
-  "forumPinned": "置頂",
-  "forumBrowse": "瀏覽",
   "forumWriteComment": "撰寫評論...",
   "chatUserTitle": "使用者 {userId}",
   "@chatUserTitle": {
     "placeholders": {
-      "userId": { "type": "String" }
+      "userId": {
+        "type": "String"
+      }
     }
   },
   "chatTaskTitle": "任務 {taskId}",
   "@chatTaskTitle": {
     "placeholders": {
-      "taskId": { "type": "int" }
+      "taskId": {
+        "type": "int"
+      }
     }
   },
   "chatInputHint": "輸入訊息...",
@@ -3418,7 +3451,6 @@
   "fleaMarketDescPlaceholder": "描述一下你的商品...",
   "fleaMarketSelectCategory": "選擇分類",
   "fleaMarketLocationPlaceholder": "例如：校園北門",
-  "fleaMarketPublishItem": "發佈商品",
   "fleaMarketSelectImageFailed": "選擇圖片失敗",
   "fleaMarketInvalidPrice": "請輸入有效價格",
   "profileEditProfileTitle": "編輯資料",
@@ -3426,17 +3458,14 @@
   "profileNamePlaceholder": "請輸入姓名",
   "profileBioPlaceholder": "介紹一下自己...",
   "profileLocationPlaceholder": "例如：倫敦",
-  "profileMyForumPosts": "我的帖子",
   "profileMyPostsEmpty": "暫無帖子",
   "profileAcceptedTasks": "我接的",
-  "profilePostedTasks": "我發的",
   "walletPointsBalance": "積分餘額",
   "walletUnwithdrawnIncome": "未提現收入",
   "walletTotalEarned": "累計收入",
   "walletTotalWithdrawn": "累計提現",
   "walletTotalSpent": "累計消費",
   "walletPaymentAccount": "收款帳戶",
-  "walletPaymentRecords": "收款記錄",
   "walletPayoutRecords": "提現記錄",
   "walletTransactionRecords": "交易記錄",
   "walletNoTransactions": "暫無交易記錄",
@@ -3444,7 +3473,6 @@
   "walletMyCoupons": "我的優惠券",
   "walletNoCoupons": "暫無優惠券",
   "settingsGoLogin": "去登入",
-  "settingsNotifications": "接收推播通知",
   "settingsThemeSystem": "跟隨系統",
   "settingsThemeLight": "淺色",
   "settingsThemeDark": "深色",
@@ -3467,8 +3495,12 @@
   "couponRedeemConfirmContent": "確定使用 {points} 積分兌換「{couponName}」嗎？",
   "@couponRedeemConfirmContent": {
     "placeholders": {
-      "points": {"type": "int"},
-      "couponName": {"type": "String"}
+      "points": {
+        "type": "int"
+      },
+      "couponName": {
+        "type": "String"
+      }
     }
   },
   "couponNoPointsRecords": "暫無積分記錄",
@@ -3476,34 +3508,22 @@
   "couponEnterInviteCodeHint": "請輸入邀請碼或兌換碼",
   "couponNoCoupons": "暫無優惠券",
   "couponClaim": "領取",
-  "couponConsecutiveCheckIn": "連續簽到{days}天",
-  "@couponConsecutiveCheckIn": {
-    "placeholders": {
-      "days": { "type": "int" }
-    }
-  },
   "customerServiceRateTitle": "評價客服",
   "customerServiceRateHint": "留下您的評價（可選）",
   "customerServiceEndTitle": "結束對話",
   "customerServiceEndMessage": "確定要結束當前客服對話嗎？",
   "customerServiceEndButton": "結束",
   "customerServiceRefresh": "重新整理",
-  "notificationMarkAllRead": "全部已讀",
   "notificationSystemTab": "系統通知",
   "notificationInteractionTab": "互動訊息",
   "notificationTaskChatTitle": "任務聊天",
   "notificationNoTaskChats": "暫無任務聊天",
   "onboardingWelcome": "歡迎使用 Link²Ur",
-  "onboardingWelcomeSubtitle": "英國生活互助平台",
   "onboardingPublishTask": "發佈任務",
-  "onboardingPublishTaskSubtitle": "輕鬆找人幫忙",
   "onboardingAcceptTask": "接受任務",
-  "onboardingAcceptTaskSubtitle": "賺取額外收入",
   "onboardingSafePayment": "安全付款",
   "onboardingSafePaymentSubtitle": "資金有保障",
   "onboardingCommunity": "社群互動",
-  "onboardingCommunitySubtitle": "連接你的世界",
-  "onboardingPrevious": "上一步",
   "searchTasks": "搜尋任務",
   "searchFleaMarket": "搜尋閒置",
   "searchForum": "搜尋帖子",
@@ -3516,23 +3536,11 @@
   "searchLeaderboardItemsTitle": "排行榜競品",
   "searchForumCategoriesTitle": "論壇板塊",
   "searchServicesTitle": "個人服務",
-  "leaderboardNoItems": "暫無排行榜",
-  "leaderboardSubmitItem": "提交競品",
-  "leaderboardItemCount": "競品數",
-  "leaderboardVoteCount": "投票數",
-  "leaderboardViewCount": "瀏覽量",
-  "leaderboardCurrentScore": "當前得分",
-  "leaderboardTotalVotes": "總投票數",
   "leaderboardRankLabel": "排名",
-  "leaderboardNoImages": "暫無圖片",
   "taskExpertNotFound": "達人不存在",
-  "taskExpertRating": "評分",
   "taskExpertCompletedOrders": "完成單數",
   "taskExpertServices": "服務項目",
-  "taskExpertNoServices": "暫無服務",
   "taskExpertBook": "預約",
-  "createTaskTitle": "發佈任務",
-  "createTaskTitlePlaceholder": "請輸入任務標題",
   "createTaskDescPlaceholder": "請詳細描述任務要求...",
   "createTaskLocationPlaceholder": "請輸入任務地點",
   "createTaskPublish": "發佈任務",
@@ -3598,7 +3606,11 @@
   "discoveryExpertRatingNew": "新",
   "discoveryExpertCompletedTasks": "{count, plural, =0{剛開業} other{完成 {count} 單}}",
   "@discoveryExpertCompletedTasks": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "discoveryFeedTypeService": "達人服務",
   "discoveryFeedTypePersonalSkill": "個人技能",
@@ -3630,11 +3642,29 @@
   "homePublishTask": "發佈任務",
   "homeDeadlineExpired": "已截止",
   "homeDeadlineDays": "{days}天後截止",
-  "@homeDeadlineDays": { "placeholders": { "days": { "type": "int" } } },
+  "@homeDeadlineDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "homeDeadlineHours": "{hours}小時後",
-  "@homeDeadlineHours": { "placeholders": { "hours": { "type": "int" } } },
+  "@homeDeadlineHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "homeDeadlineMinutes": "{minutes}分鐘後",
-  "@homeDeadlineMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "@homeDeadlineMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "homeDefaultUser": "用戶",
   "homeClassmate": "Linker",
   "homePostedNewPost": "發佈了新帖子",
@@ -3647,7 +3677,13 @@
   "homeSearchFleaMarket": "搜尋閒置",
   "homeSearchPosts": "搜尋帖子",
   "homeSearchQueryResult": "搜尋 \"{query}\"",
-  "@homeSearchQueryResult": { "placeholders": { "query": { "type": "String" } } },
+  "@homeSearchQueryResult": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "homePressEnterToSearch": "按回車鍵搜尋",
   "taskCategoryPickup": "代取快遞",
   "taskCategoryTutoring": "論文輔導",
@@ -3668,36 +3704,50 @@
   "taskSortNearDeadline": "即將截止",
   "taskDeadlineExpired": "已過期",
   "taskDeadlineMinutes": "{minutes}分鐘後截止",
-  "@taskDeadlineMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "@taskDeadlineMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "taskDeadlineHours": "{hours}小時後截止",
-  "@taskDeadlineHours": { "placeholders": { "hours": { "type": "int" } } },
+  "@taskDeadlineHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "taskDeadlineDays": "{days}天後截止",
-  "@taskDeadlineDays": { "placeholders": { "days": { "type": "int" } } },
+  "@taskDeadlineDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "taskDeadlineDate": "{month}/{day} 截止",
-  "@taskDeadlineDate": { "placeholders": { "month": { "type": "int" }, "day": { "type": "int" } } },
-  "taskCategoryAll": "全部",
+  "@taskDeadlineDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "taskCategoryHousekeepingLife": "家務生活",
-  "taskCategoryCampusLife": "校園生活",
-  "taskCategorySecondhandRental": "二手租賃",
-  "taskCategoryErrandRunning": "跑腿代辦",
-  "taskCategorySkillService": "技能服務",
-  "taskCategorySocialHelp": "社交幫助",
-  "taskCategoryTransportation": "交通出行",
-  "taskCategoryPetCare": "寵物照顧",
-  "taskCategoryLifeConvenience": "生活便利",
-  "taskCategoryOther": "其他",
-  "createTaskTitle": "發佈任務",
   "createTaskType": "任務類型",
   "createTaskTitleField": "任務標題",
   "createTaskTitleHint": "請輸入任務標題",
   "createTaskDescHint": "請詳細描述任務要求...",
-  "createTaskReward": "任務報酬",
   "createTaskRewardToBeQuoted": "待報價（不填金額，由接單者報價）",
   "createTaskLocation": "任務地點",
   "createTaskLocationHint": "請輸入任務地點",
   "createTaskDeadline": "截止時間",
   "createTaskSelectDeadline": "選擇截止日期",
-  "createTaskAddImages": "添加圖片",
   "createTaskCategoryShopping": "代購",
   "createTaskCategoryTutoring": "輔導",
   "createTaskCategoryTranslation": "翻譯",
@@ -3721,7 +3771,13 @@
   "createTaskCategorySecondHand": "二手交易",
   "createTaskCategoryOther": "其他",
   "profileDirectRequestValidation": "請填寫標題和有效價格（≥{currencySymbol}1）",
-  "@profileDirectRequestValidation": {"placeholders": {"currencySymbol": {"type": "String"}}},
+  "@profileDirectRequestValidation": {
+    "placeholders": {
+      "currencySymbol": {
+        "type": "String"
+      }
+    }
+  },
   "profileDirectRequestHintLocation": "地點",
   "profileDirectRequestHintDeadline": "截止日期（選填）",
   "taskTypeHousekeeping": "家政服務",
@@ -3738,15 +3794,14 @@
   "taskTypeFleaMarket": "二手市場",
   "taskTypeCampusLifeNeedVerify": "發布「校園生活」任務需要先完成學生郵箱認證",
   "taskDetailNoImages": "暫無圖片",
-  "timeDaysAgo": "{days}天前",
-  "@timeDaysAgo": { "placeholders": { "days": { "type": "int" } } },
-  "timeHoursAgo": "{hours}小時前",
-  "@timeHoursAgo": { "placeholders": { "hours": { "type": "int" } } },
-  "timeMinutesAgo": "{minutes}分鐘前",
-  "@timeMinutesAgo": { "placeholders": { "minutes": { "type": "int" } } },
-  "timeJustNow": "剛剛",
   "forumUserFallback": "用戶 {userId}",
-  "@forumUserFallback": { "placeholders": { "userId": { "type": "String" } } },
+  "@forumUserFallback": {
+    "placeholders": {
+      "userId": {
+        "type": "String"
+      }
+    }
+  },
   "forumNoLeaderboard": "暫無排行榜",
   "forumNoLeaderboardMessage": "還沒有排行榜",
   "forumNoPostsHint": "還沒有帖子，點擊下方按鈕發佈第一個帖子",
@@ -3783,7 +3838,9 @@
   "walletAvailableBalance": "可用餘額: {amount}",
   "@walletAvailableBalance": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "walletBalanceDeduction": "餘額抵扣",
@@ -3792,14 +3849,15 @@
   "walletPayNow": "餘額支付 {amount}",
   "@walletPayNow": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "myTasksTitle": "我的任務",
   "myTasksAccepted": "我接的",
   "myTasksPosted": "我發的",
   "myTasksGoAccept": "去接任務",
-  "commonSave": "儲存",
   "profileBio": "個人簡介",
   "profileBioHint": "介紹一下自己...",
   "profileCity": "居住城市",
@@ -3807,32 +3865,22 @@
   "profileNameRequired": "請輸入姓名",
   "profileNameMinLength": "姓名至少需要3個字符",
   "profileAnonymousUser": "匿名用戶",
-  "myPostsTitle": "我的帖子",
   "myPostsEmpty": "暫無帖子",
   "myPostsEmptyDesc": "您還沒有發佈過帖子",
   "fleaMarketSold": "已售出",
   "fleaMarketDelisted": "已下架",
   "fleaMarketItemReserved": "商品已被預留",
   "fleaMarketCategoryAll": "全部",
-  "fleaMarketCategoryElectronics": "電子產品",
-  "fleaMarketCategoryBooks": "書籍教材",
   "fleaMarketCategoryDailyUse": "生活用品",
-  "fleaMarketCategoryClothing": "服飾鞋包",
-  "fleaMarketCategorySports": "運動戶外",
-  "fleaMarketCategoryOther": "其他",
-  "fleaMarketProductImages": "商品圖片",
-  "fleaMarketInvalidPrice": "請輸入有效價格",
   "fleaMarketImageSelectFailed": "選擇圖片失敗",
   "fleaMarketTitleMinLength": "標題至少需要2個字符",
   "fleaMarketTitleRequired": "請輸入商品標題",
   "fleaMarketDescOptional": "商品描述（選填）",
   "fleaMarketDescHint": "描述一下你的商品...",
-  "fleaMarketSelectCategory": "選擇分類",
   "fleaMarketLocationOptional": "位置（選填）",
   "fleaMarketLocationHint": "例如：校園北門",
   "fleaMarketPriceRequired": "請輸入價格",
   "fleaMarketCategoryLabel": "分類",
-  "fleaMarketSeller": "賣家",
   "fleaMarketNoItemsHint": "還沒有商品，點擊下方按鈕發佈第一個商品",
   "chatNoMessages": "還沒有訊息，開始對話吧",
   "chatInProgress": "進行中",
@@ -3840,7 +3888,6 @@
   "chatTaskClosedHint": "該任務已關閉，無法發送訊息",
   "chatTaskCompletedConfirm": "任務已完成，請確認。",
   "chatHasIssueMessage": "我遇到了一些問題：",
-  "activityCampusActivities": "校園活動",
   "activityCheckLater": "稍後再來看看吧",
   "activityNoAvailableActivities": "還沒有可用的活動",
   "activityRegisterSuccess": "報名成功",
@@ -3862,7 +3909,6 @@
   "activityPublisher": "發佈者",
   "activityViewExpertProfileShort": "查看達人資料",
   "activityParticipantsCount": "參與人數",
-  "activityRemainingSlots": "剩餘名額",
   "activityStatusLabel": "狀態",
   "activityRegistrationDeadline": "報名截止：",
   "activityCurrentApplicants": "當前報名：",
@@ -3881,25 +3927,42 @@
   "activityNotWon": "期待下次活動",
   "activityDrawCompleted": "已開獎",
   "activityLotteryPending": "等待開獎",
-  "activityActivities": "活動",
   "activityPersonCount": "{current}/{max}人",
-  "@activityPersonCount": { "placeholders": { "current": { "type": "int" }, "max": { "type": "int" } } },
+  "@activityPersonCount": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "leaderboardNoLeaderboards": "暫無排行榜",
   "leaderboardNoLeaderboardsMessage": "還沒有排行榜",
   "leaderboardNoCompetitorsHint": "還沒有競品，點擊下方按鈕提交第一個競品",
   "leaderboardNetVotesCount": "淨 {count}",
-  "@leaderboardNetVotesCount": { "placeholders": { "count": { "type": "int" } } },
+  "@leaderboardNetVotesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "leaderboardRankFirst": "第1",
   "leaderboardRankSecond": "第2",
   "leaderboardRankThird": "第3",
   "leaderboardDetails": "詳情",
   "leaderboardCompletedCount": "完成 {count} 單",
-  "@leaderboardCompletedCount": { "placeholders": { "count": { "type": "int" } } },
-  "notificationMarkAllRead": "全部已讀",
+  "@leaderboardCompletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notificationSystemNotifications": "系統通知",
   "notificationInteractionMessages": "互動訊息",
-  "notificationTaskChat": "任務聊天",
-  "notificationNoTaskChat": "暫無任務聊天",
   "notificationNoTaskChatDesc": "接取或發佈任務後，可以在這裡與對方溝通",
   "taskExpertDetailTitle": "達人詳情",
   "taskExpertExpertNotExist": "達人不存在",
@@ -3915,12 +3978,29 @@
   "taskExpertApplicationApproved": "您的達人申請已通過！",
   "taskExpertApplicationRejected": "您的達人申請未通過",
   "taskExpertServiceCount": "{count} 項服務",
-  "@taskExpertServiceCount": { "placeholders": { "count": { "type": "int" } } },
+  "@taskExpertServiceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "taskExpertShareTitle": "分享任務達人 - {name}",
-  "@taskExpertShareTitle": { "placeholders": { "name": { "type": "String" } } },
+  "@taskExpertShareTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "taskExpertShareText": "來看看這位任務達人：{name}",
-  "@taskExpertShareText": { "placeholders": { "name": { "type": "String" } } },
-
+  "@taskExpertShareText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "infoFAQAccountQ1": "如何註冊帳號？",
   "infoFAQAccountA1": "您可以使用電郵或手機號碼註冊。在登入頁面點擊「註冊」，按照提示完成操作即可。",
   "infoFAQAccountQ2": "如何重設密碼？",
@@ -3929,7 +4009,6 @@
   "infoFAQAccountA3": "前往 個人中心 > 編輯資料，即可更新頭像、暱稱、簡介等資訊。",
   "infoFAQAccountQ4": "如何註銷帳號？",
   "infoFAQAccountA4": "前往 設定 > 帳號安全 > 註銷帳號。請注意此操作不可撤銷。",
-
   "infoFAQTaskQ1": "如何發布任務？",
   "infoFAQTaskA1": "點擊底部的「+」按鈕，選擇「發布任務」，填寫任務詳情後提交即可。",
   "infoFAQTaskQ2": "如何接受任務？",
@@ -3938,7 +4017,6 @@
   "infoFAQTaskA3": "前往任務詳情頁，點擊「取消任務」。請注意可能適用取消政策。",
   "infoFAQTaskQ4": "遇到糾紛怎麼辦？",
   "infoFAQTaskA4": "您可以透過任務聊天頁面發起糾紛。我們的客服團隊會協助解決。",
-
   "infoFAQPaymentQ1": "支援哪些付款方式？",
   "infoFAQPaymentA1": "我們支援 Stripe（信用卡/扣帳卡）、Apple Pay 和微信支付。",
   "infoFAQPaymentQ2": "資金託管是如何運作的？",
@@ -3947,7 +4025,6 @@
   "infoFAQPaymentA3": "前往任務詳情頁，點擊「申請退款」，填寫退款原因，我們的團隊會在1-3個工作日內審核。",
   "infoFAQPaymentQ4": "如何提現？",
   "infoFAQPaymentA4": "前往 錢包 > 提現，連接您的 Stripe 帳戶即可提現到銀行帳戶。",
-
   "vipPlanFeatureMonthly1": "任務優先推薦",
   "vipPlanFeatureMonthly2": "專屬VIP徽章",
   "vipPlanFeatureMonthly3": "服務費減免",
@@ -3956,20 +4033,24 @@
   "vipPlanFeatureYearly3": "積分加倍 & 專屬活動",
   "vipPlanFeatureYearly4": "數據分析面板",
   "vipPlanBadgeBestValue": "超值推薦",
-
   "vipRegularUser": "普通用戶",
   "infoVersionFormat": "版本 {version} ({buildNumber})",
-  "@infoVersionFormat": { "placeholders": { "version": { "type": "String" }, "buildNumber": { "type": "String" } } },
+  "@infoVersionFormat": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
   "infoCopyright": "© 2024 Link²Ur. 保留所有權利。",
-
   "chatImagePlaceholder": "[圖片]",
-
   "studentVerificationEmailLocked": "電郵已鎖定，請等待審核完成",
   "studentVerificationPending": "認證審核中，請查收電郵並完成驗證",
-
   "purchaseFailed": "購買失敗，請稍後重試。",
   "restorePurchaseFailed": "恢復購買失敗，請稍後重試。",
-
   "onboardingTaskTypeErrand": "跑腿代辦",
   "onboardingTaskTypeSkill": "技能服務",
   "onboardingTaskTypeHousekeeping": "家政清潔",
@@ -3980,33 +4061,25 @@
   "onboardingTaskTypePetCare": "寵物看護",
   "onboardingTaskTypeConvenience": "生活便利",
   "onboardingTaskTypeOther": "其他",
-
   "fleaMarketCategoryKeyElectronics": "電子產品",
   "fleaMarketCategoryKeyBooks": "書籍教材",
   "fleaMarketCategoryKeyDaily": "生活用品",
   "fleaMarketCategoryKeyClothing": "服飾鞋包",
   "fleaMarketCategoryKeySports": "運動戶外",
   "fleaMarketCategoryKeyOther": "其他",
-
   "couponRewardPoints50": "+50積分",
   "couponRewardPoints100Coupon": "+100積分 + 優惠券",
   "couponRewardPoints500Vip": "+500積分 + VIP體驗",
-
   "settingsLanguageEnglish": "English",
   "settingsLanguageChinese": "中文",
-
   "infoTermsContent": "Link²Ur 服務條款\n\n最後更新日期：2024年1月1日\n\n1. 服務概述\nLink²Ur 是一個英國生活互助平台，旨在幫助用戶發布和接受各類生活服務任務。\n\n2. 用戶責任\n- 用戶應提供真實、準確的個人資訊\n- 用戶應遵守平台規則和相關法律法規\n- 用戶對其發布的內容承擔責任\n\n3. 平台責任\n- 平台提供資訊中介服務\n- 平台對交易資金實行託管保障\n- 平台有權對違規行為進行處理\n\n4. 支付與結算\n- 所有支付透過第三方支付平台處理\n- 任務完成後平台自動結算\n- 平台收取合理的服務費用\n\n5. 隱私保護\n請參閱我們的隱私政策了解詳細資訊。\n\n6. 免責聲明\n平台作為資訊中介，不對用戶之間的交易承擔直接責任。\n\n如有任何疑問，請聯繫我們的客服團隊。",
   "infoPrivacyContent": "Link²Ur 隱私政策\n\n最後更新日期：2024年1月1日\n\n1. 資訊收集\n我們收集以下類型的資訊：\n- 註冊資訊（姓名、電郵等）\n- 位置資訊（用於附近任務推薦）\n- 設備資訊（用於推送通知）\n\n2. 資訊使用\n我們使用您的資訊來：\n- 提供和改善服務\n- 個性化推薦\n- 保障交易安全\n\n3. 資訊儲存與保護\n- 數據儲存在安全的伺服器上\n- 採用加密技術保護數據傳輸\n- 定期進行安全審計\n\n4. 資訊共享\n我們不會出售您的個人資訊。僅在以下情況下共享：\n- 經您同意\n- 法律要求\n- 服務提供所必需\n\n5. Cookie 政策\n我們使用 Cookie 來改善用戶體驗。\n\n6. 您的權利\n- 存取和修改個人資訊\n- 刪除帳號\n- 退訂通知\n\n如有隱私相關問題，請聯繫 privacy@link2ur.com",
   "infoCookieContent": "Link²Ur Cookie 政策\n\n我們使用 Cookie 和類似技術來改善您的使用體驗。\n\n1. 什麼是 Cookie\nCookie 是儲存在您設備上的小型文字檔案。\n\n2. 我們如何使用 Cookie\n- 必要 Cookie：保持登入狀態\n- 功能 Cookie：記住偏好設定\n- 分析 Cookie：改善服務品質\n\n3. 管理 Cookie\n您可以在設備設定中管理 Cookie 偏好。",
   "infoCommunityGuidelinesContent": "Link²Ur 社區準則\n\n生效日期：2026年3月\n\n1. 內容標準\n- 尊重他人：禁止人身攻擊、侮辱、歧視性言論\n- 真實可信：禁止虛假、誤導或詐騙性資訊\n- 合法合規：禁止違法內容、侵權內容\n- 安全健康：禁止危害用戶安全的內容\n\n2. 論壇行為規範\n- 帖子應發佈在相應學校分區\n- 回覆應與主題相關，禁止刷屏\n- 禁止商業廣告、學術不誠信內容\n\n3. 任務與交易規範\n- 任務描述應清晰準確\n- 評價應基於真實體驗\n- 禁止虛假好評或惡意差評\n\n4. 舉報與申訴\n- 點擊「舉報」按鈕舉報違規內容\n- 對處罰有異議可在14天內申訴\n\n5. 違規處理\n提醒/警告 → 內容刪除 → 臨時限制 → 帳戶暫停 → 永久封禁\n\n如有疑問請聯繫：info@link2ur.com",
-
-  "settingsUnknown": "未知",
-
   "serviceNegotiatePrice": "價格議價",
   "serviceNegotiatePriceHint": "向達人提出不同的價格",
   "serviceSelectDeadline": "選擇期限",
   "serviceApplyOtherSlot": "申請其他拼單",
-
   "publishTitle": "發佈",
   "publishTypeSubtitle": "選擇你要發佈的內容類型",
   "publishTaskTab": "任務發佈",
@@ -4033,7 +4106,6 @@
   "publishTip2": "上傳清晰實拍圖，能提高瀏覽和成交率",
   "publishTip3": "報酬或價格寫明確，減少溝通成本",
   "publishTip4": "選對分類，曝光更精準",
-
   "profileUpdateFailed": "更新失敗",
   "profileAvatarUpdated": "頭像已更新",
   "profileUploadFailed": "上傳失敗",
@@ -4041,7 +4113,6 @@
   "commonSuccess": "成功",
   "commonError": "錯誤",
   "commonSaved": "已儲存",
-
   "validatorEmailRequired": "請輸入電子郵件地址",
   "validatorEmailInvalid": "請輸入有效的電子郵件地址",
   "validatorPhoneRequired": "請輸入手機號碼",
@@ -4080,23 +4151,14 @@
   "validatorFieldRequired": "{fieldName}不能為空",
   "validatorFieldMinLength": "{fieldName}至少{min}個字元",
   "validatorFieldMaxLength": "{fieldName}最多{max}個字元",
-
-  "timeJustNow": "剛剛",
-  "timeMinutesAgo": "{minutes}分鐘前",
-  "timeHoursAgo": "{hours}小時前",
   "timeYesterday": "昨天",
   "timeDayBeforeYesterday": "前天",
-  "timeExpired": "已過期",
   "timeDeadlineMinutes": "{minutes}分鐘後截止",
   "timeDeadlineHours": "{hours}小時後截止",
   "timeDeadlineDays": "{days}天後截止",
   "timeDeadlineDate": "{date} 截止",
-
-  "badgeExpert": "達人",
-  "badgeStudent": "學生",
   "badgeVip": "VIP",
   "badgeSuper": "Super",
-
   "notificationPermTitle": "開啟推送通知",
   "notificationPermDesc": "開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務匹配推薦\n• 優惠活動通知",
   "notificationPermEnable": "開啟通知",
@@ -4105,22 +4167,10 @@
   "notificationPermSettingsDesc": "您已拒絕通知權限，請在系統設定中手動開啟。",
   "notificationPermSettingsLater": "稍後再說",
   "notificationPermSettingsGo": "前往設定",
-
-  "networkDisconnected": "網路已斷開",
-  "networkRestored": "網路已恢復",
-
   "shareTitle": "分享到",
   "shareLinkCopied": "連結已複製",
-  "shareWechat": "微信",
-  "shareWechatMoments": "朋友圈",
   "shareQQ": "QQ",
-  "shareQzone": "QQ空間",
-  "shareWeibo": "微博",
-  "shareSms": "簡訊",
-  "shareCopyLink": "複製連結",
-  "shareGenerateImage": "生成圖片",
   "shareMore": "更多",
-
   "actionItemPublished": "商品發佈成功",
   "actionPublishFailed": "發佈失敗",
   "actionPurchaseSuccess": "購買成功",
@@ -4129,7 +4179,6 @@
   "actionUpdateFailed": "更新失敗",
   "actionRefreshSuccess": "重新整理成功",
   "actionRefreshFailed": "重新整理失敗",
-
   "actionApplicationSubmitted": "申請已提交",
   "actionApplicationFailed": "申請失敗",
   "actionApplicationCancelled": "已取消申請",
@@ -4157,65 +4206,87 @@
   "actionNegotiationRejected": "已拒絕議價",
   "actionApplicationMessageSent": "訊息已發送",
   "actionApplicationMessageFailed": "訊息發送失敗",
-
   "actionCheckInSuccess": "簽到成功！",
   "actionCheckInFailed": "簽到失敗",
-
   "actionVoteFailed": "投票失敗",
   "actionLeaderboardApplied": "申請已提交",
   "actionLeaderboardSubmitted": "提交成功",
-
   "actionVerificationSubmitted": "提交成功，請查收郵箱驗證",
   "actionVerificationSuccess": "驗證成功",
   "actionVerificationFailed": "驗證失敗",
   "actionRenewalSuccess": "續期成功",
   "actionRenewalFailed": "續期失敗",
-
   "actionRegistrationSuccess": "報名成功",
   "actionRegistrationFailed": "報名失敗",
-
   "actionConversationEnded": "對話已結束",
   "actionEndConversationFailed": "結束對話失敗",
   "actionFeedbackSuccess": "評價成功，感謝您的回饋",
   "actionFeedbackFailed": "評價失敗",
-
   "actionCouponClaimed": "領取成功",
   "actionCouponRedeemed": "兌換成功",
   "actionInviteCodeUsed": "邀請碼使用成功",
-
   "profileRecentPosts": "近期帖子",
   "profileNoRecentPosts": "暫無帖子",
   "profileSoldItems": "已售物品",
   "profileMetaJoinedFor": "註冊 {months, plural, other{{months} 個月}}",
   "@profileMetaJoinedFor": {
-    "placeholders": { "months": { "type": "int" } }
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
   },
   "profileNoSoldItems": "暫無已售物品",
   "profilePersonalServices": "個人服務",
   "profilePersonalServicesCount": "· {count} 項",
   "@profilePersonalServicesCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileSharedWithYou": "你和 TA 的合作",
   "profileSharedTasksCount": "· {count} 次",
   "@profileSharedTasksCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileForumPostsCount": "· {count} 篇",
   "@profileForumPostsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileReviewsSubtitle": "{rating} · {count} 條",
   "@profileReviewsSubtitle": {
     "placeholders": {
-      "rating": { "type": "String" },
-      "count": { "type": "int" }
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "profileViewAllReviewsCount": "查看全部 {count} 條評價",
   "@profileViewAllReviewsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
+  "profileNoReviewsYet": "暫無評價",
+  "profileNoMoreReviews": "沒有更多評價了",
+  "profileNoServicesYet": "暫無個人服務",
+  "profileNoMoreServices": "沒有更多服務了",
+  "profileNoMorePosts": "沒有更多帖子了",
   "profileServicePriceFrom": "起",
   "profileServiceNegotiable": "議價",
   "profileFollowers": "粉絲",
@@ -4232,21 +4303,17 @@
   "profileDirectRequestSubmit": "發送請求",
   "profileMySoldItems": "已售閒置",
   "profileMySoldItemsSubtitle": "查看已售出的閒置物品",
-
   "commonDefault": "預設",
-
   "paymentIncorrectCvc": "CVC 驗證碼不正確",
   "paymentIncorrectCardNumber": "卡號不正確",
   "paymentAuthenticationRequired": "需要身份驗證",
   "paymentProcessingError": "支付處理錯誤",
   "paymentTooManyRequests": "請求過於頻繁，請稍後再試",
   "paymentInvalidRequest": "無效的支付請求",
-
   "transactionTypePayment": "支付",
   "transactionTypePayout": "收款",
   "transactionTypeRefund": "退款",
   "transactionTypeFee": "服務費",
-
   "supportChatTitle": "Linker",
   "supportChatConnecting": "連接中...",
   "supportChatHumanOnline": "人工客服在線",
@@ -4281,7 +4348,6 @@
       }
     }
   },
-
   "toolCallQueryMyTasks": "查詢我的任務",
   "toolCallGetTaskDetail": "取得任務詳情",
   "toolCallSearchTasks": "搜尋任務",
@@ -4296,7 +4362,6 @@
   "toolCallSearchFleaMarket": "搜尋跳蚤市場",
   "toolCallGetLeaderboardSummary": "查看排行榜",
   "toolCallListTaskExperts": "瀏覽達人",
-
   "toolCallLoadingQueryMyTasks": "正在查詢你的任務…",
   "toolCallLoadingGetTaskDetail": "正在取得任務詳情…",
   "toolCallLoadingSearchTasks": "正在搜尋任務…",
@@ -4311,7 +4376,6 @@
   "toolCallLoadingSearchFleaMarket": "正在搜尋跳蚤市場…",
   "toolCallLoadingGetLeaderboardSummary": "正在載入排行榜…",
   "toolCallLoadingListTaskExperts": "正在載入達人…",
-
   "toolCallGetMyWalletSummary": "錢包概況",
   "toolCallGetMyMessagesSummary": "聊天摘要",
   "toolCallGetMyVipStatus": "VIP 狀態",
@@ -4319,7 +4383,6 @@
   "toolCallGetMyCheckinStatus": "簽到狀態",
   "toolCallGetMyFleaMarketItems": "我的跳蚤市場",
   "toolCallSearchForumPosts": "搜尋論壇",
-
   "toolCallLoadingGetMyWalletSummary": "正在查詢錢包…",
   "toolCallLoadingGetMyMessagesSummary": "正在載入聊天摘要…",
   "toolCallLoadingGetMyVipStatus": "正在查詢 VIP 狀態…",
@@ -4327,7 +4390,6 @@
   "toolCallLoadingGetMyCheckinStatus": "正在查詢簽到…",
   "toolCallLoadingGetMyFleaMarketItems": "正在載入您的商品…",
   "toolCallLoadingSearchForumPosts": "正在搜尋論壇…",
-
   "toolCallGetActivityDetail": "活動詳情",
   "toolCallGetExpertDetail": "達人詳情",
   "toolCallGetForumPostDetail": "帖子詳情",
@@ -4337,7 +4399,6 @@
   "toolCallListMyActivities": "我參加的活動",
   "toolCallListForumCategories": "論壇分類",
   "toolCallGetTaskReviews": "任務評價",
-
   "toolCallLoadingGetActivityDetail": "正在載入活動詳情…",
   "toolCallLoadingGetExpertDetail": "正在載入達人詳情…",
   "toolCallLoadingGetForumPostDetail": "正在載入帖子詳情…",
@@ -4347,7 +4408,6 @@
   "toolCallLoadingListMyActivities": "正在載入您參加的活動…",
   "toolCallLoadingListForumCategories": "正在載入論壇分類…",
   "toolCallLoadingGetTaskReviews": "正在載入任務評價…",
-
   "toolCallPrepareTaskDraft": "任務草稿",
   "toolCallLoadingPrepareTaskDraft": "正在生成任務草稿…",
   "toolCallSearchServices": "搜尋服務",
@@ -4356,7 +4416,6 @@
   "toolCallLoadingGetExpertReviews": "正在載入達人評價…",
   "toolCallPrepareServiceDraft": "服務草稿",
   "toolCallLoadingPrepareServiceDraft": "正在生成服務草稿…",
-
   "aiServiceDraftTitle": "服務草稿",
   "aiServiceDraftName": "名稱",
   "aiServiceDraftDesc": "描述",
@@ -4367,22 +4426,18 @@
   "aiServiceDraftConfirmButton": "確認並去發佈",
   "aiServiceDraftNegotiable": "可協商",
   "aiServiceDraftHour": "小時",
-
   "toolCallAnalyzeMySkills": "技能分析",
   "toolCallLoadingAnalyzeMySkills": "正在分析你的技能…",
   "toolCallRecommendTakers": "推薦接單人",
   "toolCallLoadingRecommendTakers": "正在尋找合適的人選…",
   "toolCallGetNextAction": "下一步操作",
   "toolCallLoadingGetNextAction": "正在檢查任務狀態…",
-
   "aiThinkingHint1": "正在理解你的問題…",
   "aiThinkingHint2": "正在分析資訊…",
   "aiThinkingHint3": "正在組織回覆…",
-
   "aiTaskDraftTitle": "任務草稿",
   "aiTaskDraftConfirmButton": "確認並去發佈",
   "aiTaskCardViewDetail": "查看詳情 →",
-
   "expertApplicationsTitle": "服務申請管理",
   "expertApplicationsEmpty": "暫無申請",
   "expertApplicationsEmptyMessage": "您還沒有收到任何服務申請。",
@@ -4417,7 +4472,6 @@
   "expertApplicationBasePrice": "基礎價格",
   "expertApplicationViewTask": "查看任務",
   "expertApplicationChat": "溝通",
-
   "commonUnnamed": "未命名",
   "commonImageUploadFailed": "上傳圖片失敗: {error}",
   "commonImageCount": "{current}/{max}",
@@ -4425,16 +4479,12 @@
   "paymentWeChatPaySubtitle": "微信支付 (Stripe)",
   "paymentAlipaySubtitle": "支付寶 (Stripe)",
   "commonCurrencySymbol": "£ ",
-
   "forumDeletePostConfirm": "確定要刪除這篇帖子嗎？此操作不可撤銷。",
   "forumPostDeleted": "帖子已刪除",
   "forumPostUpdated": "帖子已更新",
   "forumReplyDeleted": "回覆已刪除",
   "forumDeleteReplyConfirm": "確定要刪除這條回覆嗎？",
-
   "fleaMarketDeleteItemConfirm": "確定要刪除這個商品嗎？此操作不可撤銷。",
-  "fleaMarketItemDeleted": "商品已刪除",
-
   "taskEvidenceTitle": "完成證據",
   "taskEvidenceHint": "您已完成此任務。請上傳相關證據圖片或填寫文字說明（可選），以便發佈者確認任務完成情況。",
   "taskEvidenceTextLabel": "文字說明（可選）",
@@ -4443,10 +4493,8 @@
   "taskEvidenceImageLimit": "單張圖片不超過5MB，最多上傳5張",
   "taskEvidenceSubmit": "提交完成",
   "taskEvidenceUploading": "正在上傳圖片...",
-
   "stripeSetupRequired": "請先設定收款帳戶，然後才能申請任務。",
   "stripeSetupAction": "立即設定",
-
   "profileSendCode": "傳送驗證碼",
   "profileResendCode": "重新傳送",
   "profileCodeSentSuccess": "驗證碼已傳送",
@@ -4467,21 +4515,26 @@
   "profileEmailCodeRequired": "請輸入信箱驗證碼",
   "profilePhoneCodeRequired": "請輸入手機驗證碼",
   "profileNormalizePhoneHint": "請帶國家區號，如 +44 7XXX 或 +33 6XXX",
-
   "forumPdfPreviewTitle": "PDF 預覽",
   "forumPdfContentEmpty": "PDF 內容為空",
   "forumPdfLoadFailed": "載入 PDF 失敗: {error}",
   "@forumPdfLoadFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "forumPdfUrlMissing": "缺少 PDF 地址",
   "forumPdfAttachmentCount": "PDF 附件（{current}/{max}）",
   "@forumPdfAttachmentCount": {
     "placeholders": {
-      "current": { "type": "String" },
-      "max": { "type": "String" }
+      "current": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
     }
   },
   "forumPdfAddPdf": "新增 PDF",
@@ -4489,21 +4542,29 @@
   "forumAttachmentOpenFailed": "無法開啟檔案: {error}",
   "@forumAttachmentOpenFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "forumFileAttachmentCount": "檔案附件（{current}/{max}）",
   "@forumFileAttachmentCount": {
     "placeholders": {
-      "current": { "type": "String" },
-      "max": { "type": "String" }
+      "current": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
     }
   },
   "forumFileAddFile": "新增檔案（PDF）",
   "forumFileTooBig": "檔案過大，最大 {maxMB}MB",
   "@forumFileTooBig": {
     "placeholders": {
-      "maxMB": { "type": "String" }
+      "maxMB": {
+        "type": "String"
+      }
     }
   },
   "forumFileReadFailed": "檔案讀取失敗，請重試",
@@ -4513,7 +4574,9 @@
   "publishImagesOptional": "圖片（選填，最多 {max} 張）",
   "@publishImagesOptional": {
     "placeholders": {
-      "max": { "type": "String" }
+      "max": {
+        "type": "String"
+      }
     }
   },
   "publishRelatedContentOptional": "關聯內容（選填，可關聯技能/活動/商品/排行榜等）",
@@ -4538,8 +4601,12 @@
   "locationFallbackCoordinates": "已取得座標 ({lat}, {lng})",
   "@locationFallbackCoordinates": {
     "placeholders": {
-      "lat": { "type": "String" },
-      "lng": { "type": "String" }
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
     }
   },
   "locationOnline": "線上",
@@ -4550,17 +4617,22 @@
   "locationCoordinates": "座標: {lat}, {lng}",
   "@locationCoordinates": {
     "placeholders": {
-      "lat": { "type": "String" },
-      "lng": { "type": "String" }
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
     }
   },
   "locationOpenMapsFailed": "無法開啟{provider} Maps",
   "@locationOpenMapsFailed": {
     "placeholders": {
-      "provider": { "type": "String" }
+      "provider": {
+        "type": "String"
+      }
     }
-  }
-,
+  },
   "taskDetailCounterOffer": "議價",
   "taskDetailCounterOfferHint": "輸入您的報價（GBP）",
   "taskDetailCounterOfferSent": "反報價已發送，等待對方回應",
@@ -4585,7 +4657,6 @@
   "contentMaskedHint": "部分內容已被自動處理，請透過平台內聊天溝通。",
   "contentUnderReviewHint": "內容已提交，正在等待審核。",
   "contentRejectedHint": "您的內容未通過審核。",
-
   "captchaSecurityVerification": "安全驗證",
   "loginMethodPassword": "密碼登入",
   "loginMethodEmailCode": "電子郵件驗證碼",
@@ -4595,7 +4666,6 @@
   "verificationStatusExpired": "已過期",
   "verificationStatusRevoked": "已撤銷",
   "verificationStatusUnverified": "未認證",
-
   "fleaMarketErrorGetListFailed": "獲取商品列表失敗",
   "fleaMarketErrorGetCategoriesFailed": "獲取分類失敗",
   "fleaMarketErrorInvalidItemId": "無效的商品 ID",
@@ -4648,9 +4718,7 @@
   "errorIapLoadProductsFailed": "載入產品失敗",
   "errorIapVerificationFailed": "驗證失敗，請聯繫客服",
   "errorIapPurchaseFailed": "購買失敗",
-
   "forumReplyFallbackParent": "↩ 回覆了一則留言",
-
   "expertOfficialBadge": "官方",
   "expertDashboardTitle": "達人中心",
   "expertDashboardManagement": "管理中心",
@@ -4812,7 +4880,6 @@
   "expertSearchSortRating": "評分",
   "expertSearchSortCompleted": "完成數最多",
   "expertSearchSortNewest": "最新加入",
-
   "newbieTaskCenter": "任務中心",
   "newbieTaskStage1": "完善資料",
   "newbieTaskStage2": "開始分享",
@@ -4876,7 +4943,6 @@
       }
     }
   },
-
   "officialTaskGoPost": "去發帖",
   "officialTaskExpired": "已過期",
   "officialTaskRewardEarned": "官方任務完成！獲得 {amount} 積分",
@@ -4897,7 +4963,6 @@
       }
     }
   },
-
   "officialTaskSubmissionCount": "{count}/{max} 次",
   "@officialTaskSubmissionCount": {
     "placeholders": {
@@ -4909,7 +4974,6 @@
       }
     }
   },
-
   "errorNewbieTaskNotCompleted": "該任務尚未完成",
   "errorNewbieTaskAlreadyClaimed": "該獎勵已被領取",
   "errorNewbieTaskClaimFailed": "領取獎勵失敗",
@@ -4919,7 +4983,6 @@
   "errorNewbieTasksLoadFailed": "載入任務失敗",
   "errorLeaderboardLoadFailed": "載入排行榜失敗",
   "errorBadgesLoadFailed": "載入徽章失敗",
-
   "couponDetailTitle": "優惠券詳情",
   "couponDetailDiscount": "優惠",
   "couponDetailMinAmount": "最低消費",
@@ -4943,8 +5006,12 @@
   "currentPrice": "當前價格: {currencySymbol}{price}",
   "@currentPrice": {
     "placeholders": {
-      "price": {"type": "String"},
-      "currencySymbol": {"type": "String"}
+      "price": {
+        "type": "String"
+      },
+      "currencySymbol": {
+        "type": "String"
+      }
     }
   },
   "typeMessage": "輸入訊息...",
@@ -4954,7 +5021,9 @@
   "applicationMessages": "申請留言 ({count})",
   "@applicationMessages": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "posterReply": "發佈者回覆",
@@ -4963,7 +5032,13 @@
   "publicReplyPlaceholder": "寫下你對這條申請的回覆...",
   "alreadyReplied": "已經回覆過此申請",
   "qaTitle": "問答 ({count})",
-  "@qaTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@qaTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "qaAskPlaceholder": "向發布者提問...",
   "qaReplyPlaceholder": "寫下你的回覆...",
   "qaAskButton": "提問",
@@ -5110,13 +5185,24 @@
   "drawerHelpFeedback": "幫助與回饋",
   "drawerLogin": "登入",
   "nearbyCurrentLocation": "當前定位：{city}",
-  "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
+  "@nearbyCurrentLocation": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
   "nearbyLocationFailed": "定位不可用 · 顯示倫敦附近",
   "nearbyOpenSettings": "去設置",
   "nearbySwitch": "切換",
   "nearbyApplicants": "{count}人申請",
-  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } },
-
+  "@nearbyApplicants": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "feedLabelPublishedTask": "發布了新任務",
   "feedLabelPosted": "發布了帖子",
   "feedLabelListedItem": "上架了商品",
@@ -5128,9 +5214,21 @@
   "feedLabelReviewedService": "評價了服務",
   "feedLabelCreatedRanking": "創建了排行榜",
   "servicePriceFrom": "{price}起",
-  "@servicePriceFrom": { "placeholders": { "price": { "type": "String" } } },
+  "@servicePriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "serviceReviewFrom": "來自 {title}",
-  "@serviceReviewFrom": { "placeholders": { "title": { "type": "String" } } },
+  "@serviceReviewFrom": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "createTaskPricingFixed": "固定價",
   "createTaskPricingHourly": "時薪",
   "createTaskPricingNegotiable": "協商定價",
@@ -5217,7 +5315,6 @@
   "fleaMarketErrorNotRentalItem": "該商品不可租用",
   "fleaMarketErrorCannotRentOwnItem": "不能租用自己的商品",
   "fleaMarketErrorRentalPaymentExpired": "租賃支付已過期",
-
   "homeFlowTitle": "安全交易，輕鬆互助",
   "homeFlowSubtitle": "平台託管資金 · 全程保障 · 爭議可退",
   "homeFlowStepPost": "發佈任務/技能",
@@ -5228,7 +5325,6 @@
   "homeFlowGuaranteeEscrow": "資金託管",
   "homeFlowGuaranteeRefund": "全額退款保障",
   "homeFlowGuaranteeDispute": "爭議平台介入",
-
   "skillLeaderboard": "技能排行榜",
   "leaderboardTop10": "前 10 名",
   "leaderboardMyRank": "我的排名",
@@ -5250,12 +5346,10 @@
   "badgeSelectorEmpty": "暫無可用徽章",
   "badgeNoClearDescription": "不展示任何徽章",
   "badgeViewDetails": "查看徽章詳情",
-
   "profileViews": "主頁瀏覽量",
   "editBio": "編輯簡介",
   "addSkills": "添加技能",
   "skillTags": "技能標籤",
-
   "myServiceApplicationsTitle": "我的服務申請",
   "myServiceApplicationsEmpty": "暫無申請",
   "myServiceApplicationsEmptyMessage": "您還沒有申請過任何服務。瀏覽可用服務開始吧。",
@@ -5282,13 +5376,14 @@
   "serviceCounterOfferAcceptConfirmMessage": "接受 {price} 的還價？",
   "@serviceCounterOfferAcceptConfirmMessage": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": {
+        "type": "String"
+      }
     }
   },
   "serviceCounterOfferRejectConfirm": "拒絕還價",
   "serviceCounterOfferRejectConfirmMessage": "拒絕這個還價？您可以繼續協商。",
   "serviceCounterOfferRespondFailed": "回應還價失敗",
-
   "browseServicesTitle": "瀏覽服務",
   "browseServicesSearchHint": "搜尋服務...",
   "browseServicesFilterAll": "全部",
@@ -5302,7 +5397,6 @@
   "browseServicesEmptyMessage": "請嘗試調整搜尋條件或篩選條件。",
   "browseServicesLoadMore": "載入更多",
   "browseServicesNoMore": "沒有更多服務了",
-
   "serviceStatusToggle": "切換狀態",
   "serviceStatusActivate": "上架",
   "serviceStatusDeactivate": "下架",
@@ -5311,7 +5405,6 @@
   "serviceStatusToggleFailed": "更新服務狀態失敗",
   "serviceStatusConfirmDeactivate": "下架服務",
   "serviceStatusConfirmDeactivateMessage": "下架後服務將不會出現在瀏覽列表中。您可以隨時重新上架。",
-
   "serviceReviewTitle": "服務評價",
   "serviceReviewEmpty": "暫無評價",
   "serviceReviewEmptyMessage": "成為第一個評價此服務的用戶。",
@@ -5323,7 +5416,6 @@
   "serviceReviewSubmitted": "評價提交成功",
   "serviceReviewSubmitFailed": "評價提交失敗",
   "serviceReviewAlreadyReviewed": "您已經評價過此服務",
-
   "profileMyServiceApplications": "我的服務申請",
   "profileMyServiceApplicationsSubtitle": "追蹤服務申請進度",
   "profileReceivedApplications": "收到的申請",
@@ -5333,13 +5425,17 @@
   "serviceApplicationCreatedAt": "申請於 {time}",
   "@serviceApplicationCreatedAt": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "serviceApplicationApprovedAt": "通過於 {time}",
   "@serviceApplicationApprovedAt": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "receivedApplicationsFilterAll": "全部",
@@ -5355,7 +5451,9 @@
   "versionUpdateAvailableMessage": "新版本 {version} 已發佈。",
   "@versionUpdateAvailableMessage": {
     "placeholders": {
-      "version": {"type": "String"}
+      "version": {
+        "type": "String"
+      }
     }
   },
   "versionUpdateNow": "立即更新",
@@ -5485,26 +5583,42 @@
   "packageRedemptionSuccessTitle": "核銷成功",
   "packageRedemptionSuccessPackageId": "套餐 ID：{id}",
   "@packageRedemptionSuccessPackageId": {
-    "placeholders": { "id": { "type": "Object" } }
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
   },
   "packageRedemptionSuccessUsage": "已核銷：{used} / {total}",
   "@packageRedemptionSuccessUsage": {
     "placeholders": {
-      "used": { "type": "Object" },
-      "total": { "type": "Object" }
+      "used": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
     }
   },
   "packageRedemptionSuccessRemaining": "剩餘：{remaining} 次",
   "@packageRedemptionSuccessRemaining": {
-    "placeholders": { "remaining": { "type": "Object" } }
+    "placeholders": {
+      "remaining": {
+        "type": "Object"
+      }
+    }
   },
-  "packageRedemptionSuccessExhausted": "\u26A0\uFE0F 此套餐已全部核銷完畢",
+  "packageRedemptionSuccessExhausted": "⚠️ 此套餐已全部核銷完畢",
   "packageRedemptionContinueScan": "繼續掃碼",
   "packageRedemptionPickSubServiceTitle": "選擇要核銷的子服務",
   "packageRedemptionPickSubServiceHint": "請選擇本次要為顧客核銷的子服務",
   "packageRedemptionSubServiceRemaining": "剩餘：{remaining} 次",
   "@packageRedemptionSubServiceRemaining": {
-    "placeholders": { "remaining": { "type": "Object" } }
+    "placeholders": {
+      "remaining": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchaseDialogTitle": "購買套餐",
   "packagePurchaseTypeLabel": "類型",
@@ -5513,60 +5627,96 @@
   "packagePurchaseTotalSessionsLabel": "總次數",
   "packagePurchaseTotalSessionsValue": "{count} 次",
   "@packagePurchaseTotalSessionsValue": {
-    "placeholders": { "count": { "type": "Object" } }
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchaseBundleSizeLabel": "包含服務",
   "packagePurchaseBundleSizeValue": "{count} 項",
   "@packagePurchaseBundleSizeValue": {
-    "placeholders": { "count": { "type": "Object" } }
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchasePriceLabel": "套餐價格",
   "packagePurchasePriceValue": "{currency} {amount}",
   "@packagePurchasePriceValue": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "packagePurchasePerSessionLabel": "每次均價",
   "packagePurchasePerSessionValue": "{currency} {amount}/次",
   "@packagePurchasePerSessionValue": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "packagePurchaseOriginalPerSession": "原價 {currency} {amount}/次",
   "@packagePurchaseOriginalPerSession": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "packagePurchaseSaveAmount": "立省 {currency} {amount}（{percent}% off）",
   "@packagePurchaseSaveAmount": {
     "placeholders": {
-      "currency": { "type": "String" },
-      "amount": { "type": "String" },
-      "percent": { "type": "String" }
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
     }
   },
   "discountBadge": "省{percent}%",
   "@discountBadge": {
     "placeholders": {
-      "percent": { "type": "int" }
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "packagePurchaseLinkedServiceLabel": "適用服務",
   "serviceInactiveSuffix": "已下架",
   "userPackageLinkedServiceLabel": "用於 {name}",
   "@userPackageLinkedServiceLabel": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "packagePurchaseValidityLabel": "有效期",
   "packagePurchaseValidityDays": "購買後 {days} 天內有效",
   "@packagePurchaseValidityDays": {
-    "placeholders": { "days": { "type": "Object" } }
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
   },
   "packagePurchaseValidityForever": "永久有效",
   "packagePurchaseFootnote": "購買後可在「我的套餐」中查看,出示二維碼核銷",
@@ -5579,12 +5729,12 @@
   "errorPackageNotFound": "套餐不存在",
   "errorPackageNotFoundOrInactive": "套餐不存在或已失效",
   "errorPackageNotFoundOrNotTeam": "套餐不存在或不屬於該團隊",
-  "errorPackageExpired": "套餐已過期",
+  "errorPackageExpired": "套餐已過期。",
   "errorPackageExhausted": "套餐次數已用完",
   "errorPackagePriceNotSet": "服務未設定套餐價格",
   "errorServiceNotPackage": "該服務不是套餐類型",
   "errorPersonalServiceNoPackage": "個人服務暫不支援套餐購買",
-  "errorPackageAlreadyActive": "你已有一個進行中的此服務套餐,請用完後再購買",
+  "errorPackageAlreadyActive": "你已有一個進行中的此服務套餐，請用完後再購買。",
   "errorServiceTeamResolveFailed": "無法解析服務團隊",
   "errorQrOrOtpRequired": "必須提供 QR 或 OTP",
   "errorQrInvalidOrExpired": "QR 無效或已過期,請刷新",
@@ -5704,7 +5854,9 @@
   "expertTransferConfirmIntro": "你即將把團隊所有權轉讓給 {newOwnerName}。",
   "@expertTransferConfirmIntro": {
     "placeholders": {
-      "newOwnerName": {"type": "String"}
+      "newOwnerName": {
+        "type": "String"
+      }
     }
   },
   "expertTransferImpactTitle": "轉讓後：",
@@ -5714,7 +5866,9 @@
   "expertTransferTypeNameToConfirm": "請輸入團隊名稱 {teamName} 以確認：",
   "@expertTransferTypeNameToConfirm": {
     "placeholders": {
-      "teamName": {"type": "String"}
+      "teamName": {
+        "type": "String"
+      }
     }
   },
   "expertTransferConfirmButton": "確認轉讓",
@@ -5760,22 +5914,47 @@
   "customerPackagesAnonymousUser": "匿名用戶",
   "customerPackagesUsedCount": "已核銷 {used} / {total} 次",
   "@customerPackagesUsedCount": {
-    "placeholders": { "used": {"type": "int"}, "total": {"type": "int"} }
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "customerPackagesSubServiceProgress": "子服務進度：",
   "customerPackagesSubServiceLine": "{id}：{used} / {total}",
   "@customerPackagesSubServiceLine": {
-    "placeholders": { "id": {"type": "String"}, "used": {"type": "int"}, "total": {"type": "int"} }
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "used": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "customerPackagesExpiresOn": "到期：{date}",
   "@customerPackagesExpiresOn": {
-    "placeholders": { "date": {"type": "String"} }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "customerPackagesManualRedeem": "核銷",
   "customerPackagesRedeemConfirmTitle": "確認核銷",
   "customerPackagesRedeemConfirmBody": "為 {userName} 核銷 1 次？",
   "@customerPackagesRedeemConfirmBody": {
-    "placeholders": { "userName": {"type": "String"} }
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
   },
   "packageStatusActive": "使用中",
   "packageStatusExhausted": "已用完",
@@ -5799,15 +5978,33 @@
   "packageDisputeSuccess": "爭議已提交",
   "expertPackageNumber": "套餐 #{id}",
   "@expertPackageNumber": {
-    "placeholders": { "id": {"type": "String"} }
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
   },
   "expertPackageRemainingCount": "剩餘 {remaining} / {total} 次",
   "@expertPackageRemainingCount": {
-    "placeholders": { "remaining": {"type": "int"}, "total": {"type": "int"} }
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "expertPackageQrTitle": "套餐 #{id} · 剩 {remaining} 次",
   "@expertPackageQrTitle": {
-    "placeholders": { "id": {"type": "int"}, "remaining": {"type": "int"} }
+    "placeholders": {
+      "id": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
   },
   "expertPackageShowRedemptionCode": "出示核銷碼",
   "expertPackageNotRedeemable": "不可核銷",
@@ -5832,11 +6029,13 @@
   "expertTeamStatRating": "評分",
   "expertTeamMembersHeader": "成員（{count}）",
   "@expertTeamMembersHeader": {
-    "placeholders": { "count": {"type": "int"} }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "expertTeamSeeAll": "查看全部",
-  "errorPackageAlreadyActive": "你已有一個進行中的此服務套餐，請用完後再購買。",
-  "errorPackageExpired": "套餐已過期。",
   "errorPackageBundleSubRequired": "請選擇要核銷的子服務。",
   "errorTeamNoStripeAccount": "團隊 Stripe 尚未設定完成。",
   "errorServiceHasActiveActivities": "該服務仍有進行中的活動，請先取消或完成後再刪除。",
@@ -5845,7 +6044,9 @@
   "serviceRadiusKm": "{radius}公里",
   "@serviceRadiusKm": {
     "placeholders": {
-      "radius": { "type": "int" }
+      "radius": {
+        "type": "int"
+      }
     }
   },
   "serviceRadiusWholeCity": "全城",
@@ -5874,7 +6075,6 @@
   "@rentalListingStatusOverdue": {
     "description": "Rental item status badge: rental overdue"
   },
-
   "a11yActionButton": "操作按鈕",
   "a11yDeleteItem": "刪除商品",
   "a11yRefreshItem": "重新整理商品",
@@ -5889,7 +6089,6 @@
   "a11yFilterItems": "篩選商品",
   "a11yViewItem": "查看商品",
   "a11yUploadImage": "上傳圖片",
-
   "expertEditForumBoard": "編輯論壇板塊",
   "expertForumBoardName": "板塊名稱",
   "expertForumBoardNameEn": "板塊名稱（英文）",
@@ -5899,10 +6098,8 @@
   "expertForumBoardDescZh": "板塊描述（中文）",
   "expertForumBoardUpdated": "論壇板塊已更新",
   "expertForumBoardValidateName": "板塊名稱不能為空",
-
   "profileMyPackages": "我的套餐",
   "profileMyPackagesSubtitle": "已購買的服務套餐",
-
   "consultationErrorAlreadyExists": "您已有進行中的諮詢申請",
   "@consultationErrorAlreadyExists": {},
   "consultationErrorNotFound": "諮詢申請不存在",
@@ -5942,5 +6139,190 @@
   "expertTeamLabel": "達人團隊",
   "@expertTeamLabel": {},
   "unknownUser": "未知用戶",
-  "@unknownUser": {}
+  "@unknownUser": {},
+  "commonNoData": "暫無資料",
+  "commonAdd": "新增",
+  "commonManage": "管理",
+  "skillLevelBeginner": "入門",
+  "skillLevelIntermediate": "熟練",
+  "skillLevelExpert": "精通",
+  "profileCapabilityProfile": "能力畫像",
+  "profilePreferenceProfile": "偏好畫像",
+  "profileReliabilityProfile": "可靠度畫像",
+  "profileDemandPrediction": "需求預測",
+  "profileNoSkillsHint": "還未新增技能，點擊「管理」新增",
+  "profileNoSkillsTitle": "還沒有技能",
+  "profileNoSkillsSubtitle": "點擊右下角按鈕新增你的第一個技能",
+  "profileManageSkills": "管理技能",
+  "profileAddSkill": "新增技能",
+  "profileDeleteSkill": "刪除技能",
+  "profileDeleteSkillConfirm": "確認刪除「{name}」嗎？",
+  "@profileDeleteSkillConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileSkillCategory": "技能分類",
+  "profileSkillName": "技能名稱",
+  "profileSkillNameHint": "例如：Python、平面設計、英語口語",
+  "profileSkillNameRequired": "請輸入技能名稱",
+  "profileSkillNameTooLong": "技能名稱不超過30字",
+  "profileSkillProficiency": "熟練度",
+  "skillCategoryAcademic": "學業輔導",
+  "skillCategoryTechnical": "技術開發",
+  "skillCategoryDesign": "設計創意",
+  "skillCategoryLanguageTranslation": "語言翻譯",
+  "skillCategoryLifestyleService": "生活服務",
+  "skillCategoryMusicArt": "音樂藝術",
+  "skillCategorySports": "運動健身",
+  "skillCategoryOther": "其他",
+  "preferenceModeOnline": "線上",
+  "preferenceModeOffline": "線下",
+  "preferenceModeBoth": "都可以",
+  "preferenceDurationOneTime": "一次性",
+  "preferenceDurationLongTerm": "長期",
+  "preferenceRewardHighFreq": "高頻小額",
+  "preferenceRewardLowFreq": "低頻高價",
+  "preferenceRewardNoPreference": "無偏好",
+  "preferenceTimeWeekdayDay": "工作日白天",
+  "preferenceTimeWeekdayEvening": "工作日晚上",
+  "preferenceTimeWeekend": "週末",
+  "preferenceTimeAnytime": "全天",
+  "preferenceSaved": "偏好已儲存",
+  "preferenceModeTitle": "協作方式",
+  "preferenceModeDesc": "你更傾向於線上還是線下完成任務？",
+  "preferenceDurationTitle": "任務週期",
+  "preferenceDurationDesc": "你偏好一次性還是長期合作任務？",
+  "preferenceRewardTitle": "報酬偏好",
+  "preferenceRewardDesc": "你更傾向於哪種報酬模式？",
+  "preferenceTimeTitle": "可用時段",
+  "preferenceTimeDesc": "你通常什麼時候有空？（可多選）",
+  "preferenceLocationPermissionRequired": "需要定位權限才能開啟附近任務提醒",
+  "preferenceLocationPermissionDenied": "請在系統設定中開啟定位權限",
+  "preferenceSaveSettings": "儲存設定",
+  "reliabilityNotEnoughData": "資料不足，完成更多任務後查看",
+  "reliabilityCompletedTasks": "已完成任務",
+  "reliabilityTaskCountValue": "{count} 個",
+  "@reliabilityTaskCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reliabilityCompletionRate": "完成率",
+  "reliabilityOnTimeRate": "準時率",
+  "reliabilityCommScore": "溝通評分",
+  "reliabilityRepeatRate": "重複合作率",
+  "reliabilityScore": "可靠度評分",
+  "reliabilityScoreValue": "{score}分",
+  "@reliabilityScoreValue": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "userStageNewArrival": "初來乍到",
+  "userStageSettling": "安頓中",
+  "userStageEstablished": "融入校園",
+  "userStageExperienced": "經驗豐富",
+  "demandCurrentStage": "當前階段",
+  "demandPredicted": "預測需求",
+  "demandNoData": "暫無需求預測資料",
+  "chatNoExpertTeamForTask": "該任務未關聯達人團隊",
+  "chatLoadMembersFailed": "載入成員列表失敗: {error}",
+  "@chatLoadMembersFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatAllMembersInChat": "所有團隊成員都已在聊天中",
+  "chatInviteSuccess": "已邀請 {name} 加入聊天",
+  "@chatInviteSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatInviteFailed": "邀請失敗: {error}",
+  "@chatInviteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aiChatLabelPersonal": "個人",
+  "aiChatLabelExpert": "達人",
+  "packageRedemptionShowQrHint": "請將此 QR Code 出示給達人掃描",
+  "packageRedemptionAutoRefresh": "{seconds} 秒後自動重新整理",
+  "@packageRedemptionAutoRefresh": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "packageRedemptionScanFailedHint": "掃碼失敗？讓達人手動輸入",
+  "packageRedemptionRefreshNow": "立即重新整理",
+  "groupBuyCannotLoad": "無法載入拼單資訊",
+  "groupBuyPersonUnit": "人",
+  "groupBuySuccess": "拼單成功！",
+  "groupBuyNeedMore": "還差 {count} 人成單",
+  "@groupBuyNeedMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupBuyDeadline": "截止: {time}",
+  "@groupBuyDeadline": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "groupBuyRoundN": "第 {round} 輪",
+  "@groupBuyRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "groupBuyCancelEnrollment": "取消報名",
+  "groupBuyEnrollNow": "立即報名",
+  "groupBuyAlreadyClosed": "已成單",
+  "expertTeamLoadFailedDefault": "載入失敗",
+  "expertTeamMemberCount": "{count} 位成員",
+  "@expertTeamMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "expertTeamUnknownTeam": "未知團隊",
+  "homeYouMightNeed": "你可能需要",
+  "taskPreferencesSaveFailedRetry": "儲存失敗，請重試",
+  "profileSetupSubmitFailedDefault": "提交失敗，請重試",
+  "profileSetupSkip": "跳過",
+  "profileSetupNext": "下一步",
+  "profileSetupFinish": "完成",
+  "profileSetupSkillsTitle": "你擅長什麼？",
+  "profileSetupSkillsSubtitle": "選擇你的技能領域",
+  "profileSetupTaskTypeTitle": "你更喜歡什麼類型的任務？",
+  "profileSetupOnlineLabel": "線上任務",
+  "profileSetupOnlineDesc": "透過視訊、文字或遠端方式完成任務",
+  "profileSetupOfflineLabel": "線下任務",
+  "profileSetupOfflineDesc": "面對面、實地協助完成任務",
+  "profileSetupBothDesc": "線上線下均可，彈性接單"
 }

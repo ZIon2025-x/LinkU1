@@ -273,6 +273,12 @@ abstract class AppLocalizations {
   /// **'View All'**
   String get commonViewAll;
 
+  /// No description provided for @commonCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get commonCollapse;
+
   /// No description provided for @commonLoadingImage.
   ///
   /// In en, this message translates to:
@@ -458,6 +464,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please log in to favorite services'**
   String get loginRequiredForFavorite;
+
+  /// No description provided for @noReviewsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No reviews yet'**
+  String get noReviewsYet;
 
   /// No description provided for @loginRequiredForVerification.
   ///
@@ -12449,6 +12461,24 @@ abstract class AppLocalizations {
   /// **'Fast and secure payment'**
   String get paymentFastSecure;
 
+  /// No description provided for @refundPolicyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund Policy'**
+  String get refundPolicyTitle;
+
+  /// No description provided for @refundPolicyFooterPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'By tapping Pay, you agree to our '**
+  String get refundPolicyFooterPrefix;
+
+  /// No description provided for @refundPolicyLinkText.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund Policy'**
+  String get refundPolicyLinkText;
+
   /// No description provided for @paymentWeChatPay.
   ///
   /// In en, this message translates to:
@@ -17356,6 +17386,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View all {count} reviews'**
   String profileViewAllReviewsCount(int count);
+
+  /// No description provided for @profileNoReviewsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No reviews yet'**
+  String get profileNoReviewsYet;
+
+  /// No description provided for @profileNoMoreReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'No more reviews'**
+  String get profileNoMoreReviews;
+
+  /// No description provided for @profileNoServicesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No services yet'**
+  String get profileNoServicesYet;
+
+  /// No description provided for @profileNoMoreServices.
+  ///
+  /// In en, this message translates to:
+  /// **'No more services'**
+  String get profileNoMoreServices;
+
+  /// No description provided for @profileNoMorePosts.
+  ///
+  /// In en, this message translates to:
+  /// **'No more posts'**
+  String get profileNoMorePosts;
 
   /// No description provided for @profileServicePriceFrom.
   ///
@@ -25577,6 +25637,654 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unknown User'**
   String get unknownUser;
+
+  /// No description provided for @commonNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No data'**
+  String get commonNoData;
+
+  /// No description provided for @commonAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get commonAdd;
+
+  /// No description provided for @commonManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get commonManage;
+
+  /// No description provided for @skillLevelBeginner.
+  ///
+  /// In en, this message translates to:
+  /// **'Beginner'**
+  String get skillLevelBeginner;
+
+  /// No description provided for @skillLevelIntermediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Intermediate'**
+  String get skillLevelIntermediate;
+
+  /// No description provided for @skillLevelExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get skillLevelExpert;
+
+  /// No description provided for @profileCapabilityProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Capabilities'**
+  String get profileCapabilityProfile;
+
+  /// No description provided for @profilePreferenceProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get profilePreferenceProfile;
+
+  /// No description provided for @profileReliabilityProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Reliability'**
+  String get profileReliabilityProfile;
+
+  /// No description provided for @profileDemandPrediction.
+  ///
+  /// In en, this message translates to:
+  /// **'Demand Prediction'**
+  String get profileDemandPrediction;
+
+  /// No description provided for @profileNoSkillsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No skills added yet. Tap \"Manage\" to add.'**
+  String get profileNoSkillsHint;
+
+  /// No description provided for @profileNoSkillsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No skills yet'**
+  String get profileNoSkillsTitle;
+
+  /// No description provided for @profileNoSkillsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the button to add your first skill'**
+  String get profileNoSkillsSubtitle;
+
+  /// No description provided for @profileManageSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Skills'**
+  String get profileManageSkills;
+
+  /// No description provided for @profileAddSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Skill'**
+  String get profileAddSkill;
+
+  /// No description provided for @profileDeleteSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Skill'**
+  String get profileDeleteSkill;
+
+  /// No description provided for @profileDeleteSkillConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"?'**
+  String profileDeleteSkillConfirm(String name);
+
+  /// No description provided for @profileSkillCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Category'**
+  String get profileSkillCategory;
+
+  /// No description provided for @profileSkillName.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Name'**
+  String get profileSkillName;
+
+  /// No description provided for @profileSkillNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Python, graphic design, spoken English'**
+  String get profileSkillNameHint;
+
+  /// No description provided for @profileSkillNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the skill name'**
+  String get profileSkillNameRequired;
+
+  /// No description provided for @profileSkillNameTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill name must be ≤ 30 characters'**
+  String get profileSkillNameTooLong;
+
+  /// No description provided for @profileSkillProficiency.
+  ///
+  /// In en, this message translates to:
+  /// **'Proficiency'**
+  String get profileSkillProficiency;
+
+  /// No description provided for @skillCategoryAcademic.
+  ///
+  /// In en, this message translates to:
+  /// **'Academic Tutoring'**
+  String get skillCategoryAcademic;
+
+  /// No description provided for @skillCategoryTechnical.
+  ///
+  /// In en, this message translates to:
+  /// **'Tech & Development'**
+  String get skillCategoryTechnical;
+
+  /// No description provided for @skillCategoryDesign.
+  ///
+  /// In en, this message translates to:
+  /// **'Design & Creative'**
+  String get skillCategoryDesign;
+
+  /// No description provided for @skillCategoryLanguageTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Language & Translation'**
+  String get skillCategoryLanguageTranslation;
+
+  /// No description provided for @skillCategoryLifestyleService.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle Services'**
+  String get skillCategoryLifestyleService;
+
+  /// No description provided for @skillCategoryMusicArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Music & Art'**
+  String get skillCategoryMusicArt;
+
+  /// No description provided for @skillCategorySports.
+  ///
+  /// In en, this message translates to:
+  /// **'Sports & Fitness'**
+  String get skillCategorySports;
+
+  /// No description provided for @skillCategoryOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get skillCategoryOther;
+
+  /// No description provided for @preferenceModeOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get preferenceModeOnline;
+
+  /// No description provided for @preferenceModeOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get preferenceModeOffline;
+
+  /// No description provided for @preferenceModeBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Either'**
+  String get preferenceModeBoth;
+
+  /// No description provided for @preferenceDurationOneTime.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time'**
+  String get preferenceDurationOneTime;
+
+  /// No description provided for @preferenceDurationLongTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-term'**
+  String get preferenceDurationLongTerm;
+
+  /// No description provided for @preferenceRewardHighFreq.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequent & Small'**
+  String get preferenceRewardHighFreq;
+
+  /// No description provided for @preferenceRewardLowFreq.
+  ///
+  /// In en, this message translates to:
+  /// **'Infrequent & Large'**
+  String get preferenceRewardLowFreq;
+
+  /// No description provided for @preferenceRewardNoPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'No Preference'**
+  String get preferenceRewardNoPreference;
+
+  /// No description provided for @preferenceTimeWeekdayDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekday Daytime'**
+  String get preferenceTimeWeekdayDay;
+
+  /// No description provided for @preferenceTimeWeekdayEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekday Evening'**
+  String get preferenceTimeWeekdayEvening;
+
+  /// No description provided for @preferenceTimeWeekend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekend'**
+  String get preferenceTimeWeekend;
+
+  /// No description provided for @preferenceTimeAnytime.
+  ///
+  /// In en, this message translates to:
+  /// **'Anytime'**
+  String get preferenceTimeAnytime;
+
+  /// No description provided for @preferenceSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences saved'**
+  String get preferenceSaved;
+
+  /// No description provided for @preferenceModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration Mode'**
+  String get preferenceModeTitle;
+
+  /// No description provided for @preferenceModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you prefer online or in-person tasks?'**
+  String get preferenceModeDesc;
+
+  /// No description provided for @preferenceDurationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Duration'**
+  String get preferenceDurationTitle;
+
+  /// No description provided for @preferenceDurationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you prefer one-time or long-term tasks?'**
+  String get preferenceDurationDesc;
+
+  /// No description provided for @preferenceRewardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward Preference'**
+  String get preferenceRewardTitle;
+
+  /// No description provided for @preferenceRewardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Which reward style do you prefer?'**
+  String get preferenceRewardDesc;
+
+  /// No description provided for @preferenceTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Available Times'**
+  String get preferenceTimeTitle;
+
+  /// No description provided for @preferenceTimeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'When are you usually available? (multi-select)'**
+  String get preferenceTimeDesc;
+
+  /// No description provided for @preferenceLocationPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is required to enable nearby task alerts'**
+  String get preferenceLocationPermissionRequired;
+
+  /// No description provided for @preferenceLocationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enable location permission in system settings'**
+  String get preferenceLocationPermissionDenied;
+
+  /// No description provided for @preferenceSaveSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Settings'**
+  String get preferenceSaveSettings;
+
+  /// No description provided for @reliabilityNotEnoughData.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data — complete more tasks to view'**
+  String get reliabilityNotEnoughData;
+
+  /// No description provided for @reliabilityCompletedTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed Tasks'**
+  String get reliabilityCompletedTasks;
+
+  /// No description provided for @reliabilityTaskCountValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}'**
+  String reliabilityTaskCountValue(int count);
+
+  /// No description provided for @reliabilityCompletionRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion Rate'**
+  String get reliabilityCompletionRate;
+
+  /// No description provided for @reliabilityOnTimeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'On-time Rate'**
+  String get reliabilityOnTimeRate;
+
+  /// No description provided for @reliabilityCommScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Communication Score'**
+  String get reliabilityCommScore;
+
+  /// No description provided for @reliabilityRepeatRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat Rate'**
+  String get reliabilityRepeatRate;
+
+  /// No description provided for @reliabilityScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Reliability Score'**
+  String get reliabilityScore;
+
+  /// No description provided for @reliabilityScoreValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{score}'**
+  String reliabilityScoreValue(String score);
+
+  /// No description provided for @userStageNewArrival.
+  ///
+  /// In en, this message translates to:
+  /// **'Just Arrived'**
+  String get userStageNewArrival;
+
+  /// No description provided for @userStageSettling.
+  ///
+  /// In en, this message translates to:
+  /// **'Settling In'**
+  String get userStageSettling;
+
+  /// No description provided for @userStageEstablished.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled'**
+  String get userStageEstablished;
+
+  /// No description provided for @userStageExperienced.
+  ///
+  /// In en, this message translates to:
+  /// **'Experienced'**
+  String get userStageExperienced;
+
+  /// No description provided for @demandCurrentStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Stage'**
+  String get demandCurrentStage;
+
+  /// No description provided for @demandPredicted.
+  ///
+  /// In en, this message translates to:
+  /// **'Predicted Needs'**
+  String get demandPredicted;
+
+  /// No description provided for @demandNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No demand data yet'**
+  String get demandNoData;
+
+  /// No description provided for @chatNoExpertTeamForTask.
+  ///
+  /// In en, this message translates to:
+  /// **'This task is not linked to an expert team'**
+  String get chatNoExpertTeamForTask;
+
+  /// No description provided for @chatLoadMembersFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load member list: {error}'**
+  String chatLoadMembersFailed(String error);
+
+  /// No description provided for @chatAllMembersInChat.
+  ///
+  /// In en, this message translates to:
+  /// **'All team members are already in the chat'**
+  String get chatAllMembersInChat;
+
+  /// No description provided for @chatInviteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited {name} to the chat'**
+  String chatInviteSuccess(String name);
+
+  /// No description provided for @chatInviteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite failed: {error}'**
+  String chatInviteFailed(String error);
+
+  /// No description provided for @aiChatLabelPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal'**
+  String get aiChatLabelPersonal;
+
+  /// No description provided for @aiChatLabelExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get aiChatLabelExpert;
+
+  /// No description provided for @packageRedemptionShowQrHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this QR code to the expert to scan'**
+  String get packageRedemptionShowQrHint;
+
+  /// No description provided for @packageRedemptionAutoRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-refresh in {seconds}s'**
+  String packageRedemptionAutoRefresh(int seconds);
+
+  /// No description provided for @packageRedemptionScanFailedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan failed? Ask the expert to input manually'**
+  String get packageRedemptionScanFailedHint;
+
+  /// No description provided for @packageRedemptionRefreshNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh Now'**
+  String get packageRedemptionRefreshNow;
+
+  /// No description provided for @groupBuyCannotLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load group-buy info'**
+  String get groupBuyCannotLoad;
+
+  /// No description provided for @groupBuyPersonUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'ppl'**
+  String get groupBuyPersonUnit;
+
+  /// No description provided for @groupBuySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Group buy successful!'**
+  String get groupBuySuccess;
+
+  /// No description provided for @groupBuyNeedMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more to close the deal'**
+  String groupBuyNeedMore(int count);
+
+  /// No description provided for @groupBuyDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline: {time}'**
+  String groupBuyDeadline(String time);
+
+  /// No description provided for @groupBuyRoundN.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {round}'**
+  String groupBuyRoundN(int round);
+
+  /// No description provided for @groupBuyCancelEnrollment.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel enrollment'**
+  String get groupBuyCancelEnrollment;
+
+  /// No description provided for @groupBuyEnrollNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Enroll now'**
+  String get groupBuyEnrollNow;
+
+  /// No description provided for @groupBuyAlreadyClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get groupBuyAlreadyClosed;
+
+  /// No description provided for @expertTeamLoadFailedDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load'**
+  String get expertTeamLoadFailedDefault;
+
+  /// No description provided for @expertTeamMemberCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} members'**
+  String expertTeamMemberCount(int count);
+
+  /// No description provided for @expertTeamUnknownTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown team'**
+  String get expertTeamUnknownTeam;
+
+  /// No description provided for @homeYouMightNeed.
+  ///
+  /// In en, this message translates to:
+  /// **'You might need'**
+  String get homeYouMightNeed;
+
+  /// No description provided for @taskPreferencesSaveFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed, please try again'**
+  String get taskPreferencesSaveFailedRetry;
+
+  /// No description provided for @profileSetupSubmitFailedDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit failed, please try again'**
+  String get profileSetupSubmitFailedDefault;
+
+  /// No description provided for @profileSetupSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get profileSetupSkip;
+
+  /// No description provided for @profileSetupNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get profileSetupNext;
+
+  /// No description provided for @profileSetupFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get profileSetupFinish;
+
+  /// No description provided for @profileSetupSkillsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you good at?'**
+  String get profileSetupSkillsTitle;
+
+  /// No description provided for @profileSetupSkillsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your skill areas'**
+  String get profileSetupSkillsSubtitle;
+
+  /// No description provided for @profileSetupTaskTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What kind of tasks do you prefer?'**
+  String get profileSetupTaskTypeTitle;
+
+  /// No description provided for @profileSetupOnlineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Online tasks'**
+  String get profileSetupOnlineLabel;
+
+  /// No description provided for @profileSetupOnlineDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete tasks via video, text, or remotely'**
+  String get profileSetupOnlineDesc;
+
+  /// No description provided for @profileSetupOfflineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline tasks'**
+  String get profileSetupOfflineLabel;
+
+  /// No description provided for @profileSetupOfflineDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'In-person, on-site assistance'**
+  String get profileSetupOfflineDesc;
+
+  /// No description provided for @profileSetupBothDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Both online & offline, flexible'**
+  String get profileSetupBothDesc;
 }
 
 class _AppLocalizationsDelegate

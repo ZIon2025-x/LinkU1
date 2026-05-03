@@ -96,6 +96,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonViewAll => '查看全部';
 
   @override
+  String get commonCollapse => '收起';
+
+  @override
   String get commonLoadingImage => '加载图片中...';
 
   @override
@@ -193,6 +196,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get loginRequiredForFavorite => '请登录后才能收藏服务';
+
+  @override
+  String get noReviewsYet => '暂无评价';
 
   @override
   String get loginRequiredForVerification => '请登录后进行学生认证';
@@ -6511,6 +6517,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentFastSecure => '快速安全支付';
 
   @override
+  String get refundPolicyTitle => '退款政策';
+
+  @override
+  String get refundPolicyFooterPrefix => '支付即视为已阅读并同意';
+
+  @override
+  String get refundPolicyLinkText => '《退款政策》';
+
+  @override
   String get paymentWeChatPay => '微信支付';
 
   @override
@@ -9090,6 +9105,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String profileViewAllReviewsCount(int count) {
     return '查看全部 $count 条评价';
   }
+
+  @override
+  String get profileNoReviewsYet => '暂无评价';
+
+  @override
+  String get profileNoMoreReviews => '没有更多评价了';
+
+  @override
+  String get profileNoServicesYet => '暂无个人服务';
+
+  @override
+  String get profileNoMoreServices => '没有更多服务了';
+
+  @override
+  String get profileNoMorePosts => '没有更多帖子了';
 
   @override
   String get profileServicePriceFrom => '起';
@@ -13326,6 +13356,352 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unknownUser => '未知用户';
+
+  @override
+  String get commonNoData => '暂无数据';
+
+  @override
+  String get commonAdd => '添加';
+
+  @override
+  String get commonManage => '管理';
+
+  @override
+  String get skillLevelBeginner => '入门';
+
+  @override
+  String get skillLevelIntermediate => '熟练';
+
+  @override
+  String get skillLevelExpert => '精通';
+
+  @override
+  String get profileCapabilityProfile => '能力画像';
+
+  @override
+  String get profilePreferenceProfile => '偏好画像';
+
+  @override
+  String get profileReliabilityProfile => '可靠度画像';
+
+  @override
+  String get profileDemandPrediction => '需求预测';
+
+  @override
+  String get profileNoSkillsHint => '还未添加技能，点击\"管理\"添加';
+
+  @override
+  String get profileNoSkillsTitle => '还没有技能';
+
+  @override
+  String get profileNoSkillsSubtitle => '点击右下角按钮添加你的第一个技能';
+
+  @override
+  String get profileManageSkills => '管理技能';
+
+  @override
+  String get profileAddSkill => '添加技能';
+
+  @override
+  String get profileDeleteSkill => '删除技能';
+
+  @override
+  String profileDeleteSkillConfirm(String name) {
+    return '确认删除「$name」吗？';
+  }
+
+  @override
+  String get profileSkillCategory => '技能分类';
+
+  @override
+  String get profileSkillName => '技能名称';
+
+  @override
+  String get profileSkillNameHint => '例如：Python、平面设计、英语口语';
+
+  @override
+  String get profileSkillNameRequired => '请输入技能名称';
+
+  @override
+  String get profileSkillNameTooLong => '技能名称不超过30字';
+
+  @override
+  String get profileSkillProficiency => '熟练度';
+
+  @override
+  String get skillCategoryAcademic => '学业辅导';
+
+  @override
+  String get skillCategoryTechnical => '技术开发';
+
+  @override
+  String get skillCategoryDesign => '设计创意';
+
+  @override
+  String get skillCategoryLanguageTranslation => '语言翻译';
+
+  @override
+  String get skillCategoryLifestyleService => '生活服务';
+
+  @override
+  String get skillCategoryMusicArt => '音乐艺术';
+
+  @override
+  String get skillCategorySports => '运动健身';
+
+  @override
+  String get skillCategoryOther => '其他';
+
+  @override
+  String get preferenceModeOnline => '线上';
+
+  @override
+  String get preferenceModeOffline => '线下';
+
+  @override
+  String get preferenceModeBoth => '都可以';
+
+  @override
+  String get preferenceDurationOneTime => '一次性';
+
+  @override
+  String get preferenceDurationLongTerm => '长期';
+
+  @override
+  String get preferenceRewardHighFreq => '高频小额';
+
+  @override
+  String get preferenceRewardLowFreq => '低频高价';
+
+  @override
+  String get preferenceRewardNoPreference => '无偏好';
+
+  @override
+  String get preferenceTimeWeekdayDay => '工作日白天';
+
+  @override
+  String get preferenceTimeWeekdayEvening => '工作日晚上';
+
+  @override
+  String get preferenceTimeWeekend => '周末';
+
+  @override
+  String get preferenceTimeAnytime => '全天';
+
+  @override
+  String get preferenceSaved => '偏好已保存';
+
+  @override
+  String get preferenceModeTitle => '协作方式';
+
+  @override
+  String get preferenceModeDesc => '你更倾向于线上还是线下完成任务？';
+
+  @override
+  String get preferenceDurationTitle => '任务周期';
+
+  @override
+  String get preferenceDurationDesc => '你偏好一次性还是长期合作任务？';
+
+  @override
+  String get preferenceRewardTitle => '报酬偏好';
+
+  @override
+  String get preferenceRewardDesc => '你更倾向于哪种报酬模式？';
+
+  @override
+  String get preferenceTimeTitle => '可用时段';
+
+  @override
+  String get preferenceTimeDesc => '你通常什么时候有空？（可多选）';
+
+  @override
+  String get preferenceLocationPermissionRequired => '需要定位权限才能开启附近任务提醒';
+
+  @override
+  String get preferenceLocationPermissionDenied => '请在系统设置中开启定位权限';
+
+  @override
+  String get preferenceSaveSettings => '保存设置';
+
+  @override
+  String get reliabilityNotEnoughData => '数据不足，完成更多任务后查看';
+
+  @override
+  String get reliabilityCompletedTasks => '已完成任务';
+
+  @override
+  String reliabilityTaskCountValue(int count) {
+    return '$count 个';
+  }
+
+  @override
+  String get reliabilityCompletionRate => '完成率';
+
+  @override
+  String get reliabilityOnTimeRate => '准时率';
+
+  @override
+  String get reliabilityCommScore => '沟通评分';
+
+  @override
+  String get reliabilityRepeatRate => '重复合作率';
+
+  @override
+  String get reliabilityScore => '可靠度评分';
+
+  @override
+  String reliabilityScoreValue(String score) {
+    return '$score分';
+  }
+
+  @override
+  String get userStageNewArrival => '初来乍到';
+
+  @override
+  String get userStageSettling => '安顿中';
+
+  @override
+  String get userStageEstablished => '融入校园';
+
+  @override
+  String get userStageExperienced => '经验丰富';
+
+  @override
+  String get demandCurrentStage => '当前阶段';
+
+  @override
+  String get demandPredicted => '预测需求';
+
+  @override
+  String get demandNoData => '暂无需求预测数据';
+
+  @override
+  String get chatNoExpertTeamForTask => '该任务未关联达人团队';
+
+  @override
+  String chatLoadMembersFailed(String error) {
+    return '加载成员列表失败: $error';
+  }
+
+  @override
+  String get chatAllMembersInChat => '所有团队成员都已在聊天中';
+
+  @override
+  String chatInviteSuccess(String name) {
+    return '已邀请 $name 加入聊天';
+  }
+
+  @override
+  String chatInviteFailed(String error) {
+    return '邀请失败: $error';
+  }
+
+  @override
+  String get aiChatLabelPersonal => '个人';
+
+  @override
+  String get aiChatLabelExpert => '达人';
+
+  @override
+  String get packageRedemptionShowQrHint => '请将此二维码出示给达人扫描';
+
+  @override
+  String packageRedemptionAutoRefresh(int seconds) {
+    return '$seconds 秒后自动刷新';
+  }
+
+  @override
+  String get packageRedemptionScanFailedHint => '扫码失败?让达人手动输入';
+
+  @override
+  String get packageRedemptionRefreshNow => '立即刷新';
+
+  @override
+  String get groupBuyCannotLoad => '无法加载拼单信息';
+
+  @override
+  String get groupBuyPersonUnit => '人';
+
+  @override
+  String get groupBuySuccess => '拼单成功！';
+
+  @override
+  String groupBuyNeedMore(int count) {
+    return '还差 $count 人成单';
+  }
+
+  @override
+  String groupBuyDeadline(String time) {
+    return '截止: $time';
+  }
+
+  @override
+  String groupBuyRoundN(int round) {
+    return '第 $round 轮';
+  }
+
+  @override
+  String get groupBuyCancelEnrollment => '取消报名';
+
+  @override
+  String get groupBuyEnrollNow => '立即报名';
+
+  @override
+  String get groupBuyAlreadyClosed => '已成单';
+
+  @override
+  String get expertTeamLoadFailedDefault => '加载失败';
+
+  @override
+  String expertTeamMemberCount(int count) {
+    return '$count 位成员';
+  }
+
+  @override
+  String get expertTeamUnknownTeam => '未知团队';
+
+  @override
+  String get homeYouMightNeed => '你可能需要';
+
+  @override
+  String get taskPreferencesSaveFailedRetry => '保存失败，请重试';
+
+  @override
+  String get profileSetupSubmitFailedDefault => '提交失败，请重试';
+
+  @override
+  String get profileSetupSkip => '跳过';
+
+  @override
+  String get profileSetupNext => '下一步';
+
+  @override
+  String get profileSetupFinish => '完成';
+
+  @override
+  String get profileSetupSkillsTitle => '你擅长什么？';
+
+  @override
+  String get profileSetupSkillsSubtitle => '选择你的技能领域';
+
+  @override
+  String get profileSetupTaskTypeTitle => '你更喜欢什么类型的任务？';
+
+  @override
+  String get profileSetupOnlineLabel => '线上任务';
+
+  @override
+  String get profileSetupOnlineDesc => '通过视频、文字或远程方式完成任务';
+
+  @override
+  String get profileSetupOfflineLabel => '线下任务';
+
+  @override
+  String get profileSetupOfflineDesc => '面对面、实地协助完成任务';
+
+  @override
+  String get profileSetupBothDesc => '线上线下均可，灵活接单';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13418,6 +13794,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get commonViewAll => '查看全部';
+
+  @override
+  String get commonCollapse => '收起';
 
   @override
   String get commonLoadingImage => '加載圖片中...';
@@ -13517,6 +13896,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get loginRequiredForFavorite => '請登入後才能收藏服務';
+
+  @override
+  String get noReviewsYet => '暫無評價';
 
   @override
   String get loginRequiredForVerification => '請登入後進行學生認證';
@@ -19835,6 +20217,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paymentFastSecure => '快速安全支付';
 
   @override
+  String get refundPolicyTitle => '退款政策';
+
+  @override
+  String get refundPolicyFooterPrefix => '支付即視為已閱讀並同意';
+
+  @override
+  String get refundPolicyLinkText => '《退款政策》';
+
+  @override
   String get paymentWeChatPay => '微信支付';
 
   @override
@@ -22414,6 +22805,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String profileViewAllReviewsCount(int count) {
     return '查看全部 $count 條評價';
   }
+
+  @override
+  String get profileNoReviewsYet => '暫無評價';
+
+  @override
+  String get profileNoMoreReviews => '沒有更多評價了';
+
+  @override
+  String get profileNoServicesYet => '暫無個人服務';
+
+  @override
+  String get profileNoMoreServices => '沒有更多服務了';
+
+  @override
+  String get profileNoMorePosts => '沒有更多帖子了';
 
   @override
   String get profileServicePriceFrom => '起';
@@ -26650,4 +27056,350 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get unknownUser => '未知用戶';
+
+  @override
+  String get commonNoData => '暫無資料';
+
+  @override
+  String get commonAdd => '新增';
+
+  @override
+  String get commonManage => '管理';
+
+  @override
+  String get skillLevelBeginner => '入門';
+
+  @override
+  String get skillLevelIntermediate => '熟練';
+
+  @override
+  String get skillLevelExpert => '精通';
+
+  @override
+  String get profileCapabilityProfile => '能力畫像';
+
+  @override
+  String get profilePreferenceProfile => '偏好畫像';
+
+  @override
+  String get profileReliabilityProfile => '可靠度畫像';
+
+  @override
+  String get profileDemandPrediction => '需求預測';
+
+  @override
+  String get profileNoSkillsHint => '還未新增技能，點擊「管理」新增';
+
+  @override
+  String get profileNoSkillsTitle => '還沒有技能';
+
+  @override
+  String get profileNoSkillsSubtitle => '點擊右下角按鈕新增你的第一個技能';
+
+  @override
+  String get profileManageSkills => '管理技能';
+
+  @override
+  String get profileAddSkill => '新增技能';
+
+  @override
+  String get profileDeleteSkill => '刪除技能';
+
+  @override
+  String profileDeleteSkillConfirm(String name) {
+    return '確認刪除「$name」嗎？';
+  }
+
+  @override
+  String get profileSkillCategory => '技能分類';
+
+  @override
+  String get profileSkillName => '技能名稱';
+
+  @override
+  String get profileSkillNameHint => '例如：Python、平面設計、英語口語';
+
+  @override
+  String get profileSkillNameRequired => '請輸入技能名稱';
+
+  @override
+  String get profileSkillNameTooLong => '技能名稱不超過30字';
+
+  @override
+  String get profileSkillProficiency => '熟練度';
+
+  @override
+  String get skillCategoryAcademic => '學業輔導';
+
+  @override
+  String get skillCategoryTechnical => '技術開發';
+
+  @override
+  String get skillCategoryDesign => '設計創意';
+
+  @override
+  String get skillCategoryLanguageTranslation => '語言翻譯';
+
+  @override
+  String get skillCategoryLifestyleService => '生活服務';
+
+  @override
+  String get skillCategoryMusicArt => '音樂藝術';
+
+  @override
+  String get skillCategorySports => '運動健身';
+
+  @override
+  String get skillCategoryOther => '其他';
+
+  @override
+  String get preferenceModeOnline => '線上';
+
+  @override
+  String get preferenceModeOffline => '線下';
+
+  @override
+  String get preferenceModeBoth => '都可以';
+
+  @override
+  String get preferenceDurationOneTime => '一次性';
+
+  @override
+  String get preferenceDurationLongTerm => '長期';
+
+  @override
+  String get preferenceRewardHighFreq => '高頻小額';
+
+  @override
+  String get preferenceRewardLowFreq => '低頻高價';
+
+  @override
+  String get preferenceRewardNoPreference => '無偏好';
+
+  @override
+  String get preferenceTimeWeekdayDay => '工作日白天';
+
+  @override
+  String get preferenceTimeWeekdayEvening => '工作日晚上';
+
+  @override
+  String get preferenceTimeWeekend => '週末';
+
+  @override
+  String get preferenceTimeAnytime => '全天';
+
+  @override
+  String get preferenceSaved => '偏好已儲存';
+
+  @override
+  String get preferenceModeTitle => '協作方式';
+
+  @override
+  String get preferenceModeDesc => '你更傾向於線上還是線下完成任務？';
+
+  @override
+  String get preferenceDurationTitle => '任務週期';
+
+  @override
+  String get preferenceDurationDesc => '你偏好一次性還是長期合作任務？';
+
+  @override
+  String get preferenceRewardTitle => '報酬偏好';
+
+  @override
+  String get preferenceRewardDesc => '你更傾向於哪種報酬模式？';
+
+  @override
+  String get preferenceTimeTitle => '可用時段';
+
+  @override
+  String get preferenceTimeDesc => '你通常什麼時候有空？（可多選）';
+
+  @override
+  String get preferenceLocationPermissionRequired => '需要定位權限才能開啟附近任務提醒';
+
+  @override
+  String get preferenceLocationPermissionDenied => '請在系統設定中開啟定位權限';
+
+  @override
+  String get preferenceSaveSettings => '儲存設定';
+
+  @override
+  String get reliabilityNotEnoughData => '資料不足，完成更多任務後查看';
+
+  @override
+  String get reliabilityCompletedTasks => '已完成任務';
+
+  @override
+  String reliabilityTaskCountValue(int count) {
+    return '$count 個';
+  }
+
+  @override
+  String get reliabilityCompletionRate => '完成率';
+
+  @override
+  String get reliabilityOnTimeRate => '準時率';
+
+  @override
+  String get reliabilityCommScore => '溝通評分';
+
+  @override
+  String get reliabilityRepeatRate => '重複合作率';
+
+  @override
+  String get reliabilityScore => '可靠度評分';
+
+  @override
+  String reliabilityScoreValue(String score) {
+    return '$score分';
+  }
+
+  @override
+  String get userStageNewArrival => '初來乍到';
+
+  @override
+  String get userStageSettling => '安頓中';
+
+  @override
+  String get userStageEstablished => '融入校園';
+
+  @override
+  String get userStageExperienced => '經驗豐富';
+
+  @override
+  String get demandCurrentStage => '當前階段';
+
+  @override
+  String get demandPredicted => '預測需求';
+
+  @override
+  String get demandNoData => '暫無需求預測資料';
+
+  @override
+  String get chatNoExpertTeamForTask => '該任務未關聯達人團隊';
+
+  @override
+  String chatLoadMembersFailed(String error) {
+    return '載入成員列表失敗: $error';
+  }
+
+  @override
+  String get chatAllMembersInChat => '所有團隊成員都已在聊天中';
+
+  @override
+  String chatInviteSuccess(String name) {
+    return '已邀請 $name 加入聊天';
+  }
+
+  @override
+  String chatInviteFailed(String error) {
+    return '邀請失敗: $error';
+  }
+
+  @override
+  String get aiChatLabelPersonal => '個人';
+
+  @override
+  String get aiChatLabelExpert => '達人';
+
+  @override
+  String get packageRedemptionShowQrHint => '請將此 QR Code 出示給達人掃描';
+
+  @override
+  String packageRedemptionAutoRefresh(int seconds) {
+    return '$seconds 秒後自動重新整理';
+  }
+
+  @override
+  String get packageRedemptionScanFailedHint => '掃碼失敗？讓達人手動輸入';
+
+  @override
+  String get packageRedemptionRefreshNow => '立即重新整理';
+
+  @override
+  String get groupBuyCannotLoad => '無法載入拼單資訊';
+
+  @override
+  String get groupBuyPersonUnit => '人';
+
+  @override
+  String get groupBuySuccess => '拼單成功！';
+
+  @override
+  String groupBuyNeedMore(int count) {
+    return '還差 $count 人成單';
+  }
+
+  @override
+  String groupBuyDeadline(String time) {
+    return '截止: $time';
+  }
+
+  @override
+  String groupBuyRoundN(int round) {
+    return '第 $round 輪';
+  }
+
+  @override
+  String get groupBuyCancelEnrollment => '取消報名';
+
+  @override
+  String get groupBuyEnrollNow => '立即報名';
+
+  @override
+  String get groupBuyAlreadyClosed => '已成單';
+
+  @override
+  String get expertTeamLoadFailedDefault => '載入失敗';
+
+  @override
+  String expertTeamMemberCount(int count) {
+    return '$count 位成員';
+  }
+
+  @override
+  String get expertTeamUnknownTeam => '未知團隊';
+
+  @override
+  String get homeYouMightNeed => '你可能需要';
+
+  @override
+  String get taskPreferencesSaveFailedRetry => '儲存失敗，請重試';
+
+  @override
+  String get profileSetupSubmitFailedDefault => '提交失敗，請重試';
+
+  @override
+  String get profileSetupSkip => '跳過';
+
+  @override
+  String get profileSetupNext => '下一步';
+
+  @override
+  String get profileSetupFinish => '完成';
+
+  @override
+  String get profileSetupSkillsTitle => '你擅長什麼？';
+
+  @override
+  String get profileSetupSkillsSubtitle => '選擇你的技能領域';
+
+  @override
+  String get profileSetupTaskTypeTitle => '你更喜歡什麼類型的任務？';
+
+  @override
+  String get profileSetupOnlineLabel => '線上任務';
+
+  @override
+  String get profileSetupOnlineDesc => '透過視訊、文字或遠端方式完成任務';
+
+  @override
+  String get profileSetupOfflineLabel => '線下任務';
+
+  @override
+  String get profileSetupOfflineDesc => '面對面、實地協助完成任務';
+
+  @override
+  String get profileSetupBothDesc => '線上線下均可，彈性接單';
 }
