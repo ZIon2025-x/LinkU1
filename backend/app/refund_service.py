@@ -362,27 +362,46 @@ def process_refund(
                     logger.error(f"部分退款后自动转账失败：{e}", exc_info=True)
                     # 转账失败不影响退款流程，定时任务会自动重试
         
-        # 4. 退还优惠券（如果需要）
+        # 4. 退还优惠券（仅全额退款时返还）
         # 注意：积分支付已禁用，不需要退还积分
+        # 与「退款政策」一致：全额退款 → 优惠券返还到账户；部分退款 → 优惠券视为已使用，不返还。
         try:
-            # 查找 PaymentHistory 记录
-            payment_history = db.query(models.PaymentHistory).filter(
-                models.PaymentHistory.task_id == task.id,
-                models.PaymentHistory.status == "succeeded"
-            ).order_by(models.PaymentHistory.created_at.desc()).first()
-            
-            if payment_history and payment_history.coupon_usage_log_id:
-                # 查找优惠券使用记录
-                from app.coupon_points_crud import get_coupon_usage_log, restore_coupon
-                coupon_usage_log = get_coupon_usage_log(db, payment_history.coupon_usage_log_id)
-                
-                if coupon_usage_log and coupon_usage_log.coupon_id:
-                    # 恢复优惠券状态（标记为未使用）
-                    success = restore_coupon(db, coupon_usage_log.coupon_id, coupon_usage_log.user_id)
-                    if success:
-                        logger.info(f"✅ 已恢复优惠券（ID: {coupon_usage_log.coupon_id}）")
-                    else:
-                        logger.warning(f"恢复优惠券失败（ID: {coupon_usage_log.coupon_id}），可能需要手动处理")
+            refund_amount_decimal_for_coupon = Decimal(str(refund_amount))
+            task_amount_for_coupon = (
+                Decimal(str(task.agreed_reward)) if task.agreed_reward is not None
+                else Decimal(str(task.base_reward)) if task.base_reward is not None
+                else Decimal("0")
+            )
+            is_full_refund = (
+                task_amount_for_coupon > 0
+                and refund_amount_decimal_for_coupon >= task_amount_for_coupon
+            )
+
+            if not is_full_refund:
+                logger.info(
+                    f"部分退款，优惠券不返还（task_id={task.id}, "
+                    f"refund=£{refund_amount_decimal_for_coupon}, "
+                    f"task_amount=£{task_amount_for_coupon}）"
+                )
+            else:
+                # 查找 PaymentHistory 记录
+                payment_history = db.query(models.PaymentHistory).filter(
+                    models.PaymentHistory.task_id == task.id,
+                    models.PaymentHistory.status == "succeeded"
+                ).order_by(models.PaymentHistory.created_at.desc()).first()
+
+                if payment_history and payment_history.coupon_usage_log_id:
+                    # 查找优惠券使用记录
+                    from app.coupon_points_crud import get_coupon_usage_log, restore_coupon
+                    coupon_usage_log = get_coupon_usage_log(db, payment_history.coupon_usage_log_id)
+
+                    if coupon_usage_log and coupon_usage_log.coupon_id:
+                        # 恢复优惠券状态（标记为未使用）
+                        success = restore_coupon(db, coupon_usage_log.coupon_id, coupon_usage_log.user_id)
+                        if success:
+                            logger.info(f"✅ 已恢复优惠券（ID: {coupon_usage_log.coupon_id}）")
+                        else:
+                            logger.warning(f"恢复优惠券失败（ID: {coupon_usage_log.coupon_id}），可能需要手动处理")
         except Exception as e:
             logger.warning(f"处理优惠券退还时发生错误: {e}，不影响退款流程")
         
