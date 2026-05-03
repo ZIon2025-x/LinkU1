@@ -532,11 +532,11 @@ def get_legal_document(
     lang: Optional[str] = Query("en", description="语言：zh 或 en"),
     db: Session = Depends(get_db),
 ):
-    """获取法律文档（隐私政策/用户协议/Cookie 政策/社区准则），按 type+lang 返回 content_json。用于 Web / iOS。"""
+    """获取法律文档（隐私政策/用户协议/Cookie 政策/社区准则/退款政策），按 type+lang 返回 content_json。用于 Web / iOS。"""
     try:
         doc_type = (doc_type or "").lower()
-        if doc_type not in ("privacy", "terms", "cookie", "community_guidelines"):
-            raise HTTPException(status_code=400, detail="doc_type 须为 privacy、terms、cookie 或 community_guidelines")
+        if doc_type not in ("privacy", "terms", "cookie", "community_guidelines", "refund_policy"):
+            raise HTTPException(status_code=400, detail="doc_type 须为 privacy、terms、cookie、community_guidelines 或 refund_policy")
         lang = (lang or "en").lower()
         if lang not in ("zh", "en"):
             lang = "en"
