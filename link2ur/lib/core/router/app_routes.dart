@@ -106,6 +106,9 @@ class AppRoutes {
   static const String myTasks = '/profile/my-tasks';
   static const String myPosts = '/profile/my-posts';
   static const String userProfile = '/user/:id';
+  static const String userReviews = '/user/:id/reviews';
+  static const String userPersonalServices = '/user/:id/services';
+  static const String userForumPosts = '/user/:id/forum-posts';
   static const String taskStatistics = '/profile/task-statistics';
   static const String myProfilePage = '/my-profile';
   static const String capabilityEdit = '/my-profile/capabilities';
@@ -157,6 +160,7 @@ class AppRoutes {
   static const String terms = '/terms';
   static const String privacy = '/privacy';
   static const String communityGuidelines = '/community-guidelines';
+  static const String refundPolicy = '/info/refund-policy';
   static const String about = '/about';
   static const String vip = '/vip';
   static const String vipPurchase = '/vip/purchase';

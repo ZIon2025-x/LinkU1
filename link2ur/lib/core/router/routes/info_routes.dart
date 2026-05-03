@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../app_routes.dart';
 import '../../../features/coupon_points/views/coupon_points_view.dart';
 import '../../../features/info/views/info_views.dart';
+import '../../../features/info/views/refund_policy_view.dart';
 import '../../../features/info/views/vip_purchase_view.dart';
 import '../../../features/info/views/vip_view.dart';
 import '../../../features/search/views/search_view.dart';
@@ -33,6 +34,11 @@ List<RouteBase> get infoRoutes => [
         path: AppRoutes.communityGuidelines,
         name: 'communityGuidelines',
         builder: (context, state) => const CommunityGuidelinesView(),
+      ),
+      GoRoute(
+        path: AppRoutes.refundPolicy,
+        name: 'refundPolicy',
+        builder: (context, state) => const RefundPolicyView(),
       ),
       GoRoute(
         path: AppRoutes.about,
