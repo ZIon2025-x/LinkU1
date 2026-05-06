@@ -9,9 +9,9 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
-from sqlalchemy import select, func, update, desc, or_
+from sqlalchemy import select, func, update, desc, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, aliased
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
@@ -1136,8 +1136,12 @@ async def search_linkable_content(
 
     # 搜索服务（包含达人服务和个人服务）
     if type in ("all", "service"):
-        # 服务所有者：个人服务用 user_id，达人服务用 expert_id（与 users.id 同空间）
-        owner_user_id_expr = func.coalesce(
+        from app.models_expert import Expert
+        # 服务所有者解析:
+        #   - 新团队服务 (owner_type='expert'): owner 是 Expert 团队 → Expert.name
+        #   - 新个人服务 (owner_type='user'):   owner 是 User       → User.name
+        #   - legacy 数据 (owner_type 为 NULL): 退到 user_id 或 expert_id (同 users.id 空间) → User.name
+        legacy_owner_id_expr = func.coalesce(
             models.TaskExpertService.user_id,
             models.TaskExpertService.expert_id,
         )
@@ -1148,9 +1152,28 @@ async def search_linkable_content(
                 models.TaskExpertService.description,
                 models.TaskExpertService.images,
                 models.TaskExpertService.service_type,
-                models.User.name.label("owner_name"),
+                func.coalesce(Expert.name, models.User.name).label("owner_name"),
             )
-            .join(models.User, models.User.id == owner_user_id_expr)
+            .outerjoin(
+                Expert,
+                and_(
+                    models.TaskExpertService.owner_type == "expert",
+                    models.TaskExpertService.owner_id == Expert.id,
+                ),
+            )
+            .outerjoin(
+                models.User,
+                or_(
+                    and_(
+                        models.TaskExpertService.owner_type == "user",
+                        models.TaskExpertService.owner_id == models.User.id,
+                    ),
+                    and_(
+                        models.TaskExpertService.owner_type.is_(None),
+                        legacy_owner_id_expr == models.User.id,
+                    ),
+                ),
+            )
             .where(
                 models.TaskExpertService.status == "active",
             )
@@ -1422,7 +1445,16 @@ async def get_linkable_content_for_user(
     results = []
     limit_per_type = 5
 
-    # 我的服务（达人服务 + 个人服务）
+    # 我的服务（个人服务 + 我作为团长/admin 的团队服务）
+    from app.models_expert import ExpertMember
+    my_team_ids_subq = (
+        select(ExpertMember.expert_id)
+        .where(
+            ExpertMember.user_id == current_user.id,
+            ExpertMember.role.in_(["owner", "admin"]),
+            ExpertMember.status == "active",
+        )
+    )
     my_svc_query = (
         select(
             models.TaskExpertService.id,
@@ -1432,8 +1464,19 @@ async def get_linkable_content_for_user(
         )
         .where(
             or_(
+                # legacy 个人 / legacy 单人达人 (expert_id == users.id 同空间)
                 models.TaskExpertService.user_id == current_user.id,
                 models.TaskExpertService.expert_id == current_user.id,
+                # 新个人服务
+                and_(
+                    models.TaskExpertService.owner_type == "user",
+                    models.TaskExpertService.owner_id == current_user.id,
+                ),
+                # 新团队服务: 我是团长/admin
+                and_(
+                    models.TaskExpertService.owner_type == "expert",
+                    models.TaskExpertService.owner_id.in_(my_team_ids_subq),
+                ),
             ),
             models.TaskExpertService.status == "active",
         )

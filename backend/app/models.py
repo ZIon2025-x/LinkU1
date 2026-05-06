@@ -1807,7 +1807,7 @@ class ServiceApplication(Base):
     # 关系
     service = relationship("TaskExpertService", back_populates="applications")
     applicant = relationship("User", foreign_keys=[applicant_id], backref="service_applications")
-    expert = relationship("TaskExpert", foreign_keys=[expert_id])
+    # `expert` relationship 已移除 (legacy expert_id 列代码层零读, Phase 2a 后所有路径用 new_expert_id)
     task = relationship("Task", backref="service_application", foreign_keys=[task_id])
     time_slot = relationship("ServiceTimeSlot", back_populates="applications", foreign_keys=[time_slot_id])
     

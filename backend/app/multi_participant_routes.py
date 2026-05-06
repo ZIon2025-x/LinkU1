@@ -1913,30 +1913,36 @@ def create_expert_activity(
     # 验证服务是否属于该任务达人（必须关联服务）
     if not activity.expert_service_id:
         raise HTTPException(status_code=400, detail="必须关联一个服务")
-    
-    # 查询服务
+
+    # 先按 ID + active 取出来,再分支判断归属(兼容新 owner_type='expert' 团队服务 +
+    # 旧 expert_id == users.id 的 legacy task expert 服务)
     service = db.query(TaskExpertService).filter(
-        and_(
-            TaskExpertService.id == activity.expert_service_id,
-            TaskExpertService.expert_id == current_user.id,
-            TaskExpertService.status == "active"
-        )
+        TaskExpertService.id == activity.expert_service_id,
     ).first()
-    
     if not service:
-        # 检查服务是否存在但可能不属于该用户或状态不对
-        service_exists = db.query(TaskExpertService).filter(
-            TaskExpertService.id == activity.expert_service_id
+        raise HTTPException(status_code=404, detail=f"服务不存在 (ID: {activity.expert_service_id})")
+    if service.status != "active":
+        raise HTTPException(status_code=400, detail=f"服务状态为 {service.status}，无法关联。请确保服务已上架")
+
+    is_owner = False
+    if service.owner_type == "expert" and service.owner_id:
+        # 新团队服务: 当前用户必须是该团队的 owner/admin
+        from app.models_expert import ExpertMember
+        member_row = db.query(ExpertMember).filter(
+            ExpertMember.expert_id == service.owner_id,
+            ExpertMember.user_id == current_user.id,
+            ExpertMember.role.in_(["owner", "admin"]),
+            ExpertMember.status == "active",
         ).first()
-        
-        if not service_exists:
-            raise HTTPException(status_code=404, detail=f"服务不存在 (ID: {activity.expert_service_id})")
-        elif service_exists.expert_id != current_user.id:
-            raise HTTPException(status_code=403, detail="该服务不属于当前任务达人")
-        elif service_exists.status != "active":
-            raise HTTPException(status_code=400, detail=f"服务状态为 {service_exists.status}，无法关联。请确保服务已上架")
-        else:
-            raise HTTPException(status_code=404, detail="Service not found or not accessible")
+        is_owner = member_row is not None
+    elif service.owner_type == "user" and service.owner_id:
+        is_owner = service.owner_id == current_user.id
+    else:
+        # legacy 数据 (owner_type 未回填): 用旧字段判断
+        is_owner = (service.expert_id == current_user.id) or (service.user_id == current_user.id)
+
+    if not is_owner:
+        raise HTTPException(status_code=403, detail="该服务不属于当前任务达人")
     
     # 验证 min_participants <= max_participants
     if activity.min_participants > activity.max_participants:
@@ -2021,10 +2027,15 @@ def create_expert_activity(
             discounted_price = original_price
     
     # 创建活动记录（需管理员审核后才变为 open）
+    # owner_type/owner_id 沿用 service 的归属(新 follow_feed 双维度查询依赖此列)
+    activity_owner_type = service.owner_type or ("user" if service.service_type == "personal" else "expert")
+    activity_owner_id = service.owner_id or (service.user_id if service.service_type == "personal" else service.expert_id)
     db_activity = Activity(
         title=activity.title,
         description=activity.description,
         expert_id=current_user.id,
+        owner_type=activity_owner_type,
+        owner_id=activity_owner_id,
         expert_service_id=activity.expert_service_id,
         location=activity.location,
         task_type=activity.task_type,
