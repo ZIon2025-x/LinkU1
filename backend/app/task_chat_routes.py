@@ -77,29 +77,29 @@ async def _check_is_service_owner(
     """检查用户是否为该任务关联服务的所有者或团队成员。
 
     两条反查路径:
-    1. task.expert_service_id → TaskExpertService.user_id / expert_id
+    1. task.expert_service_id → TaskExpertService.owner_type/owner_id
     2. ServiceApplication.task_id → service_owner_id / new_expert_id
     """
     from app.models_expert import ExpertMember
 
-    # 路径 1: 通过 task.expert_service_id
+    # 路径 1: 通过 task.expert_service_id (新 owner_type/owner_id 列, migration 161+227)
     if task.expert_service_id:
         svc_result = await db.execute(
             select(
-                models.TaskExpertService.user_id,
-                models.TaskExpertService.expert_id,
+                models.TaskExpertService.owner_type,
+                models.TaskExpertService.owner_id,
             ).where(models.TaskExpertService.id == task.expert_service_id)
         )
         svc_row = svc_result.first()
         if svc_row:
-            svc_user_id, svc_expert_id = svc_row
-            if svc_user_id and str(svc_user_id) == user_id:
+            owner_type, owner_id = svc_row
+            if owner_type == "user" and owner_id == user_id:
                 return True
-            if svc_expert_id:
+            if owner_type == "expert" and owner_id:
                 member = await db.execute(
                     select(ExpertMember.id).where(
                         and_(
-                            ExpertMember.expert_id == svc_expert_id,
+                            ExpertMember.expert_id == owner_id,
                             ExpertMember.user_id == user_id,
                             ExpertMember.status == "active",
                         )
