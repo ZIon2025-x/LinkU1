@@ -453,11 +453,6 @@ export const getExpertForAdmin = async (expertId: string) => {
   return res.data;
 };
 
-export const createTaskExpert = async (expertData: any) => {
-  const res = await api.post('/api/admin/task-expert', expertData);
-  return res.data;
-};
-
 /**
  * 管理员直接新建达人团队（不走用户申请审核流程）。
  * owner_user_id 必填:必须是已存在的真实用户。
