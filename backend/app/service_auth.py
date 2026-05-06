@@ -5,6 +5,7 @@
 
 import os
 import json
+import re
 import secrets
 import hashlib
 import time
@@ -25,6 +26,10 @@ settings = get_settings()
 
 SERVICE_SESSION_EXPIRE_HOURS = int(os.getenv("SERVICE_SESSION_EXPIRE_HOURS", "6"))  # 客服会话6小时
 SERVICE_MAX_ACTIVE_SESSIONS = int(os.getenv("SERVICE_MAX_ACTIVE_SESSIONS", "2"))  # 客服最多2个活跃会话
+SERVICE_STRICT_FINGERPRINT = os.getenv("SERVICE_STRICT_FINGERPRINT", "false").lower() == "true"
+
+# generate_session_id() 产物：service_session_<token_urlsafe(32)>，仅 [A-Za-z0-9_-]
+_SESSION_ID_RE = re.compile(r"^service_session_[A-Za-z0-9_-]+$")
 
 # 会话存储
 try:
@@ -332,8 +337,19 @@ class ServiceAuthManager:
                 logger.error(f"[SERVICE_AUTH] 内存存储也失败: {e2}")
     
     @staticmethod
+    def _is_valid_session_id_format(session_id: str) -> bool:
+        # session_id 由 generate_session_id() 产生：service_session_<token_urlsafe(32)>
+        # 只允许 [A-Za-z0-9_-]，拒绝 Redis SCAN glob 元字符（*?[]\）等任何非预期字符
+        if not session_id or len(session_id) > 128:
+            return False
+        return _SESSION_ID_RE.match(session_id) is not None
+
+    @staticmethod
     def _get_session_data(session_id: str) -> Optional[dict]:
         """从Redis或内存获取会话数据"""
+        if not ServiceAuthManager._is_valid_session_id_format(session_id):
+            logger.warning(f"[SERVICE_AUTH] 拒绝非法格式的 session_id")
+            return None
         try:
             if USE_REDIS and redis_client:
                 # 从Redis查找（使用 SCAN 替代 KEYS）
@@ -535,13 +551,13 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
         logger.warning(f"[SERVICE_AUTH] 客服会话已失效: {session.service_id}")
         return None
     
-    # 验证设备指纹（用于检测会话劫持）- 暂时禁用严格验证
+    # 验证设备指纹（用于检测会话劫持）
     current_fingerprint = ServiceAuthManager.get_device_fingerprint(request)
     if session.device_fingerprint != current_fingerprint:
         logger.warning(f"[SERVICE_AUTH] 设备指纹不匹配: {session.service_id}, 会话指纹: {session.device_fingerprint[:8]}..., 当前指纹: {current_fingerprint[:8]}...")
-        # 暂时不强制登出，只记录警告
-        # ServiceAuthManager.delete_session(service_session_id)
-        # return None
+        if SERVICE_STRICT_FINGERPRINT:
+            ServiceAuthManager.delete_session(service_session_id)
+            return None
     
     # 验证IP地址（可选，用于检测异常登录）- 使用统一的IP获取方法
     from app.security import get_client_ip
