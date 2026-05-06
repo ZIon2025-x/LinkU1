@@ -199,7 +199,6 @@ async def apply_for_service(
     application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
-        expert_id=None,  # 旧字段，不再使用
         new_expert_id=service.owner_id if service.owner_type == "expert" else None,
         service_owner_id=service.owner_id if service.owner_type == "user" else None,
         application_message=body.get("message"),

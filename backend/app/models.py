@@ -1605,8 +1605,9 @@ class TaskExpertService(Base):
     service_type = Column(String(20), nullable=False, default="expert", server_default="expert")  # 'personal' | 'expert'
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
     # 新多态 owner 列（Phase 2a）——与旧列共存，新代码用新列
-    owner_type = Column(String(20), nullable=True)  # 'expert' | 'user'，回填后为 NOT NULL
-    owner_id = Column(String(8), nullable=True)  # experts.id 或 users.id，回填后为 NOT NULL
+    # migration 161 + 227 已将 owner_type / owner_id 设为 NOT NULL + CHECK (in 'expert', 'user')
+    owner_type = Column(String(20), nullable=False)  # 'expert' | 'user'
+    owner_id = Column(String(8), nullable=False)  # experts.id 或 users.id
     pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'negotiable'
     location_type = Column(String(20), nullable=False, default="online", server_default="online")  # 'online' | 'in_person' | 'both'
     location = Column(String(255), nullable=True)  # city/address text for display
@@ -1779,9 +1780,8 @@ class ServiceApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=True)  # NULL = 团队咨询（未指定具体服务）
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)  # [legacy] 指向旧 task_experts 表，仅历史数据使用
-    # 指向新 experts 表的 ID（Phase 2a）——与旧 expert_id 共存
-    new_expert_id = Column(String(8), ForeignKey("experts.id", ondelete="CASCADE"), nullable=True)  # 指向 experts.id（新表）
+    # legacy `expert_id` 列已通过 migration 226 删除 (代码层零读, dual_set 验证无孤儿)
+    new_expert_id = Column(String(8), ForeignKey("experts.id", ondelete="CASCADE"), nullable=True)  # 指向 experts.id (Phase 2a 起唯一团队归属字段)
     service_owner_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="SET NULL"), nullable=True)  # 选择的时间段ID
     application_message = Column(Text, nullable=True)
@@ -1814,7 +1814,6 @@ class ServiceApplication(Base):
     __table_args__ = (
         Index("ix_service_applications_service_id", service_id),
         Index("ix_service_applications_applicant_id", applicant_id),
-        Index("ix_service_applications_expert_id", expert_id),
         Index("ix_service_applications_new_expert_id", new_expert_id),
         Index("ix_service_applications_status", status),
         Index("ix_service_applications_task_id", task_id),

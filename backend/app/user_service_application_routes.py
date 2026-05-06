@@ -163,7 +163,8 @@ async def respond_to_counter_offer(
         raise HTTPException(status_code=400, detail="任务达人尚未提出议价")
     
     # 提前计算 owner_id，供 accept 和 reject 分支共用
-    owner_id = application.service_owner_id or application.expert_id
+    # 此路由仅处理个人服务,service_owner_id 必然非空 (FK SET NULL 触发即 owner 已删)
+    owner_id = application.service_owner_id
 
     if request.accept:
         # 5. 同意议价：更新状态为price_agreed
@@ -290,7 +291,7 @@ async def cancel_service_application(
     await db.refresh(application)
 
     # 7. 发送通知给服务所有者
-    cancel_owner_id = application.service_owner_id or application.expert_id
+    cancel_owner_id = application.service_owner_id
     from app.task_notifications import send_service_application_cancelled_notification
     try:
         await send_service_application_cancelled_notification(
