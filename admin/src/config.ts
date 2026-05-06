@@ -20,7 +20,6 @@ export const MAIN_SITE_URL = isProduction
 // 管理员专用端点
 export const API_ENDPOINTS = {
   // 认证
-  ADMIN_LOGIN: '/api/admin/login',
   ADMIN_LOGOUT: '/api/admin/logout',
   ADMIN_REFRESH: '/api/admin/refresh',
   ADMIN_PROFILE: '/api/auth/admin/profile',

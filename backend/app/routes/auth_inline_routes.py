@@ -575,45 +575,6 @@ def resend_verification_email(
     }
 
 
-@router.post("/admin/login")
-def admin_login(
-    request: Request,
-    response: Response,
-    login_data: schemas.AdminUserLogin,
-    db: Session = Depends(get_db)
-):
-    """后台管理员登录端点，使用Cookie会话认证"""
-    admin = crud.authenticate_admin_user(db, login_data.username, login_data.password)
-    if not admin:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-
-    # 更新最后登录时间
-    crud.update_admin_last_login(db, admin.id)
-
-    # 使用新的管理员会话认证系统
-    from app.admin_auth import create_admin_session, create_admin_session_cookie
-
-    # 创建管理员会话
-    session_id = create_admin_session(admin.id, request)
-    if not session_id:
-        raise HTTPException(status_code=500, detail="Failed to create admin session")
-
-    # 设置管理员会话Cookie
-    response = create_admin_session_cookie(response, session_id)
-
-    return {
-        "message": "管理员登录成功",
-        "admin": {
-            "id": admin.id,
-            "name": admin.name,
-            "username": admin.username,
-            "email": admin.email,
-            "is_super_admin": admin.is_super_admin,
-            "user_type": "admin",
-        },
-    }
-
-
 @router.get("/user/info")
 def get_user_info(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)

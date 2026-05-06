@@ -130,11 +130,6 @@ api.interceptors.response.use(
 
 // ==================== 认证相关 API ====================
 
-export const adminLogin = async (loginData: { username: string; password: string }) => {
-  const res = await api.post('/api/admin/login', loginData);
-  return res.data;
-};
-
 const AUTH_COOKIE_NAMES = ['session', 'admin_session', 'csrf_token', 'refresh_token'];
 
 function clearAuthCookies() {
