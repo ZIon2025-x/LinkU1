@@ -502,33 +502,30 @@ export const getAllExpertActivitiesAdmin = async (params?: { page?: number; limi
   return res.data;
 };
 
-// 注: 旧 URL `/api/admin/task-expert/{expert_id}/services/{service_id}` 走 routers.py
-// 的 legacy 端点,按 task_experts.id (旧 user_id 语义) 查表,与新管理端列表返回的
-// 8 字符 experts.id 不匹配,会全部 404。新端点改为只用 service_id (全局唯一),
-// 路由参数 expertId 保留以避免动 ExpertManagement.tsx 的调用站点。
-export const updateExpertServiceAdmin = async (_expertId: string, serviceId: number, serviceData: any) => {
+// 新端点只用 service_id / activity_id (全局唯一),不需要 expert_id
+// (旧 URL `/api/admin/task-expert/{expert_id}/services/{service_id}` 走 routers.py
+//  legacy 端点按 task_experts.id 查表,与新 8 字符 experts.id 不匹配会 404。)
+export const updateExpertServiceAdmin = async (serviceId: number, serviceData: any) => {
   const res = await api.put(`/api/admin/experts/services/${serviceId}`, serviceData);
   return res.data;
 };
 
-export const deleteExpertServiceAdmin = async (_expertId: string, serviceId: number) => {
+export const deleteExpertServiceAdmin = async (serviceId: number) => {
   const res = await api.delete(`/api/admin/experts/services/${serviceId}`);
   return res.data;
 };
 
-// 同上 — legacy 单团队活动列表 URL 已死,但函数本身被 admin_task_expert_router 列表替代,
-// 这里保留只是因为没人在用 (也没人 import)。新 URL 也走 admin_task_expert_router。
 export const getExpertActivitiesAdmin = async (expertId: string) => {
   const res = await api.get('/api/admin/experts/activities', { params: { expert_id: expertId } });
   return res.data;
 };
 
-export const updateExpertActivityAdmin = async (_expertId: string, activityId: number, activityData: any) => {
+export const updateExpertActivityAdmin = async (activityId: number, activityData: any) => {
   const res = await api.put(`/api/admin/experts/activities/${activityId}`, activityData);
   return res.data;
 };
 
-export const deleteExpertActivityAdmin = async (_expertId: string, activityId: number) => {
+export const deleteExpertActivityAdmin = async (activityId: number) => {
   const res = await api.delete(`/api/admin/experts/activities/${activityId}`);
   return res.data;
 };

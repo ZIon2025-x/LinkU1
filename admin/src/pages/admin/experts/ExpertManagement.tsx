@@ -533,7 +533,7 @@ const ExpertManagement: React.FC = () => {
   const serviceEditModal = useModalForm<any>({
     initialValues: serviceFormInitial,
     onSubmit: async (values) => {
-      await updateExpertServiceAdmin(values.expert_id, values.id, {
+      await updateExpertServiceAdmin(values.id, {
         service_name: values.service_name,
         description: values.description,
         base_price: values.base_price,
@@ -546,7 +546,7 @@ const ExpertManagement: React.FC = () => {
     },
     onError: (e) => message.error(getErrorMessage(e)),
   });
-  const handleDeleteService = (expertId: string, serviceId: number, name: string) => {
+  const handleDeleteService = (serviceId: number, name: string) => {
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除服务「${name}」吗？`,
@@ -554,7 +554,7 @@ const ExpertManagement: React.FC = () => {
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
-        await deleteExpertServiceAdmin(expertId, serviceId);
+        await deleteExpertServiceAdmin(serviceId);
         message.success('已删除');
         servicesTable.refresh();
       },
@@ -566,7 +566,7 @@ const ExpertManagement: React.FC = () => {
   const activityEditModal = useModalForm<any>({
     initialValues: activityFormInitial,
     onSubmit: async (values) => {
-      await updateExpertActivityAdmin(values.expert_id, values.id, {
+      await updateExpertActivityAdmin(values.id, {
         title: values.title,
         description: values.description,
         status: values.status,
@@ -578,7 +578,7 @@ const ExpertManagement: React.FC = () => {
     },
     onError: (e) => message.error(getErrorMessage(e)),
   });
-  const handleDeleteActivity = (expertId: string, activityId: number, title: string) => {
+  const handleDeleteActivity = (activityId: number, title: string) => {
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除活动「${title}」吗？关联任务可能被一并处理。`,
@@ -586,7 +586,7 @@ const ExpertManagement: React.FC = () => {
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
-        await deleteExpertActivityAdmin(expertId, activityId);
+        await deleteExpertActivityAdmin(activityId);
         message.success('已删除');
         activitiesTable.refresh();
       },
@@ -959,7 +959,7 @@ const ExpertManagement: React.FC = () => {
             编辑
           </button>
           <button
-            onClick={() => handleDeleteService(record.expert_id, record.id, record.service_name)}
+            onClick={() => handleDeleteService(record.id, record.service_name)}
             style={{ padding: '4px 8px', border: '1px solid #dc3545', background: 'white', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
           >
             删除
@@ -1013,7 +1013,7 @@ const ExpertManagement: React.FC = () => {
             编辑
           </button>
           <button
-            onClick={() => handleDeleteActivity(record.expert_id, record.id, record.title)}
+            onClick={() => handleDeleteActivity(record.id, record.title)}
             style={{ padding: '4px 8px', border: '1px solid #dc3545', background: 'white', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
           >
             删除
@@ -1565,7 +1565,7 @@ const ExpertManagement: React.FC = () => {
                             const newImages = [...(svc.images || [])];
                             newImages.splice(imgIdx, 1);
                             try {
-                              await updateExpertServiceAdmin(editModal.formData.id, svc.id, { images: newImages });
+                              await updateExpertServiceAdmin(svc.id, { images: newImages });
                               const updatedServices = [...editModal.formData.services];
                               updatedServices[svcIdx] = { ...svc, images: newImages };
                               editModal.updateField('services', updatedServices);
@@ -1603,7 +1603,7 @@ const ExpertManagement: React.FC = () => {
                       try {
                         const url = await uploadImageWithCategory(file, 'service_image', expertId);
                         const newImages = [...(svc.images || []), url];
-                        await updateExpertServiceAdmin(editModal.formData.id, svc.id, { images: newImages });
+                        await updateExpertServiceAdmin(svc.id, { images: newImages });
                         const updatedServices = [...editModal.formData.services];
                         updatedServices[svcIdx] = { ...svc, images: newImages };
                         editModal.updateField('services', updatedServices);
