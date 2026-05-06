@@ -34,6 +34,12 @@ def _load_root_certificates() -> List[bytes]:
     return certs
 
 
+def get_verifier():
+    """获取已初始化的 SignedDataVerifier 实例（webhook + transaction JWS 共用同一 root cert / bundle_id 配置）。
+    未配置或库未安装时返回 None。"""
+    return _get_verifier()
+
+
 def _get_verifier():
     global _verifier
     if _verifier is not None:

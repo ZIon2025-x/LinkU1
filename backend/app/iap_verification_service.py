@@ -11,26 +11,20 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
-from cryptography import x509
 import jwt
-from jwt import PyJWKClient
+
+from app.apple_webhook_verifier import get_verifier as get_apple_signed_data_verifier
 
 logger = logging.getLogger(__name__)
 
 
 class IAPVerificationService:
     """Apple IAP验证服务"""
-    
+
     # App Store Server API端点
     PRODUCTION_API_URL = "https://api.storekit.itunes.apple.com"
     SANDBOX_API_URL = "https://api.storekit-sandbox.itunes.apple.com"
-    
-    # Apple公钥URL（用于验证JWS）
-    APPLE_PUBLIC_KEY_URL = "https://api.appstoreconnect.apple.com/v1/certificates"
-    
-    # JWT密钥ID（从JWS header中获取）
-    APPLE_KEY_ID_HEADER = "x5c"
-    
+
     def __init__(self):
         """初始化验证服务"""
         # 从环境变量获取App Store Connect配置
@@ -54,120 +48,85 @@ class IAPVerificationService:
     
     def verify_transaction_jws(self, transaction_jws: str) -> Dict[str, Any]:
         """
-        验证交易JWS
-        
-        Args:
-            transaction_jws: JWS格式的交易数据
-            
-        Returns:
-            解析后的交易数据
-            
-        Raises:
-            ValueError: 如果JWS格式无效或验证失败
+        验证并解析交易 JWS。
+
+        启用完整验证时（生产环境强制启用），使用 app-store-server-library 的
+        SignedDataVerifier 完整校验 Apple Root CA → 中间证书 → 叶子证书的链路 +
+        签名 + bundle_id + environment，杜绝攻击者用自签证书伪造 JWS 的旁路。
         """
+        if self.enable_full_verification:
+            return self._verify_with_signed_data_verifier(transaction_jws)
+        # 仅 sandbox 且显式关闭完整验证时走快路径（仅供本地/CI 测试）
+        return self._parse_jws_unverified(transaction_jws)
+
+    def _verify_with_signed_data_verifier(self, transaction_jws: str) -> Dict[str, Any]:
+        verifier = get_apple_signed_data_verifier()
+        if verifier is None:
+            raise ValueError(
+                "IAP 验证器未初始化（缺少 Apple root certs 或 app-store-server-library 未安装），"
+                "拒绝激活以避免凭据伪造旁路"
+            )
         try:
-            # 解析JWS header
-            parts = transaction_jws.split('.')
-            if len(parts) != 3:
-                raise ValueError("无效的JWS格式：必须包含header、payload和signature三部分")
-            
-            header_b64, payload_b64, signature_b64 = parts
-            
-            # 解码header
-            header_padded = header_b64 + '=' * (4 - len(header_b64) % 4)
-            header_data = base64.urlsafe_b64decode(header_padded)
-            header = json.loads(header_data)
-            
-            # 解码payload（不验证签名，仅用于获取信息）
-            payload_padded = payload_b64 + '=' * (4 - len(payload_b64) % 4)
-            payload_data = base64.urlsafe_b64decode(payload_padded)
-            transaction_data = json.loads(payload_data)
-            
-            # 如果启用完整验证，验证JWS签名
-            if self.enable_full_verification:
-                self._verify_jws_signature(transaction_jws, header)
-            
-            return {
-                "header": header,
-                "payload": transaction_data,
-                "transaction_id": str(transaction_data.get("transactionId", "")),
-                "original_transaction_id": str(transaction_data.get("originalTransactionId", "")),
-                "product_id": transaction_data.get("productId", ""),
-                "purchase_date": transaction_data.get("purchaseDate", 0),
-                "expires_date": transaction_data.get("expiresDate", 0),
-                "is_trial_period": transaction_data.get("isTrialPeriod", False),
-                "is_in_intro_offer_period": transaction_data.get("isInIntroOfferPeriod", False),
-                "environment": transaction_data.get("environment", "Production"),
-                "type": transaction_data.get("type", ""),
-            }
-            
-        except json.JSONDecodeError as e:
-            raise ValueError(f"JWS payload解析失败: {str(e)}")
+            decoded = verifier.verify_and_decode_signed_transaction(transaction_jws)
         except Exception as e:
-            raise ValueError(f"JWS验证失败: {str(e)}")
-    
-    def _verify_jws_signature(self, transaction_jws: str, header: Dict[str, Any]) -> None:
-        """
-        验证JWS签名（使用Apple公钥）
-        
-        Apple的JWS交易收据通常包含x5c证书链，应该优先使用x5c进行验证。
-        x5c是自包含的，不需要从外部API获取。
-        
-        Args:
-            transaction_jws: JWS格式的交易数据
-            header: JWS header
-            
-        Raises:
-            ValueError: 如果签名验证失败
-        """
+            raise ValueError(f"JWS 签名验证失败: {e}")
+        return self._decoded_payload_to_dict(decoded)
+
+    @staticmethod
+    def _decoded_payload_to_dict(decoded) -> Dict[str, Any]:
+        """把 JWSTransactionDecodedPayload 映射成原有调用方期望的 dict 形状。"""
+        environment = None
+        if getattr(decoded, "rawEnvironment", None):
+            environment = decoded.rawEnvironment
+        elif getattr(decoded, "environment", None) is not None:
+            environment = decoded.environment.value
+        # offerType: 1=INTRODUCTORY, 2=PROMOTIONAL, 3=CODE
+        offer_type = getattr(decoded, "offerType", None)
+        offer_type_value = offer_type.value if offer_type is not None and hasattr(offer_type, "value") else getattr(decoded, "rawOfferType", None)
+        is_intro = offer_type_value == 1
+        type_val = getattr(decoded, "type", None)
+        type_str = type_val.value if type_val is not None and hasattr(type_val, "value") else (getattr(decoded, "rawType", None) or "")
+        return {
+            "header": None,
+            "payload": None,
+            "transaction_id": str(getattr(decoded, "transactionId", "") or ""),
+            "original_transaction_id": str(getattr(decoded, "originalTransactionId", "") or ""),
+            "product_id": getattr(decoded, "productId", "") or "",
+            "purchase_date": getattr(decoded, "purchaseDate", 0) or 0,
+            "expires_date": getattr(decoded, "expiresDate", 0) or 0,
+            "is_trial_period": is_intro,  # JWSTransactionDecodedPayload 不直接给这两个字段，由 offerType 推导
+            "is_in_intro_offer_period": is_intro,
+            "environment": environment or "Production",
+            "type": type_str,
+        }
+
+    @staticmethod
+    def _parse_jws_unverified(transaction_jws: str) -> Dict[str, Any]:
+        """仅 sandbox 且显式关闭完整验证时使用：解析但不验证签名。生产强制启用完整验证（见 __init__）。"""
+        parts = transaction_jws.split(".")
+        if len(parts) != 3:
+            raise ValueError("无效的JWS格式：必须包含header、payload和signature三部分")
+        header_b64, payload_b64, _ = parts
         try:
-            # 优先使用x5c证书链（Apple的JWS通常都包含x5c）
-            x5c = header.get("x5c")
-            if x5c and len(x5c) > 0:
-                # 使用证书链中的第一个证书（叶子证书）验证签名
-                cert_data = base64.b64decode(x5c[0])
-                cert = x509.load_der_x509_certificate(cert_data, default_backend())
-                public_key = cert.public_key()
-                
-                # 验证JWS签名
-                jwt.decode(
-                    transaction_jws,
-                    public_key,
-                    algorithms=["ES256"],
-                    options={"verify_signature": True}
-                )
-                logger.debug("JWS签名验证成功（使用x5c证书）")
-                return
-            
-            # 如果没有x5c，尝试使用kid（但Apple的JWS通常都有x5c）
-            kid = header.get("kid")
-            if kid:
-                # 注意：Apple的公开JWKS端点可能不适用于所有情况
-                # 如果kid存在但没有x5c，记录警告
-                error_msg = f"JWS header包含kid但没有x5c，无法验证签名。kid={kid}"
-                logger.warning(error_msg)
-                # 如果启用完整验证且不是沙盒环境，抛出异常
-                if self.enable_full_verification and not self.use_sandbox:
-                    raise ValueError(error_msg)
-            else:
-                error_msg = "JWS header中缺少x5c和kid，无法验证签名"
-                logger.warning(error_msg)
-                # 如果启用完整验证且不是沙盒环境，抛出异常
-                if self.enable_full_verification and not self.use_sandbox:
-                    raise ValueError(error_msg)
-                
-        except jwt.InvalidSignatureError as e:
-            error_msg = f"JWS签名验证失败: 签名无效 - {str(e)}"
-            logger.error(error_msg)
-            if self.enable_full_verification and not self.use_sandbox:
-                raise ValueError(error_msg)
-        except Exception as e:
-            error_msg = f"JWS签名验证失败: {str(e)}"
-            logger.warning(f"{error_msg}（继续处理）")
-            # 在生产环境中，如果验证失败应该抛出异常
-            # 但在开发环境中，我们可以记录警告并继续
-            if self.enable_full_verification and not self.use_sandbox:
-                raise ValueError(error_msg)
+            header_padded = header_b64 + "=" * (-len(header_b64) % 4)
+            header = json.loads(base64.urlsafe_b64decode(header_padded))
+            payload_padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+            transaction_data = json.loads(base64.urlsafe_b64decode(payload_padded))
+        except (json.JSONDecodeError, ValueError) as e:
+            raise ValueError(f"JWS payload解析失败: {e}")
+        return {
+            "header": header,
+            "payload": transaction_data,
+            "transaction_id": str(transaction_data.get("transactionId", "")),
+            "original_transaction_id": str(transaction_data.get("originalTransactionId", "")),
+            "product_id": transaction_data.get("productId", ""),
+            "purchase_date": transaction_data.get("purchaseDate", 0),
+            "expires_date": transaction_data.get("expiresDate", 0),
+            "is_trial_period": transaction_data.get("isTrialPeriod", False),
+            "is_in_intro_offer_period": transaction_data.get("isInIntroOfferPeriod", False),
+            "environment": transaction_data.get("environment", "Production"),
+            "type": transaction_data.get("type", ""),
+        }
     
     def get_transaction_info(self, transaction_id: str, environment: str = "Production") -> Optional[Dict[str, Any]]:
         """
