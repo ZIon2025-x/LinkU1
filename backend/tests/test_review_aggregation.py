@@ -333,6 +333,53 @@ def test_reply_to_review_allows_personal_service_owner():
     assert "current_user.id" in src
 
 
+# ---------------------------------------------------------------------------
+# Batch 5: time_slot 回退一致性 (#12 + #13)
+# ---------------------------------------------------------------------------
+
+
+def test_release_time_slot_seat_helper_exists_and_guards_underflow():
+    """helper 必须存在,且必须有 current_participants > 0 守卫避免下溢负数。"""
+    import inspect
+    from app.consultation.helpers import release_time_slot_seat
+
+    src = inspect.getsource(release_time_slot_seat)
+    assert "current_participants > 0" in src or "current_participants > 0)" in src, (
+        "release_time_slot_seat 缺少下溢守卫"
+    )
+    assert "current_participants - 1" in src
+
+
+def test_consultation_routes_release_seat_in_terminal_paths():
+    """negotiate-response reject / close_consultation / reject_application 三处
+    终态写入后必须调 release_time_slot_seat。P0 #13。"""
+    import inspect
+    from app.expert_consultation_routes import (
+        respond_to_negotiation,
+        close_consultation,
+        reject_application,
+    )
+
+    for fn in (respond_to_negotiation, close_consultation, reject_application):
+        src = inspect.getsource(fn)
+        assert "release_time_slot_seat" in src, (
+            f"{fn.__name__} 终态分支没有调 release_time_slot_seat"
+        )
+
+
+def test_scheduled_payment_expiry_releases_time_slot():
+    """check_expired_payment_tasks 取消 pending_payment 任务时必须回退 time_slot。
+    P0 #12: 之前 30 分钟未付任务被自动 cancelled, SA→cancelled, 但 slot 不释放。"""
+    import inspect
+    from app.scheduled_tasks import check_expired_payment_tasks
+
+    src = inspect.getsource(check_expired_payment_tasks)
+    # sync 路径直接 inline UPDATE (不能 await async helper), 验证 inline SQL 存在
+    assert "current_participants" in src and "current_participants - 1" in src, (
+        "check_expired_payment_tasks 取消过期任务时未回退 time_slot 名额"
+    )
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating

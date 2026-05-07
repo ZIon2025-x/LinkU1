@@ -16,9 +16,26 @@
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app import models
+
+
+async def release_time_slot_seat(db, time_slot_id: Optional[int]) -> None:
+    """ServiceApplication 终态(rejected/cancelled/closed/expired)时回退 time_slot 名额。
+
+    - 多入口收尾:reject/cancel/close/scheduled_cancel,缺一即时间段名额永久泡掉。
+    - 用 `current_participants > 0` 守卫避免下溢负数 (与 cancel_service_application 对齐)。
+    - time_slot_id=None 时静默跳过 (申请未占座)。
+    """
+    if not time_slot_id:
+        return
+    await db.execute(
+        update(models.ServiceTimeSlot)
+        .where(models.ServiceTimeSlot.id == time_slot_id)
+        .where(models.ServiceTimeSlot.current_participants > 0)
+        .values(current_participants=models.ServiceTimeSlot.current_participants - 1)
+    )
 
 # ServiceApplication 的"进行中"状态集合 — 用于幂等性查询
 _ACTIVE_CONSULTATION_STATUSES = (

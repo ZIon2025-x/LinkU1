@@ -843,7 +843,7 @@ def check_expired_payment_tasks(db: Session):
                 
                 # 如果是服务申请创建的任务，更新申请状态（兼容达人服务和个人服务）
                 if task.expert_service_id or getattr(task, 'task_source', None) == 'personal_service':
-                    from sqlalchemy import select
+                    from sqlalchemy import select, update as sa_update
                     application = db.execute(
                         select(models.ServiceApplication).where(
                             models.ServiceApplication.task_id == task.id
@@ -851,6 +851,17 @@ def check_expired_payment_tasks(db: Session):
                     ).scalar_one_or_none()
                     if application:
                         application.status = "cancelled"
+                        # P0 #12: 回退 time_slot 占座 — 否则名额永久泡掉,后续 apply
+                        # 撞 time_slot_full 排不上。
+                        if application.time_slot_id:
+                            db.execute(
+                                sa_update(models.ServiceTimeSlot)
+                                .where(models.ServiceTimeSlot.id == application.time_slot_id)
+                                .where(models.ServiceTimeSlot.current_participants > 0)
+                                .values(
+                                    current_participants=models.ServiceTimeSlot.current_participants - 1
+                                )
+                            )
                 
                 # 如果是活动申请创建的任务，更新参与者状态
                 if task.is_multi_participant:

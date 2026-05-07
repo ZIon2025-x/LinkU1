@@ -13,6 +13,7 @@ from app.consultation.helpers import (
     check_consultation_idempotency,
     close_consultation_task,
     create_placeholder_task,
+    release_time_slot_seat,
     resolve_taker_from_service,
 )
 from app.consultation.notifications import (
@@ -779,6 +780,8 @@ async def respond_to_negotiation(
         application.rejected_at = get_utc_time()
         # 同步关闭咨询占位 Task
         await close_consultation_task(db, application, reason="协商已被拒绝")
+        # P0 #13: 回退 time_slot 占座 — 终态后名额必须释放
+        await release_time_slot_seat(db, application.time_slot_id)
     elif action == "counter":
         # 校验价格
         try:
@@ -1112,6 +1115,8 @@ async def close_consultation(
     application.updated_at = get_utc_time()
     # 同步关闭咨询占位 Task
     await close_consultation_task(db, application, reason="咨询已关闭", new_status="closed")
+    # P0 #13: 回退 time_slot 占座
+    await release_time_slot_seat(db, application.time_slot_id)
     await db.commit()
     return {"status": "cancelled"}
 
@@ -1548,6 +1553,8 @@ async def reject_application(
     application.updated_at = get_utc_time()
     # 同步关闭咨询占位 Task
     await close_consultation_task(db, application, reason="申请已被拒绝")
+    # P0 #13: 回退 time_slot 占座
+    await release_time_slot_seat(db, application.time_slot_id)
     await db.commit()
     return {"status": "rejected"}
 
