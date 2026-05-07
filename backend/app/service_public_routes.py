@@ -477,69 +477,8 @@ async def reply_to_service_application(
     }
 
 
-# ==================== GET /api/services/{service_id}/reviews ====================
-
-@service_public_router.get("/api/services/{service_id}/reviews")
-async def get_service_reviews(
-    service_id: int,
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """获取服务获得的评价 (公开,不含评价人私人信息)。"""
-    service = await db.get(models.TaskExpertService, service_id)
-    if not service:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
-        )
-
-    base_where = and_(
-        models.Task.created_by_expert == True,  # noqa: E712
-        models.Task.expert_service_id == service_id,
-        models.Task.status == "completed",
-        models.Review.is_deleted.is_(False),
-    )
-
-    count_query = (
-        select(func.count(models.Review.id))
-        .select_from(models.Review)
-        .join(models.Task, models.Review.task_id == models.Task.id)
-        .where(base_where)
-    )
-    total = (await db.execute(count_query)).scalar() or 0
-
-    list_query = (
-        select(models.Review, models.User.name, models.User.avatar)
-        .join(models.Task, models.Review.task_id == models.Task.id)
-        .outerjoin(models.User, models.Review.user_id == models.User.id)
-        .where(base_where)
-        .order_by(models.Review.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
-    rows = (await db.execute(list_query)).all()
-
-    return {
-        "total": total,
-        "items": [
-            schemas.ReviewPublicOut(
-                id=r.id,
-                task_id=r.task_id,
-                rating=r.rating,
-                comment=r.comment,
-                created_at=r.created_at,
-                reply_content=r.reply_content,
-                reply_at=r.reply_at,
-                is_anonymous=bool(r.is_anonymous),
-                reviewer_name=None if r.is_anonymous else reviewer_name,
-                reviewer_avatar=None if r.is_anonymous else reviewer_avatar,
-            )
-            for r, reviewer_name, reviewer_avatar in rows
-        ],
-        "limit": limit,
-        "offset": offset,
-        "has_more": (offset + limit) < total,
-    }
+# GET /api/services/{service_id}/reviews 在 service_review_routes.py 实现 (前注册胜出)。
+# 此处历史死路由已删除 — P0 #9: 双注册 + 注册顺序决定胜出, 是定时炸弹。
 
 
 # ==================== GET /api/experts/{expert_id}/reviews ====================

@@ -1574,8 +1574,16 @@ async def get_task_reviews_async(
         
         logger.debug("返回评价数量: %s", len(public_reviews))
         logger.debug("返回的评价ID: %s", [r.id for r in public_reviews])
-        logger.debug("返回的评价用户ID: %s", [r.user_id for r in public_reviews])
-        return [schemas.ReviewOut.model_validate(r) for r in public_reviews]
+        # P0 #11: 匿名评价对**非作者**的查看者必须 mask user_id, 防止反查作者主页。
+        # 当前作者本人能看到自己的评价是匿名的, 但 user_id 也可省去 (前端无需)。
+        current_uid = str(current_user.id) if current_user else None
+        out = []
+        for r in public_reviews:
+            item = schemas.ReviewOut.model_validate(r)
+            if r.is_anonymous and (current_uid is None or str(r.user_id) != current_uid):
+                item = item.model_copy(update={"user_id": None})
+            out.append(item)
+        return out
     except Exception as e:
         logger.error(f"Error getting task reviews for {task_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get task reviews: {str(e)}")

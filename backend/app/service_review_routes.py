@@ -72,12 +72,23 @@ async def get_service_reviews(
     items = []
     for r in reviews:
         reviewer = users_map.get(r.user_id)
+        is_anon = bool(getattr(r, "is_anonymous", False))
+        # P0 #11: 匿名评价不暴露 reviewer 身份
+        if is_anon:
+            reviewer_id = None
+            reviewer_name = ""
+            reviewer_avatar = None
+        else:
+            reviewer_id = r.user_id
+            reviewer_name = reviewer.name if reviewer else "Unknown"
+            reviewer_avatar = reviewer.avatar if reviewer else None
         items.append({
             "id": r.id,
             "task_id": r.task_id,
-            "reviewer_id": r.user_id,
-            "reviewer_name": reviewer.name if reviewer else "Unknown",
-            "reviewer_avatar": reviewer.avatar if reviewer else None,
+            "reviewer_id": reviewer_id,
+            "reviewer_name": reviewer_name,
+            "reviewer_avatar": reviewer_avatar,
+            "is_anonymous": is_anon,
             "rating": r.rating,
             "comment": r.comment,
             "created_at": r.created_at.isoformat() if r.created_at else None,

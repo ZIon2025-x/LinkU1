@@ -380,6 +380,62 @@ def test_scheduled_payment_expiry_releases_time_slot():
     )
 
 
+# ---------------------------------------------------------------------------
+# Batch 6: reviews 端点去重 + 匿名泄露 (#9 + #11)
+# ---------------------------------------------------------------------------
+
+
+def test_review_out_user_id_is_optional_for_anonymous():
+    """ReviewOut.user_id 必须 Optional, 匿名场景才能序列化 user_id=None。"""
+    from app.schemas import ReviewOut
+    fields = ReviewOut.model_fields
+    assert "user_id" in fields
+    # Pydantic v2: 检查字段是否允许 None
+    annotation = fields["user_id"].annotation
+    annotation_str = str(annotation)
+    assert "None" in annotation_str or "Optional" in annotation_str, (
+        f"ReviewOut.user_id 仍是必填 str ({annotation}), 匿名评价无法 mask user_id"
+    )
+
+
+def test_service_review_routes_filters_anonymous_reviewer_id():
+    """service_review_routes.get_service_reviews 必须按 is_anonymous mask 掉
+    reviewer_id/name/avatar。P0 #11。"""
+    import inspect
+    from app.service_review_routes import get_service_reviews
+
+    src = inspect.getsource(get_service_reviews)
+    assert "is_anonymous" in src, (
+        "get_service_reviews 没有 is_anonymous 分支, 匿名评价仍泄露 reviewer 身份"
+    )
+
+
+def test_service_public_reviews_dead_route_removed():
+    """service_public_routes.py 那条被遮蔽的 /api/services/{id}/reviews 应当删除,
+    避免未来注册顺序变化时静默切换语义 (P0 #9)。"""
+    import inspect
+    import app.service_public_routes as mod
+    # 不该再有 get_service_reviews 的同名死端点 (expert reviews 端点保留)
+    src = inspect.getsource(mod)
+    # 保留: get_expert_reviews
+    assert "get_expert_reviews" in src
+    # 关键: 不再注册 service_public_router.get("/api/services/{service_id}/reviews")
+    assert '@service_public_router.get("/api/services/{service_id}/reviews")' not in src, (
+        "service_public_routes 的死路由 /{service_id}/reviews 仍然存在"
+    )
+
+
+def test_async_routers_masks_anonymous_user_id():
+    """/tasks/{id}/reviews 异步端点必须把匿名评价的 user_id 置 None。"""
+    import inspect
+    from app.async_routers import get_task_reviews_async
+
+    src = inspect.getsource(get_task_reviews_async)
+    # 必须在序列化时 mask user_id (匿名时)
+    assert "is_anonymous" in src
+    assert "user_id" in src
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating

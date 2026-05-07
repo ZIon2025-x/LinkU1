@@ -923,7 +923,7 @@ class ReviewCreate(ReviewBase):
 class ReviewOut(ReviewBase):
     id: int
     task_id: int
-    user_id: str  # 现在ID是字符串类型
+    user_id: Optional[str] = None  # 匿名评价时序列化前置 None,避免 reviewer 身份泄露
     created_at: datetime.datetime
 
     class Config:

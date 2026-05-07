@@ -789,8 +789,18 @@ def get_task_reviews(
 @measure_api_performance("get_user_received_reviews")
 @cache_response(ttl=300, key_prefix="user_reviews")  # 缓存5分钟
 def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
-    """获取用户收到的所有评价（包括匿名评价），用于个人主页显示"""
-    return crud.get_user_received_reviews(db, user_id)
+    """获取用户收到的所有评价（包括匿名评价），用于个人主页显示
+
+    P0 #11: 匿名评价的 user_id 在序列化前置 None, 防止从公共缓存反查作者身份。
+    """
+    reviews = crud.get_user_received_reviews(db, user_id)
+    out = []
+    for r in reviews:
+        item = schemas.ReviewOut.model_validate(r)
+        if getattr(r, "is_anonymous", 0):
+            item = item.model_copy(update={"user_id": None})
+        out.append(item)
+    return out
 
 
 @router.get("/{user_id}/reviews")
