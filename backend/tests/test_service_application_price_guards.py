@@ -662,6 +662,136 @@ def test_personal_service_create_allows_positive_base_price_for_fixed():
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Chat-route application resolver — TaskApplication / ServiceApplication 兼容
+# ---------------------------------------------------------------------------
+#
+# 背景:支付完成后 Flutter 仍持有 ServiceApplication.id (=16) 调用
+#   GET /api/messages/task/{task_id}?application_id=16
+#   GET /api/tasks/{task_id}/applications/{application_id}/consult-status
+# 但这两个端点原本只查 task_applications 表 → 永远 404 "申请不存在"。
+# _resolve_chat_application 应该先查 TaskApplication, 没有再 fallback
+# 查 ServiceApplication, 让两类 id 都能命中。
+
+
+@pytest.mark.asyncio
+async def test_resolve_chat_application_prefers_task_application():
+    """同一 application_id 在 TaskApplication 命中时优先返回它,is_service_app=False。"""
+    from app.task_chat_routes import _resolve_chat_application
+
+    ta = MagicMock(spec=["id", "task_id", "applicant_id"])
+    ta.id = 16
+    ta.task_id = 331
+    ta.applicant_id = "u_applicant"
+
+    first = MagicMock()
+    first.scalar_one_or_none = MagicMock(return_value=ta)
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=first)
+
+    result, is_service_app = await _resolve_chat_application(db, 16, 331)
+    assert result is ta
+    assert is_service_app is False
+
+
+@pytest.mark.asyncio
+async def test_resolve_chat_application_falls_back_to_service_application():
+    """TaskApplication 没命中时,fallback 查 ServiceApplication;命中则返回
+    (sa_obj, True)。"""
+    from app.task_chat_routes import _resolve_chat_application
+
+    sa = MagicMock(spec=["id", "task_id", "applicant_id"])
+    sa.id = 16
+    sa.task_id = 331
+    sa.applicant_id = "u_applicant"
+
+    first = MagicMock()
+    first.scalar_one_or_none = MagicMock(return_value=None)  # TA miss
+    second = MagicMock()
+    second.scalar_one_or_none = MagicMock(return_value=sa)   # SA hit
+    calls = iter([first, second])
+
+    async def _execute(*args, **kwargs):
+        return next(calls)
+
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=_execute)
+
+    result, is_service_app = await _resolve_chat_application(db, 16, 331)
+    assert result is sa
+    assert is_service_app is True
+
+
+@pytest.mark.asyncio
+async def test_resolve_chat_application_returns_none_when_neither_matches():
+    """两张表都 miss → (None, False)。调用方应当抛 404。"""
+    from app.task_chat_routes import _resolve_chat_application
+
+    miss = MagicMock()
+    miss.scalar_one_or_none = MagicMock(return_value=None)
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=miss)
+
+    result, is_service_app = await _resolve_chat_application(db, 99999, 331)
+    assert result is None
+    assert is_service_app is False
+
+
+@pytest.mark.asyncio
+async def test_consult_status_returns_service_application_fields():
+    """consult-status 端点在客户端传 ServiceApplication.id 时,从 SA 取字段返回,
+    不再 404。回归生产 17:41:57 的 'CONSULTATION_NOT_FOUND'。
+    """
+    from app.task_chat_routes import consult_status
+
+    task = MagicMock(
+        id=331,
+        poster_id="u_applicant",
+        taker_id="u_owner",
+        original_task_id=None,
+        description="",
+    )
+    sa = MagicMock(
+        id=16,
+        task_id=331,
+        applicant_id="u_applicant",
+        status="approved",
+        negotiated_price=50,
+        currency="GBP",
+        created_at=None,
+    )
+
+    task_lookup = MagicMock()
+    task_lookup.scalar_one_or_none = MagicMock(return_value=task)
+    ta_miss = MagicMock()
+    ta_miss.scalar_one_or_none = MagicMock(return_value=None)
+    sa_hit = MagicMock()
+    sa_hit.scalar_one_or_none = MagicMock(return_value=sa)
+    calls = iter([task_lookup, ta_miss, sa_hit])
+
+    async def _execute(*args, **kwargs):
+        try:
+            return next(calls)
+        except StopIteration:
+            return MagicMock()
+
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=_execute)
+
+    current_user = MagicMock(id="u_applicant")
+
+    result = await consult_status(
+        task_id=331,
+        application_id=16,
+        current_user=current_user,
+        db=db,
+    )
+    assert result["id"] == 16
+    assert result["task_id"] == 331
+    assert result["applicant_id"] == "u_applicant"
+    assert result["status"] == "approved"
+
+
 def test_flutter_error_localizer_has_all_three_codes():
     """Regression: ensure the 3 backend error_codes remain wired into the
     Flutter error_localizer switch. If someone removes a case, this fails

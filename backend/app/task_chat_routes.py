@@ -51,6 +51,39 @@ logger = logging.getLogger(__name__)
 task_chat_router = APIRouter()
 
 
+async def _resolve_chat_application(
+    db: AsyncSession, application_id: int, task_id: int
+):
+    """优先按 TaskApplication 查;没有则 fallback 查 ServiceApplication。
+
+    支付完成后 Flutter 仍持有 ServiceApplication.id 来访问聊天/状态端点;两类
+    申请的 task_id/applicant_id/status/negotiated_price 等字段语义相同,调用方
+    可统一使用。返回 (application_or_None, is_service_app)。
+    """
+    ta_result = await db.execute(
+        select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+        )
+    )
+    application = ta_result.scalar_one_or_none()
+    if application is not None:
+        return application, False
+
+    sa_result = await db.execute(
+        select(models.ServiceApplication).where(
+            and_(
+                models.ServiceApplication.id == application_id,
+                models.ServiceApplication.task_id == task_id,
+            )
+        )
+    )
+    application = sa_result.scalar_one_or_none()
+    return application, application is not None
+
+
 async def _is_team_member_of_application(
     db: AsyncSession, application: models.ServiceApplication, user_id: str
 ) -> bool:
@@ -844,16 +877,11 @@ async def get_task_messages(
                 )
 
         # 如果提供了 application_id，验证申请存在且调用者有权限
+        is_service_app = False
         if application_id:
-            app_query = select(models.TaskApplication).where(
-                and_(
-                    models.TaskApplication.id == application_id,
-                    models.TaskApplication.task_id == task_id
-                )
+            application, is_service_app = await _resolve_chat_application(
+                db, application_id, task_id
             )
-            app_result = await db.execute(app_query)
-            application = app_result.scalar_one_or_none()
-
             if not application:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -878,12 +906,15 @@ async def get_task_messages(
         )
 
         # 按 application_id 筛选消息
-        if application_id:
+        # ServiceApplication 流程下,Message.application_id 始终为 NULL
+        # (expert_consultation_routes.py:553 等)。客户端传 ServiceApplication.id
+        # 时降级为主聊天查询,避免返回空列表。
+        if application_id and not is_service_app:
             messages_query = messages_query.where(
                 models.Message.application_id == application_id
             )
         else:
-            # 不带 application_id 时只返回主任务聊天（不含申请频道私聊）
+            # 不带 application_id (或 ServiceApplication 流程) 时只返回主任务聊天
             messages_query = messages_query.where(
                 models.Message.application_id.is_(None)
             )
@@ -6185,14 +6216,10 @@ async def consult_status(
         if not task:
             raise_http_error_with_code("任务不存在", 404, error_codes.TASK_NOT_FOUND)
 
-        # 查询申请
-        app_result = await db.execute(
-            select(models.TaskApplication).where(
-                models.TaskApplication.id == application_id,
-                models.TaskApplication.task_id == task_id,
-            )
+        # 查询申请 (兼容 ServiceApplication: 支付完成后客户端持有的是 SA.id)
+        application, _is_service_app = await _resolve_chat_application(
+            db, application_id, task_id
         )
-        application = app_result.scalar_one_or_none()
         if not application:
             raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
 
