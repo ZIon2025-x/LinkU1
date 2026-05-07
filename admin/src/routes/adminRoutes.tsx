@@ -37,6 +37,7 @@ const ManualRewards = lazy(() => import('../pages/admin/manual-rewards/ManualRew
 const CheckinRewardConfig = lazy(() => import('../pages/admin/checkin-rewards/CheckinRewardConfig'));
 const SkillCategoryManagement = lazy(() => import('../pages/admin/skill-categories/SkillCategoryManagement'));
 const SkillLeaderboardManagement = lazy(() => import('../pages/admin/skill-leaderboard/SkillLeaderboardManagement'));
+const AIPromptManagement = lazy(() => import('../pages/admin/ai-prompt/AIPromptManagement'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -153,6 +154,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Skill Leaderboard */}
           <Route path="skill-leaderboard" element={<SkillLeaderboardManagement />} />
+
+          {/* AI System Prompt */}
+          <Route path="ai-prompt" element={<AIPromptManagement />} />
 
           {/* Settings */}
           <Route path="settings" element={<Settings />} />

@@ -206,6 +206,12 @@ const defaultMenuItems: MenuItem[] = [
     icon: '🥇',
     path: '/admin/skill-leaderboard',
   },
+  {
+    key: 'ai-prompt',
+    label: 'AI Prompt',
+    icon: '🤖',
+    path: '/admin/ai-prompt',
+  },
 ];
 
 const PATH_LABELS: Record<string, string> = {
@@ -240,6 +246,7 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/checkin-rewards': '签到奖励配置',
   '/admin/skill-categories': '技能分类',
   '/admin/skill-leaderboard': '技能排行榜',
+  '/admin/ai-prompt': 'AI Prompt',
   '/admin/settings': '设置',
   '/admin/2fa': '双因素认证',
 };

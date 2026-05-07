@@ -422,6 +422,10 @@ app.include_router(sitemap_router, tags=["SEO"])
 from app.ai_friendly_routes import ai_router
 app.include_router(ai_router, prefix="/api", tags=["AI友好端点"])
 
+# Admin: AI System Prompt 管理
+from app.admin_ai_prompt_routes import router as admin_ai_prompt_router
+app.include_router(admin_ai_prompt_router)
+
 # 添加 SSR 路由（为社交媒体爬虫提供正确的 Open Graph meta 标签）
 from app.ssr_routes import ssr_router
 app.include_router(ssr_router, tags=["SSR"])

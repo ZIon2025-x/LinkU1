@@ -535,6 +535,12 @@ _db_prompt_cache: tuple[str | None, float] = (None, 0.0)
 _DB_PROMPT_CACHE_TTL = 300  # 5 分钟
 
 
+def invalidate_prompt_cache() -> None:
+    """Admin 后台保存新 prompt 后立刻调一次，避免 5 分钟旧值生效。"""
+    global _db_prompt_cache
+    _db_prompt_cache = (None, 0.0)
+
+
 async def _get_system_prompt_template(db: AsyncSession) -> str:
     """根据配置获取 system prompt 模板。db 模式会缓存 5 分钟。"""
     global _db_prompt_cache

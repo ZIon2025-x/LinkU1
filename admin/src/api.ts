@@ -1854,3 +1854,39 @@ export async function refreshSkillLeaderboard() {
   const res = await api.post('/api/admin/leaderboard/refresh');
   return res.data;
 }
+
+// ==================== AI System Prompt ====================
+
+export interface AISystemPrompt {
+  id: number;
+  name: string;
+  content: string;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export async function listAIPrompts() {
+  const res = await api.get<{ prompts: AISystemPrompt[] }>('/api/admin/ai/system-prompts');
+  return res.data;
+}
+
+export async function getActiveAIPrompt() {
+  const res = await api.get<{ active: AISystemPrompt | null; default_template: string }>(
+    '/api/admin/ai/system-prompts/active'
+  );
+  return res.data;
+}
+
+export async function saveAIPrompt(data: { name?: string; content: string }) {
+  const res = await api.post<AISystemPrompt>('/api/admin/ai/system-prompts', {
+    name: data.name ?? 'default',
+    content: data.content,
+  });
+  return res.data;
+}
+
+export async function activateAIPrompt(id: number) {
+  const res = await api.post<AISystemPrompt>(`/api/admin/ai/system-prompts/${id}/activate`);
+  return res.data;
+}
