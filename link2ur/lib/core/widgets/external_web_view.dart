@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../data/services/storage_service.dart';
+import '../config/app_config.dart';
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
 import '../router/page_transitions.dart';
@@ -18,11 +20,18 @@ class ExternalWebView extends StatefulWidget {
     required this.url,
     this.title,
     this.onNavigationStateChanged,
+    this.bridgeAuth = false,
   });
 
   final String url;
   final String? title;
   final VoidCallback? onNavigationStateChanged;
+
+  /// 是否把 app 端登录态以 cookie 形式注入 WebView。仅当：
+  /// 1. 调用方明确知道 [url] 来自可信源（不接受用户/外部输入），且
+  /// 2. 目标主机正好是 [_authBridgeAllowedHosts] 中之一，
+  /// 才应设为 true。默认 false：用户输入、深链未匹配兜底、Banner 等都不应桥接凭证。
+  final bool bridgeAuth;
 
   /// 便捷方法 - 在外部浏览器中打开
   static Future<void> open(String url) async {
@@ -38,6 +47,7 @@ class ExternalWebView extends StatefulWidget {
     BuildContext context, {
     required String url,
     String? title,
+    bool bridgeAuth = false,
   }) async {
     if (kIsWeb) {
       final uri = Uri.tryParse(url);
@@ -48,7 +58,7 @@ class ExternalWebView extends StatefulWidget {
     }
     await pushWithSwipeBack(
       context,
-      _ExternalWebViewPage(url: url, title: title),
+      _ExternalWebViewPage(url: url, title: title, bridgeAuth: bridgeAuth),
       useRootNavigator: true,
     );
   }
@@ -59,6 +69,7 @@ class ExternalWebView extends StatefulWidget {
     BuildContext context, {
     required String url,
     String? title,
+    bool bridgeAuth = false,
   }) async {
     if (kIsWeb) {
       final uri = Uri.tryParse(url);
@@ -81,7 +92,11 @@ class ExternalWebView extends StatefulWidget {
           return ClipRRect(
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(20)),
-            child: _ExternalWebViewPage(url: url, title: title),
+            child: _ExternalWebViewPage(
+              url: url,
+              title: title,
+              bridgeAuth: bridgeAuth,
+            ),
           );
         },
       ),
@@ -104,7 +119,7 @@ class _ExternalWebViewState extends State<ExternalWebView> {
     _initWebView();
   }
 
-  void _initWebView() {
+  Future<void> _initWebView() async {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
@@ -124,8 +139,54 @@ class _ExternalWebViewState extends State<ExternalWebView> {
             }
           },
         ),
-      )
-      ..loadRequest(Uri.parse(widget.url));
+      );
+
+    // 凭证桥接默认关闭。仅当调用方显式 bridgeAuth: true 且目标主机在白名单内才注入。
+    await _injectAuthCookiesIfNeeded();
+    if (!mounted) return;
+
+    await _controller.loadRequest(Uri.parse(widget.url));
+  }
+
+  /// 显式允许桥接登录态的目标主机白名单。不接受任何子域通配（防止
+  /// 子域接管 / 不可信子域内容借此读取 api.link2ur.com 的凭据）。
+  static const Set<String> _authBridgeAllowedHosts = {
+    'link2ur.com',
+    'www.link2ur.com',
+  };
+
+  /// 仅当 [widget.bridgeAuth] 为 true、目标主机在白名单内、且本地有 session 时，
+  /// 把会话 cookie 注入 WebView 的 cookie store（写在 API 域名上，借 SameSite=Lax + CORS
+  /// allow_credentials 让 React 前端 withCredentials 调 api.link2ur.com 时能识别用户）。
+  ///
+  /// 安全约束：
+  /// - 永远不注入 refresh_token（长寿命凭据，不应进 JS-readable cookie store）。
+  /// - 永远不通配子域。新域要在 [_authBridgeAllowedHosts] 显式列出。
+  /// - 调用方对 [url] 的可信度负责。bridgeAuth: true 不接受用户/外部数据来源的 URL。
+  Future<void> _injectAuthCookiesIfNeeded() async {
+    if (!widget.bridgeAuth) return;
+    final uri = Uri.tryParse(widget.url);
+    if (uri == null) return;
+    if (uri.scheme != 'https') return;
+    final host = uri.host.toLowerCase();
+    if (!_authBridgeAllowedHosts.contains(host)) return;
+
+    final token = await StorageService.instance.getAccessToken();
+    if (token == null || token.isEmpty) return;
+
+    final apiHost = Uri.parse(AppConfig.instance.baseUrl).host;
+    final cookieManager = WebViewCookieManager();
+
+    await cookieManager.setCookie(WebViewCookie(
+      name: 'session_id',
+      value: token,
+      domain: apiHost,
+    ));
+    await cookieManager.setCookie(WebViewCookie(
+      name: 'user_authenticated',
+      value: 'true',
+      domain: apiHost,
+    ));
   }
 
   Future<void> _updateNavigationState() async {
@@ -189,10 +250,12 @@ class _ExternalWebViewPage extends StatefulWidget {
   const _ExternalWebViewPage({
     required this.url,
     this.title,
+    this.bridgeAuth = false,
   });
 
   final String url;
   final String? title;
+  final bool bridgeAuth;
 
   @override
   State<_ExternalWebViewPage> createState() => _ExternalWebViewPageState();
@@ -254,6 +317,7 @@ class _ExternalWebViewPageState extends State<_ExternalWebViewPage> {
         url: widget.url,
         title: widget.title,
         onNavigationStateChanged: _refreshNavState,
+        bridgeAuth: widget.bridgeAuth,
       ),
     );
   }

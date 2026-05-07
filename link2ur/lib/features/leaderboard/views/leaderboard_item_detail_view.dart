@@ -22,7 +22,6 @@ import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
-import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/utils/share_util.dart';
@@ -880,8 +879,16 @@ class _ContactCard extends StatelessWidget {
   }
 
   void _openUrl(BuildContext context, String url) {
-    final uri = url.startsWith('http') ? url : 'https://$url';
-    ExternalWebView.openInApp(context, url: uri);
+    // 用户提交的链接不进 in-app WebView——避免与本应用的登录态共享一个浏览上下文。
+    // 走系统浏览器，URL 栏可见、cookie store 与 app 隔离。
+    final raw = url.startsWith('http://') || url.startsWith('https://')
+        ? url
+        : 'https://$url';
+    final uri = Uri.tryParse(raw);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return;
+    }
+    launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   void _copy(BuildContext context, String text) {

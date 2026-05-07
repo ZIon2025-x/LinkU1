@@ -9,6 +9,7 @@ import os
 import shutil
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import case, select, and_, or_, func, update, delete
@@ -1327,6 +1328,26 @@ async def submit_item(
             # 简单的URL格式验证和自动添加协议
             if not (item_data.website.startswith('http://') or item_data.website.startswith('https://')):
                 item_data.website = 'https://' + item_data.website
+            # 解析并校验 host：要求合法 http(s) URL，且禁止指向 link2ur.com 系
+            # 防止借榜单 website 字段把受害者引导到本站 WebView 触发凭证桥接路径。
+            try:
+                parsed = urlparse(item_data.website)
+                host = (parsed.hostname or "").lower()
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="网站地址格式不正确"
+                )
+            if parsed.scheme not in ("http", "https") or not host:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="网站地址格式不正确"
+                )
+            if host == "link2ur.com" or host.endswith(".link2ur.com"):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="网站地址不能指向本站域名"
+                )
     
     # 验证图片数量
     if item_data.images and len(item_data.images) > 5:
