@@ -2325,36 +2325,58 @@ def liveness_check():
     return {"status": "alive"}
 
 
+def _redact_health_payload(payload: dict) -> dict:
+    """剥离公开 /health 响应中可能泄露内部拓扑（DB host / Redis URL / driver 异常细节）的字段。
+    保留每个 check 的 status，让外部探针仍能判断健康度。"""
+    safe_keys = {"status", "response_time_ms"}
+    redacted_checks = {}
+    for name, info in (payload.get("checks") or {}).items():
+        if isinstance(info, dict):
+            redacted_checks[name] = {k: v for k, v in info.items() if k in safe_keys}
+        else:
+            redacted_checks[name] = info
+    return {
+        "status": payload.get("status"),
+        "timestamp": payload.get("timestamp"),
+        "checks": redacted_checks,
+    }
+
+
 @app.get("/health")
-async def health_check():
-    """完整的健康检查 - 使用增强的健康检查模块"""
+async def health_check(request: Request):
+    """健康检查 - 公开返回精简状态；带管理员密钥时返回完整诊断。"""
     from app.health_check import health_checker
-    
+
     health_status = await health_checker.comprehensive_health_check()
-    
+
     # 更新 Prometheus 指标
     try:
         from app.metrics import update_health_status, record_http_request
         update_health_status("database", health_status["checks"].get("database_sync", {}).get("status") == "healthy")
         update_health_status("redis", health_status["checks"].get("redis", {}).get("status") == "healthy")
         update_health_status("overall", health_status["status"] == "healthy")
-        
+
         # 记录 HTTP 请求指标
         response_time = health_status["summary"].get("response_time_ms", 0) / 1000
         status_code = 200 if health_status["status"] == "healthy" else 503
         record_http_request("GET", "/health", status_code, response_time)
     except Exception as e:
         logger.debug(f"更新健康检查Prometheus指标失败: {e}")
-    
+
+    admin_key = request.headers.get("X-Admin-Key", "")
+    expected_key = os.getenv("ADMIN_TOGGLE_KEY", "")
+    is_admin = bool(expected_key) and admin_key == expected_key
+    response_payload = health_status if is_admin else _redact_health_payload(health_status)
+
     # 根据检查结果决定最终状态
     if health_status["status"] == "healthy":
-        return health_status
+        return response_payload
     else:
         # 如果关键服务不可用，返回503状态码
         status_code = 503 if health_status["status"] == "unhealthy" else 200
         return JSONResponse(
             status_code=status_code,
-            content=health_status
+            content=response_payload,
         )
 
 @app.get("/ping")
