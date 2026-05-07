@@ -30,6 +30,23 @@ SERVICE_STRICT_FINGERPRINT = os.getenv("SERVICE_STRICT_FINGERPRINT", "false").lo
 
 # generate_session_id() 产物：service_session_<token_urlsafe(32)>，仅 [A-Za-z0-9_-]
 _SESSION_ID_RE = re.compile(r"^service_session_[A-Za-z0-9_-]+$")
+# 客服 ID 格式：CS + 4 位数字（见 models.CustomerService.id）
+_SERVICE_ID_RE = re.compile(r"^CS\d{4}$")
+# refresh token 由 secrets.token_urlsafe(32) 生成
+_REFRESH_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _refresh_key(service_id: str, refresh_token: str) -> Optional[str]:
+    """构造客服 refresh token 的 Redis key；任何字段不合法返回 None。
+    新格式 service_refresh_token:{service_id}:{refresh_token} 与 admin/user 一致，
+    让 revoke_all_service_refresh_tokens 的 SCAN 模式真能匹配到。"""
+    if not service_id or not refresh_token:
+        return None
+    if not _SERVICE_ID_RE.match(service_id):
+        return None
+    if len(refresh_token) > 128 or not _REFRESH_TOKEN_RE.match(refresh_token):
+        return None
+    return f"service_refresh_token:{service_id}:{refresh_token}"
 
 # 会话存储
 try:
@@ -594,12 +611,16 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
                         "expires_at": format_iso_utc(get_utc_time() + timedelta(hours=12)),
                         "last_used": None  # 记录最后使用时间，用于频率限制
                     }
-                    redis_client.setex(
-                        f"service_refresh_token:{refresh_token}",
-                        12 * 3600,  # 12小时TTL
-                        json.dumps(refresh_data)
-                    )
-                    logger.info(f"[SERVICE_AUTH] 客服refresh token已保存到Redis: {service_id}")
+                    refresh_key = _refresh_key(str(service_id), refresh_token)
+                    if refresh_key:
+                        redis_client.setex(
+                            refresh_key,
+                            12 * 3600,  # 12小时TTL
+                            json.dumps(refresh_data)
+                        )
+                        logger.info(f"[SERVICE_AUTH] 客服refresh token已保存到Redis: {service_id}")
+                    else:
+                        logger.warning(f"[SERVICE_AUTH] service_id 或 refresh_token 格式非法，跳过保存")
                 
                 logger.info(f"[SERVICE_AUTH] 生成客服refresh token: {service_id}")
             except Exception as e:
@@ -690,62 +711,73 @@ def clear_service_session_cookie(response: Response) -> Response:
         logger.error(f"[SERVICE_AUTH] 客服Cookie清除失败: {e}")
         return response
 
-def verify_service_refresh_token(refresh_token: str, ip_address: str = "", device_fingerprint: str = "") -> Optional[str]:
-    """验证客服refresh token，检查IP和设备指纹绑定"""
+def verify_service_refresh_token(refresh_token: str, service_id: str, ip_address: str = "", device_fingerprint: str = "") -> Optional[str]:
+    """验证客服 refresh token，检查 IP 和设备指纹绑定。
+    需要明确传 service_id（来自 cookie + DB 校验后的值），用于构造唯一 key。"""
     try:
         if not USE_REDIS or not redis_client:
             return None
-        
-        # 从Redis获取refresh token数据
-        data = safe_redis_get(f"service_refresh_token:{refresh_token}")
+
+        key = _refresh_key(service_id, refresh_token)
+        if key is None:
+            logger.warning(f"[SERVICE_AUTH] service_id / refresh_token 格式非法")
+            return None
+
+        data = safe_redis_get(key)
         if not data:
             return None
-        
-        # 检查是否过期
+
+        # 检查是否过期；同时计算剩余 TTL 用作绝对生命期上限
+        now = get_utc_time()
         expires_at_str = data.get('expires_at')
+        remaining_seconds: Optional[int] = None
         if expires_at_str:
             expires_at = parse_iso_utc(expires_at_str)
-            if get_utc_time() > expires_at:
-                # 过期了，删除
-                redis_client.delete(f"service_refresh_token:{refresh_token}")
+            if now > expires_at:
+                redis_client.delete(key)
                 return None
-        
+            remaining_seconds = max(int((expires_at - now).total_seconds()), 0)
+
         # 检查IP绑定
         stored_ip = data.get('ip_address', '')
         if stored_ip and ip_address and stored_ip != ip_address:
             logger.warning(f"[SERVICE_AUTH] 客服refresh token IP不匹配: 存储={stored_ip}, 当前={ip_address}")
             return None
-        
+
         # 检查设备指纹绑定
         stored_device = data.get('device_fingerprint', '')
         if stored_device and device_fingerprint and stored_device != device_fingerprint:
             logger.warning(f"[SERVICE_AUTH] 客服refresh token 设备指纹不匹配: 存储={stored_device}, 当前={device_fingerprint}")
             return None
-        
+
         # 检查频率限制（20分钟内最多使用一次）
         last_used_str = data.get('last_used')
         if last_used_str:
             last_used = parse_iso_utc(last_used_str)
-            if get_utc_time() - last_used < timedelta(minutes=20):
-                logger.warning(f"[SERVICE_AUTH] 客服refresh token 使用过于频繁: {refresh_token}")
+            if now - last_used < timedelta(minutes=20):
+                logger.warning(f"[SERVICE_AUTH] 客服refresh token 使用过于频繁: {service_id}")
                 return None
-        
-        # 更新最后使用时间
-        current_time = get_utc_time()
-        data['last_used'] = format_iso_utc(current_time)
-        redis_client.setex(f"service_refresh_token:{refresh_token}", 12 * 3600, json.dumps(data))
-        
+
+        # 更新最后使用时间，TTL 不超过原始 expires_at 剩余时长（避免无限滚动）
+        data['last_used'] = format_iso_utc(now)
+        ttl = remaining_seconds if remaining_seconds is not None else 12 * 3600
+        if ttl > 0:
+            redis_client.setex(key, ttl, json.dumps(data))
+
         return data.get('service_id')
-        
+
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] 验证refresh token失败: {e}")
         return None
 
-def revoke_service_refresh_token(refresh_token: str) -> bool:
-    """撤销客服refresh token"""
+def revoke_service_refresh_token(refresh_token: str, service_id: str) -> bool:
+    """撤销客服 refresh token；service_id 必须明确传入用于定位 key。"""
     try:
         if USE_REDIS and redis_client:
-            return redis_client.delete(f"service_refresh_token:{refresh_token}") > 0
+            key = _refresh_key(service_id, refresh_token)
+            if key is None:
+                return False
+            return redis_client.delete(key) > 0
         return False
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] 撤销refresh token失败: {e}")

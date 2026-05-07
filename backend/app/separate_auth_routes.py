@@ -753,20 +753,20 @@ def service_refresh_token(
         # 验证refresh token
         from app.service_auth import verify_service_refresh_token
         from app.secure_auth import get_client_ip, get_device_fingerprint
-        verified_service_id = verify_service_refresh_token(refresh_token, get_client_ip(request), get_device_fingerprint(request))
+        verified_service_id = verify_service_refresh_token(refresh_token, service_id, get_client_ip(request), get_device_fingerprint(request))
         if not verified_service_id or verified_service_id != service_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="无效的refresh token"
             )
-        
+
         # 生成新的会话
         from app.service_auth import ServiceAuthManager, create_service_session_cookie
         new_session = ServiceAuthManager.create_session(service_id, request)
-        
+
         # 撤销旧的refresh token
         from app.service_auth import revoke_service_refresh_token
-        revoke_service_refresh_token(refresh_token)
+        revoke_service_refresh_token(refresh_token, service_id)
         
         # 生成新的会话和refresh token
         user_agent = request.headers.get("user-agent", "")
