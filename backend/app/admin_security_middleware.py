@@ -6,18 +6,20 @@
 import logging
 import os
 from typing import Optional
+from urllib.parse import urlparse
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
+from app.config import Config
 from app.security import get_client_ip
 from app.rate_limiting import rate_limiter
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 # 管理员子域名配置
-ADMIN_SUBDOMAIN = "admin.link2ur.com"
-ADMIN_SUBDOMAIN_DEV = "localhost:3001"
+ADMIN_HOST_PROD = "admin.link2ur.com"
+# 开发环境本地 host（host header 会带端口；origin/referer 解析后 hostname 不含端口）
+ADMIN_DEV_HOSTNAMES = {"localhost", "127.0.0.1"}
+ADMIN_DEV_HOST_HEADERS = {"localhost:3001", "127.0.0.1:3001"}
 
 # IP 白名单（可选，通过环境变量配置）
 ADMIN_IP_WHITELIST = os.getenv("ADMIN_IP_WHITELIST", "").split(",")
@@ -38,31 +40,41 @@ def is_admin_route(path: str) -> bool:
     return any(path.startswith(prefix) for prefix in ADMIN_ROUTE_PREFIXES)
 
 
+def _hostname_allowed(hostname: Optional[str]) -> bool:
+    if not hostname:
+        return False
+    hostname = hostname.lower()
+    if hostname == ADMIN_HOST_PROD:
+        return True
+    # 仅在非生产环境放行本地开发 host，避免 https://localhost.attacker.com 之类绕过
+    if not Config.IS_PRODUCTION and hostname in ADMIN_DEV_HOSTNAMES:
+        return True
+    return False
+
+
+def _host_header_allowed(host_header: Optional[str]) -> bool:
+    if not host_header:
+        return False
+    host_header = host_header.lower()
+    if host_header == ADMIN_HOST_PROD:
+        return True
+    if not Config.IS_PRODUCTION and host_header in ADMIN_DEV_HOST_HEADERS:
+        return True
+    return False
+
+
 def verify_admin_origin(request: Request) -> bool:
-    """验证请求来源是否为 admin 子域名"""
+    """验证请求来源是否为 admin 子域名（精确 host 比对，禁止子串/前缀绕过）"""
     origin = request.headers.get("origin", "")
     referer = request.headers.get("referer", "")
     host = request.headers.get("host", "")
-    
-    # 检查 Origin 头
-    if origin:
-        if ADMIN_SUBDOMAIN in origin or ADMIN_SUBDOMAIN_DEV in origin:
-            return True
-    
-    # 检查 Referer 头
-    if referer:
-        if ADMIN_SUBDOMAIN in referer or ADMIN_SUBDOMAIN_DEV in referer:
-            return True
-    
-    # 检查 Host 头（直接访问时）
-    if host:
-        if ADMIN_SUBDOMAIN in host or ADMIN_SUBDOMAIN_DEV in host:
-            return True
-    
-    # 开发环境：允许 localhost
-    if "localhost" in origin or "localhost" in referer or "localhost" in host:
+
+    if origin and _hostname_allowed(urlparse(origin).hostname):
         return True
-    
+    if referer and _hostname_allowed(urlparse(referer).hostname):
+        return True
+    if _host_header_allowed(host):
+        return True
     return False
 
 
