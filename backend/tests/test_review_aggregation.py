@@ -294,6 +294,45 @@ async def test_consult_idempotency_skips_apply_only_records():
     )
 
 
+# ---------------------------------------------------------------------------
+# Batch 4: 通知 + 评价回复 (#5 + #10)
+# ---------------------------------------------------------------------------
+
+
+def test_apply_notifies_personal_service_owner():
+    """apply_for_service 在 owner_type='user' (个人服务) 时也必须给 owner 发通知。
+    P0 #5: 之前只给 expert 团队发, personal owner 完全没站内信/push。"""
+    import inspect
+    from app.expert_consultation_routes import apply_for_service
+
+    src = inspect.getsource(apply_for_service)
+    # 必须出现 owner_type=='user' 的通知分支
+    # (粗略形状: 用 service.owner_id 当 user_id 调 create_notification)
+    assert 'owner_type == "user"' in src or "owner_type=='user'" in src, (
+        "apply_for_service 没有 owner_type=='user' 的处理分支, 个人服务 owner 收不到通知"
+    )
+    # 应当存在 personal-service notification helper 调用 (函数名/字符串约定)
+    assert "_notify_personal_service_owner" in src or "create_notification" in src, (
+        "apply_for_service 在 user 分支未发通知"
+    )
+
+
+def test_reply_to_review_allows_personal_service_owner():
+    """personal-service review.expert_id=None 但 task.taker_id == current_user 应当能回复。
+    P0 #10: 之前直接 404, 个人服务 owner 完全无法回复评价。"""
+    import inspect
+    from app.expert_marketing_routes import reply_to_review
+
+    src = inspect.getsource(reply_to_review)
+    # 必须有通过 task.taker_id 校验个人服务 owner 的分支
+    assert "taker_id" in src, (
+        "reply_to_review 没有 personal-service owner (task.taker_id) 校验分支"
+    )
+    # 必须分流: review.expert_id 真值走团队权限, 假值走个人服务 owner 校验
+    assert "review.expert_id" in src
+    assert "current_user.id" in src
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating

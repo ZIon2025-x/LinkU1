@@ -41,11 +41,16 @@ async def reply_to_review(
         raise HTTPException(status_code=404, detail="评价不存在")
 
     # 权限检查必须在状态检查之前,否则攻击者可探测 review_id 是否已回复(信息泄露)
-    if not review.expert_id:
-        # 不是团队评价(个人服务等),返回 404 防止泄露存在性
-        raise HTTPException(status_code=404, detail="评价不存在")
-
-    await _get_member_or_403(db, review.expert_id, current_user.id, required_roles=["owner", "admin"])
+    if review.expert_id:
+        # 团队评价: 必须是团队 owner/admin
+        await _get_member_or_403(db, review.expert_id, current_user.id, required_roles=["owner", "admin"])
+    else:
+        # P0 #10: 个人服务评价 — review.expert_id=None。通过 task.taker_id 反查 owner。
+        # 个人服务的服务提供者(被评价者)是 task.taker_id, 这里要求 current_user 必须是
+        # 该 task 的 taker_id, 否则 404 (不泄露存在性)。
+        task = await db.get(models.Task, review.task_id) if review.task_id else None
+        if not task or str(task.taker_id) != str(current_user.id):
+            raise HTTPException(status_code=404, detail="评价不存在")
 
     # 权限通过后再检查业务状态
     if review.reply_content:

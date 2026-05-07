@@ -63,6 +63,34 @@ def _ensure_negotiable_status(application) -> None:
 # ==================== Helpers ====================
 
 
+async def _notify_personal_service_owner_new_application(
+    db: AsyncSession,
+    owner_user_id: str,
+    applicant_name: str,
+    service_name: str,
+    application_id: int,
+) -> None:
+    """通知个人服务 owner 收到新申请。Best-effort,失败不阻塞主流程。"""
+    try:
+        from app.async_crud import AsyncNotificationCRUD
+        _msg = consultation_submitted(
+            applicant_name=applicant_name, service_name=service_name
+        )
+        await AsyncNotificationCRUD.create_notification(
+            db=db,
+            user_id=owner_user_id,
+            notification_type="service_application_received",
+            title="新服务申请",
+            content=_msg["content_zh"] + "，请前往个人主页处理",
+            title_en="New Service Application",
+            content_en=_msg["content_en"],
+            related_id=str(application_id),
+            related_type="service_application",
+        )
+    except Exception as e:
+        logger.warning(f"通知个人服务 owner 新申请失败: {e}")
+
+
 async def _notify_team_admins_new_application(
     db: AsyncSession,
     expert_id: str,
@@ -264,7 +292,7 @@ async def apply_for_service(
     await db.commit()
     await db.refresh(application)
 
-    # 通知团队 owner+admin 有新申请(团队服务才发,个人服务跳过)
+    # 通知服务提供者有新申请。团队服务通知 owner+admin,个人服务通知 owner 本人。
     if service.owner_type == "expert":
         await _notify_team_admins_new_application(
             db,
@@ -275,6 +303,15 @@ async def apply_for_service(
             notification_type="service_application_received",
             title_zh="新服务申请",
             title_en="New Service Application",
+        )
+    elif service.owner_type == "user" and service.owner_id:
+        # P0 #5: 个人服务也必须给 owner 发通知, 否则 owner 完全感知不到新申请。
+        await _notify_personal_service_owner_new_application(
+            db,
+            owner_user_id=service.owner_id,
+            applicant_name=current_user.name or "用户",
+            service_name=service.service_name or "服务",
+            application_id=application.id,
         )
 
     return {
