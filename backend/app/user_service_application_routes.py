@@ -489,8 +489,12 @@ async def finalize_personal_service_application(
         raise HTTPException(status_code=400, detail="服务未上架，无法创建任务")
 
     # 确定最终价格
-    # 优先级: 议价达成 > 用户出价 > 时间段拼单价 > 服务基础价
-    if application.status == "price_agreed" and application.expert_counter_price is not None:
+    # 优先级: SA.final_price (formal_apply 锁价) > 议价达成 > 用户出价 > 时间段拼单价 > 服务基础价
+    # final_price 来自 formal_apply / accept-negotiation 等正式定价路径,必须最高优先级。
+    # 之前漏读 final_price → 用户在 formal_apply 输入金额完全被忽略 (P0 #7)。
+    if application.final_price is not None and float(application.final_price) > 0:
+        price = float(application.final_price)
+    elif application.status == "price_agreed" and application.expert_counter_price is not None:
         price = float(application.expert_counter_price)
     elif application.negotiated_price is not None:
         price = float(application.negotiated_price)

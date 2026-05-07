@@ -36,6 +36,30 @@ logger = logging.getLogger(__name__)
 consultation_router = APIRouter(tags=["expert-consultations"])
 
 
+# 议价/报价/还价端点共享:允许进入 negotiating 状态的 ServiceApplication 状态集
+# 终态 (approved/rejected/cancelled/closed/completed) 不能再被改回 negotiating,
+# 否则会污染真实订单的聊天 + 重置已固定的 final_price。
+_NEGOTIABLE_SOURCE_STATUSES = (
+    "consulting",
+    "negotiating",
+    "price_agreed",
+    "pending",
+)
+
+
+def _ensure_negotiable_status(application) -> None:
+    """终态 SA 拒绝议价类操作。生产可见的 P0 #6 回归点。"""
+    if application.status not in _NEGOTIABLE_SOURCE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "application_terminal_status",
+                "message": f"申请已 {application.status},无法继续议价/还价",
+                "current_status": application.status,
+            },
+        )
+
+
 # ==================== Helpers ====================
 
 
@@ -508,6 +532,7 @@ async def negotiate_price(
         raise_http_error_with_code("申请不存在", 404, error_codes.CONSULTATION_NOT_FOUND)
     if application.applicant_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权操作")
+    _ensure_negotiable_status(application)
 
     try:
         price = float(body.get("price", 0))
@@ -591,6 +616,7 @@ async def quote_price(
         pass  # 个人服务 owner
     else:
         raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
+    _ensure_negotiable_status(application)
 
     try:
         price = float(body.get("price", 0))
@@ -1509,6 +1535,7 @@ async def counter_offer(
         await _get_member_or_403(db, application.new_expert_id, current_user.id, required_roles=["owner", "admin"])
     elif application.service_owner_id != current_user.id:
         raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
+    _ensure_negotiable_status(application)
 
     price = body.get("price")
     if price is not None:

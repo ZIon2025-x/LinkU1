@@ -52,6 +52,9 @@ async def check_consultation_idempotency(
         models.ServiceApplication.applicant_id == applicant_id,
         models.ServiceApplication.service_id == subject_id,
         models.ServiceApplication.status.in_(_ACTIVE_CONSULTATION_STATUSES),
+        # P0 #8: 排除 task_id IS NULL 的"纯 apply" 记录 — 那是 apply 端点路径的
+        # 占位 SA, 不能让 /consult 命中后返回 task_id=null 让客户端跳空白聊天。
+        models.ServiceApplication.task_id.isnot(None),
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()

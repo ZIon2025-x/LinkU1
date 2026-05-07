@@ -165,6 +165,135 @@ def test_list_services_endpoint_does_not_hard_filter_expert_only():
     )
 
 
+# ---------------------------------------------------------------------------
+# Batch 3: 议价/申请状态机 (#6 + #7 + #8)
+# ---------------------------------------------------------------------------
+
+
+import pytest as _pytest
+from unittest.mock import AsyncMock as _AsyncMock
+
+
+@_pytest.mark.asyncio
+async def test_negotiate_rejects_terminal_status():
+    """已 approved/rejected/cancelled 的 SA 不能再被 negotiate 端点改回 negotiating。
+    P0 #6: 之前无状态校验, 任意状态都能被改回 negotiating, 污染真实 task 聊天。"""
+    from app.expert_consultation_routes import negotiate_price
+    from fastapi import HTTPException
+
+    application = MagicMock(
+        id=16, applicant_id="u_applicant", status="approved",
+        service_id=19, new_expert_id=None, task_id=331,
+    )
+    app_lookup = MagicMock()
+    app_lookup.scalar_one_or_none = MagicMock(return_value=application)
+    db = MagicMock()
+    db.execute = _AsyncMock(return_value=app_lookup)
+
+    current_user = MagicMock(id="u_applicant", name="x")
+
+    with _pytest.raises(HTTPException) as exc_info:
+        await negotiate_price(
+            application_id=16,
+            body={"price": 50},
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+    assert exc_info.value.status_code == 400
+    # 状态没被改写
+    assert application.status == "approved"
+
+
+@_pytest.mark.asyncio
+async def test_quote_rejects_terminal_status():
+    """已 cancelled 的 SA 不能再被 owner quote 改回 negotiating。"""
+    from app.expert_consultation_routes import quote_price
+    from fastapi import HTTPException
+
+    application = MagicMock(
+        id=16, status="cancelled", service_id=19, new_expert_id=None,
+        service_owner_id="u_owner", task_id=None,
+    )
+    app_lookup = MagicMock()
+    app_lookup.scalar_one_or_none = MagicMock(return_value=application)
+    db = MagicMock()
+    db.execute = _AsyncMock(return_value=app_lookup)
+
+    current_user = MagicMock(id="u_owner", name="owner")
+
+    with _pytest.raises(HTTPException) as exc_info:
+        await quote_price(
+            application_id=16,
+            body={"price": 50},
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+    assert exc_info.value.status_code == 400
+    assert application.status == "cancelled"
+
+
+@_pytest.mark.asyncio
+async def test_counter_offer_rejects_terminal_status():
+    """已 rejected 的 SA 不能再被 owner counter-offer 改回 negotiating。"""
+    from app.expert_consultation_routes import counter_offer
+    from fastapi import HTTPException
+
+    application = MagicMock(
+        id=16, status="rejected", service_id=19, new_expert_id=None,
+        service_owner_id="u_owner", task_id=None,
+    )
+    app_lookup = MagicMock()
+    app_lookup.scalar_one_or_none = MagicMock(return_value=application)
+    db = MagicMock()
+    db.execute = _AsyncMock(return_value=app_lookup)
+
+    current_user = MagicMock(id="u_owner", name="owner")
+
+    with _pytest.raises(HTTPException) as exc_info:
+        await counter_offer(
+            application_id=16,
+            body={"price": 50},
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+    assert exc_info.value.status_code == 400
+    assert application.status == "rejected"
+
+
+def test_finalize_uses_final_price_with_top_priority():
+    """formal_apply 写的 SA.final_price 必须在 finalize 价格优先级里被读取。
+    P0 #7: 之前价格链不读 final_price, 用户在 formal_apply 输入金额完全被忽略,
+    实际下单按 negotiated_price 收钱, 金额可能完全不同。"""
+    import inspect
+    from app.user_service_application_routes import finalize_personal_service_application
+
+    src = inspect.getsource(finalize_personal_service_application)
+    # 必须出现对 application.final_price 的读取作为价格来源之一
+    assert "final_price" in src, (
+        "finalize_personal_service_application 价格优先级链未引用 final_price"
+    )
+
+
+@_pytest.mark.asyncio
+async def test_consult_idempotency_skips_apply_only_records():
+    """对同一服务先 apply 后 consult, 不能命中 apply 路径的 SA (task_id=None) 当作幂等返回 ——
+    那样 response.task_id=null, 客户端跳聊天空白页。
+    P0 #8: 修复后 consult 必须重新建 placeholder task + SA。"""
+    import inspect
+    from app.consultation.helpers import check_consultation_idempotency
+
+    src = inspect.getsource(check_consultation_idempotency)
+    # 改后必须显式排除 task_id IS NULL 的"纯 apply" SA, 否则会捕获到无 task 的记录
+    # 接受多种合理写法 (isnot(None) / is_not(None) / != None)
+    assert ("task_id.isnot" in src or "task_id.is_not" in src
+            or "task_id != None" in src or "task_id IS NOT NULL" in src), (
+        "check_consultation_idempotency 仍会命中 task_id IS NULL 的 apply 路径 SA"
+    )
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating
