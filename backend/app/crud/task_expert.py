@@ -119,14 +119,9 @@ def update_task_expert_bio(db: Session, user_id: str):
         else 0.0
     )
 
-    avg_rating_result = (
-        db.query(func.avg(Review.rating))
-        .filter(Review.user_id == user_id)
-        .scalar()
-    )
-    avg_rating = (
-        float(avg_rating_result) if avg_rating_result is not None else 0.0
-    )
+    # 收到的评价均分 — 必须走 helper, 不能简单 Review.user_id==user_id (作者侧)
+    from app.crud.review import get_user_received_avg_rating
+    avg_rating = get_user_received_avg_rating(db, user_id)
 
     successful_tasks_count = (
         db.query(distinct(Task.id))

@@ -1,12 +1,41 @@
 """评价相关 CRUD，独立模块便于维护与测试。"""
 from html import escape
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.crud.user import update_user_statistics
+
+
+def _received_avg_rating_select(user_id: str):
+    """生成"该 user 收到的有效评价"的 AVG select 表达式。
+
+    Review.user_id 是评价**作者**(models.py:309 reviews back_populates="user",
+    foreign_keys=[user_id]),所以"我收到的评价"必须经 Task 反查对方:
+      (Task.poster_id == me AND Review.user_id == Task.taker_id)  -- taker 给我打分
+      OR (Task.taker_id == me AND Review.user_id == Task.poster_id)  -- poster 给我打分
+    并过滤软删 (migration 212)。
+    """
+    return (
+        select(func.avg(models.Review.rating))
+        .select_from(models.Review)
+        .join(models.Task, models.Review.task_id == models.Task.id)
+        .where(
+            models.Review.is_deleted.is_(False),
+            or_(
+                and_(
+                    models.Task.poster_id == user_id,
+                    models.Review.user_id == models.Task.taker_id,
+                ),
+                and_(
+                    models.Task.taker_id == user_id,
+                    models.Review.user_id == models.Task.poster_id,
+                ),
+            ),
+        )
+    )
 
 
 def get_user_reviews(db: Session, user_id: str, limit: int = 5):
@@ -212,14 +241,23 @@ async def update_expert_team_statistics_async(db, expert_id: str):
     }
 
 
+def get_user_received_avg_rating(db: Session, user_id: str) -> float:
+    """该 user 收到的平均评分(non-deleted),纯计算,不写回。
+
+    GET 路径(profile_routes / dashboard 等)用这个;写入路径用
+    `calculate_user_avg_rating` (后者额外把结果写回 user.avg_rating)。
+    """
+    result = db.execute(_received_avg_rating_select(user_id)).scalar()
+    return float(result) if result is not None else 0.0
+
+
 def calculate_user_avg_rating(db: Session, user_id: str):
-    """计算并更新用户的平均评分"""
-    result = (
-        db.query(func.avg(models.Review.rating))
-        .filter(models.Review.user_id == user_id, models.Review.is_deleted.is_(False))
-        .scalar()
-    )
-    avg_rating = float(result) if result is not None else 0.0
+    """计算并写回该 user 收到的平均评分(non-deleted)。
+
+    所有调用方应当走 `get_user_received_avg_rating` 或这一处,不要再自己写
+    `Review.user_id == user_id` 风格的聚合 — 那样会算成"该 user 写出的均分"。
+    """
+    avg_rating = get_user_received_avg_rating(db, user_id)
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:
         user.avg_rating = avg_rating

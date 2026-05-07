@@ -78,10 +78,9 @@ def update_user_statistics(db: Session, user_id: str):
     ).count()
     completed_tasks = completed_taken_tasks + completed_posted_tasks
 
-    avg_rating_result = (
-        db.query(func.avg(Review.rating)).filter(Review.user_id == user_id).scalar()
-    )
-    avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
+    # 收到的评价均分 — 必须走 helper, 不能简单 Review.user_id==user_id (那是作者侧)
+    from app.crud.review import get_user_received_avg_rating
+    avg_rating = get_user_received_avg_rating(db, user_id)
 
     completion_rate = (
         (completed_taken_tasks / taken_tasks * 100.0) if taken_tasks > 0 else 0.0

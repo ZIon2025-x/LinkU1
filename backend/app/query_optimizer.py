@@ -105,7 +105,10 @@ class QueryOptimizer:
         if user:
             # 计算统计信息
             user.task_count = len(user.tasks_posted) + len(user.tasks_taken)
-            user.avg_rating = sum(review.rating for review in user.reviews) / len(user.reviews) if user.reviews else 0.0
+            # User.reviews 关系是"该 user 写过的评价"(`models.py:179` foreign_keys=Review.user_id)
+            # 直接对它算平均会变成"该 user 写出的均分", 必须按"收到的"算。
+            from app.crud.review import get_user_received_avg_rating
+            user.avg_rating = get_user_received_avg_rating(db, user_id)
         
         return user
     
@@ -199,17 +202,14 @@ class QueryOptimizer:
     @staticmethod
     def get_user_dashboard_data(db: Session, user_id: str) -> Dict[str, Any]:
         """获取用户仪表板数据，一次查询获取所有信息"""
-        # 使用子查询获取统计信息
-        stats_query = (
+        # 任务统计 - 单独算
+        task_stats = (
             db.query(
                 func.count(models.Task.id).label('total_tasks'),
                 func.count(models.Task.id).filter(models.Task.status == 'open').label('open_tasks'),
                 func.count(models.Task.id).filter(models.Task.status == 'in_progress').label('in_progress_tasks'),
                 func.count(models.Task.id).filter(models.Task.status == 'completed').label('completed_tasks'),
-                func.avg(models.Review.rating).label('avg_rating'),
-                func.count(models.Review.id).label('review_count')
             )
-            .outerjoin(models.Review, models.Review.user_id == user_id)
             .filter(
                 or_(
                     models.Task.poster_id == user_id,
@@ -217,6 +217,23 @@ class QueryOptimizer:
                 )
             )
         ).first()
+
+        # 评价统计 - 必须按 "收到的评价" 算 (Review.user_id 是作者)
+        from app.crud.review import get_user_received_avg_rating
+        avg_rating = get_user_received_avg_rating(db, user_id)
+        review_count = (
+            db.query(func.count(models.Review.id))
+            .select_from(models.Review)
+            .join(models.Task, models.Review.task_id == models.Task.id)
+            .filter(
+                models.Review.is_deleted.is_(False),
+                or_(
+                    (models.Task.poster_id == user_id) & (models.Review.user_id == models.Task.taker_id),
+                    (models.Task.taker_id == user_id) & (models.Review.user_id == models.Task.poster_id),
+                ),
+            )
+            .scalar()
+        ) or 0
         
         # 获取最近的任务
         recent_tasks = (
@@ -250,12 +267,12 @@ class QueryOptimizer:
         
         return {
             'stats': {
-                'total_tasks': stats_query.total_tasks or 0,
-                'open_tasks': stats_query.open_tasks or 0,
-                'in_progress_tasks': stats_query.in_progress_tasks or 0,
-                'completed_tasks': stats_query.completed_tasks or 0,
-                'avg_rating': float(stats_query.avg_rating) if stats_query.avg_rating else 0.0,
-                'review_count': stats_query.review_count or 0
+                'total_tasks': task_stats.total_tasks or 0,
+                'open_tasks': task_stats.open_tasks or 0,
+                'in_progress_tasks': task_stats.in_progress_tasks or 0,
+                'completed_tasks': task_stats.completed_tasks or 0,
+                'avg_rating': avg_rating,
+                'review_count': review_count,
             },
             'recent_tasks': recent_tasks,
             'recent_messages': recent_messages

@@ -88,12 +88,9 @@ def get_my_profile(
         if fresh_user:
             current_user = fresh_user
 
-        from app.models import Review
-        from sqlalchemy import func as sa_func
-        rating_row = db.query(
-            sa_func.avg(Review.rating), sa_func.count(Review.id)
-        ).filter(Review.user_id == current_user.id, Review.is_deleted.is_(False)).first()
-        avg_rating = round(float(rating_row[0]), 1) if rating_row and rating_row[0] else 0.0
+        # 收到的评价均分 — 必须走 helper (Review.user_id 是作者, 不是被评价者)
+        from app.crud.review import get_user_received_avg_rating
+        avg_rating = round(get_user_received_avg_rating(db, current_user.id), 1)
 
         # 获取并清理字符串字段（去除首尾空格）
         residence_city = getattr(current_user, 'residence_city', None)
@@ -337,17 +334,10 @@ def user_profile(
         db, user_id, limit=10
     )  # 获取最近10条评价
 
-    # 实时计算平均评分
-    from sqlalchemy import func
-
+    # 实时计算"收到的"平均评分 — 必须走 helper (Review.user_id 是作者, 不是被评价者)
     from app.models import Review, User
-
-    avg_rating_result = (
-        db.query(func.avg(Review.rating))
-        .filter(Review.user_id == user_id, Review.is_deleted.is_(False))
-        .scalar()
-    )
-    avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
+    from app.crud.review import get_user_received_avg_rating
+    avg_rating = get_user_received_avg_rating(db, user_id)
 
     # 「全部评价」section sub 的真实总数(reviews 上面 limit=10 是预览,这里要用真实 count)
     # ((Task.poster_id == user_id) & (Review.user_id == Task.taker_id))
