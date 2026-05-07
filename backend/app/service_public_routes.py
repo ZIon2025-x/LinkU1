@@ -99,19 +99,22 @@ async def _is_service_owner(
 )
 async def list_services_by_category(
     category: Optional[str] = Query(None, description="按 TaskExpertService.category 精确筛选"),
+    owner_type: Optional[str] = Query(None, description="可选 'user' / 'expert' 过滤;不传则两类都返回"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """跨达人列出 active 状态的达人服务，可选 category 筛选。供技能板块/聚合页使用。
 
-    只返回达人团队服务 (owner_type='expert')，不含个人服务，与 spec
-    "显示该 category 下的达人/达人服务" 语义一致。
+    默认 owner_type=None 时同时返回个人服务 (owner_type='user') 和达人团队服务
+    (owner_type='expert')。Flutter 唯一 servicesPublic 入口要靠这里发现个人服务。
+    需要单独类型时显式传 owner_type=user 或 expert。
     """
     query = select(models.TaskExpertService).where(
         models.TaskExpertService.status == "active",
-        models.TaskExpertService.owner_type == "expert",
     )
+    if owner_type in ("user", "expert"):
+        query = query.where(models.TaskExpertService.owner_type == owner_type)
     if category:
         query = query.where(models.TaskExpertService.category == category)
 

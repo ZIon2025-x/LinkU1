@@ -2559,7 +2559,7 @@ class TaskExpertServiceOut(BaseModel):
     description_zh: Optional[str] = None
     category: Optional[str] = None
     images: Optional[List[str]]
-    base_price: float
+    base_price: Optional[float] = None  # negotiable 服务允许 None (面议)
     currency: Literal["GBP", "EUR"]  # 统一为Literal类型
     pricing_type: Optional[str] = None  # fixed / negotiable
     # 位置相关字段
@@ -2625,7 +2625,7 @@ class TaskExpertServiceOut(BaseModel):
             "description_zh": getattr(obj, "description_zh", None),
             "category": getattr(obj, "category", None),
             "images": obj.images,
-            "base_price": float(obj.base_price),
+            "base_price": float(obj.base_price) if obj.base_price is not None else None,
             "currency": obj.currency,
             "pricing_type": getattr(obj, "pricing_type", None),
             "location_type": getattr(obj, "location_type", None),

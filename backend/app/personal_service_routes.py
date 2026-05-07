@@ -158,7 +158,7 @@ async def create_personal_service(
         description_en=description_en,
         description_zh=description_zh,
         category=data.category,
-        base_price=data.base_price or 0,
+        base_price=data.base_price,  # negotiable 允许 None;schema 已守 fixed 必须 >0
         currency=data.currency,
         pricing_type=data.pricing_type,
         location_type=data.location_type,

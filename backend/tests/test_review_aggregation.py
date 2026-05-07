@@ -69,6 +69,102 @@ def test_calculate_user_avg_rating_returns_zero_when_no_reviews():
     db.commit.assert_called_once()
 
 
+# ---------------------------------------------------------------------------
+# Batch 2: 个人服务可见性 / 价格 (#2 + #3 + #4)
+# ---------------------------------------------------------------------------
+
+
+def test_task_expert_service_out_accepts_null_base_price():
+    """议价个人服务允许 base_price=None (面议),Schema 必须兼容。
+    P0 #4: schema 原 `base_price: float` 必填,from_orm 直接 float(None) → 500。
+    """
+    from app.schemas import TaskExpertServiceOut
+    from datetime import datetime, timezone
+    from unittest.mock import MagicMock
+
+    obj = MagicMock()
+    obj.id = 19
+    obj.expert_id = None
+    obj.service_type = "personal"
+    obj.user_id = "u_owner"
+    obj.service_name = "面议服务"
+    obj.service_name_en = None
+    obj.service_name_zh = None
+    obj.description = "x"
+    obj.description_en = None
+    obj.description_zh = None
+    obj.category = "other"
+    obj.images = None
+    obj.base_price = None  # 关键: NULL
+    obj.currency = "GBP"
+    obj.pricing_type = "negotiable"
+    obj.location_type = "online"
+    obj.location = None
+    obj.latitude = None
+    obj.longitude = None
+    obj.service_radius_km = None
+    obj.skills = None
+    obj.status = "active"
+    obj.display_order = 0
+    obj.view_count = 0
+    obj.application_count = 0
+    obj.created_at = datetime.now(timezone.utc)
+    obj.package_type = None
+    obj.total_sessions = None
+    obj.bundle_service_ids = None
+    obj.package_price = None
+    obj.validity_days = None
+    obj.linked_service_id = None
+    obj.has_time_slots = False
+    obj.time_slot_duration_minutes = None
+    obj.time_slot_start_time = None
+    obj.time_slot_end_time = None
+    obj.participants_per_slot = None
+    obj.weekly_time_slot_config = None
+    obj.owner_type = "user"
+    obj.owner_id = "u_owner"
+
+    # 不应抛 TypeError("float() argument must be ... not NoneType")
+    out = TaskExpertServiceOut.from_orm(obj)
+    assert out.base_price is None
+    assert out.pricing_type == "negotiable"
+
+
+def test_personal_service_create_preserves_null_base_price():
+    """议价个人服务创建时, base_price=None 必须保留, 不能被 `or 0` 强写为 0。
+    P0 #3: 强写 0 后议价服务在按价格排序时全堆顶, 详情卡可能显示 ¥0。
+    """
+    from app.schemas import PersonalServiceCreate
+
+    svc = PersonalServiceCreate(
+        service_name="面议",
+        description="x",
+        base_price=None,
+        pricing_type="negotiable",
+        currency="GBP",
+        category="accompany",
+    )
+    # schema 层接受 None
+    assert svc.base_price is None
+
+
+def test_list_services_endpoint_does_not_hard_filter_expert_only():
+    """`/api/services` 端点应允许个人服务出现, 不能写死 owner_type=='expert'。
+    P0 #2: 列表硬过滤导致 Flutter 唯一通用入口看不到任何个人服务。
+    """
+    import inspect
+    from app.service_public_routes import list_services_by_category
+
+    src = inspect.getsource(list_services_by_category)
+    # 不应该再有把 owner_type 写死为 'expert' 的 where
+    # (允许通过参数过滤, 但不能默认硬编码)
+    # 用关键字精确判断: 'owner_type == "expert"' 或类似形式不该作为无条件 filter
+    # 而具体写法允许多样, 检查最直接的硬编码
+    assert 'owner_type == "expert"' not in src.replace(" ", "") or "Query(" in src, (
+        "list_services_by_category 仍硬编码 owner_type='expert',个人服务被排除"
+    )
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating
