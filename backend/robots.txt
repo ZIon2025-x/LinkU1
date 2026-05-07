@@ -91,9 +91,11 @@ Crawl-delay: 2
 # Sitemap location - 使用动态生成的sitemap（包含所有任务、商品、帖子等）
 Sitemap: https://www.link2ur.com/sitemap.xml
 
-# AI信息文件 - 帮助AI理解网站
-# AI Information: https://www.link2ur.com/.well-known/ai.txt
-# AI API: https://api.link2ur.com/api/ai/site-info
+# AI 信息文件 - 帮助 AI 理解网站
+# 入口（指向结构化端点）：https://www.link2ur.com/.well-known/ai.txt
+# 站点元数据：https://api.link2ur.com/api/ai/site-info
+# 任务摘要：https://api.link2ur.com/api/ai/tasks/summary
+# 分类清单：https://api.link2ur.com/api/ai/categories
 
 # 爬取延迟
 Crawl-delay: 1
