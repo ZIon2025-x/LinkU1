@@ -266,14 +266,10 @@ async def custom_cors_middleware(request: Request, call_next):
     allowed_origins = Config.ALLOWED_ORIGINS
     
     def is_allowed_origin(origin: str) -> bool:
-        """检查origin是否在允许列表中"""
+        """检查 origin 是否在允许列表中（严格相等，避免 startswith 让 https://www.link2ur.com.attacker.com 通过）"""
         if not origin:
             return False
-        # 精确匹配或前缀匹配
-        for allowed in allowed_origins:
-            if origin == allowed or origin.startswith(allowed.rstrip('/')):
-                return True
-        return False
+        return origin in allowed_origins
     
     def set_cors_headers(response: Response):
         """设置CORS响应头（使用 Config.ALLOWED_HEADERS，含 X-App-Platform 等）"""

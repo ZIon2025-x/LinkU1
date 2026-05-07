@@ -22,7 +22,7 @@ def set_cors_headers(response: Response, request: Request = None):
         origin = request.headers.get("origin")
         # 使用 Config.ALLOWED_ORIGINS（从环境变量读取）
         allowed_origins = Config.ALLOWED_ORIGINS
-        if origin and any(origin == allowed or origin.startswith(allowed.rstrip('/')) for allowed in allowed_origins):
+        if origin and origin in allowed_origins:
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
