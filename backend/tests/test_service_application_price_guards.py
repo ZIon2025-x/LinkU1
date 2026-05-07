@@ -322,6 +322,214 @@ async def test_apply_allows_fixed_service_with_positive_base_price():
     assert result["status"] == "pending"
 
 
+@pytest.mark.asyncio
+async def test_apply_allows_negotiable_no_base_no_slot_when_user_provides_negotiated_price():
+    """议价服务 + 无 base_price + 无 slot 时,只要 body 提供有效 negotiated_price (>0),
+    apply 应当放行,并把价格写到 ServiceApplication.negotiated_price 上 ——
+    供 owner 端在审批/还价流程里看到议价金额。
+    """
+    from app.expert_consultation_routes import apply_for_service
+
+    service = MagicMock(
+        id=19,
+        status="active",
+        base_price=None,
+        pricing_type="negotiable",
+        owner_type="user",
+        owner_id="u_owner",
+        currency="GBP",
+    )
+
+    first = MagicMock()
+    first.scalar_one_or_none = MagicMock(return_value=service)
+    second = MagicMock()
+    second.scalar_one_or_none = MagicMock(return_value=None)
+    third = MagicMock()  # update application_count
+    calls = iter([first, second, third])
+
+    async def _execute(*args, **kwargs):
+        try:
+            return next(calls)
+        except StopIteration:
+            return MagicMock()
+
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=_execute)
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.add = MagicMock()
+
+    current_user = MagicMock(id="u_applicant", name="test")
+
+    with patch(
+        "app.expert_consultation_routes._notify_team_admins_new_application",
+        AsyncMock(),
+    ):
+        result = await apply_for_service(
+            service_id=19,
+            body={"message": "我想要", "negotiated_price": 50.0},
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+
+    assert result["service_id"] == 19
+    # 创建的 application 必须带上议价金额
+    db.add.assert_called_once()
+    application = db.add.call_args.args[0]
+    assert float(application.negotiated_price) == 50.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_price", [0, -10, "abc", None])
+async def test_apply_rejects_negotiable_no_base_no_slot_with_invalid_negotiated_price(invalid_price):
+    """议价 + 无 base_price + 无 slot 但 negotiated_price 不是有效正数 (0/负/非数字/缺失) ——
+    仍然应当 400 apply_requires_consultation,因为没有可落地的价格。
+    """
+    from app.expert_consultation_routes import apply_for_service
+
+    service = MagicMock(
+        id=19,
+        status="active",
+        base_price=None,
+        pricing_type="negotiable",
+        owner_type="user",
+        owner_id="u_owner",
+        currency="GBP",
+    )
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=_mock_service_lookup_then_empty_existing(service))
+
+    current_user = MagicMock(id="u_applicant", name="test")
+
+    body = {"message": "x"}
+    if invalid_price is not None:
+        body["negotiated_price"] = invalid_price
+
+    with pytest.raises(HTTPException) as exc_info:
+        await apply_for_service(
+            service_id=19,
+            body=body,
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail["error_code"] == "apply_requires_consultation"
+
+
+@pytest.mark.asyncio
+async def test_apply_persists_application_message():
+    """前端 task_expert_repository.applyService 用 'application_message' 作为 key
+    (commit 099f416e4 起);后端必须按这个 key 读,否则用户留言全部丢失。
+    """
+    from app.expert_consultation_routes import apply_for_service
+
+    service = MagicMock(
+        id=9,
+        status="active",
+        base_price=10,
+        pricing_type="fixed",
+        owner_type="user",
+        owner_id="u_owner",
+        currency="GBP",
+    )
+
+    first = MagicMock()
+    first.scalar_one_or_none = MagicMock(return_value=service)
+    second = MagicMock()
+    second.scalar_one_or_none = MagicMock(return_value=None)
+    third = MagicMock()
+    calls = iter([first, second, third])
+
+    async def _execute(*args, **kwargs):
+        try:
+            return next(calls)
+        except StopIteration:
+            return MagicMock()
+
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=_execute)
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.add = MagicMock()
+
+    current_user = MagicMock(id="u_applicant", name="test")
+
+    with patch(
+        "app.expert_consultation_routes._notify_team_admins_new_application",
+        AsyncMock(),
+    ):
+        await apply_for_service(
+            service_id=9,
+            body={"application_message": "我想要这个服务"},
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+
+    db.add.assert_called_once()
+    application = db.add.call_args.args[0]
+    assert application.application_message == "我想要这个服务"
+
+
+@pytest.mark.asyncio
+async def test_apply_persists_negotiated_price_for_fixed_service():
+    """Fixed 价 + base_price>0 的服务,如果用户在 body 里同时提供了 negotiated_price,
+    也要把这个值写到 ServiceApplication.negotiated_price 上 —— 表示用户想还价 / 提价。
+    apply 自身不再因有 negotiated_price 而改变状态语义,owner 侧后续可以选择 approve 或 quote。
+    """
+    from app.expert_consultation_routes import apply_for_service
+
+    service = MagicMock(
+        id=9,
+        status="active",
+        base_price=10,
+        pricing_type="fixed",
+        owner_type="user",
+        owner_id="u_owner",
+        currency="GBP",
+    )
+
+    first = MagicMock()
+    first.scalar_one_or_none = MagicMock(return_value=service)
+    second = MagicMock()
+    second.scalar_one_or_none = MagicMock(return_value=None)
+    third = MagicMock()
+    calls = iter([first, second, third])
+
+    async def _execute(*args, **kwargs):
+        try:
+            return next(calls)
+        except StopIteration:
+            return MagicMock()
+
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=_execute)
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.add = MagicMock()
+
+    current_user = MagicMock(id="u_applicant", name="test")
+
+    with patch(
+        "app.expert_consultation_routes._notify_team_admins_new_application",
+        AsyncMock(),
+    ):
+        await apply_for_service(
+            service_id=9,
+            body={"message": "还价", "negotiated_price": 15.0},
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+
+    db.add.assert_called_once()
+    application = db.add.call_args.args[0]
+    assert float(application.negotiated_price) == 15.0
+
+
 # ---------------------------------------------------------------------------
 # Team-service approve guard (_approve_team_service_application)
 # ---------------------------------------------------------------------------

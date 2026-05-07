@@ -140,12 +140,25 @@ async def apply_for_service(
     # 这样并发请求会串行化,避免超额。
     time_slot_id = body.get("time_slot_id")
 
-    # 护栏：议价服务 + 无基础价 + 无时间段 → apply 流程无处落地价格，
+    # 用户提议的议价金额：兼容 int/float/str；非正/非数字一律视为未提供
+    _raw_price = body.get("negotiated_price")
+    user_negotiated_price: Optional[float] = None
+    if _raw_price is not None:
+        try:
+            _parsed = float(_raw_price)
+            if _parsed > 0:
+                user_negotiated_price = _parsed
+        except (TypeError, ValueError):
+            user_negotiated_price = None
+
+    # 护栏：议价服务 + 无基础价 + 无时间段 + 用户也没出价 → apply 流程无处落地价格，
     # 到审批时会撞 DB 约束（chk_tasks_reward_type_consistency）且 Stripe 拒 0 金额。
     # 引导用户走 /consult 咨询流程（那边原生支持 reward_to_be_quoted）。
+    # 用户在 body 提供 negotiated_price>0 时直接放行，价格落到 ServiceApplication.negotiated_price 上，
+    # owner 端可按议价金额 approve，也可走 negotiate/quote 还价。
     _is_negotiable = (service.pricing_type or "fixed") == "negotiable"
     _no_base_price = service.base_price is None or float(service.base_price) <= 0
-    if _is_negotiable and _no_base_price and not time_slot_id:
+    if _is_negotiable and _no_base_price and not time_slot_id and user_negotiated_price is None:
         raise HTTPException(
             status_code=400,
             detail={
@@ -201,10 +214,11 @@ async def apply_for_service(
         applicant_id=current_user.id,
         new_expert_id=service.owner_id if service.owner_type == "expert" else None,
         service_owner_id=service.owner_id if service.owner_type == "user" else None,
-        application_message=body.get("message"),
+        application_message=body.get("application_message"),
         time_slot_id=time_slot_id,
         status="pending",
         currency=service.currency or "GBP",
+        negotiated_price=user_negotiated_price,
     )
     db.add(application)
 
