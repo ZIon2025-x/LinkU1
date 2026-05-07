@@ -202,7 +202,10 @@ def generate_html(
     if meta_description:
         meta_description = re.sub(r'<[^>]+>', '', meta_description)
     
-    # 生成结构化数据JSON（json.dumps 已自动转义特殊字符）
+    # 生成结构化数据 JSON。
+    # 注意：json.dumps 不转义 '<' 与 '/'，因此用户字段里的 `</script>` 字面值会被
+    # HTML 解析器识别为 script 块结束 → 触发存储型 XSS。这里把 '<' 与 U+2028/2029
+    # 编码成 JS 字符串转义序列，JSON 仍然合法但 HTML 解析器看不到 '<'。
     structured_data_json = ""
     if structured_data:
         # 移除值为 None 的字段，避免输出 null
@@ -213,7 +216,13 @@ def generate_html(
                 return [_remove_none(i) for i in obj]
             return obj
         cleaned_data = _remove_none(structured_data)
-        structured_data_json = f'<script type="application/ld+json">{json.dumps(cleaned_data, ensure_ascii=False)}</script>'
+        safe_payload = (
+            json.dumps(cleaned_data, ensure_ascii=False)
+            .replace("<", "\\u003c")
+            .replace(" ", "\\u2028")
+            .replace(" ", "\\u2029")
+        )
+        structured_data_json = f'<script type="application/ld+json">{safe_payload}</script>'
     
     # 如果没有提供body内容，生成默认内容（title/description 已转义）
     if not body_content:

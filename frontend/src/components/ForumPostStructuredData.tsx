@@ -1,5 +1,6 @@
 import React from 'react';
 import { decodeContent } from '../utils/formatContent';
+import { stringifyJsonLd } from '../utils/jsonLd';
 
 interface ForumPostStructuredDataProps {
   post: {
@@ -76,7 +77,7 @@ const ForumPostStructuredData: React.FC<ForumPostStructuredDataProps> = ({ post,
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(cleanedData, null, 2) }}
+      dangerouslySetInnerHTML={{ __html: stringifyJsonLd(cleanedData, 2) }}
     />
   );
 };

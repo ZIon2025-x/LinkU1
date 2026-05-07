@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/errorHandler';
 import { validateName } from '../utils/inputValidators';
 import { formatViewCount } from '../utils/formatUtils';
+import { stringifyJsonLd } from '../utils/jsonLd';
 import {
   getCustomLeaderboardDetail,
   getLeaderboardItems,
@@ -1279,7 +1280,7 @@ const CustomLeaderboardDetail: React.FC = () => {
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
+              __html: stringifyJsonLd({
                 "@context": "https://schema.org",
                 "@type": "ItemList",
                 "name": leaderboard.name,

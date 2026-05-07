@@ -1,4 +1,5 @@
 import type React from 'react';
+import { stringifyJsonLd } from '../utils/jsonLd';
 
 interface BreadcrumbItem {
   name: string;
@@ -24,7 +25,7 @@ const BreadcrumbStructuredData: React.FC<BreadcrumbStructuredDataProps> = ({ ite
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData, null, 2) }}
+      dangerouslySetInnerHTML={{ __html: stringifyJsonLd(structuredData, 2) }}
     />
   );
 };

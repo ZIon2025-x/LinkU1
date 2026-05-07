@@ -3,6 +3,7 @@ import type React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { obfuscateLocation } from '../utils/formatUtils';
+import { stringifyJsonLd } from '../utils/jsonLd';
 
 dayjs.extend(utc);
 
@@ -96,7 +97,7 @@ const TaskStructuredData: React.FC<TaskStructuredDataProps> = ({ task, language 
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(cleanedData, null, 2) }}
+      dangerouslySetInnerHTML={{ __html: stringifyJsonLd(cleanedData, 2) }}
     />
   );
 };

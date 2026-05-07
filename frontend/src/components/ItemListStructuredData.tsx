@@ -1,4 +1,5 @@
 import type React from 'react';
+import { stringifyJsonLd } from '../utils/jsonLd';
 
 interface ListItemInput {
   id: number | string;
@@ -44,7 +45,7 @@ const ItemListStructuredData: React.FC<ItemListStructuredDataProps> = ({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      dangerouslySetInnerHTML={{ __html: stringifyJsonLd(structuredData) }}
     />
   );
 };

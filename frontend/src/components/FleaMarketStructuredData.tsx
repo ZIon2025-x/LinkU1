@@ -1,4 +1,5 @@
 import type React from 'react';
+import { stringifyJsonLd } from '../utils/jsonLd';
 
 interface FleaMarketStructuredDataProps {
   item: {
@@ -50,7 +51,7 @@ const FleaMarketStructuredData: React.FC<FleaMarketStructuredDataProps> = ({ ite
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(cleanedData, null, 2) }}
+      dangerouslySetInnerHTML={{ __html: stringifyJsonLd(cleanedData, 2) }}
     />
   );
 };

@@ -1,4 +1,5 @@
 import type React from 'react';
+import { stringifyJsonLd } from '../utils/jsonLd';
 
 /**
  * OrganizationStructuredData - 全局组织信息结构化数据
@@ -32,7 +33,7 @@ const OrganizationStructuredData: React.FC = () => {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData, null, 2) }}
+      dangerouslySetInnerHTML={{ __html: stringifyJsonLd(structuredData, 2) }}
     />
   );
 };
