@@ -23,6 +23,7 @@ from app.secure_auth import (
     is_mobile_app_request,
     validate_session
 )
+from app.separate_auth_deps import get_current_admin
 from app.cookie_manager import CookieManager
 from app.security import get_password_hash, verify_password, log_security_event, generate_strong_password, pwd_context
 
@@ -988,15 +989,14 @@ def get_redis_status():
 @secure_auth_router.post("/cleanup-refresh-tokens")
 def cleanup_old_refresh_tokens_endpoint(
     request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin),
 ):
-    """清理旧的refresh token（手动触发）"""
+    """清理旧的 refresh token（管理员手动触发）。
+
+    历史上此端点只校验"任意已登录用户"，使任意低权限账户能反复触发
+    全局 SCAN+删除，造成其他用户被强制登出。改为强制管理员鉴权。
+    """
     try:
-        # 验证会话
-        current_session = validate_session(request)
-        if not current_session:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="会话无效"
-            )
         from app.secure_auth import USE_REDIS, redis_client
         
         if not USE_REDIS or not redis_client:
