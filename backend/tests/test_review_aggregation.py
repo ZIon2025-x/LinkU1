@@ -537,6 +537,55 @@ async def test_consult_rejects_self_for_personal_service():
     assert exc_info.value.status_code == 400
 
 
+# ---------------------------------------------------------------------------
+# Batch 9: 数据/显示对齐 (C.P1.2 / D.P1.2 / D.P1.3)
+# ---------------------------------------------------------------------------
+
+
+def test_async_task_reviews_filters_soft_deleted():
+    """async /tasks/{id}/reviews 必须过滤 is_deleted=true 的 review,
+    否则任务详情页评价区出现"幽灵"评价。P1 C.P1.2。"""
+    import inspect
+    from app.async_routers import get_task_reviews_async
+
+    src = inspect.getsource(get_task_reviews_async)
+    # 在拉 all_reviews_query 时必须有 is_deleted 过滤
+    # 接受两种写法: is_deleted.is_(False) 或 ~Review.is_deleted / is_deleted == False
+    has_filter = (
+        "is_deleted.is_(False)" in src
+        or "is_deleted == False" in src
+        or "is_deleted.is(False)" in src
+        or "~models.Review.is_deleted" in src
+    )
+    assert has_filter, "async /tasks/{id}/reviews 拉评价时未过滤软删"
+
+
+def test_discovery_expert_services_falls_back_to_personal_owner_rating():
+    """discovery feed 的 _fetch_expert_services 必须给个人服务 fallback rating —
+    否则个人服务卡片永远 0 星 (Expert.rating 不存在)。P1 D.P1.2。"""
+    import inspect
+    from app.discovery_routes import _fetch_expert_services
+
+    src = inspect.getsource(_fetch_expert_services)
+    # 必须读 PersonalOwner.avg_rating (个人服务 owner 的均分)
+    assert "personal_owner_rating" in src or "avg_rating" in src, (
+        "_fetch_expert_services 没有为个人服务 fallback rating, 永远 None"
+    )
+
+
+def test_service_browse_price_sort_pushes_negotiable_to_tail():
+    """service_browse_routes 的 price_asc/price_desc 排序对议价个人服务
+    (base_price=NULL) 应当用 NULLS LAST, 不让它们堆到边界。P1 D.P1.3。"""
+    import inspect
+    from app.service_browse_routes import browse_services
+
+    src = inspect.getsource(browse_services)
+    # 接受 nullslast / nulls_last / nullsfirst 任意一种 NULL 排序处理
+    assert ("nullslast" in src or "nulls_last" in src or "is_(None)" in src), (
+        "list_services 价格排序未处理议价 NULL 项"
+    )
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating

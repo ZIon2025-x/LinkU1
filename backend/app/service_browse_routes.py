@@ -135,8 +135,11 @@ async def browse_services(
         elif sort == "newest":
             order_clauses.append(S.created_at.desc())
         elif sort == "price_asc":
+            # P1 D.P1.3: 议价 (base_price=NULL) 排末尾, 不让它们堆到最低价位置误导用户
+            order_clauses.append(S.base_price.is_(None))
             order_clauses.append(S.base_price.asc())
         elif sort == "price_desc":
+            order_clauses.append(S.base_price.is_(None))
             order_clauses.append(S.base_price.desc())
         elif sort == "nearby":
             order_clauses.append(distance_sq.asc())

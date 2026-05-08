@@ -729,6 +729,7 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             Expert.rating.label("expert_rating"),
             PersonalOwner.name.label("personal_owner_name"),
             PersonalOwner.avatar.label("personal_owner_avatar"),
+            PersonalOwner.avg_rating.label("personal_owner_rating"),
         )
         .outerjoin(
             Expert,
@@ -778,7 +779,12 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             "original_price": None,
             "discount_percentage": None,
             "currency": row.currency or "GBP",
-            "rating": float(row.expert_rating) if row.expert_rating else None,
+            # P1 D.P1.2: 个人服务 fallback 到 owner.avg_rating, 否则永远 None。
+            "rating": (
+                float(row.personal_owner_rating) if (is_personal and row.personal_owner_rating)
+                else float(row.expert_rating) if row.expert_rating
+                else None
+            ),
             "like_count": None,
             "comment_count": None,
             "upvote_count": None,

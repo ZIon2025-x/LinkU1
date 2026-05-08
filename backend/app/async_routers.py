@@ -1517,8 +1517,10 @@ async def get_task_reviews_async(
             raise HTTPException(status_code=404, detail="Task not found")
 
         # 先获取所有评价（用于当前用户自己的评价检查）
+        # P1 C.P1.2: 过滤软删 review (migration 212), 不让"幽灵"评价出现在任务详情页
         all_reviews_query = select(models.Review).where(
-            models.Review.task_id == task_id
+            models.Review.task_id == task_id,
+            models.Review.is_deleted.is_(False),
         )
         all_reviews_result = await db.execute(all_reviews_query)
         all_reviews = all_reviews_result.scalars().all()
