@@ -1415,6 +1415,74 @@ async def update_flea_market_item(
         )
 
 
+@flea_market_router.delete("/items/{item_id}", response_model=dict)
+async def delete_flea_market_item(
+    item_id: str,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """卖家软删除自己的商品（下架，列表/详情不再展示）"""
+    try:
+        db_id = parse_flea_market_id(item_id)
+
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+
+        if item.seller_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限操作此商品"
+            )
+
+        if item.status == "sold":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="已售出的商品无法删除"
+            )
+
+        if item.status == "deleted":
+            return {"success": True, "message": "商品已删除"}
+
+        old_images = []
+        if item.images:
+            try:
+                old_images = json.loads(item.images) if isinstance(item.images, str) else item.images
+            except (json.JSONDecodeError, TypeError, ValueError):
+                old_images = []
+
+        if old_images:
+            logger.info(f"软删除商品 {db_id}，删除 {len(old_images)} 张图片")
+            delete_flea_market_item_images(db_id, old_images)
+
+        await db.execute(
+            update(models.FleaMarketItem)
+            .where(models.FleaMarketItem.id == db_id)
+            .values(status="deleted")
+        )
+        await db.commit()
+
+        invalidate_item_cache(db_id)
+
+        return {"success": True, "message": "商品已删除"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"删除商品失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="删除商品失败"
+        )
+
+
 # ==================== 商品刷新API ====================
 
 @flea_market_router.post("/items/{item_id}/refresh", response_model=dict)

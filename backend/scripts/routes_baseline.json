@@ -171,6 +171,11 @@
   },
   {
     "method": "DELETE",
+    "path": "/api/flea-market/items/{item_id}",
+    "name": "delete_flea_market_item"
+  },
+  {
+    "method": "DELETE",
     "path": "/api/forum/categories/{category_id}",
     "name": "delete_category"
   },
