@@ -1749,8 +1749,11 @@ export const applyForService = async (serviceId: number, applicationData: {
   return res.data;
 };
 
-export const getMyServiceApplications = async (params?: { status?: string; limit?: number; offset?: number }) => {
-  const res = await api.get('/api/users/me/service-applications', { params });
+export const getMyServiceApplications = async (params?: { status?: string; page?: number; page_size?: number }) => {
+  // 2026-05-08: 旧 GET /api/users/me/service-applications 已下线，
+  // 收敛到 expert_consultation_routes.py 的 /api/my/service-applications
+  // (字段更全：含 owner_reply / consultation_task_id；分页用 page/page_size)
+  const res = await api.get('/api/my/service-applications', { params });
   return res.data;
 };
 
@@ -1772,9 +1775,11 @@ export const getMyTaskExpertApplications = async (params?: { status?: string; se
 };
 
 // 协商/批准/拒绝（新路由不再有 /api/task-experts 前缀）
+// 2026-05-08: 后端 ApplicationCounterOfferRequest schema 字段名是 `price`（不是 `counter_price`），
+// `message` 字段历史上从未被 handler 读取。改为发送 schema 真实接受的 price + 可选 service_id。
 export const counterOfferServiceApplication = async (applicationId: number, counterData: {
-  counter_price: number;
-  message?: string;
+  price: number;
+  service_id?: number;
 }) => {
   const res = await api.post(`/api/applications/${applicationId}/counter-offer`, counterData);
   return res.data;

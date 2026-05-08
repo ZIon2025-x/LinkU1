@@ -28,8 +28,10 @@ interface ServiceApplication {
   id: number;
   service_id: number;
   service_name: string;
-  expert_id: string;
-  expert_name?: string;
+  // 后端 /api/my/service-applications 回的是 service_owner_*；
+  // 旧 expert_id/expert_name 字段从未被该端点回传，仅 UI 历史定义。
+  service_owner_id?: string;
+  service_owner_name?: string;
   status: string;
   application_message?: string;
   negotiated_price?: number;
@@ -37,8 +39,10 @@ interface ServiceApplication {
   final_price?: number;
   currency?: string;
   task_id?: number;
+  consultation_task_id?: number;
+  owner_reply?: string;
+  owner_reply_at?: string;
   created_at: string;
-  updated_at: string;
 }
 
 const MyServiceApplications: React.FC = () => {
@@ -102,7 +106,7 @@ const MyServiceApplications: React.FC = () => {
     
     setLoading(true);
     try {
-      const params: any = { limit: 50, offset: 0 };
+      const params: any = { page: 1, page_size: 50 };
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
@@ -330,7 +334,7 @@ const MyServiceApplications: React.FC = () => {
                         {app.service_name}
                       </div>
                       <div style={{ fontSize: '14px', color: '#718096' }}>
-                        任务达人: {app.expert_name || app.expert_id}
+                        任务达人: {app.service_owner_name || app.service_owner_id || '-'}
                       </div>
                     </div>
                     <span

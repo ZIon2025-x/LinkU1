@@ -723,9 +723,10 @@ const TaskExpertDashboard: React.FC = () => {
     }
     
     try {
+      // 2026-05-08: 后端 ApplicationCounterOfferRequest 字段名是 `price`（不是 `counter_price`），
+      // 且历史上 message 字段从未被 handler 读取——这里不再传，避免误以为留言被发出。
       await counterOfferServiceApplication(selectedApplication.id, {
-        counter_price: counterPrice,
-        message: counterMessage || undefined,
+        price: counterPrice,
       });
       message.success('议价已提交');
       setShowCounterOfferModal(false);
