@@ -745,7 +745,8 @@ async def get_flea_market_item(
         # 判断卖家是否活跃（近30天上架≥5件商品）
         seller_is_active = False
         if item.seller_id:
-            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+            # aware datetime — FleaMarketItem.created_at 是 timezone-aware
+            thirty_days_ago = get_utc_time() - timedelta(days=30)
             active_count_result = await db.execute(
                 select(func.count(models.FleaMarketItem.id)).where(
                     models.FleaMarketItem.seller_id == item.seller_id,

@@ -14,6 +14,7 @@ from app.deps import get_async_db_dependency
 from app import models
 from app.expert_routes import _get_member_or_403
 from app.async_routers import get_current_user_secure_async_csrf
+from app.utils.time_utils import get_utc_time
 
 router = APIRouter(prefix="/api/experts", tags=["expert-earnings"])
 
@@ -113,7 +114,10 @@ async def earnings_summary(
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=['owner', 'admin', 'member'])
 
     from datetime import timedelta
-    now = datetime.utcnow()
+    # aware datetime — Task.created_at 是 timezone-aware（DateTime(timezone=True)），
+    # 旧 utcnow() 是 naive，>= 比较时 SQLAlchemy 会按 server tz 隐式转换，
+    # 在跨夏令时/UTC 偏移环境下统计区间会偏移
+    now = get_utc_time()
     if period == 'this_month':
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     elif period == 'last_30d':

@@ -1634,8 +1634,11 @@ if CELERY_AVAILABLE:
         try:
             from datetime import datetime, timedelta
             from app import models, crud
+            from app.utils.time_utils import get_utc_time
 
-            threshold = datetime.utcnow() - timedelta(days=60)
+            # aware datetime — Task.payment_completed_at 是 timezone-aware,
+            # 与 payment_transfer_service.py:209 的 89 天窗口判断保持一致
+            threshold = get_utc_time() - timedelta(days=60)
             tasks = db.query(models.Task).filter(
                 models.Task.taker_expert_id.is_not(None),
                 models.Task.status.in_(['in_progress', 'disputed']),

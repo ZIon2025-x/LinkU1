@@ -717,7 +717,8 @@ def _handle_dispute_team_reversal(db, task_id: int) -> None:
         # 填充审计字段（spec §1.3）
         pt.stripe_reversal_id = reversal.id
         pt.status = "reversed"
-        pt.reversed_at = datetime.utcnow()
+        # PaymentTransfer.reversed_at 是 timezone-aware（DateTime(timezone=True)）
+        pt.reversed_at = get_utc_time()
         pt.reversed_reason = "dispute"
         db.commit()
         logger.warning(

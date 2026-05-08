@@ -485,8 +485,10 @@ def retry_failed_transfer(
         if transfer_record.status == "retrying":
             delay_idx = min(transfer_record.retry_count - 1, len(RETRY_DELAYS) - 1)
             delay_seconds = RETRY_DELAYS[delay_idx] if delay_idx >= 0 else RETRY_DELAYS[0]
-            from datetime import datetime, timedelta
-            transfer_record.next_retry_at = datetime.utcnow() + timedelta(seconds=delay_seconds)
+            # 必须用 aware datetime — DB 里 next_retry_at 是 timezone-aware，
+            # 与同字段 line 403 的 get_utc_time() 对齐；旧 utcnow() 是 naive，
+            # 调度器 line 450 比较 next_retry_at > get_utc_time() 时会因 tzinfo 不一致出错。
+            transfer_record.next_retry_at = get_utc_time() + timedelta(seconds=delay_seconds)
         if transfer_record.retry_count >= transfer_record.max_retries:
             transfer_record.status = "failed"
             transfer_record.next_retry_at = None
