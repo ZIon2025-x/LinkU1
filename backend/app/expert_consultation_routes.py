@@ -48,6 +48,24 @@ _NEGOTIABLE_SOURCE_STATUSES = (
 )
 
 
+# 议价价格上限:Stripe 单笔 PaymentIntent 上限 99,999,99,999 (~ 9 亿小币种单位)。
+# 实际个人/达人服务消费场景 50,000 GBP/EUR 已是极高值。超过即视为输入错误,
+# 防止 finalize 时撞 Stripe API 500。P1 B.P1.3。
+_MAX_NEGOTIATION_PRICE = 50_000.0
+
+
+def _validate_negotiation_price_bound(price: float) -> None:
+    if price > _MAX_NEGOTIATION_PRICE:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "price_out_of_range",
+                "message": f"价格超出上限 ({_MAX_NEGOTIATION_PRICE:.0f})",
+                "max": _MAX_NEGOTIATION_PRICE,
+            },
+        )
+
+
 def _ensure_negotiable_status(application) -> None:
     """终态 SA 拒绝议价类操作。生产可见的 P0 #6 回归点。"""
     if application.status not in _NEGOTIABLE_SOURCE_STATUSES:
@@ -338,6 +356,15 @@ async def create_consultation(
     if not service:
         raise_http_error_with_code("服务不存在", 404, error_codes.SERVICE_NOT_FOUND)
 
+    # P1 B.P1.5: 个人服务 owner 不能对自己发起咨询;团队侧已守(下方 elif 分支),
+    # 个人侧之前漏写,会导致占位 task poster_id == taker_id 的病态状态。
+    if service.owner_type == "user" and str(service.owner_id) == str(current_user.id):
+        raise_http_error_with_code(
+            "不能对自己的服务发起咨询",
+            400,
+            getattr(error_codes, "CANNOT_CONSULT_SELF", "cannot_consult_self"),
+        )
+
     # 检查是否已有进行中的咨询/申请（幂等）
     existing_app = await check_consultation_idempotency(
         db,
@@ -578,6 +605,7 @@ async def negotiate_price(
         raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
     if price <= 0:
         raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
+    _validate_negotiation_price_bound(price)
     # 团队咨询：议价时必须绑定服务
     service_id = body.get("service_id")
     if application.service_id is None:
@@ -662,6 +690,7 @@ async def quote_price(
         raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
     if price <= 0:
         raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
+    _validate_negotiation_price_bound(price)
     # 团队咨询：报价时必须绑定服务
     service_id = body.get("service_id")
     if application.service_id is None:
@@ -1589,6 +1618,7 @@ async def counter_offer(
             raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
         if price <= 0:
             raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
+        _validate_negotiation_price_bound(price)
 
     # 团队咨询：还价时必须绑定服务
     service_id = body.get("service_id")

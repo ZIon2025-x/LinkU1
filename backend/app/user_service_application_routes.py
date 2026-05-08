@@ -404,6 +404,12 @@ async def owner_counter_offer(
 
     if counter_offer.counter_price <= 0:
         raise HTTPException(status_code=400, detail="议价价格必须大于0")
+    # P1 B.P1.3: 价格上限守卫,防止 finalize 时撞 Stripe API。
+    if float(counter_offer.counter_price) > 50_000:
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "price_out_of_range", "max": 50000},
+        )
 
     application.status = "negotiating"
     application.expert_counter_price = counter_offer.counter_price

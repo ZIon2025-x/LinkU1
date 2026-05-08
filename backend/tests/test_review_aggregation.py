@@ -471,6 +471,72 @@ def test_discovery_service_reviews_includes_personal_services():
     )
 
 
+# ---------------------------------------------------------------------------
+# Batch 8: 数据守卫 - 议价价格上限 + self-consult 守卫
+# ---------------------------------------------------------------------------
+
+
+@_pytest.mark.asyncio
+async def test_negotiate_rejects_price_above_upper_bound():
+    """议价 price 必须有上限 (Stripe 拒收 > 99 亿; 实际生意 50000 GBP/EUR 已极高)。
+    P1 B.P1.3: 之前只校验 > 0, 上限缺失会导致 finalize 时 Stripe 500。"""
+    from app.expert_consultation_routes import negotiate_price
+    from fastapi import HTTPException
+
+    application = MagicMock(
+        id=16, applicant_id="u_applicant", status="negotiating",
+        service_id=19, new_expert_id=None, task_id=None,
+    )
+    app_lookup = MagicMock()
+    app_lookup.scalar_one_or_none = MagicMock(return_value=application)
+    db = MagicMock()
+    db.execute = _AsyncMock(return_value=app_lookup)
+    current_user = MagicMock(id="u_applicant", name="x")
+
+    with _pytest.raises(HTTPException) as exc_info:
+        await negotiate_price(
+            application_id=16,
+            body={"price": 99_000_000_000},  # 99 亿
+            request=MagicMock(),
+            db=db,
+            current_user=current_user,
+        )
+    assert exc_info.value.status_code == 400
+
+
+@_pytest.mark.asyncio
+async def test_consult_rejects_self_for_personal_service():
+    """个人服务 owner 不能对自己发起咨询 (placeholder task poster_id==taker_id 病态)。
+    P1 B.P1.5: 团队侧已有 CANNOT_CONSULT_SELF 拦截, 个人侧漏写。"""
+    from app.expert_consultation_routes import create_consultation
+    from fastapi import HTTPException
+
+    service = MagicMock(
+        id=19, status="active",
+        owner_type="user",
+        owner_id="u_self",  # 跟 current_user.id 一致
+        service_name="x",
+        service_name_en=None,
+        base_price=10,
+        currency="GBP",
+    )
+    svc_lookup = MagicMock()
+    svc_lookup.scalar_one_or_none = MagicMock(return_value=service)
+    db = MagicMock()
+    db.execute = _AsyncMock(return_value=svc_lookup)
+    current_user = MagicMock(id="u_self", name="self")
+
+    with _pytest.raises(HTTPException) as exc_info:
+        await create_consultation(
+            service_id=19,
+            request=MagicMock(),
+            body={},
+            db=db,
+            current_user=current_user,
+        )
+    assert exc_info.value.status_code == 400
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating
