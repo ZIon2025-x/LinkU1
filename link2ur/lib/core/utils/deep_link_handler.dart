@@ -69,6 +69,19 @@ class DeepLinkHandler {
         }
       }).catchError((Object e) {
         AppLogger.error('Deep link - Stripe handleURLCallback failed', e);
+        // 给用户兜底反馈,避免支付返回时 silent fail。优先用 ScaffoldMessenger,
+        // 拿不到 Scaffold 就 fallback 到顶层 OverlayEntry。
+        final ctx = _navigatorKey?.currentContext;
+        if (ctx != null && ctx.mounted) {
+          final messenger = ScaffoldMessenger.maybeOf(ctx);
+          if (messenger != null) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text('Payment redirect failed, please retry'),
+              ),
+            );
+          }
+        }
       });
       return;
     }

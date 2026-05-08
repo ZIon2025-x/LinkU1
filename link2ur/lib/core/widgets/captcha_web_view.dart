@@ -136,6 +136,14 @@ class _CaptchaWebViewState extends State<CaptchaWebView> {
       ..loadHtmlString(_buildHtml());
   }
 
+  /// HTML attribute context 转义（值放进 `"..."` 双引号 attr）。
+  /// siteKey 当前由调用方硬编码（公开站点 key），但补转义做 depth-in-defense。
+  String _escapeHtmlAttr(String s) => s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+
   String _buildHtml() {
     if (widget.captchaType == CaptchaType.hcaptcha) {
       return _buildHCaptchaHtml();
@@ -144,6 +152,7 @@ class _CaptchaWebViewState extends State<CaptchaWebView> {
   }
 
   String _buildReCaptchaHtml() {
+    final safeKey = _escapeHtmlAttr(widget.siteKey);
     return '''
 <!DOCTYPE html>
 <html>
@@ -163,7 +172,7 @@ class _CaptchaWebViewState extends State<CaptchaWebView> {
 </head>
 <body>
   <div class="g-recaptcha"
-    data-sitekey="${widget.siteKey}"
+    data-sitekey="$safeKey"
     data-callback="onCaptchaSuccess"
     data-error-callback="onCaptchaError">
   </div>
@@ -181,6 +190,7 @@ class _CaptchaWebViewState extends State<CaptchaWebView> {
   }
 
   String _buildHCaptchaHtml() {
+    final safeKey = _escapeHtmlAttr(widget.siteKey);
     return '''
 <!DOCTYPE html>
 <html>
@@ -200,7 +210,7 @@ class _CaptchaWebViewState extends State<CaptchaWebView> {
 </head>
 <body>
   <div class="h-captcha"
-    data-sitekey="${widget.siteKey}"
+    data-sitekey="$safeKey"
     data-callback="onCaptchaSuccess"
     data-error-callback="onCaptchaError">
   </div>

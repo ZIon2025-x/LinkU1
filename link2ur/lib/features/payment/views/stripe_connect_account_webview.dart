@@ -90,11 +90,20 @@ class _StripeConnectAccountWebViewState
       ..loadHtmlString(_buildHtml());
   }
 
+  /// JS 字符串字面量转义。值放进 `"..."` 上下文,
+  /// 当前 publishableKey/clientSecret 都是 server 控制的 ASCII，
+  /// 但仍把 `<`/`>` 写成 `<`/`>` 防 `</script>` 跳出做 depth-in-defense。
+  String _escapeForJsString(String s) => s
+      .replaceAll(r'\', r'\\')
+      .replaceAll('"', r'\"')
+      .replaceAll('<', r'<')
+      .replaceAll('>', r'>');
+
   String _buildHtml() {
     // 使用 Stripe Connect embedded components (Web)
     // https://docs.stripe.com/connect/get-started-connect-embedded-components
-    final safeKey = widget.publishableKey.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
-    final safeSecret = widget.clientSecret.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+    final safeKey = _escapeForJsString(widget.publishableKey);
+    final safeSecret = _escapeForJsString(widget.clientSecret);
     return '''
 <!DOCTYPE html>
 <html lang="en">
