@@ -276,7 +276,9 @@ async def delete_personal_service(
     if service.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权删除此服务")
 
-    await db.delete(service)
+    # P0 #15: 软删 — 物理删除会撞 Task.expert_service_id ondelete=RESTRICT 直接 500;
+    # 历史任务/评价仍需引用此服务做反查。
+    service.status = "deleted"
     await db.commit()
     return {"message": "服务已删除"}
 

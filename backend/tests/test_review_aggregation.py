@@ -436,6 +436,41 @@ def test_async_routers_masks_anonymous_user_id():
     assert "user_id" in src
 
 
+# ---------------------------------------------------------------------------
+# Batch 7: 硬删保护 + discovery feed (#15 + #16)
+# ---------------------------------------------------------------------------
+
+
+def test_personal_service_delete_uses_soft_delete():
+    """删除个人服务必须改成软删 (status='deleted'), 不能 db.delete()。
+    P0 #15: 物理删除会撞 ondelete=RESTRICT (Task.expert_service_id), 直接 500。"""
+    import inspect
+    from app.personal_service_routes import delete_personal_service
+
+    src = inspect.getsource(delete_personal_service)
+    # 不该再有 db.delete(service)
+    assert "db.delete(service)" not in src and "await db.delete(" not in src, (
+        "delete_personal_service 仍在物理删除, 历史 task 引用会 500"
+    )
+    # 必须有软删标记
+    assert "deleted" in src or "status" in src, (
+        "delete_personal_service 没有软删/状态标记"
+    )
+
+
+def test_discovery_service_reviews_includes_personal_services():
+    """discovery feed 的 _fetch_service_reviews 不能强制 created_by_expert==True,
+    否则个人服务 review 永不进 feed。P0 #16。"""
+    import inspect
+    from app.discovery_routes import _fetch_service_reviews
+
+    src = inspect.getsource(_fetch_service_reviews)
+    # 不该再有 created_by_expert == True 的硬过滤
+    assert "created_by_expert == True" not in src, (
+        "_fetch_service_reviews 仍硬过滤 created_by_expert, 个人服务 review 进不了 feed"
+    )
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating

@@ -526,11 +526,13 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int, current_user=None
         .join(models.TaskExpertService, models.Task.expert_service_id == models.TaskExpertService.id)
         .outerjoin(models.Activity, models.Task.parent_activity_id == models.Activity.id)
         .where(
-            models.Task.created_by_expert == True,
+            # P0 #16: 移除 created_by_expert==True 硬过滤 — 个人服务 review 也要进 feed。
+            # expert_service_id 已经隐含"基于服务"的语义 (上面 join TaskExpertService)。
             models.Task.status == "completed",
             models.Task.is_visible == True,
             models.Review.comment.isnot(None),
             models.Review.comment != "",
+            models.Review.is_deleted.is_(False),  # 顺手过滤软删 review
         )
         .order_by(desc(models.Review.created_at))
         .limit(limit)
