@@ -92,6 +92,9 @@ async def get_service_reviews(
             "rating": r.rating,
             "comment": r.comment,
             "created_at": r.created_at.isoformat() if r.created_at else None,
+            # P1 C.P1.4: 个人/达人 owner 回复评价后必须回传, 不然 Flutter UI 看不到
+            "reply_content": r.reply_content,
+            "reply_at": r.reply_at.isoformat() if r.reply_at else None,
         })
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}

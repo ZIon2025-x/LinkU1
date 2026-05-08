@@ -586,6 +586,36 @@ def test_service_browse_price_sort_pushes_negotiable_to_tail():
     )
 
 
+# ---------------------------------------------------------------------------
+# Batch 10: 后端小修 (C.P1.3 + C.P1.4)
+# ---------------------------------------------------------------------------
+
+
+def test_create_review_endpoint_returns_error_code_dict():
+    """create_review 路由失败时必须抛 dict (含 error_code), 不能直接抛英文整句。
+    P1 C.P1.3: localizer 只在英文整句完全相等时命中, 大小写/标点变更立刻失效。"""
+    import inspect
+    from app.routes.task_routes import create_review
+
+    src = inspect.getsource(create_review)
+    # 必须在 detail 里带 error_code 字段
+    assert '"error_code"' in src or "'error_code'" in src, (
+        "create_review 仍直接抛英文整句, Flutter localizer 难以命中"
+    )
+
+
+def test_service_review_routes_returns_reply_content():
+    """get_service_reviews 必须返回 reply_content 和 reply_at 字段, 否则
+    个人服务 owner 回复了评价用户也看不到。P1 C.P1.4。"""
+    import inspect
+    from app.service_review_routes import get_service_reviews
+
+    src = inspect.getsource(get_service_reviews)
+    assert "reply_content" in src and "reply_at" in src, (
+        "get_service_reviews 没有回传 reply_content/reply_at 字段"
+    )
+
+
 def test_calculate_user_avg_rating_writes_received_avg_back_to_user():
     """算出 4.5 后写回 User.avg_rating=4.5 并 commit。"""
     from app.crud.review import calculate_user_avg_rating

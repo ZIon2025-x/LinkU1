@@ -703,14 +703,26 @@ def create_review(
 
     result = crud.create_review(db, current_user.id, task_id, review)
     if isinstance(result, str):
-        error_messages = {
+        # P1 C.P1.3: 抛 dict (error_code + message_zh + message_en), Flutter localizer
+        # 优先按 error_code 命中, 命中不到时 fallback 到 message。之前抛英文整句, 大小写/标点
+        # 一变 localizer 立刻失效。
+        error_messages_zh = {
+            "task_not_completed": "任务尚未完成",
+            "not_participant": "您不是该任务的参与者",
+            "already_reviewed": "您已评价过该任务",
+        }
+        error_messages_en = {
             "task_not_completed": "Task is not completed yet.",
             "not_participant": "You are not a participant of this task.",
             "already_reviewed": "You have already reviewed this task.",
         }
         raise HTTPException(
             status_code=400,
-            detail=error_messages.get(result, result),
+            detail={
+                "error_code": result,
+                "message": error_messages_zh.get(result, result),
+                "message_en": error_messages_en.get(result, result),
+            },
         )
     db_review = result
     
