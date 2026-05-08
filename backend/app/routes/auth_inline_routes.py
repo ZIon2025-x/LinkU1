@@ -33,6 +33,7 @@ from fastapi import (
     Request,
     Response,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
@@ -224,24 +225,39 @@ async def register(
         )
 
     # --- Create user (verified, since email code was valid) ---
+    # 应用层 line 186-192 的 email/name 唯一性 check 与 commit 之间存在 TOCTOU 窗口,
+    # 并发请求可能两个都通过 check; 此时 DB 层的 unique constraint (models.py:140-141)
+    # 会兜底 — 但如果不 catch IntegrityError, FastAPI 默认抛 500。这里转成 400 + 业务错误码,
+    # 让前端能用 email_already_registered / username_already_taken 局部国际化。
     user_data = schemas.UserCreate(**validated_data)
-    new_user = await async_user_crud.create_user(db, user_data)
+    try:
+        new_user = await async_user_crud.create_user(db, user_data)
 
-    from sqlalchemy import update
-    await db.execute(
-        update(models.User)
-        .where(models.User.id == new_user.id)
-        .values(
-            is_verified=1,
-            is_active=1,
-            user_level="normal",
-            inviter_id=inviter_id,
-            invitation_code_id=invitation_code_id,
-            invitation_code_text=invitation_code_text
+        from sqlalchemy import update
+        await db.execute(
+            update(models.User)
+            .where(models.User.id == new_user.id)
+            .values(
+                is_verified=1,
+                is_active=1,
+                user_level="normal",
+                inviter_id=inviter_id,
+                invitation_code_id=invitation_code_id,
+                invitation_code_text=invitation_code_text
+            )
         )
-    )
-    await db.commit()
-    await db.refresh(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+    except IntegrityError as e:
+        await db.rollback()
+        # PostgreSQL: "duplicate key value violates unique constraint \"users_email_key\"" 等
+        msg = str(getattr(e, "orig", e)).lower()
+        if "email" in msg:
+            raise HTTPException(status_code=400, detail="email_already_registered")
+        if "name" in msg or "username" in msg:
+            raise HTTPException(status_code=400, detail="username_already_taken")
+        # 其它 unique constraint(phone 等)统一回 400 而非 500
+        raise HTTPException(status_code=400, detail="account_already_exists")
 
     # --- Invitation code reward ---
     if invitation_code_id:
