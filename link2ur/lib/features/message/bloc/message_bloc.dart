@@ -90,6 +90,17 @@ class MessageFetchUnreadCount extends MessageEvent {
   const MessageFetchUnreadCount();
 }
 
+/// 内部事件：WebSocket 收到聊天消息后由 BLoC handler 同步 patch state
+/// （listener 内不能直接 emit，必须走 event handler）
+class _MessageWsChatReceived extends MessageEvent {
+  const _MessageWsChatReceived(this.wsMessage);
+  final WebSocketMessage wsMessage;
+
+  // BLoC 不基于 props 对 event 去重，留空即可
+  @override
+  List<Object?> get props => const [];
+}
+
 // ==================== State ====================
 
 enum MessageStatus { initial, loading, loaded, error }
@@ -234,11 +245,18 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     on<MessageStopPolling>(_onStopPolling);
     on<MessageFetchUnreadCount>(_onFetchUnreadCount);
 
+    on<_MessageWsChatReceived>(_onWsChatReceived);
+
     // 对标 iOS：WebSocket 收到消息/通知时先拉未读 API 再刷新列表，角标实时更新
+    // 优化：聊天消息能本地 patch 现有 TaskChat 时跳过整列表刷新，0 网络延迟更新预览/未读数
+    // isClosed 守卫：cancel() 是 async，cancel 后 in-flight 事件可能仍触发 listener
     _wsSubscription = WebSocketService.instance.messageStream.listen((wsMessage) {
-      if (wsMessage.isChatMessage || wsMessage.isNotification) {
+      if (isClosed) return;
+      if (wsMessage.isChatMessage) {
+        add(_MessageWsChatReceived(wsMessage));
+      } else if (wsMessage.isNotification) {
+        // 通知类（点赞、评论、系统等）：仅刷新未读，不重拉列表
         add(const MessageFetchUnreadCount());
-        add(const MessageRefreshRequested());
       }
     });
   }
@@ -401,6 +419,8 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       // 刷新时重新加载本地偏好
       _loadPreferences(emit);
 
+      // contacts 仍要拉：desktop_sidebar 用 state.totalUnread（含 contacts.unreadCount）
+      // 做未读红点 boolean。即使私聊已下线返回空列表，刷新后能保持角标准确。
       final contacts = await _messageRepository.getContacts();
       final taskChats = await _messageRepository.getTaskChats();
       emit(state.copyWith(
@@ -420,6 +440,90 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         isRefreshing: false,
       ));
     }
+  }
+
+  /// WebSocket 聊天消息 → 本地 patch 对应 TaskChat（命中即 0 网络延迟更新预览/未读数）
+  /// 命中失败（解析异常 / 全新会话）→ 兜底走 forceRefresh 全量刷新
+  Future<void> _onWsChatReceived(
+    _MessageWsChatReceived event,
+    Emitter<MessageState> emit,
+  ) async {
+    final wsMessage = event.wsMessage;
+    void safeAdd(MessageEvent e) {
+      if (!isClosed) add(e);
+    }
+
+    final data = wsMessage.data;
+    if (data == null) {
+      safeAdd(const MessageFetchUnreadCount());
+      safeAdd(const MessageLoadTaskChats(forceRefresh: true));
+      return;
+    }
+
+    // 解析消息体（type=task_message 时嵌套在 data['message'] 里，对齐 ChatBloc）
+    final Map<String, dynamic> messageMap =
+        (wsMessage.type == 'task_message' && data['message'] is Map<String, dynamic>)
+            ? (data['message'] as Map<String, dynamic>)
+            : data;
+
+    Message message;
+    try {
+      message = Message.fromJson(messageMap);
+    } catch (e) {
+      AppLogger.warning('MessageBloc WS parse failed', e);
+      safeAdd(const MessageFetchUnreadCount());
+      safeAdd(const MessageLoadTaskChats(forceRefresh: true));
+      return;
+    }
+
+    final taskId = message.taskId;
+    if (taskId == null) {
+      // 私聊消息（非任务聊天）目前消息列表只展示 task chats，仅刷新未读
+      safeAdd(const MessageFetchUnreadCount());
+      return;
+    }
+
+    // 不增 unread 的两种情况：
+    //  1) 自己发的消息（state.taskChats 列表里那条卡片不应该有红点）
+    //  2) 系统消息（senderId 为空字符串）— 系统消息走通知路径，不污染聊天未读
+    final myUserId = _storage.getUserId();
+    final isFromSelf =
+        myUserId != null && myUserId.isNotEmpty && message.senderId == myUserId;
+    final isSystemMessage = message.senderId.isEmpty;
+    final shouldIncrementUnread = !isFromSelf && !isSystemMessage;
+
+    // 在现有列表里找对应的 TaskChat
+    final idx = state.taskChats.indexWhere((c) => c.taskId == taskId);
+    if (idx < 0) {
+      // 新会话 → 走全量刷新（拿出新会话的完整元数据：taskTitle/images/role 等）
+      safeAdd(const MessageFetchUnreadCount());
+      safeAdd(const MessageLoadTaskChats(forceRefresh: true));
+      return;
+    }
+
+    final existing = state.taskChats[idx];
+    final newLastObj = ChatLastMessage(
+      id: message.id,
+      content: message.content,
+      senderId: message.senderId,
+      senderName: message.senderName,
+      createdAt: message.createdAt?.toIso8601String(),
+    );
+    final patched = existing.copyWith(
+      lastMessage: message.content,
+      lastMessageObj: newLastObj,
+      lastMessageTime: message.createdAt ?? DateTime.now().toUtc(),
+      unreadCount:
+          shouldIncrementUnread ? existing.unreadCount + 1 : existing.unreadCount,
+    );
+
+    final updated = List<TaskChat>.from(state.taskChats);
+    updated[idx] = patched;
+    if (emit.isDone) return;
+    emit(state.copyWith(taskChats: updated));
+
+    // 角标 API 单独再拉一次（保险：本地 ++ 可能与服务端实际未读不同步）
+    safeAdd(const MessageFetchUnreadCount());
   }
 
   // ==================== 置顶/隐藏 ====================

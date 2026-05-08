@@ -370,9 +370,18 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         .take(_kMaxGalleryImages)
         .where((f) => f.path.isNotEmpty)
         .toList();
-    for (final file in toSend) {
-      if (!mounted) break;
-      await _sendImage(await file.readAsBytes(), file.name);
+    if (toSend.isEmpty) return;
+
+    // 多图并发：所有图片同时上传 + 发消息，UI 整体"发送中"指示器统一在外层管理
+    setState(() => _isSendingMessage = true);
+    try {
+      await Future.wait(toSend.map((file) async {
+        final bytes = await file.readAsBytes();
+        if (!mounted) return;
+        await _sendImage(bytes, file.name, manageSendingFlag: false);
+      }));
+    } finally {
+      if (mounted) setState(() => _isSendingMessage = false);
     }
   }
 
@@ -390,23 +399,59 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     }
   }
 
+  // 乐观更新用临时消息 id 生成器（负数递减，避免与后端 id 冲突）
+  static int _pendingCounter = 0;
+  static int _nextPendingId() => -(++_pendingCounter);
+
   /// 上传图片到 `/api/upload/image`,再发送一条 message_type=image 的消息。
   /// 与普通任务聊天 ChatBloc._onSendImage 对齐,额外带 application_id 进咨询上下文。
-  Future<void> _sendImage(Uint8List bytes, String filename) async {
+  ///
+  /// [manageSendingFlag] 单图发送（相机拍照单张）传 true 自管 _isSendingMessage；
+  /// 多图并发场景由外层 [_pickImageFromGallery] 统一管，这里传 false 避免相互覆盖。
+  Future<void> _sendImage(
+    Uint8List bytes,
+    String filename, {
+    bool manageSendingFlag = true,
+  }) async {
     if (!mounted) return;
-    setState(() => _isSendingMessage = true);
+    if (manageSendingFlag) {
+      setState(() => _isSendingMessage = true);
+    }
     // 先从 context 拿依赖,再跨 await 使用,避免 widget dispose 后访问失效 context
     final messageRepo = context.read<MessageRepository>();
     final apiService = context.read<ApiService>();
+
+    int? pendingId;
+    void removePending() {
+      if (pendingId == null) return;
+      _messages = _messages.where((m) => m.id != pendingId).toList();
+    }
+
     try {
+      // 1) 上传图片（拿到 imageUrl 后再插 pending，让乐观气泡能直接显示真图）
       final imageUrl = await messageRepo.uploadImage(bytes, filename);
       if (imageUrl.isEmpty) {
         throw Exception('upload_returned_empty_url');
       }
+      if (!mounted) return;
 
-      // 后端 SendMessageRequest.content 有 min_length=1,空串会 422。
-      // 对齐普通任务聊天 ChatBloc._onSendImage:content='[图片]' 作为占位,
-      // 前端按 messageType=='image' 分支渲染时读 imageUrl/attachments,不显示这串占位。
+      // 2) 乐观更新：插入 pending message，UI 立刻显示图片气泡
+      pendingId = _nextPendingId();
+      final pending = Message(
+        id: pendingId,
+        senderId: _currentUserId ?? '',
+        content: '[图片]',
+        messageType: 'image',
+        imageUrl: imageUrl,
+        taskId: widget.taskId,
+        createdAt: DateTime.now().toUtc(),
+      );
+      setState(() {
+        _messages = [pending, ..._messages]; // 新→旧，插头部
+      });
+
+      // 3) 发消息 API。后端 SendMessageRequest.content 有 min_length=1,
+      // 用 '[图片]' 占位绕开 422；前端按 messageType=='image' 渲染附件，不显示占位。
       final response = await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.taskChatSend(widget.taskId),
         data: {
@@ -427,19 +472,29 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       if (!mounted) return;
       if (response.isSuccess && response.data != null) {
         final message = Message.fromJson(response.data!);
+        // 用真实 message 替换 pending（保持位置）
         setState(() {
-          _messages = [message, ..._messages];
-          _isSendingMessage = false;
+          _messages = _messages
+              .map((m) => m.id == pendingId ? message : m)
+              .toList();
+          if (manageSendingFlag) _isSendingMessage = false;
         });
       } else {
-        setState(() => _isSendingMessage = false);
+        // API 失败：移除 pending，提示
+        setState(() {
+          removePending();
+          if (manageSendingFlag) _isSendingMessage = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.localizeError('task_send_message_failed'))),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isSendingMessage = false);
+      setState(() {
+        removePending();
+        if (manageSendingFlag) _isSendingMessage = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.localizeError('task_send_message_failed'))),
       );

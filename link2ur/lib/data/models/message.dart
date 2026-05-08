@@ -407,6 +407,9 @@ class TaskChat extends Equatable {
   /// 创建副本，仅覆盖指定字段
   TaskChat copyWith({
     int? unreadCount,
+    String? lastMessage,
+    ChatLastMessage? lastMessageObj,
+    DateTime? lastMessageTime,
   }) {
     return TaskChat(
       taskId: taskId,
@@ -422,9 +425,9 @@ class TaskChat extends Equatable {
       images: images,
       isMultiParticipant: isMultiParticipant,
       participants: participants,
-      lastMessage: lastMessage,
-      lastMessageObj: lastMessageObj,
-      lastMessageTime: lastMessageTime,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageObj: lastMessageObj ?? this.lastMessageObj,
+      lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
       serviceApplicationId: serviceApplicationId,
       isConsultationPlaceholder: isConsultationPlaceholder,
@@ -432,7 +435,8 @@ class TaskChat extends Equatable {
   }
 
   @override
-  List<Object?> get props => [taskId, lastMessage, unreadCount, serviceApplicationId];
+  List<Object?> get props =>
+      [taskId, lastMessage, lastMessageTime, unreadCount, serviceApplicationId];
 }
 
 /// 发送消息请求

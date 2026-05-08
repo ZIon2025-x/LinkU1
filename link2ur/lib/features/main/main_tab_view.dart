@@ -262,7 +262,9 @@ class _MainTabViewState extends State<MainTabView>
           context.push('/login');
           return;
         }
+        // 对齐 initState / didChangeAppLifecycleState 三连：先 unread 后 list
         _messageBloc
+          ..add(const MessageFetchUnreadCount())
           ..add(const MessageLoadContacts())
           ..add(const MessageLoadTaskChats());
         context.read<NotificationBloc>()
