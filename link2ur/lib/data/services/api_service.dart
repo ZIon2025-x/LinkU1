@@ -624,7 +624,12 @@ class ApiService {
 
     if (error.response?.data is Map) {
       final data = error.response!.data as Map;
+      // 顶层 error_code (自定义 exception handler 路径)
       errorCode = data['error_code'] as String?;
+      // FastAPI HTTPException(detail=dict) 会包一层 detail; 没顶层 code 时再下钻一层
+      if (errorCode == null && data['detail'] is Map) {
+        errorCode = (data['detail'] as Map)['error_code'] as String?;
+      }
       requestId = data['request_id'] as String? ?? error.response?.headers.value('x-request-id');
     } else {
       requestId = error.response?.headers.value('x-request-id');
@@ -663,7 +668,15 @@ class ApiService {
     if (data == null) return null;
     if (data is String) return data;
     if (data is Map) {
-      return data['message'] ?? data['detail'] ?? data['error'];
+      // FastAPI HTTPException(detail=dict) 包装: 优先用 detail 内的 message
+      final detail = data['detail'];
+      if (detail is Map) {
+        final inner = detail['message'] ?? detail['error'];
+        if (inner is String) return inner;
+      }
+      // 顶层 message / detail(string) / error
+      final top = data['message'] ?? data['detail'] ?? data['error'];
+      return top is String ? top : null;
     }
     return null;
   }
