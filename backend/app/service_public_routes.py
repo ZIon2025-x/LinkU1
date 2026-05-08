@@ -22,7 +22,7 @@ import json as _json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -398,7 +398,7 @@ async def get_service_applications(
 async def reply_to_service_application(
     service_id: int,
     application_id: int,
-    request: Request,
+    body: schemas.ServiceApplicationReplyRequest,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -408,12 +408,9 @@ async def reply_to_service_application(
       - ownership check 通过 _is_service_owner 走 ExpertMember,
         新 Expert 团队的 owner/admin 都能回复 (legacy 只让 service.expert_id==user_id 通过)
     """
-    body = await request.json()
-    message = (body.get("message") or "").strip()
+    message = body.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="回复内容不能为空")
-    if len(message) > 500:
-        raise HTTPException(status_code=400, detail="回复内容不能超过500字")
 
     service_result = await db.execute(
         select(models.TaskExpertService).where(

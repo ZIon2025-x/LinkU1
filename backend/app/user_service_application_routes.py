@@ -5,11 +5,10 @@
 
 import logging
 from datetime import timedelta
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
     Query,
@@ -67,68 +66,10 @@ async def get_current_user_secure_async_csrf(
     )
 
 
-@user_service_application_router.get("/service-applications", response_model=schemas.PaginatedResponse)
-async def get_my_service_applications(
-    status_filter: Optional[str] = Query(None, alias="status"),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """用户获取自己的申请列表"""
-    query = select(models.ServiceApplication).where(
-        models.ServiceApplication.applicant_id == current_user.id
-    )
-    
-    if status_filter:
-        query = query.where(models.ServiceApplication.status == status_filter)
-    
-    # 获取总数
-    count_query = select(func.count(models.ServiceApplication.id)).where(
-        models.ServiceApplication.applicant_id == current_user.id
-    )
-    if status_filter:
-        count_query = count_query.where(models.ServiceApplication.status == status_filter)
-    
-    total_result = await db.execute(count_query)
-    total = total_result.scalar()
-    
-    # 分页查询
-    query = query.order_by(models.ServiceApplication.created_at.desc()).offset(offset).limit(limit)
-    
-    result = await db.execute(query)
-    applications = result.scalars().all()
-    
-    # 加载关联数据
-    items = []
-    for app in applications:
-        app_dict = schemas.ServiceApplicationOut.model_validate(app).model_dump()
-        # 加载服务信息
-        service = await db.get(models.TaskExpertService, app.service_id)
-        if service:
-            app_dict["service_name"] = service.service_name
-        # 加载服务所有者信息
-        if app.service_owner_id:
-            from app import async_crud
-            owner = await async_crud.async_user_crud.get_user_by_id(db, app.service_owner_id)
-            if owner:
-                app_dict["owner_name"] = owner.name
-        elif app.new_expert_id:
-            # 用 new_expert_id (FK → experts.id, team_id 语义)
-            # 而非 legacy expert_id (FK → task_experts.id, user_id 语义)
-            from app.models_expert import Expert
-            expert_team = await db.get(Expert, app.new_expert_id)
-            if expert_team:
-                app_dict["owner_name"] = expert_team.name
-        items.append(app_dict)
-    
-    return {
-        "total": total,
-        "items": items,
-        "limit": limit,
-        "offset": offset,
-        "has_more": (offset + limit) < total,
-    }
+# NOTE: GET /api/users/me/service-applications 已下线 (2026-05-08)。
+# 唯一 my-applications 入口是 expert_consultation_routes.py:1826
+# `GET /api/my/service-applications`，schema 更全 (含 owner_reply / consultation_task_id)。
+# 此处保留 POST /service-applications/{id}/* 系列(取消/议价响应/owner-* 等)。
 
 
 @user_service_application_router.post("/service-applications/{application_id}/respond-counter-offer")

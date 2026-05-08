@@ -1018,6 +1018,11 @@ class TaskExpertRepository {
   }
 
   /// 咨询转正式申请
+  ///
+  /// Backend (`POST /api/applications/{id}/formal-apply`, FormalApplyRequest)
+  /// 只读取 `price` / `deadline` / `is_flexible` 三个字段。早期 Flutter 发
+  /// `proposed_price` 被静默忽略 — 用户提议价被吞,2026-05-08 修正。
+  /// `message` 和 `time_slot_id` 当前后端不读,故不再发送。
   Future<Map<String, dynamic>> formalApply(
     int applicationId, {
     double? proposedPrice,
@@ -1029,9 +1034,7 @@ class TaskExpertRepository {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.formalApply(applicationId),
       data: {
-        if (proposedPrice != null) 'proposed_price': proposedPrice,
-        if (message != null && message.isNotEmpty) 'message': message,
-        if (timeSlotId != null) 'time_slot_id': timeSlotId,
+        if (proposedPrice != null) 'price': proposedPrice,
         if (deadline != null) 'deadline': deadline,
         'is_flexible': isFlexible,
       },

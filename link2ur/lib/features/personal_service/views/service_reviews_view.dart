@@ -189,6 +189,8 @@ class _ReviewCard extends StatelessWidget {
     final rating = (review['rating'] as num?)?.toInt() ?? 0;
     final comment = review['comment'] as String? ?? '';
     final createdAt = review['created_at'] as String?;
+    final replyContent = review['reply_content'] as String?;
+    final replyAt = review['reply_at'] as String?;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -272,6 +274,49 @@ class _ReviewCard extends StatelessWidget {
             Text(
               comment,
               style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+
+          // Owner reply
+          if (replyContent != null && replyContent.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(AppRadius.small),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.expertReviewReplyLabel,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    replyContent,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  if (replyAt != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatDate(replyAt),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ],

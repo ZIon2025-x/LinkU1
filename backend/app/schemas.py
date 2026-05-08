@@ -2957,6 +2957,82 @@ class ServiceApplicationRejectRequest(BaseModel):
     reject_reason: Optional[str] = None
 
 
+# ==================== 服务申请/咨询/协商请求 Schemas ====================
+# 这些 schema 替代 expert_consultation_routes 中早期使用的 raw `body: dict` 入参,
+# 让 OpenAPI 文档完整, 字段被吞 (例如 apply 早期忽略 deadline/is_flexible) 的回归
+# 由 Pydantic 校验直接挡住。
+
+
+class ServiceApplyRequest(BaseModel):
+    """用户申请服务请求 (POST /api/services/{service_id}/apply)"""
+    application_message: Optional[str] = Field(None, max_length=2000)
+    # 议价服务允许用户提议价格;非正/非数字由 Pydantic 校验直接 422
+    negotiated_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    time_slot_id: Optional[int] = Field(None, description="选择的时间段 ID (拼单服务)")
+    deadline: Optional[datetime.datetime] = Field(None, description="期望完成时间 (is_flexible=0 时使用)")
+    is_flexible: Optional[int] = Field(0, ge=0, le=1, description="0=有期限, 1=灵活时间")
+
+
+class ServiceConsultRequest(BaseModel):
+    """用户对服务发起咨询 (POST /api/services/{service_id}/consult)"""
+    message: Optional[str] = Field(None, max_length=2000)
+
+
+class TeamConsultRequest(BaseModel):
+    """用户对达人团队发起咨询 (POST /api/experts/{expert_id}/consult)"""
+    message: Optional[str] = Field(None, max_length=2000)
+
+
+class NegotiatePriceRequest(BaseModel):
+    """用户提出议价 (POST /api/applications/{id}/negotiate)"""
+    price: condecimal(gt=0, max_digits=12, decimal_places=2)
+    service_id: Optional[int] = Field(None, description="团队咨询议价时必填")
+
+
+class QuotePriceRequest(BaseModel):
+    """达人 owner/admin 报价 (POST /api/applications/{id}/quote)"""
+    price: condecimal(gt=0, max_digits=12, decimal_places=2)
+    service_id: Optional[int] = Field(None, description="团队咨询报价时必填")
+
+
+class NegotiateResponseRequest(BaseModel):
+    """协商响应 — accept / reject / counter (POST /api/applications/{id}/negotiate-response)"""
+    action: Literal["accept", "reject", "counter"]
+    price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = Field(
+        None, description="action=counter 时必填"
+    )
+    service_id: Optional[int] = Field(None, description="团队咨询还价时可换绑服务")
+
+
+class FormalApplyRequest(BaseModel):
+    """咨询转正式申请 (POST /api/applications/{id}/formal-apply)"""
+    price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    deadline: Optional[datetime.datetime] = None
+    is_flexible: Optional[int] = Field(0, ge=0, le=1)
+
+
+class PayAndFinalizeRequest(BaseModel):
+    """price_agreed 状态确认订单进入付款 (POST /api/applications/{id}/pay-and-finalize)"""
+    deadline: Optional[datetime.datetime] = None
+    # 接受 bool 或 0/1 整数(向后兼容旧 Flutter)
+    is_flexible: Optional[bool] = None
+
+
+class ApplicationCounterOfferRequest(BaseModel):
+    """达人还价 (POST /api/applications/{id}/counter-offer)。
+
+    与 `CounterOfferRequest` 区别:此端点 price 可选 (允许只换服务不换价),
+    且字段名是 `price` 而非 `counter_price`。
+    """
+    price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    service_id: Optional[int] = Field(None, description="团队咨询还价时可换绑服务")
+
+
+class ServiceApplicationReplyRequest(BaseModel):
+    """服务所有者对申请的公开回复 (POST /api/services/{sid}/applications/{aid}/reply)"""
+    message: str = Field(..., min_length=1, max_length=500)
+
+
 class PaginatedResponse(BaseModel):
     """分页响应基类"""
     total: int

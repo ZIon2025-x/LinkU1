@@ -177,7 +177,7 @@ async def _notify_team_admins_new_application(
 @consultation_router.post("/api/services/{service_id}/apply")
 async def apply_for_service(
     service_id: int,
-    body: dict,
+    body: schemas.ServiceApplyRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -209,18 +209,15 @@ async def apply_for_service(
     # 时间段容量校验: 若指定了 time_slot_id, 检查该 slot 是否还有名额
     # 并发安全: 用 SELECT FOR UPDATE 锁定 slot 行,然后 count + insert,
     # 这样并发请求会串行化,避免超额。
-    time_slot_id = body.get("time_slot_id")
+    time_slot_id = body.time_slot_id
 
-    # 用户提议的议价金额：兼容 int/float/str；非正/非数字一律视为未提供
-    _raw_price = body.get("negotiated_price")
-    user_negotiated_price: Optional[float] = None
-    if _raw_price is not None:
-        try:
-            _parsed = float(_raw_price)
-            if _parsed > 0:
-                user_negotiated_price = _parsed
-        except (TypeError, ValueError):
-            user_negotiated_price = None
+    # 用户提议的议价金额 (Pydantic 已校验 gt=0, 无需再判)
+    user_negotiated_price: Optional[float] = (
+        float(body.negotiated_price) if body.negotiated_price is not None else None
+    )
+    # 价格上限守卫,防止 finalize 撞 Stripe API 上限 (与 negotiate/quote 同款)
+    if user_negotiated_price is not None:
+        _validate_negotiation_price_bound(user_negotiated_price)
 
     # 护栏：议价服务 + 无基础价 + 无时间段 + 用户也没出价 → apply 流程无处落地价格，
     # 到审批时会撞 DB 约束（chk_tasks_reward_type_consistency）且 Stripe 拒 0 金额。
@@ -280,16 +277,22 @@ async def apply_for_service(
                 },
             )
 
+    # is_flexible=1 时 deadline 强制为 None,避免冲突 (与 owner-approve / formal-apply 一致)
+    is_flexible_val = int(body.is_flexible or 0)
+    apply_deadline = body.deadline if (is_flexible_val == 0 and not time_slot_id) else None
+
     application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
         new_expert_id=service.owner_id if service.owner_type == "expert" else None,
         service_owner_id=service.owner_id if service.owner_type == "user" else None,
-        application_message=body.get("application_message"),
+        application_message=body.application_message,
         time_slot_id=time_slot_id,
         status="pending",
         currency=service.currency or "GBP",
         negotiated_price=user_negotiated_price,
+        deadline=apply_deadline,
+        is_flexible=is_flexible_val,
     )
     db.add(application)
 
@@ -344,7 +347,7 @@ async def apply_for_service(
 async def create_consultation(
     service_id: int,
     request: Request,
-    body: Optional[dict] = None,
+    body: Optional[schemas.ServiceConsultRequest] = None,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
@@ -411,7 +414,7 @@ async def create_consultation(
         applicant_id=current_user.id,
         new_expert_id=service.owner_id if service.owner_type == "expert" else None,
         service_owner_id=service.owner_id if service.owner_type == "user" else None,
-        application_message=(body or {}).get("message"),
+        application_message=(body.message if body else None),
         status="consulting",
         currency=service.currency or "GBP",
         task_id=consulting_task.id,
@@ -465,7 +468,7 @@ async def create_consultation(
 async def create_team_consultation(
     expert_id: str,
     request: Request,
-    body: Optional[dict] = None,
+    body: Optional[schemas.TeamConsultRequest] = None,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
@@ -548,7 +551,7 @@ async def create_team_consultation(
         service_id=None,
         applicant_id=current_user.id,
         new_expert_id=expert_id,
-        application_message=(body or {}).get("message"),
+        application_message=(body.message if body else None),
         status="consulting",
         currency="GBP",
         task_id=consulting_task.id,
@@ -583,7 +586,7 @@ async def create_team_consultation(
 @consultation_router.post("/api/applications/{application_id}/negotiate")
 async def negotiate_price(
     application_id: int,
-    body: dict,
+    body: schemas.NegotiatePriceRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -599,15 +602,10 @@ async def negotiate_price(
         raise HTTPException(status_code=403, detail="无权操作")
     _ensure_negotiable_status(application)
 
-    try:
-        price = float(body.get("price", 0))
-    except (TypeError, ValueError):
-        raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
-    if price <= 0:
-        raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
+    price = float(body.price)
     _validate_negotiation_price_bound(price)
     # 团队咨询：议价时必须绑定服务
-    service_id = body.get("service_id")
+    service_id = body.service_id
     if application.service_id is None:
         if not service_id:
             raise HTTPException(status_code=400, detail="团队咨询议价必须选择一个服务")
@@ -662,7 +660,7 @@ async def negotiate_price(
 @consultation_router.post("/api/applications/{application_id}/quote")
 async def quote_price(
     application_id: int,
-    body: dict,
+    body: schemas.QuotePriceRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -684,15 +682,10 @@ async def quote_price(
         raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
     _ensure_negotiable_status(application)
 
-    try:
-        price = float(body.get("price", 0))
-    except (TypeError, ValueError):
-        raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
-    if price <= 0:
-        raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
+    price = float(body.price)
     _validate_negotiation_price_bound(price)
     # 团队咨询：报价时必须绑定服务
-    service_id = body.get("service_id")
+    service_id = body.service_id
     if application.service_id is None:
         if not service_id:
             raise HTTPException(status_code=400, detail="团队咨询报价必须选择一个服务")
@@ -746,7 +739,7 @@ async def quote_price(
 @consultation_router.post("/api/applications/{application_id}/negotiate-response")
 async def respond_to_negotiation(
     application_id: int,
-    body: dict,
+    body: schemas.NegotiateResponseRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -789,9 +782,7 @@ async def respond_to_negotiation(
             error_codes.INVALID_STATUS_TRANSITION,
         )
 
-    action = body.get("action")  # accept, reject, counter
-    if action not in ("accept", "reject", "counter"):
-        raise HTTPException(status_code=400, detail="action 必须为 accept/reject/counter")
+    action = body.action  # Pydantic Literal 已强制 accept/reject/counter
 
     if action == "accept":
         # 只能接受对方的报价,不能自己同意自己提的价
@@ -812,15 +803,13 @@ async def respond_to_negotiation(
         # P0 #13: 回退 time_slot 占座 — 终态后名额必须释放
         await release_time_slot_seat(db, application.time_slot_id)
     elif action == "counter":
-        # 校验价格
-        try:
-            price = float(body.get("price", 0))
-        except (TypeError, ValueError):
-            raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
-        if price <= 0:
-            raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
+        if body.price is None:
+            raise_http_error_with_code(
+                "action=counter 时必须提供 price", 400, error_codes.PRICE_OUT_OF_RANGE
+            )
+        price = float(body.price)
         # 团队咨询还价时可更换服务
-        service_id = body.get("service_id")
+        service_id = body.service_id
         if application.service_id is None and not service_id:
             raise HTTPException(status_code=400, detail="团队咨询还价必须选择一个服务")
         if service_id:
@@ -892,7 +881,7 @@ async def respond_to_negotiation(
 @consultation_router.post("/api/applications/{application_id}/formal-apply")
 async def formal_apply(
     application_id: int,
-    body: dict,
+    body: schemas.FormalApplyRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -907,9 +896,11 @@ async def formal_apply(
     if application.applicant_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权操作")
 
-    application.final_price = body.get("price", application.negotiated_price)
-    application.deadline = body.get("deadline")
-    application.is_flexible = body.get("is_flexible", 0)
+    application.final_price = (
+        float(body.price) if body.price is not None else application.negotiated_price
+    )
+    application.deadline = body.deadline
+    application.is_flexible = body.is_flexible or 0
     application.status = "pending"
     application.updated_at = get_utc_time()
 
@@ -938,7 +929,7 @@ async def formal_apply(
 @consultation_router.post("/api/applications/{application_id}/pay-and-finalize")
 async def pay_and_finalize(
     application_id: int,
-    body: dict,
+    body: schemas.PayAndFinalizeRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -1009,19 +1000,9 @@ async def pay_and_finalize(
             error_codes.INVALID_STATUS_TRANSITION,
         )
 
-    # 解析 body:deadline / is_flexible
-    deadline_val = body.get("deadline") if body else None
-    parsed_deadline = None
-    if deadline_val:
-        try:
-            from datetime import datetime as _dt
-            parsed_deadline = (
-                _dt.fromisoformat(deadline_val.replace("Z", "+00:00"))
-                if isinstance(deadline_val, str) else deadline_val
-            )
-        except (ValueError, TypeError):
-            raise HTTPException(status_code=400, detail="deadline 格式无效")
-    is_flexible_val = body.get("is_flexible") if body else None
+    # Pydantic 已把 deadline 解析为 datetime,无需手动处理 ISO/Z 后缀
+    parsed_deadline = body.deadline
+    is_flexible_val = body.is_flexible
 
     if application.new_expert_id:
         # 团队咨询:写 deadline/flex 后委托给 team helper
@@ -1155,8 +1136,8 @@ async def close_consultation(
 @consultation_router.post("/api/applications/{application_id}/approve")
 async def approve_application(
     application_id: int,
-    body: dict,
     request: Request,
+    body: Optional[dict] = None,  # body unused; kept Optional 以兼容客户端不发 body
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
@@ -1559,8 +1540,8 @@ async def _approve_team_service_application(
 @consultation_router.post("/api/applications/{application_id}/reject")
 async def reject_application(
     application_id: int,
-    body: dict,
     request: Request,
+    body: Optional[dict] = None,  # body unused; kept Optional 以兼容客户端不发 body
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
@@ -1591,7 +1572,7 @@ async def reject_application(
 @consultation_router.post("/api/applications/{application_id}/counter-offer")
 async def counter_offer(
     application_id: int,
-    body: dict,
+    body: schemas.ApplicationCounterOfferRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -1610,18 +1591,12 @@ async def counter_offer(
         raise_http_error_with_code("无权操作", 403, error_codes.NOT_SERVICE_OWNER)
     _ensure_negotiable_status(application)
 
-    price = body.get("price")
+    price: Optional[float] = float(body.price) if body.price is not None else None
     if price is not None:
-        try:
-            price = float(price)
-        except (TypeError, ValueError):
-            raise_http_error_with_code("price 必须为数字", 400, error_codes.PRICE_OUT_OF_RANGE)
-        if price <= 0:
-            raise_http_error_with_code("price 必须大于 0", 400, error_codes.PRICE_OUT_OF_RANGE)
         _validate_negotiation_price_bound(price)
 
     # 团队咨询：还价时必须绑定服务
-    service_id = body.get("service_id")
+    service_id = body.service_id
     if application.service_id is None:
         if not service_id:
             raise HTTPException(status_code=400, detail="团队咨询还价必须选择一个服务")

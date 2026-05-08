@@ -236,6 +236,21 @@
   },
   {
     "method": "DELETE",
+    "path": "/api/task-experts",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/task-experts/",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/task-experts/{path:path}",
+    "name": "deprecated_subpath"
+  },
+  {
+    "method": "DELETE",
     "path": "/api/tasks/{task_id}/delete",
     "name": "delete_cancelled_task"
   },
@@ -306,6 +321,11 @@
   },
   {
     "method": "GET",
+    "path": "/.well-known/ai.txt",
+    "name": "ai_txt"
+  },
+  {
+    "method": "GET",
     "path": "/.well-known/openid-configuration",
     "name": "openid_configuration"
   },
@@ -348,6 +368,16 @@
     "method": "GET",
     "path": "/api/admin/admin-users",
     "name": "get_admin_users_for_super_admin"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/ai/system-prompts",
+    "name": "list_prompts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/ai/system-prompts/active",
+    "name": "get_active_prompt"
   },
   {
     "method": "GET",
@@ -1726,6 +1756,11 @@
   },
   {
     "method": "GET",
+    "path": "/api/services",
+    "name": "list_services_by_category"
+  },
+  {
+    "method": "GET",
     "path": "/api/services/browse",
     "name": "browse_services"
   },
@@ -1748,11 +1783,6 @@
     "method": "GET",
     "path": "/api/services/{service_id}/applications",
     "name": "get_service_applications"
-  },
-  {
-    "method": "GET",
-    "path": "/api/services/{service_id}/reviews",
-    "name": "get_service_reviews"
   },
   {
     "method": "GET",
@@ -1858,6 +1888,21 @@
     "method": "GET",
     "path": "/api/system/health",
     "name": "system_health_check"
+  },
+  {
+    "method": "GET",
+    "path": "/api/task-experts",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "GET",
+    "path": "/api/task-experts/",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "GET",
+    "path": "/api/task-experts/{path:path}",
+    "name": "deprecated_subpath"
   },
   {
     "method": "GET",
@@ -2116,11 +2161,6 @@
   },
   {
     "method": "GET",
-    "path": "/api/users/me/service-applications",
-    "name": "get_my_service_applications"
-  },
-  {
-    "method": "GET",
     "path": "/api/users/me/service-applications/received",
     "name": "get_received_service_applications"
   },
@@ -2276,6 +2316,11 @@
   },
   {
     "method": "GET",
+    "path": "/api/users/users/{user_id}/personal-services",
+    "name": "get_user_personal_services"
+  },
+  {
+    "method": "GET",
     "path": "/api/users/users/{user_id}/received-reviews",
     "name": "get_user_received_reviews"
   },
@@ -2318,6 +2363,11 @@
     "method": "GET",
     "path": "/api/users/{user_id}/following",
     "name": "get_following"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/{user_id}/personal-services",
+    "name": "get_user_personal_services"
   },
   {
     "method": "GET",
@@ -2586,6 +2636,21 @@
   },
   {
     "method": "PATCH",
+    "path": "/api/task-experts",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/task-experts/",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/task-experts/{path:path}",
+    "name": "deprecated_subpath"
+  },
+  {
+    "method": "PATCH",
     "path": "/api/tasks/{task_id}/reward",
     "name": "update_task_reward"
   },
@@ -2643,6 +2708,16 @@
     "method": "POST",
     "path": "/api/admin/admin-user",
     "name": "create_admin_user_by_super_admin"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/ai/system-prompts",
+    "name": "save_prompt"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/ai/system-prompts/{prompt_id}/activate",
+    "name": "activate_prompt"
   },
   {
     "method": "POST",
@@ -2763,11 +2838,6 @@
     "method": "POST",
     "path": "/api/admin/leaderboard/refresh",
     "name": "refresh_leaderboard"
-  },
-  {
-    "method": "POST",
-    "path": "/api/admin/login",
-    "name": "admin_login"
   },
   {
     "method": "POST",
@@ -3931,6 +4001,11 @@
   },
   {
     "method": "POST",
+    "path": "/api/services/{service_id}/favorite",
+    "name": "toggle_service_favorite"
+  },
+  {
+    "method": "POST",
     "path": "/api/services/{service_id}/purchase-package",
     "name": "purchase_package"
   },
@@ -3988,6 +4063,21 @@
     "method": "POST",
     "path": "/api/student-verification/submit",
     "name": "submit_verification"
+  },
+  {
+    "method": "POST",
+    "path": "/api/task-experts",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "POST",
+    "path": "/api/task-experts/",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "POST",
+    "path": "/api/task-experts/{path:path}",
+    "name": "deprecated_subpath"
   },
   {
     "method": "POST",
@@ -4328,11 +4418,6 @@
     "method": "POST",
     "path": "/api/users/admin/customer-service-chat",
     "name": "admin_send_customer_service_chat_message"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/admin/login",
-    "name": "admin_login"
   },
   {
     "method": "POST",
@@ -4918,6 +5003,21 @@
     "method": "PUT",
     "path": "/api/services/me/{service_id}",
     "name": "update_personal_service"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/task-experts",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/task-experts/",
+    "name": "deprecated_root"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/task-experts/{path:path}",
+    "name": "deprecated_subpath"
   },
   {
     "method": "PUT",
