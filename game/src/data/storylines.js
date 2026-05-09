@@ -371,4 +371,438 @@ export const STORYLINES = {
       },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────────
+  // 反诈线 (scam_education) - 教玩家识别针对海外华人的常见诈骗。
+  // ─────────────────────────────────────────────────────────────
+  // 不绑 NPC，纯靠 minWeek + flag 推进。每章演一种真实存在的套路：
+  //   ch1: 仿冒大使馆电话（"涉洗钱"威胁）
+  //   ch2: 快递包裹"海关清关费"短信钓鱼
+  //   ch3: Tinder/Hinge 杀猪盘（pig butchering）
+  //   ch4: 老兵回头帮新生（要求至少抗住 2 次）
+  scam_education: {
+    id: 'scam_education', name: '反诈这一年', npc: null,
+    chapters: [
+      {
+        id: 'scam_1', title: '"中国驻英大使馆来电"',
+        trigger: { minWeek: 4 },
+        title_full: '+44 020 79... 来电',
+        body: '下午 3 点。陌生英国号码打来。\n\n机器人女声："本机为中国驻英大使馆领事保护中心。您名下护照涉及一起境外洗钱案，请按 1 接通办案专员。"\n\n按 1 后—— 一个普通话男声很官方："请问您是 ××× 同学吗？您的 BRP 号 ×××××× 我这边查到您 8 月 14 日有一笔可疑跨境转账。需要您在 2 小时内将名下所有资金转至我们指定的"安全账户"接受清查，否则将冻结您的护照、限制出入境。"',
+        choices: [
+          { label: '"假的吧" + 立刻挂断 + 群里警告', effect: { energy: 1, belonging: 6, flag: 'scam_consul_resisted' },
+            feedback: '你挂断电话立刻发 CSSA 群："刚才接到大使馆电话说我洗钱要我转账 假的对吧？"\n\n5 秒不到：\n\n狗哥：假的 别转 哥们这种我接过 8 次\n@Lily：宝宝注意安全 ✨ 这种我朋友被骗过 £3000\n上岸了的姐：大使馆从来不打电话要钱。所有使馆事务必须线下预约。中国驻英使馆官网首页头条有警告。\n凯泽：靠 我说怎么前几天也接到了 我还跟那个机器人女声犟了 5 分钟\n新生小王：??? 还有这种事吗 我刚来一个月吓死我了\n\n潜水的人（出现）：注意 现在 home office 也开始有仿冒邮件了。' },
+          { label: '"那我先核实一下"（继续听）', effect: { energy: -3, belonging: -1 },
+            feedback: '对方语气立刻紧张："核实？这就是不配合调查！我现在就给你接公安部！" 然后转接一个所谓"上海公安"。\n\n你后知后觉发现 BRP 号他能"念出"是因为先逼你说出来的。你挂了。\n\n3 小时后你才完全冷静。心跳到现在还快。' },
+          { label: '"先转 £500 试试看"', effect: { wallet: -500, energy: -10, belonging: -8, flag: 'scammed_consul' },
+            feedback: '你按对方提供的账户转了 £500"诚意金"。对方立刻又说要再转 £8,000 才能"解除冻结"——你这才反应过来。\n\n那 £500 没了。你没敢告诉爸妈。后来你打电话给真的大使馆——人家说："我们从不打电话办案。这是诈骗。" 你哭了 1 小时。\n\n伦敦给你上的最贵一课：£500。' },
+        ],
+      },
+      {
+        id: 'scam_2', title: 'Royal Mail 包裹滞留短信',
+        trigger: { minWeek: 9 },
+        title_full: '一条来自 +44 7 ... 的短信',
+        body: '你手机震动。SMS：\n\n"[Royal Mail] 您的包裹（追踪号 RM2024××××UK）因海关申报信息缺失被滞留。需在 24 小时内补缴清关费 £2.50 + 完成身份验证，否则包裹将被销毁。点击核实：royal-mail-track-uk.cn/verify"\n\n你确实在等一个国内寄来的包裹。',
+        choices: [
+          { label: '点开域名一看就假 + 直接删除', effect: { energy: 1, belonging: 4, flag: 'scam_courier_resisted' },
+            feedback: '你看了一眼链接：`.cn/verify`。Royal Mail 是英国官方机构怎么可能用 .cn 域名。\n\n你删了短信。半小时后又收到一条同样模板，发件人换了号码。\n\n你截图发群："这是诈骗模板。Royal Mail 真的有费要补永远在 royalmail.com 信箱里。"\n\n新生小王：同学 谢谢提醒 我前天差点点了 😱\n@Lily：天 我室友昨天点了 立刻冻卡了 谢谢宝宝\n狗哥：这种破链接我闭眼都能看出来 但每次都有人中\n凯泽：补充一下：HMRC、DVLA、NHS 短信永远不附链接 全部官网信箱通知' },
+          { label: '点开链接但中途警觉退出', effect: { energy: -2, belonging: -1 },
+            feedback: '你点开了链接——一个仿真度很高的 Royal Mail 页面，要求你输入 BRP 号 + 信用卡 + CVV。\n\n输到信用卡那栏你停下来：Royal Mail 收 £2.50 不需要 CVV。\n\n你立刻关浏览器。第二天去银行把卡冻结重发——以防输入的 BRP 号被存了。' },
+          { label: '填了信息（£2.50 看起来无害）', effect: { wallet: -200, energy: -8, belonging: -5, flag: 'scammed_courier' },
+            feedback: '你填了信用卡 + CVV。对方扣了 "£2.50"。\n\n3 天后你查银行账单——同一张卡又被刷了 £200 在土耳其某个网站。你打电话给银行 dispute、cancel、补卡。流程走了 2 周。\n\n你想：£2.50 是诱饵，CVV 才是猎物。' },
+        ],
+      },
+      {
+        id: 'scam_3', title: '"Goldman Sachs Recruiter" 在 LinkedIn 找你',
+        trigger: { minWeek: 16 },
+        title_full: '"看了你 profile，邀请你来面试"',
+        body: 'LinkedIn DM 弹出。"Olivia Chen · Senior Recruiter, Goldman Sachs Asset Management · London"。头像很职业（套装 + 公司 logo 背景）。\n\n"Hi! Saw your profile and your dissertation topic — you\'re a strong fit for our Quantitative Research summer internship 2025. We\'d like to fast-track you through. Can you complete this take-home assignment by Friday?" 附 PDF。\n\n你做了 take-home（其实题目挺合理）+ 提交 + 第二轮 video interview 也过了。3 周后她说："Final stage. We just need you to complete background check via our HR partner — £350, fully reimbursed in your first paycheck."',
+        choices: [
+          { label: '"正规公司不会让候选人付 background check 费" + 举报', effect: { energy: 1, belonging: 6, flag: 'scam_recruiter_resisted' },
+            feedback: '你回："Goldman Sachs HR runs background checks internally. Candidates never pay. I\'ll be reporting this to LinkedIn and Action Fraud."\n\n她立刻 unmatch。你截图 + 反查 — 她头像是 Goldman 真员工 LinkedIn 盗的，名字也是真员工但不是 recruiter。整套是精心仿冒。\n\n你发 CSSA 群警告：\n\n上岸了的姐：这种已经是产业。LinkedIn 上同一头像注册 50 个号轮着用。\n@Lily：我之前也被 BCG 假 recruiter 加过 😭\n狗哥：但凡 candidate 出钱 100% 假\n凯泽：我表姐去年被这个套路骗了 £600 +\n潜水的人：之前 Reddit r/Big4 也有类似帖。' },
+          { label: '"那能不能等签 contract 后再扣"（讨价）', effect: { energy: -5, belonging: -3 },
+            feedback: '她："Sorry that\'s not negotiable. We can\'t process background check without payment confirmation. If you\'re not ready, we\'ll have to move to the next candidate."\n\n你看了她 message 30 分钟。差点付了。最后心一狠拒了。\n\n第二天 LinkedIn 上她已经 unmatch 你 — 印证了你的怀疑。但你也想：投行真的不可能这么快 fast-track，是我太想被认可。' },
+          { label: '付了 £350', effect: { wallet: -350, energy: -10, belonging: -6, flag: 'scammed_recruiter' },
+            feedback: '你付了 £350 到她说的 "HR 合作账户"。第二天她说还需要 "compliance training fee £500"。\n\n你这才反应过来。你立刻冻结银行卡 + report fraud。£350 银行 dispute 拿回来一半（£175）。\n\n净损 £175 + 一周 dispute 流程 + 那两周你 essay 没好好写——deadline 写到凌晨 4 点交。\n\n6 个月后真正的 Goldman summer internship 申请开放——你扔了简历。但这次你做了 30 分钟 background research 才回 recruiter。' },
+        ],
+      },
+      {
+        id: 'scam_4', title: '帮新生写反诈贴',
+        trigger: { minWeek: 32, flag: 'scam_consul_resisted' },
+        title_full: 'CSSA 群里突然有学妹差点被骗',
+        body: '半夜 12 点。CSSA 群里一个新生女生发："救命 我刚收到大使馆电话说我护照有问题要我转 8000 镑 我现在该不该转"\n\n群里几个人在劝。但她说"对方说得很官方 还知道我护照号..."\n\n你看了 30 秒。',
+        choices: [
+          { label: '写一份长贴讲完整套路 + 自己经历', effect: { energy: -10, belonging: 18, academic: 2, flag: 'scam_educator' },
+            feedback: '你坐起来打了 1500 字 + 5 张截图：\n\n· 大使馆从不打电话要钱\n· 快递诈骗的 .cn 域名鉴别\n· Hinge 上的金融男 5 周钓鱼脚本\n· Action Fraud 报案链接\n\n那个新生女生：同学 我没转 我 block 了。我刚才真的差一点。\n上岸了的姐：写得好。建议群主置顶。\n@Lily：救命 我现在浑身汗 ✨ 我妈昨天还说"在英国安全"\n狗哥：mark + 转发\n凯泽：补充：Action Fraud 报案后会给你一个 reference number 报银行 chargeback 的时候用得上\n新生小王：同学 我能存到本地吗 想发给我室友\n潜水的人：⬆️\n\n你看了一眼时间——凌晨 2 点了。3 天后群主把你的帖子置顶。' },
+          { label: '简单一句"假的别转"', effect: { energy: -1, belonging: 4 },
+            feedback: '你回了一句"假的 别转 直接 block"。她回"好的谢谢"。然后没下文。\n\n你后来知道她确实没转。但你也知道——你本可以多说几句。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // 杀猪盘恋爱线 (scam_romance) - 4 章 · 让玩家以为是真恋爱
+  // ─────────────────────────────────────────────────────────────
+  // 设计原则：前 2 章读起来必须像正经 dating arc，没有任何 scam 信号。
+  // 玩家在 ch3 才看到第一个红旗；ch4 是揭穿 / 损失 / 抗住后的 aftermath。
+  // 真实模板：研究过 2024-2025 真实 pig butchering 案例 (Hinge / Coffee Meets Bagel)
+  scam_romance: {
+    id: 'scam_romance', name: 'Hinge 上的 Daniel', npc: null,
+    forGender: 'female',
+    chapters: [
+      {
+        id: 'romance_1', title: 'Hinge 上一个完美男生 / 女生',
+        trigger: { minWeek: 14 },
+        title_full: '"Daniel · 31 · Banking · Singapore→London"',
+        body: '周二晚 11 点你在 ensuite 床上无聊滑 Hinge。突然一个 match。\n\n"Daniel · 31 · 新加坡→伦敦"。照片 4 张：健身房自拍、Maldives 海边、米其林餐厅、和小狗合影。Bio 写："Banker @ 一家美资行 (cant say which 😅) / 在伦敦 6 个月 short-term posting / 北京长大 / 喜欢 hiking + Murakami / 想认识有思想的人不只是想 brunch"。\n\n他第一句话：" 你写 cultural studies... 是真的吗？我大学差点也读那个。本科最后一年读了 Said 的 Orientalism 三遍。" 接着精准引用了一段。\n\n你愣住——这是你来伦敦 14 周遇到的第一个真正"对得上话"的人。',
+        choices: [
+          { label: '回他 + 开始聊', effect: { energy: 1, belonging: 4, flag: 'romance_daniel_started' },
+            feedback: '你们聊到凌晨 2 点。他比你大 9 岁但思维很扎实——讲他在新加坡看 Crazy Rich Asians 的复杂感受、讲他爸妈搬到 SG 后的失语、讲他 25 岁差点辞职去读 PhD。\n\n你睡前给他发"晚安"。他回了一个月亮 emoji。\n\n你想：原来 Hinge 上不是只有 hookup 的人。' },
+          { label: '太完美了 直接 unmatch', effect: { energy: 1, belonging: -1, flag: 'romance_daniel_skipped' },
+            feedback: '你 unmatch 了。\n\n第二天你后悔了 5 分钟——但你想起朋友说过的话："过于完美的男生 / 女生 9 成是诈骗。"\n\n你不知道你刚才避开了什么。但你直觉是对的。' },
+        ],
+      },
+      {
+        id: 'romance_2', title: '第一次约会 cancel + Deliveroo 道歉',
+        trigger: { flag: 'romance_daniel_started', minWeek: 16 },
+        title_full: '"Babe so sorry, urgent NYC client call"',
+        body: '聊了 2 周。每天早安晚安 + 长 voice messages。他给你介绍他妈的福建菜谱、记得你 essay deadline、跟你视频过 1 次（光线很暗 5 分钟就借故挂了，说在等 client）。\n\n你们约这周日 brunch in Mayfair (Sketch)。前一晚他发：\n\n"Babe so sorry — got an urgent NYC client call to fly out tonight 😭 will be back Wed. To make it up I sent you a small thing on Deliveroo, please order whatever you want this weekend. ❤️"\n\n你查 Deliveroo 收到 £30 voucher。',
+        choices: [
+          { label: '"理解 工作要紧" + 收下 voucher', effect: { wallet: 30, energy: 2, belonging: 4, flag: 'romance_daniel_invested' },
+            feedback: '你回："理解。NYC 出差注意休息。" 他立刻发一长串感谢 + "等我回来一定补上"。\n\n你周日点了 Deliveroo + 在床上吃 brunch + 想他。\n\n这一刻你没注意到的事：第一次见面就出差，是 pig butchering 经典脚本里的"建立距离感 + 维持神秘 + 用钱补偿建立 reciprocity"三连。\n\n但你只是觉得 — 他真的是个忙人。' },
+          { label: '"非要见到 那下周一定" 坚持', effect: { energy: -2, belonging: 0, flag: 'romance_daniel_doubted' },
+            feedback: '你回："那下周一定见。我可以 flexible。"\n\n他："当然 我也想 — 但 next week 我还要去 SF 那边 client。要不 the week after?"\n\n你心里咯噔一下。但你说"好"。\n\n直觉先于理性。但你还没听直觉。' },
+          { label: '直接 unmatch', effect: { energy: 0, belonging: 0, flag: 'romance_daniel_skipped' },
+            feedback: '你直接 unmatch 了。\n\n他从你 Hinge 列表消失。你心里有 5 分钟"是不是太快了"——但也没再回头。\n\n后来你才知道 — 你避开了一个 6 周精心打磨的脚本。' },
+        ],
+      },
+      {
+        id: 'romance_3', title: '"Today my desk got an alpha"',
+        trigger: { flag: 'romance_daniel_invested' },
+        title_full: '一个突然的"投资建议"',
+        body: '5 周过去了。每天早晚 voice messages。他听过你哭（你妈检查出甲状腺问题那次）。他给你买了 Headspace 1 年订阅 (£40) + 寄过来一本他喜欢的 Murakami 签名版（你拆包裹时手在抖）。\n\n他还是没 in person 见过你（每次都在出差）。\n\n今天他发来："宝 跟你讲个事——today my desk got an alpha (insider tip 不能解释具体)。下周二 BTC 必涨 ≥ 8%。我们内部 trading platform 我帮你开个号 — 你先 £200 试试 一周后 £400 提现 you can use it for that handbag you wanted ❤️"\n\n附一张 platform 截图：他自己账号余额 £127,432。还有他 IG story 转发 — 站在 Goldman 大楼前。',
+        choices: [
+          { label: '"我 google 一下这个 platform"（反查）', effect: { energy: -3, belonging: 6, flag: 'scam_pig_resisted' },
+            feedback: '你 Google "platform 名字 + scam"。第一页 5 个 reddit 帖 + Action Fraud 警告 + 中文小红书"被骗 £30,000"。所有人描述的"男 / 女朋友"都来自不同国家但脚本一致。\n\n你反查他 4 张 Hinge 照片——3 张盗自上海某健身教练 IG。Maldives 那张是 Getty Images。Goldman 大楼前那张是 Google Street View 截图 P 上去的。\n\n你坐在床上发呆 30 分钟。然后开始截图——5 周聊天 + voice messages + 收到的 £30 Deliveroo voucher（这居然是真的，他唯一 sunk cost 的钱）+ 那本 Murakami 签名（也是真的，但是 Amazon £18 的版本）。\n\n你拉黑 + 报 Action Fraud。\n\n你一晚上 24h 没吃东西。心痛不是为他——是为那 5 周里你以为是真的的所有"晚安"。' },
+          { label: '"听起来不太对，但 £200 试一下"', effect: { wallet: -500, energy: -8, belonging: -6, flag: 'scammed_pig_partial' },
+            feedback: '你转了 £200。第二天 platform 显示余额 £258。第三天 £367。\n\n你又投 £300。第五天他说提现吧——但 platform 显示"需要先存入 £1,500 verification fee 才能 unlock"。\n\n你拒绝再投。Daniel 一夜之间消失。Murakami 那本书后来你发现是 Amazon 直发的（订单 ID 还在他 forward 的截图角落）。\n\n损失 £500。下个月你删了 Sainsbury\'s 基础款 + 打 Link2Ur 接了 12 单代购。' },
+          { label: '"宝你说啥我听啥" 全梭 £5,000', effect: { wallet: -5000, energy: -25, belonging: -15, flag: 'scammed_pig_full' },
+            feedback: '你转了 £5,000——过去 4 个月 Link2Ur 接单 + 妈妈生活费攒的全部。Platform 显示余额 £6,400。你截图发给 Daniel。\n\n他："Babe I\'m proud of you. Withdraw 需要先存 £2,000 KYC fee。"\n\n你拒了。24 小时之内 Hinge unmatch、微信 block、电话停机。\n\n你坐在床上看那个空对话框——你不知道要 block 谁，他已经不在了。\n\n你给妈打电话——说不出口，挂了。\n\n第二天 9am 还有 tutorial。Tom 在厨房做 toast 跟你说 "alright?" 你说 "alright"。\n\n那个月你删了 Sainsbury\'s basket 6 件、Tesco 改买 Value range、圣诞机票没订（CSSA 群里说"今年留下"）。妈妈下个月转账你回："这学期不用 我接单够用"——撒谎。\n\n半年后你才在 NHS 咨询那里把它讲出来。' },
+        ],
+      },
+      {
+        id: 'romance_4', title: '他消失之后',
+        trigger: { flag: 'scam_pig_resisted' },
+        title_full: '空空的 Hinge 列表',
+        body: '一周后。"Daniel" 的 profile 在 Hinge 上消失。\n\n你打开微信对话框看到的最后一条还是他 5 周前发的 voice message："宝今天想你。" 你听了 3 秒就关了。\n\nCSSA 群里你刚发的反诈帖 156 个赞。\n\n上岸了的姐：写得好 我组里有人去年被同样剧本骗 £18k\n@Lily：宝宝太勇敢了 ✨ 我下次 swipe 也警觉一点\n狗哥：靠 这种我也接过 1 次 但我直接 unmatch 没 5 周这么深\n潜水的人：（出现）记得：他们是 24/7 工厂化操作 不是个例。\n\nAditi 私聊你："Glad you caught it in time."',
+        choices: [
+          { label: '预约 NHS 心理咨询', effect: { energy: 5, belonging: 8, flag: 'scam_pig_therapy' },
+            feedback: '你给 GP 写 referral。3 周后约到 NHS 6-session CBT。\n\n第一次你 talk 了 40 分钟。咨询师没说什么，让你哭完。临走时她递给你一杯水："Same time next week."\n\n6 周后你重新打开 Hinge——这次 swipe 得很慢。' },
+          { label: '跟 Aditi 单独讲一次', effect: { energy: -2, belonging: 12, npc: { aditi: 3 } },
+            feedback: 'Aditi 听你讲完 1 小时没插嘴。然后说："My cousin lost £40k to one of these in 2023."\n\n她没安慰你也没评判。沉默 2 分钟。然后："Pret? My treat." 你点头。' },
+          { label: '默默消化 不告诉任何人', effect: { energy: -5, belonging: -3 },
+            feedback: '你没告诉任何人。3 周后还是会半夜醒来想他的 voice message。\n\n你 delete 了 Hinge 但没卸载。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // 杀猪盘恋爱线 - 男玩家版 (scam_romance_m) - 4 章 · Diana
+  // ─────────────────────────────────────────────────────────────
+  // 镜像 scam_romance (Daniel)。Diana 是 31 岁香港背景的"白富美" persona，
+  // 真实 pig butchering 用美貌 + 学历 + 弱势(我刚分手)做诱饵。
+  scam_romance_m: {
+    id: 'scam_romance_m', name: 'Hinge 上的 Diana', npc: null,
+    forGender: 'male',
+    chapters: [
+      {
+        id: 'romance_m_1', title: 'Hinge 上一个完美的 Diana',
+        trigger: { minWeek: 14 },
+        title_full: '"Diana · 30 · HK→London · Lawyer"',
+        body: '周二晚 11 点你在床上无聊滑 Hinge。突然 super-like 一个 30 岁女生。\n\n"Diana · 30 · 香港→伦敦"。照片 4 张：律所玻璃楼前 + Cap Ferrat 度假 + 跟妹妹合照（妹妹也很好看）+ 大学毕业典礼穿学袍。Bio："Lawyer @ 一家美所 / 香港大学毕业 / 在伦敦做 secondment 半年 / 喜欢 Sally Rooney + climbing / 想认识能聊深的人"。\n\n她第一句话："你写 cultural studies — 不是讨好课件那种 是真的吗？我律所 senior 是 Sandel 学派的 我跟他每周吃午饭 他借我的 Justice 我读了三遍。"\n\n你愣住——这是 Hinge 上的女生第一次开口比你 essay 写得好。',
+        choices: [
+          { label: '回她 + 开始聊', effect: { energy: 1, belonging: 4, flag: 'romance_diana_started' },
+            feedback: '你们聊到凌晨 2 点。她比你大 8 岁但没看穿你——她讲香港回归后她爸的政治转向、讲她妹妹得抑郁症时她半年没睡好、讲她 27 岁差点辞职去做 NGO。\n\n你睡前给她发"晚安"。她回了一颗星星。\n\n你想：原来 Hinge 上不全是颜值滤镜。' },
+          { label: '太完美了 直接 unmatch', effect: { energy: 1, belonging: -1, flag: 'romance_diana_skipped' },
+            feedback: '你 unmatch 了。\n\n第二天你后悔了 5 分钟。但你想起室友说过的话："过于完美的女生 + 太精准击中你的兴趣点 = 9 成是钓鱼。"\n\n你不知道你避开了什么。但你直觉是对的。' },
+        ],
+      },
+      {
+        id: 'romance_m_2', title: '第一次约会 cancel + Selfridges voucher',
+        trigger: { flag: 'romance_diana_started', minWeek: 16 },
+        title_full: '"Babe so sorry, urgent partner call to fly to NY"',
+        body: '聊了 2 周。她每天发你早安晚安 + 长 voice notes（声音真的好听 — 中港混合的英式英语）。她记得你 essay deadline、给你推荐 Sally Rooney 新书、视频过 1 次（光线不好 5 分钟挂了"我 partner 在 call 我"）。\n\n你们约这周日 brunch in Mayfair。前一晚她发：\n\n"Babe so sorry — partner 临时让我飞 NY 跟客户开庭，要等到周三。To make it up — 我让 Selfridges 给你寄个 voucher £40 这周末买点喜欢的 ❤️"\n\n你查邮箱真收到 Selfridges £40 e-voucher。',
+        choices: [
+          { label: '"理解 律所就这样" + 收下', effect: { wallet: 40, energy: 2, belonging: 4, flag: 'romance_diana_invested' },
+            feedback: '你回："理解。NY 飞机注意休息。" 她立刻发一长串感谢 + "回来一定补上"。\n\n你周末用 voucher 买了一双 socks + 一瓶 hand wash。在床上想她。\n\n你没注意到的事：第一次见面就出差、视频从来短、用钱补偿"建立 reciprocity"——这是 pig butchering 经典 3 步骤。\n\n但你只是觉得：她真的是个 high-flyer。' },
+          { label: '"非要见到 Sunday 一定" 坚持', effect: { energy: -2, belonging: 0, flag: 'romance_diana_doubted' },
+            feedback: '你回："那 Sunday 必须见。我 flexible。"\n\n她："当然 我也想 — 但 next week 还要去 SF closing 一个 deal。要不 the week after?"\n\n你心里咯噔一下。但你说"好"。\n\n直觉先于理性。但你还没听直觉。' },
+          { label: '直接 unmatch', effect: { energy: 0, belonging: 0, flag: 'romance_diana_skipped' },
+            feedback: '你直接 unmatch。她在你 Hinge 列表消失。\n\n你心里有 5 分钟"是不是太快了"——但也没回头。\n\n后来你才知道——你避开了一个 6 周精心打磨的脚本。' },
+        ],
+      },
+      {
+        id: 'romance_m_3', title: '"My partner gave me an alpha"',
+        trigger: { flag: 'romance_diana_invested' },
+        title_full: '一个突然的"投资建议"',
+        body: '5 周过去了。每天早晚 voice notes。她听过你哭（你妈检查甲状腺那次）。她给你买了 Audible 1 年订阅 (£80) + 寄过来一本她 own 的 Sally Rooney 签名版（你拆包裹时手在抖）。\n\n她还是没 in person 见过你（每次都在飞）。\n\n今天她发来："Babe — 我 partner 今天给了一个 alpha。她做 PE 的 朋友圈一个 boutique platform 给 high-net-worth client 内部交易 win rate 90%+。我让她给你开个 access — 你先 £200 试试 一周后 £400 提现 你之前说想买的那个 jacket 就够了 ❤️"\n\n附 platform 截图：她自己账户 £180,432 余额。还有她 IG story 站在 Mayfair Annabel 私人会所门口。',
+        choices: [
+          { label: '"我 google 一下 + 反查照片"', effect: { energy: -3, belonging: 6, flag: 'scam_pig_resisted' },
+            feedback: '你 Google 那个 platform。第一页 8 个 reddit 帖 + Action Fraud 警告 + 香港 MingPao 报道"被骗 ¥2M"。所有受害者描述的"男 / 女朋友"脚本一致。\n\n你反查 Diana 4 张 Hinge 照片——3 张盗自香港某 KOL Instagram。Cap Ferrat 那张是 Pinterest 模特照。Mayfair Annabel 门口那张是 Google Street View 截图 P 上去的。\n\n你坐在床上发呆 30 分钟。然后开始截图——5 周聊天 + voice notes + 收到的 £40 Selfridges voucher（这居然是真的，她唯一 sunk cost）+ 那本 Sally Rooney 签名（也是真的，但是 eBay £25 的版本）。\n\n你拉黑 + 报 Action Fraud。\n\n你一晚上 24h 没吃东西。心痛不是为她——是为那 5 周里你以为是真的的所有"晚安"。' },
+          { label: '"听起来不太对，但 £200 试一下"', effect: { wallet: -500, energy: -8, belonging: -6, flag: 'scammed_pig_partial' },
+            feedback: '你转了 £200。第二天 platform 显示余额 £258。第三天 £367。\n\n你又投 £300。第五天她说提现吧——但 platform 显示"需要先存 £1,500 verification fee 才能 unlock"。\n\n你拒绝再投。Diana 一夜之间消失。Sally Rooney 那本书后来你发现是 eBay 直发的（订单 ID 还在她 forward 的截图角落）。\n\n损失 £500。下个月你删了 Sainsbury\'s 基础款 + 打 Link2Ur 接了 12 单代购。' },
+          { label: '"宝你说啥我听啥" 全梭 £5,000', effect: { wallet: -5000, energy: -25, belonging: -15, flag: 'scammed_pig_full' },
+            feedback: '你转了 £5,000——4 个月 Link2Ur 接单 + 妈妈生活费攒的全部。Platform 显示余额 £6,400。\n\n你截图发 Diana。她："Withdraw 需要先存 £2,000 KYC fee。"\n\n你拒了。24 小时之内 Hinge unmatch、微信 block、电话停机。\n\n你坐在床上看那个空对话框——你不知道要 block 谁，她已经不在了。\n\n你给妈打电话——说不出口，挂了。\n\n第二天 9am 还有 tutorial。楼下 Tom 在厨房煎 bacon 跟你说 "alright?" 你说 "alright"。\n\n那个月你删了 Sainsbury\'s basket 6 件、Tesco 改买 Value range、圣诞机票没订（CSSA 群里说"今年留下"）。妈妈下个月转账你回："这学期不用 我接单够用"——撒谎。\n\n半年后你才在 NHS 咨询那里把它讲出来。' },
+        ],
+      },
+      {
+        id: 'romance_m_4', title: 'Diana 消失之后',
+        trigger: { flag: 'scam_pig_resisted' },
+        title_full: '空空的 Hinge 列表',
+        body: '一周后。Diana 的 profile 在 Hinge 上消失。\n\n你打开微信看到她最后一条 voice note："Babe 今天想你。" 你听了 3 秒就关了。\n\nCSSA 群里你刚发的反诈帖 174 个赞——其中 60% 是男生。群里：\n\n狗哥：兄弟 我也被加过一个 hk 律所女 当时差点 当时差点\n凯泽：我去 这个 prop firm 我表哥也踩过 £8k\n上岸了的姐：男生很少发反诈贴 这条很重要。\n新生小王：哥们 你这个让我学到了 我准备发给我爸妈\n@Lily：男生宝宝注意安全 太可怕了 ✨\n\nMarcus 私聊你："Mate. My cousin lost £15k to one of these. Glad you posted."',
+        choices: [
+          { label: '预约 NHS 心理咨询', effect: { energy: 5, belonging: 8, flag: 'scam_pig_therapy' },
+            feedback: '你给 GP 写 referral。3 周后约到 NHS 6-session CBT。\n\n第一次你 talk 了 40 分钟。咨询师没说什么，让你哭完。临走时她递给你一杯水："Same time next week."\n\n6 周后你重新打开 Hinge——这次 swipe 得很慢。' },
+          { label: '跟 Marcus 单独喝杯酒', effect: { energy: -2, belonging: 12, npc: { marcus: 3 } },
+            feedback: 'Marcus 听你讲完没插嘴。然后递给你 Guinness："Drink up."\n\n第二轮酒来的时候他说："Same thing happened to my flatmate. He still can\'t talk about it."\n\n你们没再聊这件事。' },
+          { label: '默默消化 不告诉任何人', effect: { energy: -5, belonging: -3 },
+            feedback: '你没告诉任何人。3 周后还是会半夜醒来想她的 voice note。\n\n你 delete 了 Hinge 但没卸载。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // 美妆代购 MLM 线 - 女玩家版 (scam_cosmetic_daigou) - 3 章 · Lyn 学姐
+  // ─────────────────────────────────────────────────────────────
+  // 真实模板：UK 留学圈 2024 真实存在的"美妆 / 护肤 small business 代购"
+  // funnel。Younique / Nu Skin / Arbonne / Monat 等品牌伪装成 personal brand。
+  scam_cosmetic_daigou: {
+    id: 'scam_cosmetic_daigou', name: 'Lyn 姐 · "我自己用的"', npc: null,
+    forGender: 'female',
+    chapters: [
+      {
+        id: 'daigou_1', title: 'Lyn 姐朋友圈给你点赞',
+        trigger: { minWeek: 8 },
+        title_full: '"小妹妹 这个 SK-II 我用了 3 年"',
+        body: 'CSSA 群里一个 27 岁的"Lyn 姐 ✨"——她朋友圈是精修生活流：Selfridges 化妆品柜台、Mayfair 下午茶、Notting Hill 公寓阳台。她跟你点赞 5 条朋友圈后私聊你：\n\n"小妹妹 我看你皮肤底子好但是好像没护肤 ✨ 我自己用了 3 年的小蓝瓶 + Erborian 系列免税价我帮你拿 你这个状态用了一定加分 不加我代购微信也行 我朋友圈每周分享。"\n\n你点开她朋友圈——确实每天发护肤"测评"，看起来像一个真在用的人。',
+        choices: [
+          { label: '"哎好 我加你看看"', effect: { energy: -1, belonging: 2, flag: 'lyn_started' },
+            feedback: '你加了她代购微信。第一周她每天发你"今日 OOTD"+ 护肤 vlog + 一些"姐妹我们要爱自己"的鸡汤。\n\n第二周她发了一支 Charlotte Tilbury Pillow Talk 唇膏（£30）作为"妹妹见面礼"，没收钱。\n\n你想：原来 UK 真的有"代购学姐"这种暖心存在。' },
+          { label: '"谢谢 我 Boots 买就行"', effect: { wallet: 0, belonging: 0 },
+            feedback: '你客气拒绝。Lyn 姐："了解 ❤️ 有需要随时找我"。\n\n她没再 push。但她半年后在另一个 CSSA 群里 attach 别的女生——同样的话术，同样的"妹妹我看你皮肤底子好"。\n\n你不知道你避开了什么。' },
+        ],
+      },
+      {
+        id: 'daigou_2', title: '"要不要做我们 affiliate"',
+        trigger: { flag: 'lyn_started', minWeek: 14 },
+        title_full: '"你这个气质做我们 partner 简直完美"',
+        body: '6 周过去了。Lyn 姐每天给你点赞 + 偶尔送小样 + 听你 vent 关于学校。你跟她讲了一些蛮 personal 的事（比如你跟妈妈关系紧张）。\n\n今天她语音 30 秒：\n\n"小妹妹 跟你讲个事——其实姐姐我做的不只是代购 我做的是一个 wellness brand 的 UK partner。每周开会 我现在带 12 个 girls。我看你气质和谈吐——你做我们 partner 简直完美 而且这个收入 sky\'s the limit。我们这周二有个 onboarding tea 在我 flat 你来听一下不收钱 不参加也没事 ❤️"',
+        choices: [
+          { label: '去 onboarding tea', effect: { energy: -3, belonging: -1, flag: 'lyn_pitch_in' },
+            feedback: '你周二去了她 Notting Hill 公寓（后来你才知道是 Airbnb）。屋里 5 个 25-30 岁女生 + 一个戴大金链子的"top-tier mentor"。\n\nMentor 站起来分享："2 年前我也是 PhD student 焦虑迷茫。现在我每个月被动收入 £8,000+。这不是销售 这是 lifestyle empowerment。"\n\n你听到 7 点。Lyn 姐单独把你拉到角落："你 Q4 能到 Silver tier。"' },
+          { label: '"我去看看" 但中途撤', effect: { energy: -2, belonging: 2, flag: 'lyn_doubted' },
+            feedback: '你去了 30 分钟就站起来要走。Lyn 姐："Stay for the Q&A?" 你坚持。\n\n出门后你 Google "她说的 wellness brand 名字 + scam"——第一页全是 r/antiMLM。\n\n你心里凉了——Lyn 姐 6 周给你点赞 + 送小样 + 听你 vent 都是为了这一刻。' },
+          { label: '"哎这是 MLM 吧" 直接拒绝 + 群里警告', effect: { energy: -3, belonging: 6, flag: 'scam_cosmetic_resisted' },
+            feedback: '你看了 voice note 5 分钟没回。然后："Lyn 姐 这是 wellness MLM 吗？我朋友被 Nu Skin 拉过 我不参加。"\n\nLyn 姐回："这不一样的 我们是 community-based..."\n\n你直接 block。\n\n回家后你发 CSSA 群警告："以美妆代购为 funnel 的 wellness MLM 已经至少 3 个不同名字 同一套话术。"\n\n@Lily：天 我半年前被「Vivi 学姐」加过 一模一样剧本 我居然真去了 Notting Hill 公寓 ✨\n上岸了的姐：funnel 6 周话术：第一周点赞、第二周送小样、第三周听你 vent、第四周开始铺生活方式、第五周邀请聚会、第六周 starter kit。识别这个节奏。\n新生小王：同学 我前天被 Cherry 学姐加了 我以为她真的是学姐\n狗哥：男生群里也有 改成 trading mentor 一个味' },
+        ],
+      },
+      {
+        id: 'daigou_3', title: '"£300 starter kit + 你的 downline"',
+        trigger: { flag: 'lyn_pitch_in' },
+        title_full: 'Notting Hill 阳台上的 final pitch',
+        body: '聚会后 Lyn 姐留你单独聊。她 brewing 一壶 Mariage Frères tea。\n\n"妹妹 我看出来你跟其他 girls 不一样——你认真、有读 cultural studies、有 own voice。我们 starter kit £300 包 6 件 product samples + first 3 months mentorship + access to global Wellness summit Zoom。我自己 5 个月 break even。我帮你 onboard 5 个 lead 你 break even 更快。"\n\n她 push 价目表 + 团队层级图（Bronze / Silver / Gold / Platinum / Diamond）：\n\n"你 Q4 到 Silver。Q1 到 Gold。Q2 你 own life。"',
+        choices: [
+          { label: '"这是金字塔结构" + 拒绝 + Block', effect: { energy: -2, belonging: 6, flag: 'scam_cosmetic_resisted' },
+            feedback: '你站起来。"Lyn 姐 这就是 MLM。你之前送我的小样我会还你钱。我朋友被 Nu Skin 拉过 我 google 过你们 mentor 名字——有 2 个 lawsuit。我不参加，建议你也想想自己在做什么。"\n\nLyn 姐表情瞬间冷下来："你想清楚 — 限时 quota。你不参加 我下周 invite 别人。"\n\n你："那就 invite 别人。"\n\n你 block 她。3 周后她在另一个 CSSA 群里 attach 别的女生——她甚至不记得你。' },
+          { label: '交 £300 试一下', effect: { wallet: -300, energy: -10, belonging: -8, flag: 'scammed_cosmetic' },
+            feedback: '你转 £300。一周后 starter kit 到了——里面是 £25 amazon 烂护肤品 + 一本 self-published 的"empowerment guide"。\n\nLyn 姐 push 你"build downline"。你试着发朋友圈一次——3 个朋友私聊你"你怎么做这个了"。你删了那条朋友圈。\n\n3 个月后你没拉到任何人。Lyn 姐从你 mentor 变成 distant。半年后她从 IG 把"Wellness Partner @ ..."那行去掉了。\n\n那盒 amazon 烂护肤品摆在书桌 2 个月。妈妈视频问你"那是什么"，你说"室友送的"。' },
+          { label: '"我得想想"（缓兵）', effect: { energy: -3, belonging: 0 },
+            feedback: '你说"让我考虑一周"。Lyn 姐立刻 push："spot 留给你 但下周不 confirm 就 release"。\n\n你回家后查 reddit 1 小时确认是 MLM。你不 block 她但不回。\n\n她 push 3 次后停了。3 周后她从你朋友圈消失（block 了你？）。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Trading Mentor 线 - 男玩家版 (scam_trading_mentor) - 3 章 · "Eric 哥"
+  // ─────────────────────────────────────────────────────────────
+  // 真实模板：UK 留学男生圈"Trading 群 / Forex Discord"funnel。
+  // 一个看似战绩很好的 trader 拉你进群 → 几周晒单建立信任 → 引你入
+  // copy-trade platform → 平台是仿盘自己开的。
+  scam_trading_mentor: {
+    id: 'scam_trading_mentor', name: '"Eric 哥" · 带飞 Forex', npc: null,
+    forGender: 'male',
+    chapters: [
+      {
+        id: 'mentor_1', title: 'CSSA 男生群"Eric 哥"加你',
+        trigger: { minWeek: 8, flag: 'cssa' },
+        title_full: '"兄弟 你这一年也算白来 不学一点交易"',
+        body: 'CSSA 男生小群里有个"Eric 哥 · 27 · 留英 5 年"。他每天发战绩截图："今天 GBP/USD short 25 pips +£420"、"昨晚 BTC long +£1,800"。配文很谦虚："小赚一点 兄弟们做参考"。\n\n群里几个本科男生膜拜他。今天他突然单独加你："兄弟 我看你蛮认真的 不像那群 boba boys。我有个 Discord 我跟 4 个 brothers 在里面带带新人 不收钱 你来玩玩 ❤️" 附 Discord 邀请链接。',
+        choices: [
+          { label: '加 Discord 看看', effect: { energy: -1, belonging: 2, flag: 'eric_mentor_started' },
+            feedback: '你加了 Discord。里面 6 个亚裔男生 23-30 岁。每天 6:30 AM Eric 哥发当日 trade plan，晚上 10 PM 复盘。\n\n第一周你只看不动 — 但 Eric 哥的"plan"看起来真的赚（截图都有时间戳 + 平台 logo）。\n\n你想：原来 trading 真的有人做出来了。' },
+          { label: '"兄弟 我学业紧 谢"', effect: { belonging: 0 },
+            feedback: '你客气拒绝。Eric 哥发了"了解 兄弟 加油"。\n\n他没再 push。但他半年后在另一个 CSSA 群里 add 别的男生——同样的话术。' },
+        ],
+      },
+      {
+        id: 'mentor_2', title: '"我的 broker 给我 prop firm allocation"',
+        trigger: { flag: 'eric_mentor_started', minWeek: 14 },
+        title_full: 'Discord voice call · 听了 1 小时',
+        body: '6 周过去了。Discord 里 Eric 哥每天发 plan + 每周 voice call 1 小时讲市场。他给你看过他"broker" platform 的截图——账户 £128,000，月 P&L +£18,000。他叫你"老弟"。\n\n今天他突然 voice call 你："老弟 我今天跟 broker 谈下来 给我 $10M prop firm allocation。我有一些 spillover 给 brothers — 你我哥们关系。"\n\n他打开屏幕共享一个 platform："这个是 Singapore 持牌的 prop firm。你充 £500 入金 我给你 8x leverage 你跟我的 trade 复制。每周提现。我 take 20% performance fee 老弟你也别客气 我赚才有意义。"',
+        choices: [
+          { label: '"哥这个 platform 我 google 一下"', effect: { energy: -3, belonging: 4, flag: 'eric_doubted' },
+            feedback: '你 Google 那个 platform 名字。\n\n第一页 Action Fraud 警告 + 中文新加坡新闻"假 prop firm 骗 SG/UK 留学生 £20M"。所有受害者都是亚洲男生 22-28 岁。\n\n你冷汗下来。Eric 哥的"截图"——你回看他每张交易截图 timestamp 错位、broker logo 是模糊的、"Singapore 持牌"那个 license 号反查发现是某真实 broker 的 — 但被嫁接到了假平台。\n\n你心里说"靠 6 周 friend 都是脚本"。' },
+          { label: '"哥 我信你 入 £500"', effect: { wallet: -500, energy: -10, belonging: -6, flag: 'scammed_trading_partial' },
+            feedback: '你转了 £500 入金。第二天平台显示余额 £680。Eric 哥："兄弟 你跟得很稳。"\n\n你又入 £1,000。第五天他说提现吧——但 platform 弹窗"提现需先存 £1,500 验证账户"。\n\n你拒了再投。24 小时之内 Eric 哥全部消失。\n\n你损失 £1,500。下个月 Tesco basket 砍半。' },
+          { label: '"哥 我梭 £5,000"', effect: { wallet: -5000, energy: -25, belonging: -15, flag: 'scammed_trading_full' },
+            feedback: '你梭了 £5,000——4 个月 Link2Ur + 妈妈生活费攒的全部。Platform 显示余额 £6,400。\n\n你截图发 Eric 哥。他："KYC fee £2,000 解锁更高 leverage。"\n\n你拒了。24h 内全部消失。Discord disband、微信 block、电话停机。\n\n你给爸打电话——说不出口，挂了。\n\n第二天还要去 supervision meeting。导师问你"是不是没睡好" 你说"昨晚做了个噩梦"。\n\n那个月你接了 28 单 Link2Ur 跑腿——Westfield Apple 代购 + 给陌生人遛狗 + Bicester 帮买 4 个 Burberry 围巾扛回伦敦。爸要给你打钱你说"不用 学校 scholarship 下来了"——撒谎。\n\n半年后你才在 NHS 咨询那里把它说出来。' },
+        ],
+      },
+      {
+        id: 'mentor_3', title: 'Eric 哥消失之后',
+        trigger: { flag: 'eric_doubted' },
+        title_full: 'Discord 解散通知',
+        body: '一周后。Discord server 突然 deleted。Eric 哥微信号停用。CSSA 男生小群里也再没他踪迹。\n\n你回看那 6 周——他每天 6:30 AM 的 trade plan / 每周 voice call / "老弟" 这个称呼 / 那个 prop firm 屏幕共享 — 全是脚本。\n\n你发到 CSSA 男生群："警告 — Eric 哥是诈骗 Discord deleted 跑路了。"\n\n狗哥：靠 老子也加了 没充钱算我命大\n凯泽：我充了 £200 试水钱还卡里没出来\n新生小王：???? 我以为 Eric 哥是真的 我差点跟着上 £500\n上岸了的姐：兄弟们 trading mentor 真的没有人会"白送" 这是行业铁律\n潜水的人：FCA register 查 broker 牌照 30 秒能验真假。\n\n其中那个充了 £200 的男生（"老张"）单独私聊你："我充了 £3,000 还没出来 现在咋办"。',
+        choices: [
+          { label: '帮那个男生 step-by-step report Action Fraud', effect: { energy: -8, belonging: 18, flag: 'scam_trading_helper' },
+            feedback: '你跟他视频 1 小时——教他截图聊天 + Discord 历史 + 平台 receipt + 银行 dispute + Action Fraud 报案。\n\n他第二天 update："银行 chargeback 大概能拿回 £2,500。"\n\n3 周后 CSSA 群把你的反诈帖置顶。' },
+          { label: '默默删 Discord + 不告诉任何人', effect: { energy: -3, belonging: -2 },
+            feedback: '你 quit 那个 Discord、删聊天记录、卸 broker app。\n\n3 周后那个男生没出来——他后来损失 £5,000 没敢报警。\n\n你后悔的 — 是没站出来。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // 同学伪装 MLM 线 (scam_classmate) - 3 章 · Emma 学姐
+  // ─────────────────────────────────────────────────────────────
+  // 真实模板：UK 留学圈 2023-2024 真实存在的 networking funnel：
+  // CSSA 活动后加微信 → "Women in Business" / "Lifestyle Investment" 聚会
+  // → 拉你买 starter kit。常见品牌：Amway / Nu Skin / Younique / 某些 crypto
+  // wellness mentor 网络。
+  scam_classmate: {
+    id: 'scam_classmate', name: 'Emma 学姐 · "我们一起做"', npc: null,
+    chapters: [
+      {
+        id: 'mlm_1', title: 'CSSA 活动后加微信',
+        trigger: { minWeek: 6, flag: 'cssa' },
+        title_full: '"我刚才听你 Q&A 印象很深"',
+        body: 'CSSA 周二晚的"留学生 career talk"结束。你刚要走，一个 26 岁穿米色西装套装的女生 Emma 追上你："Hi 学妹 / 学弟。我 LSE 经济 PhD Y2。我刚才听你那个关于 belonging 的提问印象很深。"\n\n她递给你一杯咖啡（她已经买了两杯）："我家以前不富裕——靠 freelance + 一些 investment 的方式 才让我读到 PhD。我看你状态我觉得我们可以聊聊。"\n\n她朋友圈：图书馆 / Pret / Mayfair Hyatt 茶歇 / 一些"成功女性"标签朋友。一切看起来很真。',
+        choices: [
+          { label: '"好 我加你微信"', effect: { energy: -1, belonging: 4, flag: 'emma_mlm_started' },
+            feedback: '你加了。第一周她每天发你早安 + 推荐 podcast (Tim Ferriss, Naval) + 跟你讲她家庭故事。\n\n她比你大 4 岁，听起来很 mentor。你想：原来 LSE 真的有这种学姐。' },
+          { label: '"谢谢但我赶时间"', effect: { belonging: 0 },
+            feedback: '你客气拒绝。Emma 说"那以后再约"。但她加了你 WhatsApp 号——一周后给你发了一个 newsletter 链接 (你没点)。\n\n这条线没继续。但你不知道你避开了什么。' },
+        ],
+      },
+      {
+        id: 'mlm_2', title: '"Women in Business" 聚会',
+        trigger: { flag: 'emma_mlm_started', minWeek: 12 },
+        title_full: 'Mayfair 公寓 · 30 个亚洲女性',
+        body: '6 周过去了。Emma 跟你聊得很深——她甚至帮你看了一份 essay outline（看得比一些 tutor 还认真）。你信任她。\n\n今天她邀请你参加"Women in Business London"周聚会。Mayfair 的一栋私人公寓（"我们 mentor 借给我们 host 的"）。你穿了你最贵的那件大衣。\n\n屋里 30 个 25-35 岁亚裔女性。每个手腕上都戴金链 / Cartier。一个戴大金链子的 32 岁女生 站起来分享："3 年前我也是 PhD student depressed。现在我帮 200 个 women build 6-figure passive income through our community-driven wealth platform..." 她哭了一下。掌声。\n\n你旁边一个女生握你的手："Welcome. You\'re going to love this."',
+        choices: [
+          { label: '"我得走了，今晚 essay deadline" + 中途撤', effect: { energy: -2, belonging: 2, flag: 'emma_doubted' },
+            feedback: '你低声跟 Emma 说要走。她："Stay for the Q&A at least?" 你坚持。她送你到门口："理解。下周咖啡？"\n\n出门后你在 tube 上 Google 了那个"wealth platform"名字。第一页 reddit："/r/antiMLM" 帖子 17 条。Younique-style MLM 套路。\n\n你心里凉了一截——但你也没完全接受。Emma 真的对你很 nice 啊？' },
+          { label: '"哎 这是 MLM" 直接走 + 把链接发 CSSA 群警告', effect: { energy: -3, belonging: 6, flag: 'scam_mlm_resisted' },
+            feedback: '你看了 5 分钟就站起来。Emma 跟出来："你要走？" 你说："Emma 这是 MLM 对吧？" 她愣了 0.5 秒——然后职业化笑容："这是 community based wealth platform 不一样。"\n\n你说："好的 那我就不参与了。" 然后 Block。\n\n回家路上你发 CSSA 群警告：\n\n@Lily：救命 我上周还被一个叫 Lily（不是我）的拉去过 我还差点交钱 ✨\n上岸了的姐：MLM = wealth platform = community = lifestyle 都是同一个 funnel 换皮。识别要点：聚会必有"我从 £20k 到 £400k"故事 + 必有 starter kit + 必有"limited spot"。\n狗哥：这帮人最烦 我接到过 4 次邀请 都是 mayfair 公寓\n新生小王：同学 我才知道 networking 还能这么搞 我以为 networking 就是去 LSE Career fair\n凯泽：补充：r/antiMLM 上有 brand 黑名单 几乎覆盖所有这种"姐姐"' },
+          { label: '坐下听完 + 跟 Emma 单独聊', effect: { energy: -3, belonging: -1, flag: 'emma_pitch_in' },
+            feedback: '你听到 9 点。一个又一个亚裔女性站起来讲她们"financial transformation"。你心里有些不对劲，但 Emma 在旁边很温暖。\n\n散场前 Emma 单独把你拉到角落："I want to talk to you about joining our team." 她眼神很真挚。\n\n你说："好 详细聊一下。"' },
+        ],
+      },
+      {
+        id: 'mlm_3', title: '"£400 starter kit"',
+        trigger: { flag: 'emma_pitch_in' },
+        title_full: '"我看出来你有潜力"',
+        body: '聚会后 Emma 把你叫到她 Mayfair 公寓 (后来你才知道是 short-term Airbnb)。她端来茶。\n\n"我看出来你有潜力——你比我刚开始时聪明 3 倍。我们 starter kit £400 包含 sample products + first month\'s mentorship + access to top mentor 的 weekly call。我自己 6 个月 break even。我帮你拉 5 个 lead 你可以 break even faster。"\n\n她把价目表 + 团队层级图给你看："Bronze, Silver, Gold, Platinum tier。你 Q4 能到 Silver。"',
+        choices: [
+          { label: '"这是 Pyramid scheme" + 拒绝 + Block', effect: { energy: -2, belonging: 6, flag: 'scam_mlm_resisted' },
+            feedback: '你站起来。"Emma 这就是 MLM。我朋友被拉过。我 google 过你们 mentor 的名字 — 有两个 lawsuit。我不参与，建议你也想想。"\n\nEmma 表情瞬间冷下来："你想清楚 — 这是 limited time。你不参加 我下周就 invite 别人了。"\n\n你："那就 invite 别人。" 走出门。\n\n你 block 了她。3 周后她在另一个 CSSA 群里 attach 别的女生——她甚至不记得你。' },
+          { label: '交 £400 试一下', effect: { wallet: -400, energy: -10, belonging: -8, flag: 'scammed_mlm' },
+            feedback: '你转 £400 到她说的 stripe 链接。一周后 starter kit 到了——里面是 £30 amazon 烂护肤品 + 一本 self-published 的"成功学"小册子。\n\nEmma 让你"build downline" 拉 5 个新人。你试着发朋友圈一次——3 个朋友私聊你"你怎么做这个了"。你删了那条朋友圈。\n\n3 个月后你没拉到任何人。Emma 从你 mentor 变成 distant。半年后她从 LinkedIn 把"PhD candidate at LSE"那行去掉了 —— 她其实根本不在 LSE。\n\n你那盒 starter kit 在书桌上堆了 4 个月。某周一你把它扔了——那天还要交 5000 字 essay。' },
+          { label: '"我得想想"（缓兵）', effect: { energy: -3, belonging: 0 },
+            feedback: '你说"让我考虑 1 周"。Emma 立刻 push："the spot 留给你 但我下周如果你不 confirm 就 release"。\n\n你回家后查 reddit 1 小时——确认是 MLM。但你也没 block 她，只是不回。\n\n她 push 了 3 次后停了。然后她从你朋友圈消失（block 了你？）。3 周后另一个学妹问你"Emma 是谁 她加我说我们一起 networking"——你立刻给她讲了一切。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Link2Ur 自由职业线 (link2ur_freelance) - 从接单到自由职业职业化。
+  // ─────────────────────────────────────────────────────────────
+  // 设计原则：不浪漫化 freelance。每章揭示真实代价（税务/合规/visa/客户砍价）。
+  // 但展示这条路的存在 —— 让玩家知道毕业后不止"投行 / 回国"两条路。
+  link2ur_freelance: {
+    id: 'link2ur_freelance', name: 'Link2Ur · 自由职业觉醒', npc: null,
+    chapters: [
+      {
+        id: 'fl_1', title: '第一次想"我能不能靠这个活"',
+        trigger: { flag: 'l2u_3_done', minWeek: 8 },
+        title_full: '完成 3 单后的 Pret 长椅',
+        body: '你坐在 Bloomsbury 的长椅上吃 meal deal。打开 Link2Ur app 看自己的接单记录：3 单 / £85 / 评分 5.0。\n\n你算了算：1 单平均 1.5 小时，£28/小时。比中餐馆 £10 高 3 倍。比写代码 internship £15 高 2 倍。\n\n你心里冒出一个念头："如果我把 essay proofread + PPT 美化做出名号——这能不能变成一份正经收入？"',
+        choices: [
+          { label: '认真 Google "学生签证能不能 freelance"', effect: { academic: 3, energy: -1, flag: 'freelance_curious' },
+            feedback: '你查了 1 小时：\n· Tier 4 学生签证不能"自雇" (self-employed)\n· 但可以做 paid internship + freelance limited 20h/week (term time)\n· 毕业后 Graduate Visa (PSW) 可以完全自雇\n\n你打开 Notion 建了一个文档："毕业后 freelance 路线"。\n\n你想：原来这不只是"打零工"。这可能是一条路。' },
+          { label: '"挣点零花就好" 关掉 app', effect: { belonging: 1 },
+            feedback: '你回了 ensuite 写 essay。Link2Ur 还是偶尔接单——但你没把它当一回事。\n\n这一年还有 44 周可以重新想这件事。' },
+        ],
+      },
+      {
+        id: 'fl_2', title: '客户 referral 的诱惑',
+        trigger: { flag: 'l2u_8_done' },
+        title_full: '"我同事都在问哪儿找你"',
+        body: '一个老客户私聊你（platform 私信）：\n\n"上次你帮我做的 PPT 我们公司 5 个同事都问我哪儿找的设计师。我可以介绍他们直接找你 — 不走 Link2Ur 抽成。一单 £50-80。我也帮你节省 platform 15% 抽佣。"\n\n你算了下：5 个客户 × £60 平均 = £300，不抽佣。但走 platform 之外有几个问题：客户付钱不可靠、没有评价系统、纯靠信任。',
+        choices: [
+          { label: '答应 + 但坚持先走 Link2Ur 第一单 (再决定)', effect: { wallet: 60, energy: -3, belonging: 4, flag: 'freelance_pitched' },
+            feedback: '你回："谢了 但我建议第一单还是走 Link2Ur 我评价系统才能保护我们俩 之后熟了我们直接合作。"\n\n客户回："Smart kid. OK 我让他们先发到 Link2Ur 上 atag 你接。"\n\n5 个客户的第一单都走完后，3 个变成长期合作（脱离 platform）+ 2 个走丢了。你这一波多挣 £180。\n\n你开始想：我是不是该开个 LinkedIn 把这个写上去？' },
+          { label: '答应 + 直接走 platform 之外', effect: { wallet: 100, energy: -2, belonging: 0 },
+            feedback: '你直接答应。第一个客户 £80 现金转账 — 但第三个客户拖了 3 周才付，第五个直接消失。最后到手 £200，不如想象。\n\n但你也意识到：没有 platform protection 的 freelance 风险更高。' },
+          { label: '婉拒 / 留 platform', effect: { belonging: 1 },
+            feedback: '你说"还是走 platform 吧 我新手不想踩坑"。客户尊重："好 那我让他们去 platform 找你。"\n\n你少挣了一些 — 但你也保住了 Link2Ur 的评价记录，长期看更值。' },
+        ],
+      },
+      {
+        id: 'fl_3', title: '第一张 invoice + 第一次报税',
+        trigger: { flag: 'freelance_pitched', minWeek: 22 },
+        title_full: 'BACS 转账 £350',
+        body: '你给一个 startup 做了 deck。客户 BACS 转账 £350 到你 Monzo。\n\n这是你来英国第一次靠"脑子"挣这么多钱，不是端盘子、不是代购。但你也开始焦虑：\n· 这笔钱要不要交税？\n· 学生签证 self-employed 算不算违规？\n· HMRC self-assessment 截止日是哪天？\n\n你 Google "student visa freelance UK" 翻了 30 个 reddit 帖。',
+        choices: [
+          { label: '注册 sole trader + 走合规路线', effect: { wallet: -50, energy: -5, academic: 2, belonging: 8, flag: 'freelance_sole_trader' },
+            feedback: '你花了 1 周做这件事：\n· 在 GOV.UK 注册 self-assessment（免费）\n· 让会计学姐帮看了 1 小时（£30）\n· 学生签证下你限制 in 20h/week，记录工时（在 Excel 里手动）\n· 4 月 5 日财年截止前申报，赚得少不用真交税但要 file return\n\n这是你这一年最 boring 但最稳的一次决定。\n\n6 个月后你给爸妈说"我在英国注册了 sole trader" — 他们不太懂但听起来很正经。' },
+          { label: '收了再说 (informal)', effect: { wallet: 30, energy: 1, belonging: -2, flag: 'freelance_informal' },
+            feedback: '你没注册 sole trader。继续接单收钱直接进 Monzo。\n\n这一年没出问题。但你也没法堂堂正正在 LinkedIn 写"freelance designer since 2024"——因为没注册的话写出来反而风险更大。\n\n灰色地带也是地带。但路走窄了。' },
+        ],
+      },
+      {
+        id: 'fl_4', title: '第一个 client meeting · 把 day rate 念出来',
+        trigger: { flag: 'freelance_sole_trader' },
+        title_full: 'Zoom 上的 founder',
+        body: '一个 startup founder 在 LinkedIn 上找你："看到你 portfolio。我们想找人做整套 brand identity + 6 个月 investor pitch deck。可以聊聊？"\n\nZoom 上 ta 听你 portfolio 听了 30 分钟。然后说："quote 一下你的 day rate？"\n\n你之前最贵的单是 £80。但这是 6 个月深度合作。Whitmore 上次跟你说过"Don\'t undercharge — they will not respect what you don\'t value yourself."',
+        choices: [
+          { label: 'Quote £600/day day rate', effect: { wallet: 0, energy: -8, belonging: 6, flag: 'freelance_premium' },
+            feedback: '你深呼吸说："£600/day, project rate negotiable based on scope."\n\n沉默 3 秒。Founder："Fair. Let\'s do 4 days/month for £2,400 retainer, 6 months."\n\n总数 £14,400。\n\n挂电话你坐在椅子上没动 5 分钟。然后给妈发了条消息："今天接了一个长期项目"。她回了一个赞。' },
+          { label: 'Quote £200/day（保守）', effect: { wallet: 800, energy: -3, belonging: 2 },
+            feedback: '你说 £200/day。Founder 立刻"OK!"——你立刻知道自己 quote 低了。\n\n你接了项目，挣了 £4,800 / 6 个月。但你心里总有根刺：原来我可以收更多。\n\n下次再 quote 的时候你说出来"£500"——那一次客户回"That\'s actually reasonable, let\'s go."' },
+          { label: '"我没经验 我们就走 platform 吧"', effect: { wallet: 200, belonging: -3 },
+            feedback: '你退缩了。Founder 说："那算了 我们再看看其他人。" 然后挂了。\n\n你回去打开 Link2Ur 接了一单 £25 的 PPT。你没说错——但你想：我刚才本来可以试一次。' },
+        ],
+      },
+      {
+        id: 'fl_5', title: '毕业前的选择',
+        trigger: { flag: 'freelance_premium', minWeek: 48 },
+        title_full: '5 个稳定客户 · 月收入 £3000+',
+        body: '4 月。毕业还有 8 周。你已经有 5 个稳定客户：3 个 startup + 2 个咨询公司。月稳定收入 £3,000-3,500。\n\nGraduate Visa 申请已交。你站在路口：\n· **继续 freelance**：自由 / 不稳 / 没 visa sponsor / 但完全自主\n· **转 corporate**：进咨询 / 投行 / 大厂 / sponsor / 但回到 9-5\n· **回国 freelance**：把伦敦客户做远程 / 国内消费低 / 但少了伦敦 ecosystem\n\n你跟林可儿 / 林楠（如果在一起）讨论。ta 说："你的选择 我支持任何一个。"',
+        choices: [
+          { label: '继续 freelance · 留伦敦', effect: { energy: -3, belonging: 12, flag: 'freelance_career', wallet: 0 },
+            feedback: '你正式声明 freelance 主业。第一年涨到月均 £4,500。\n\n两年后你拿 ILR（Indefinite Leave to Remain）—— 你是 freelance / self-sponsored 路线拿到的。这条路在中国留学生圈里几乎没人走 — 因为不像投行 H1B 那么"显赫"。\n\n但你慢慢明白：你这一年学的不只是社会学。你学的是 "how to charge for what you know"。\n\n这条路不光鲜。但是你的。' },
+          { label: '转 corporate · 找 sponsor 工作', effect: { wallet: 0, academic: 3, flag: 'freelance_to_corporate' },
+            feedback: '你应聘了 BCG / McKinsey / Bain — 拿到 BCG offer。年薪 £55,000。\n\nfreelance 5 个客户全部交接走。\n\n你 25 岁就开始穿西装。但你 28 岁那年某个雨夜在 Old Street 加完班走出 office，会想起那个 Pret 长椅 —— 你 22 岁第一次算"£28/小时"那个下午。' },
+          { label: '回国 freelance · 把客户做远程', effect: { wallet: 0, belonging: 8, flag: 'freelance_remote_china' },
+            feedback: '你飞回北京 / 上海。继续给伦敦那 5 个客户做项目，全程 remote。\n\n国内房租 1/3，你妈做的红烧肉每周 1 次。月收入还是 £3,000+ 但花销减半。\n\n你成了那种"在伦敦读书 + 现在在国内 freelance + 客户全是英国"的稀有物种。\n\n你妈见人就说："我儿子 / 女儿是 freelancer。" 她不太知道这是什么。但听起来很自由。' },
+        ],
+      },
+    ],
+  },
 };

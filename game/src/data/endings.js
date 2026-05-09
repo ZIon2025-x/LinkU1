@@ -49,6 +49,26 @@ export const ENDINGS = [
   },
 
   // ============================================================
+  // 隐藏结局 — Freelance 自由职业者（自走全部 5 章 + 选 freelance_career）
+  // ============================================================
+  {
+    id: 'freelance_path',
+    condition: ({ flags }) => !!flags.freelance_career,
+    allowLink2UrEcho: true,
+    ending: {
+      title: '自由职业的伦敦', subtitle: 'Self-Employed in London',
+      text:
+        '毕业后你没投简历。LinkedIn 改成 "Independent Designer · London"，Sole Trader 注册号填进 invoice 模板。\n\n'
+        + '第一年月均 £4,500。第二年涨到 £6,200。第三年你雇了一个 part-time 助理（也是 CSSA 学妹）。\n\n'
+        + 'Graduate Visa 到期前 6 个月你开始准备 self-sponsored skilled worker route。\n\n'
+        + '5 年后你拿到 ILR。1 月递材料、3 月 BRP 寄到。晚饭妈妈视频里说"那以后你不用每年回去续签了？"你说是。她沉默 5 秒："那妈来住一个月也不用申请 visa 了。"\n\n'
+        + '伦敦 5 月。你坐在自己 Hackney studio 窗台上喝一杯 oat flat white。\n\n'
+        + '你想起那个 Pret 长椅上算 "£28/小时" 的下午——22 岁，账户里 £85。\n\n'
+        + '窗外是英国最难得的晴天。',
+    },
+  },
+
+  // ============================================================
   // Tier 1 — 双 flag 组合（最稀有）
   // ============================================================
   {

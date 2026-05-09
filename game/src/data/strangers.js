@@ -67,6 +67,14 @@ export const STRANGERS = [
     welcomeMsg: 'Yo. Marcus. I\'m the only Black PhD in our department so they made me your DEI rep without asking 😅 Anyway, hi.',
   },
   {
+    id: 'cherry_daixie', name: 'Cherry · 学姐', avatar: '🌸', color: '#e0a8c0',
+    role: 'Y2 "学姐" · 经验贴整理（其实人在国内）',
+    metAt: 'flat',
+    encounterTitle: '微信好友请求弹出',
+    encounterBody: '晚上 11 点你在 ensuite 刷手机。微信弹出一条好友请求：\n\n「Cherry · 学姐 ✨」头像是一个戴鸭舌帽 + 圆框眼镜的甜美亚洲女生（小红书精修 portrait 风）。\n\n验证消息："学弟 / 学妹 看你在 CSSA 群里好像也是社会学的 我 Y2 上届的 加你方便给你分享我整理的经验贴 hhh"\n\n你点开头像放大——朋友圈背景图：图书馆桌上一杯 Pret + 一摞 reading + 一支金色钢笔。最新一条朋友圈："凌晨 4 点 essay 终于交了 🥺"。一切都很合理。',
+    welcomeMsg: '大家好 我 Cherry 学姐 Y2 同专业 我整理了 30000 字经验贴 私聊找我领 ❤️',
+  },
+  {
     id: 'park', name: 'Park', avatar: '朴', color: '#9080a0',
     role: 'KCL Music · 韩国 / openly gay',
     metAt: 'soho',

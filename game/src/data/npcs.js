@@ -107,6 +107,22 @@ export const NPC_NETWORK_EVENTS = [
     ],
   },
 
+  // ===== Mei 真实一面 (Soho 路过) =====
+  {
+    id: 'mei_soho_passing',
+    title: '路过 Lucky Star',
+    body: '夜里 11 点你走在 Gerrard Street。Lucky Star 已经打烊。Mei 姐站在卷帘门外跟一个 50 多岁白发的批发商比划着——好像在为一箱菜的价格争执。她中文夹英文夹得有点凶。她瞥见你，愣了 0.5 秒，对你点点头，又转回去吵她的。',
+    location: 'soho',
+    condition: ({ npcRel }) => (npcRel.mei || 0) >= 4,
+    auto: true,
+    choices: [
+      { label: '走过去帮她说话', effect: { energy: -3, belonging: 8, npc: { mei: 2 }, flag: 'mei_soho_witnessed' },
+        feedback: '你走过去用普通话问"姐 怎么了"。批发商一愣——他不会中文。Mei 姐顺势用英语跟他说"This is my nephew/niece, he/she works in finance"。批发商让步了 5%。\n\n关门后 Mei 姐站在卷帘门下抽了一根烟——你从没见她抽烟过。"这种人欺负我英文不好。"她瞪你一眼："明天来吃饭 免单。"' },
+      { label: '远远看着 不打扰', effect: { belonging: 3, flag: 'mei_soho_witnessed' },
+        feedback: '你站在街对面看了 5 分钟。批发商最后摇着头走了。Mei 姐在门口点了一根烟——你从没见她抽烟过。\n\n她回头时，你已经转过街角。' },
+    ],
+  },
+
   // ===== 跨圈 (王凯 vs Sarah) =====
   {
     id: 'wk_meets_sarah',

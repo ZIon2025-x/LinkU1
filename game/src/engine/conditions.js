@@ -52,6 +52,11 @@ export function matches(item, state) {
 export function findStoryTrigger(storylines, state) {
   for (const lineId of Object.keys(storylines)) {
     const line = storylines[lineId];
+    // Gender-locked storylines: only fire for matching player gender. This is
+    // for scam lines whose narrative requires opposite-gender attraction
+    // (pig butchering Daniel/Diana mirror) or gender-specific funnels
+    // (cosmetic MLM aimed at women / trading-mentor aimed at men).
+    if (line.forGender && line.forGender !== state.gender) continue;
     const progress = state.storyProgress?.[lineId] || 0;
     if (progress >= line.chapters.length) continue;
     const chapter = line.chapters[progress];

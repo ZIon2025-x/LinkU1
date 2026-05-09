@@ -1,4 +1,34 @@
 export const STRANGER_EVENTS = [
+  // ===== Cherry「学姐」（代写党 · 钓鱼身份 · 2-stage reveal）=====
+  // 现实背景：境内运营，群里加好友 → 私聊建立信任 → deadline 前推销代写。
+  // 头像永远是精修甜美女生图（盗图）；从不约线下；语气过分热情。
+  {
+    id: 'cherry_normal_1', strangerId: 'cherry_daixie', weeksAfter: 3,
+    title: 'Cherry 私信发"经验贴"',
+    body: 'Cherry 给你私信："学弟 / 学妹 我整理的 30000 字经验贴：reading list + Whitmore 喜欢什么 framing + tutorial 不能犯的 5 个错。免费给你 ❤️" 后面跟一个 Notion 链接。\n\n你顺手翻了她朋友圈——她每条都很认真：图书馆灯下、咖啡杯、笔记本。看起来就是个成绩好的 Y2 学姐。',
+    choices: [
+      { label: '点开看 + 道谢', effect: { energy: -1, academic: 2, belonging: 2 },
+        feedback: '你点开 Notion——内容确实详尽，全是 Y2 真实知识。你回："谢谢学姐 救命。" Cherry 立刻回："客气啦 我们这届都是这么过来的 有问题随时问我 ❤️"\n\n你想：怎么会有这么热心的学姐。' },
+      { label: '"谢谢" 但没点', effect: { belonging: 1 },
+        feedback: '你客气回了一句没真打开。Cherry 回了一句"嗯嗯有空看 ❤️"。' },
+    ],
+  },
+  {
+    id: 'cherry_pitch', strangerId: 'cherry_daixie', weeksAfter: 16,
+    title: 'Cherry 突然私信',
+    body: 'Week 19。期末 essay deadline 还有 8 天。Cherry 突然发来一长串：\n\n"学弟 / 学妹 不知道方便不方便问—— 你那个 essay 进度怎么样啦？我之前帮我室友过了一篇 distinction 我有个 native speaker 朋友 PhD 在读 3000 字 £180 包改到你满意 Turnitin 0% 完全不留痕迹 ❤️ 不收定金 出稿先看 你信我 hhh"\n\n后面附一张精致的价目表截图 + 一张所谓"成功案例" PDF 缩略图。你截屏她头像放大放进 Google 图片反查——是某个无关韩国 Instagram 网红盗的。',
+    choices: [
+      { label: '"什么意思？我自己写。" + 拉黑', effect: { energy: -2, academic: 4, belonging: 6, flag: 'daixie_refused' },
+        feedback: '你发完那句话直接拉黑 Cherry。\n\n那 30000 字 Notion 是 funnel。3 个月铺垫，就为这一刻。她"学姐"人设、朋友圈、热心——全是脚本。\n\n第二天 tutorial Whitmore 在白板上写 "Original thinking is not a luxury. It is the only thing." 你一下子坐直了。' },
+      { label: '截图发群挂出来', effect: { energy: -5, belonging: 3, flag: 'daixie_reported', npc: { aditi: 1 } },
+        feedback: '你把 Cherry 的私信 + 反查头像截图发到群里：「@所有人 这个 Cherry 是代写党。头像盗的某 IG 网红。学妹 / 学弟 注意。」\n\n狗哥：靠 我也加过她 当时我以为是 hr 学姐\n@Lily：天 我朋友圈她还给我点赞过 ✨ 现在删\n上岸了的姐：每年 deadline 前都有这种。识别要点：免费送大量"经验贴" + 私聊不在群里说话 + 朋友圈定时发。\n新生小王：???? 我前天还跟她说"谢谢学姐"\n凯泽：CSSA 群主已经踢了\n\nAditi 私聊你："Brave of you. I had four messages like this last semester. Different name, same playbook."' },
+      { label: '"价格能低吗"（探）', effect: { energy: -3, belonging: -4, flag: 'daixie_tempted' },
+        feedback: '你回了一句"价格能再商量吗"。Cherry 立刻发来一个升级价目表 + 微信支付码 + 试稿 PDF。\n\n你看着那张支付码 30 秒。然后退出聊天。\n\n你最后没付。但你心里有点虚——你为什么会"问价"？是 deadline 还是别的？' },
+      { label: '"不需要 谢谢"（礼貌拒绝）', effect: { belonging: 0, flag: 'daixie_refused' },
+        feedback: '你客气回了一句。Cherry 立刻回 "好的 学弟 / 学妹 加油 有需要随时找我 ❤️"——好像什么都没发生。\n\n一周后她从群里消失（被踢？换号？）。你后来听说她另外开了 3 个号在不同 CSSA 群里发同一套 funnel。' },
+    ],
+  },
+
   // ===== 小李（传媒）=====
   {
     id: 'xl_vlog_help', strangerId: 'xiao_li', weeksAfter: 5,

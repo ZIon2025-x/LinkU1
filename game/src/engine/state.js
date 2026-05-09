@@ -310,6 +310,11 @@ export function reducer(state, action) {
       const friendsCompleted = t.friendTask
         ? [...(state.link2urFriendsCompleted || []), t.templateId]
         : (state.link2urFriendsCompleted || []);
+      // 完成数量里程碑 → 触发 freelance 剧情线对应章节的 flag
+      const newCompletedCount = state.link2urCompleted.length + 1;
+      const milestoneFlags = { ...state.flags };
+      if (newCompletedCount >= 3) milestoneFlags.l2u_3_done = true;
+      if (newCompletedCount >= 8) milestoneFlags.l2u_8_done = true;
       return {
         ...state,
         link2urBoard: newBoard,
@@ -318,6 +323,7 @@ export function reducer(state, action) {
         link2urRating: newRating,
         link2urEarnings: state.link2urEarnings + t.reward,
         actionsLeft: Math.max(0, state.actionsLeft - (t.actionCost || 1)),
+        flags: milestoneFlags,
         stats: {
           ...state.stats,
           wallet: state.stats.wallet + t.reward,
