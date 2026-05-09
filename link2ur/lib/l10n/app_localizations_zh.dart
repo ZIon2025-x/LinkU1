@@ -13702,6 +13702,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileSetupBothDesc => '线上线下均可，灵活接单';
+
+  @override
+  String get expertTermsCheckboxPrefix => '我已阅读并同意';
+
+  @override
+  String get expertTermsCheckboxLink => '《达人团队收款与责任声明》';
+
+  @override
+  String get expertTermsRequired => '请先阅读并勾选同意《达人团队收款与责任声明》后再提交';
+
+  @override
+  String get expertTermsLoadFailed => '加载声明失败，请重试';
+
+  @override
+  String get expertTermsViewerTitle => '达人团队收款与责任声明';
+
+  @override
+  String get expertTermsClose => '关闭';
+
+  @override
+  String expertTeamPayoutHolderNote(String name) {
+    return '本团队收款由 $name 以个人身份代收。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -27402,4 +27425,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileSetupBothDesc => '線上線下均可，彈性接單';
+
+  @override
+  String get expertTermsCheckboxPrefix => '我已閱讀並同意';
+
+  @override
+  String get expertTermsCheckboxLink => '《達人團隊收款與責任聲明》';
+
+  @override
+  String get expertTermsRequired => '請先閱讀並勾選同意《達人團隊收款與責任聲明》後再提交';
+
+  @override
+  String get expertTermsLoadFailed => '載入聲明失敗，請重試';
+
+  @override
+  String get expertTermsViewerTitle => '達人團隊收款與責任聲明';
+
+  @override
+  String get expertTermsClose => '關閉';
+
+  @override
+  String expertTeamPayoutHolderNote(String name) {
+    return '本團隊收款由 $name 以個人身份代收。';
+  }
 }

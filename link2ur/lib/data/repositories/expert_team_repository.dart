@@ -75,12 +75,14 @@ class ExpertTeamRepository {
 
   Future<ExpertTeamApplication> applyToCreateTeam({
     required String expertName,
+    required String agreedTermsVersion,
     String? bio,
     String? avatar,
     String? applicationMessage,
   }) async {
     final response = await _apiService.post(ApiEndpoints.expertTeamApply, data: {
       'expert_name': expertName,
+      'agreed_terms_version': agreedTermsVersion,
       if (bio != null) 'bio': bio,
       if (avatar != null) 'avatar': avatar,
       if (applicationMessage != null) 'application_message': applicationMessage,

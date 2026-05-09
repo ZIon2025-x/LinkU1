@@ -32,12 +32,19 @@ class ExpertTeamLoadMembers extends ExpertTeamEvent {
 
 class ExpertTeamApplyCreate extends ExpertTeamEvent {
   final String expertName;
+  final String agreedTermsVersion;
   final String? bio;
   final String? avatar;
   final String? message;
-  ExpertTeamApplyCreate({required this.expertName, this.bio, this.avatar, this.message});
+  ExpertTeamApplyCreate({
+    required this.expertName,
+    required this.agreedTermsVersion,
+    this.bio,
+    this.avatar,
+    this.message,
+  });
   @override
-  List<Object?> get props => [expertName];
+  List<Object?> get props => [expertName, agreedTermsVersion];
 }
 
 class ExpertTeamLoadMyApplications extends ExpertTeamEvent {}
@@ -436,6 +443,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.applyToCreateTeam(
         expertName: event.expertName,
+        agreedTermsVersion: event.agreedTermsVersion,
         bio: event.bio,
         avatar: event.avatar,
         applicationMessage: event.message,

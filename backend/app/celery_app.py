@@ -184,6 +184,13 @@ celery_app.conf.beat_schedule = {
         'task': 'app.recommendation_tasks.optimize_recommendation_system_task',
         'schedule': crontab(hour=4, minute=0),  # 每天凌晨4点
     },
+
+    # 达人团队 B 端风险拦截：每天 03:15 UTC 扫描近 30 天结算流水触发 L1/L2 阈值警告
+    # migration 229；linktest 无 Celery 不跑，prod 灰度（rising-edge 防重复通知）
+    'check-expert-volume-thresholds': {
+        'task': 'app.celery_tasks.check_expert_volume_thresholds_task',
+        'schedule': crontab(hour=3, minute=15),
+    },
     
     # 检查过期积分 - 每1小时执行一次（降低频率，积分过期对实时性要求不高）
     'check-expired-points': {

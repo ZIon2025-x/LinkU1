@@ -26285,6 +26285,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Both online & offline, flexible'**
   String get profileSetupBothDesc;
+
+  /// No description provided for @expertTermsCheckboxPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read and agree to the '**
+  String get expertTermsCheckboxPrefix;
+
+  /// No description provided for @expertTermsCheckboxLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Team Payout & Liability Notice'**
+  String get expertTermsCheckboxLink;
+
+  /// No description provided for @expertTermsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please read and accept the Notice before submitting'**
+  String get expertTermsRequired;
+
+  /// No description provided for @expertTermsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load the Notice. Please retry.'**
+  String get expertTermsLoadFailed;
+
+  /// No description provided for @expertTermsViewerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Team Payout & Liability Notice'**
+  String get expertTermsViewerTitle;
+
+  /// No description provided for @expertTermsClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get expertTermsClose;
+
+  /// No description provided for @expertTeamPayoutHolderNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments to this team are received by {name} in a personal capacity.'**
+  String expertTeamPayoutHolderNote(String name);
 }
 
 class _AppLocalizationsDelegate

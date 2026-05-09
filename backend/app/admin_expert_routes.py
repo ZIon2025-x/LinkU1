@@ -3,6 +3,7 @@
 实现管理员管理达人团队的相关接口
 """
 
+import datetime
 import logging
 from typing import List, Optional
 
@@ -27,6 +28,7 @@ from app.schemas_expert import (
     ExpertProfileUpdateOut,
     ExpertProfileUpdateReview,
     ExpertOut,
+    ExpertAdminOut,
     ExpertCreateByAdmin,
 )
 from app.utils.time_utils import get_utc_time
@@ -52,11 +54,16 @@ async def _create_expert_team_with_owner(
     is_official: bool = False,
     official_badge: Optional[str] = None,
     allow_applications: bool = False,
+    agreed_terms_version: Optional[str] = None,
+    agreed_terms_at: Optional[datetime.datetime] = None,  # admin-direct 创建时为 None（条款不适用）
 ) -> Expert:
     """在事务中创建一个达人团队 + owner 成员 + 论坛板块。
 
     调用方负责 `db.commit()` 或 `db.rollback()`。
     raises HTTPException(404) 如果 owner_user_id 不存在。
+
+    payout_holder_user_id 默认与 owner_user_id 一致（migration 229）；
+    转让 owner 时由 transfer_ownership 路由同步刷新。
     """
     # 校验 owner 用户存在
     user_result = await db.execute(
@@ -92,6 +99,9 @@ async def _create_expert_team_with_owner(
         is_official=is_official,
         official_badge=official_badge,
         member_count=1,
+        payout_holder_user_id=owner_user_id,
+        agreed_terms_version=agreed_terms_version,
+        agreed_terms_at=agreed_terms_at,
         created_at=now,
         updated_at=now,
     )
@@ -202,6 +212,9 @@ async def review_expert_application(
                 owner_user_id=application.user_id,
                 bio=application.bio,
                 avatar=application.avatar,
+                # migration 229: 把申请人勾选的条款版本/时间刻到团队上做举证
+                agreed_terms_version=application.agreed_terms_version,
+                agreed_terms_at=application.agreed_terms_at,
             )
 
             await db.commit()
@@ -366,35 +379,48 @@ async def list_experts(
     page_size: int = Query(20, ge=1, le=100),
     status_filter: Optional[str] = Query(None, description="按状态筛选: active, inactive, suspended"),
     keyword: Optional[str] = Query(None, description="按名称关键字搜索"),
+    min_warning_level: Optional[int] = Query(
+        None, ge=0, le=2,
+        description="按 volume_warning_level >= N 过滤 (0=全部, 1=仅 L1+, 2=仅 L2)",
+    ),
+    sort_by: Optional[str] = Query(
+        None,
+        description="排序: volume_desc(按近30天流水降序) / created_desc(默认)",
+    ),
     current_admin: models.AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """列出所有达人团队（分页，可按状态/关键字筛选）"""
+    """列出所有达人团队（分页，可按状态/关键字/流水告警等级筛选）"""
     try:
-        q = select(Expert)
+        # WHERE 条件复用：列表 + count 都要应用同一组过滤
+        filters = []
         if status_filter:
-            q = q.where(Expert.status == status_filter)
+            filters.append(Expert.status == status_filter)
         if keyword:
-            q = q.where(
+            filters.append(
                 or_(
                     Expert.name.ilike(f"%{keyword}%"),
                     Expert.name_en.ilike(f"%{keyword}%"),
                     Expert.name_zh.ilike(f"%{keyword}%"),
                 )
             )
-        q = q.order_by(Expert.created_at.desc())
+        if min_warning_level is not None and min_warning_level > 0:
+            filters.append(Expert.volume_warning_level >= min_warning_level)
 
+        q = select(Expert)
         count_q = select(func.count()).select_from(Expert)
-        if status_filter:
-            count_q = count_q.where(Expert.status == status_filter)
-        if keyword:
-            count_q = count_q.where(
-                or_(
-                    Expert.name.ilike(f"%{keyword}%"),
-                    Expert.name_en.ilike(f"%{keyword}%"),
-                    Expert.name_zh.ilike(f"%{keyword}%"),
-                )
+        if filters:
+            q = q.where(and_(*filters))
+            count_q = count_q.where(and_(*filters))
+
+        # 排序：默认按 created_at desc；admin 关注 B 端风险时切到 volume desc
+        if sort_by == "volume_desc":
+            q = q.order_by(
+                Expert.last_30d_volume_pence.desc().nullslast(),
+                Expert.created_at.desc(),
             )
+        else:
+            q = q.order_by(Expert.created_at.desc())
 
         total_result = await db.execute(count_q)
         total = total_result.scalar_one()
@@ -408,7 +434,9 @@ async def list_experts(
             "total": total,
             "page": page,
             "page_size": page_size,
-            "items": [ExpertOut.model_validate(e) for e in experts],
+            # 用 ExpertAdminOut 暴露 volume_warning_level / last_30d_volume_pence
+            # 这三个字段对买家保密，仅 admin 列表能看
+            "items": [ExpertAdminOut.model_validate(e) for e in experts],
         }
     except Exception as e:
         logger.error("list_experts error: %s", e)

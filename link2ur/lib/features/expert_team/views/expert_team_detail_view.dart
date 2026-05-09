@@ -250,6 +250,7 @@ class _DetailContent extends StatelessWidget {
             child: Column(
               children: [
                 _BioSection(team: team),
+                _PayoutHolderNote(team: team),
                 const SizedBox(height: 12),
                 if (state.services.isNotEmpty) ...[
                   _ServicesSection(
@@ -815,6 +816,50 @@ class _BioSectionState extends State<_BioSection> {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7b. Payout holder note — 明示买家"团队收款由 owner 个人代收"(migration 229)
+// ---------------------------------------------------------------------------
+
+class _PayoutHolderNote extends StatelessWidget {
+  final ExpertTeam team;
+  const _PayoutHolderNote({required this.team});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = team.payoutHolderName;
+    if (name == null || name.isEmpty) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 13,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              context.l10n.expertTeamPayoutHolderNote(name),
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.5,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
         ],
       ),
     );

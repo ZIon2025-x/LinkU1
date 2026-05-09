@@ -1881,3 +1881,41 @@ if CELERY_AVAILABLE:
             raise
         finally:
             db.close()
+
+    @celery_app.task(
+        name='app.celery_tasks.check_expert_volume_thresholds_task',
+        bind=True,
+        max_retries=2,
+        default_retry_delay=300,
+    )
+    def check_expert_volume_thresholds_task(self):
+        """检查达人团队近 30 天结算流水阈值 - Celery 任务包装 (migration 229)。
+
+        每天 03:15 UTC 跑一次。函数本身用 rising-edge 策略防止重复发送通知，
+        Celery 重试只会让流水字段重新计算 + 漏发的通知补发，重试安全。
+        linktest 没 Celery，本任务不会在 staging 跑；prod 灰度通过 Celery beat 触发。
+        """
+        start_time = time.time()
+        task_name = 'check_expert_volume_thresholds_task'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import check_expert_volume_thresholds
+            result = check_expert_volume_thresholds(db)
+            duration = time.time() - start_time
+            logger.info(f"{task_name} 完成 (耗时: {duration:.2f}秒, 结果: {result})")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "result": result}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{task_name} 失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()

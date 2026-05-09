@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { message, Modal, Select, Tag, Spin } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
@@ -311,13 +311,22 @@ const ExpertManagement: React.FC = () => {
   // Status filters use useAdminTable's built-in filters to avoid stale closure on refresh
 
   // ==================== 达人列表 ====================
+  // migration 229: B 端流水阈值过滤 + 排序
+  const [minWarningLevel, setMinWarningLevel] = useState<number>(0);
+  const [sortBy, setSortBy] = useState<'created' | 'volume'>('created');
+
   const fetchExperts = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
-    const response = await getExperts({ page, size: pageSize });
+    const response = await getExperts({
+      page,
+      size: pageSize,
+      min_warning_level: minWarningLevel > 0 ? minWarningLevel : undefined,
+      sort_by: sortBy === 'volume' ? 'volume_desc' : undefined,
+    });
     return {
       data: response.task_experts || [],
       total: response.total || 0,
     };
-  }, []);
+  }, [minWarningLevel, sortBy]);
 
   const expertsTable = useAdminTable<any>({
     fetchData: fetchExperts,
@@ -325,6 +334,15 @@ const ExpertManagement: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
     enabled: subTab === 'list',
   });
+
+  // useAdminTable 用 fetchDataRef 锁定 fetchData,外部 state 变了不会自动 refetch
+  // 这里手动触发刷新,并强制回到第 1 页(否则用户在第 5 页切过滤后会看到空表)
+  useEffect(() => {
+    if (subTab !== 'list') return;
+    expertsTable.setCurrentPage(1);
+    expertsTable.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minWarningLevel, sortBy]);
 
   // ==================== 申请列表 ====================
   const fetchApplications = useCallback(async () => {
@@ -678,6 +696,44 @@ const ExpertManagement: React.FC = () => {
       title: '完成数',
       width: 80,
       render: (_, record) => record.completed_tasks ?? 0,
+    },
+    {
+      // migration 229: 近 30 天 succeeded 转账总额（pence）→ £ 显示
+      // 由 check_expert_volume_thresholds 每天 03:15 UTC 刷新
+      key: 'last_30d_volume_pence',
+      title: '近30天流水',
+      width: 120,
+      render: (_, record) => {
+        const pence = Number(record.last_30d_volume_pence ?? 0);
+        if (!pence) return <span style={{ color: '#bbb' }}>£0</span>;
+        const pounds = (pence / 100).toLocaleString('en-GB', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        const isHigh = pence >= 500_000; // L1
+        return (
+          <span style={{
+            color: isHigh ? '#dc3545' : '#333',
+            fontWeight: isHigh ? 600 : 400,
+            fontFamily: 'monospace',
+            fontSize: 12,
+          }}>
+            £{pounds}
+          </span>
+        );
+      },
+    },
+    {
+      // migration 229: rising-edge 升档时间戳；显示 L1/L2 红/橙徽章
+      key: 'volume_warning_level',
+      title: '警告',
+      width: 70,
+      render: (_, record) => {
+        const lvl = Number(record.volume_warning_level ?? 0);
+        if (lvl === 0) return <span style={{ color: '#bbb' }}>-</span>;
+        if (lvl === 2) return <Tag color="red" style={{ margin: 0 }}>L2</Tag>;
+        return <Tag color="orange" style={{ margin: 0 }}>L1</Tag>;
+      },
     },
     {
       key: 'member_count',
@@ -1052,7 +1108,30 @@ const ExpertManagement: React.FC = () => {
       {/* 达人列表 */}
       {subTab === 'list' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+            {/* migration 229: B 端风险拦截过滤 + 排序 */}
+            <span style={{ fontSize: 13, color: '#666' }}>流水告警:</span>
+            <Select
+              value={minWarningLevel}
+              onChange={(v) => setMinWarningLevel(v)}
+              style={{ width: 130 }}
+              options={[
+                { value: 0, label: '全部' },
+                { value: 1, label: '仅 L1+ (≥£5k)' },
+                { value: 2, label: '仅 L2 (≥£20k)' },
+              ]}
+            />
+            <span style={{ fontSize: 13, color: '#666', marginLeft: 8 }}>排序:</span>
+            <Select
+              value={sortBy}
+              onChange={(v) => setSortBy(v)}
+              style={{ width: 130 }}
+              options={[
+                { value: 'created', label: '创建时间 ↓' },
+                { value: 'volume', label: '近30天流水 ↓' },
+              ]}
+            />
+            <div style={{ flex: 1 }} />
             <button
               onClick={() => setCreateModalOpen(true)}
               style={{

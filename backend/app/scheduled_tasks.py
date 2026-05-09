@@ -2618,3 +2618,117 @@ def send_package_expiry_reminders(db: Session) -> dict:
             db.rollback()
 
     return {"sent": sent}
+
+
+# ==========================================================================
+# 达人团队 B 端风险拦截：近 30 天结算流水阈值检查 (migration 229)
+# ==========================================================================
+
+# 阈值（pence）—— 改阈值在这里调，不需要 bump 协议版本号
+# £5,000 = L1 (建议升级对公)
+# £20,000 = L2 (平台保留要求资质/限流的权利)
+EXPERT_VOLUME_L1_PENCE = 500_000
+EXPERT_VOLUME_L2_PENCE = 2_000_000
+
+
+def check_expert_volume_thresholds(db: Session):
+    """每日扫描达人团队近 30 天 succeeded 结算流水，触发 L1/L2 阈值警告。
+
+    Rising-edge 通知策略：仅在 level 上升时给 owner 发通知，避免每日重复打扰；
+    流水下降时静默更新 level（让 admin 列表反映真实状态），不发"恢复"通知。
+    `last_30d_volume_pence` 每次都刷新，admin 后台据此排序/过滤高流水团队。
+    """
+    from sqlalchemy import func, select
+    from app import crud
+    from app.models_expert import Expert
+    try:
+        cutoff = get_utc_time() - timedelta(days=30)
+
+        # 按 expert 聚合 succeeded 转账金额（pounds）；再换算为 pence
+        agg_q = (
+            select(
+                models.PaymentTransfer.taker_expert_id,
+                func.coalesce(func.sum(models.PaymentTransfer.amount), 0).label('total_gbp'),
+            )
+            .where(
+                and_(
+                    models.PaymentTransfer.taker_expert_id.isnot(None),
+                    models.PaymentTransfer.status == 'succeeded',
+                    models.PaymentTransfer.created_at >= cutoff,
+                )
+            )
+            .group_by(models.PaymentTransfer.taker_expert_id)
+        )
+        volumes_pence = {}
+        for row in db.execute(agg_q).all():
+            # row.total_gbp 通常是 Decimal（DECIMAL 列），用 round 兜住 SUM coalesce 返回 int 0
+            # 或异常路径返回 float 时 IEEE 754 精度损失（£52.49 → 5248 而非 5249）
+            volumes_pence[row.taker_expert_id] = int(round(float(row.total_gbp or 0) * 100))
+
+        # 遍历所有活跃团队（流水为 0 的也要刷字段，避免陈旧告警残留）
+        active_experts = list(
+            db.execute(select(Expert).where(Expert.status == 'active')).scalars().all()
+        )
+
+        l1_new = 0
+        l2_new = 0
+        scanned = 0
+        for expert in active_experts:
+            scanned += 1
+            volume_pence = volumes_pence.get(expert.id, 0)
+            new_level = (
+                2 if volume_pence >= EXPERT_VOLUME_L2_PENCE
+                else 1 if volume_pence >= EXPERT_VOLUME_L1_PENCE
+                else 0
+            )
+            old_level = expert.volume_warning_level or 0
+            expert.last_30d_volume_pence = volume_pence
+
+            if new_level > old_level:
+                # rising edge: 写 level + 时间戳 + 给 payout_holder 发通知
+                expert.volume_warning_level = new_level
+                expert.volume_warning_at = get_utc_time()
+                target_uid = expert.payout_holder_user_id
+                if target_uid:
+                    amount_str = f"£{volume_pence / 100:,.2f}"
+                    if new_level == 1:
+                        crud.create_notification(
+                            db=db,
+                            user_id=target_uid,
+                            type="expert_volume_warning_l1",
+                            title="团队近 30 天流水已达 £5,000",
+                            content=(
+                                f"你的团队「{expert.name}」近 30 天 succeeded 流水已达 {amount_str}。"
+                                "考虑到 Stripe 个人账户的合规要求，建议升级到对公收款方式。"
+                            ),
+                            auto_commit=False,
+                        )
+                        l1_new += 1
+                    elif new_level == 2:
+                        crud.create_notification(
+                            db=db,
+                            user_id=target_uid,
+                            type="expert_volume_warning_l2",
+                            title="团队近 30 天流水已达 £20,000",
+                            content=(
+                                f"你的团队「{expert.name}」近 30 天 succeeded 流水已达 {amount_str}。"
+                                "平台保留要求你提供企业资质材料、暂停接单或限制部分功能的权利，"
+                                "请尽快通过帮助中心联系客服。"
+                            ),
+                            auto_commit=False,
+                        )
+                        l2_new += 1
+            elif new_level < old_level:
+                # 下降：静默更新 level；保留原 volume_warning_at（"最近一次升档时间"）
+                expert.volume_warning_level = new_level
+
+        db.commit()
+        logger.info(
+            f"check_expert_volume_thresholds: scanned={scanned} "
+            f"L1_new={l1_new} L2_new={l2_new}"
+        )
+        return {"scanned": scanned, "l1_new": l1_new, "l2_new": l2_new}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"check_expert_volume_thresholds 失败: {e}", exc_info=True)
+        raise

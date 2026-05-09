@@ -6324,5 +6324,19 @@
   "profileSetupOnlineDesc": "透過視訊、文字或遠端方式完成任務",
   "profileSetupOfflineLabel": "線下任務",
   "profileSetupOfflineDesc": "面對面、實地協助完成任務",
-  "profileSetupBothDesc": "線上線下均可，彈性接單"
+  "profileSetupBothDesc": "線上線下均可，彈性接單",
+  "expertTermsCheckboxPrefix": "我已閱讀並同意",
+  "expertTermsCheckboxLink": "《達人團隊收款與責任聲明》",
+  "expertTermsRequired": "請先閱讀並勾選同意《達人團隊收款與責任聲明》後再提交",
+  "expertTermsLoadFailed": "載入聲明失敗，請重試",
+  "expertTermsViewerTitle": "達人團隊收款與責任聲明",
+  "expertTermsClose": "關閉",
+  "expertTeamPayoutHolderNote": "本團隊收款由 {name} 以個人身份代收。",
+  "@expertTeamPayoutHolderNote": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

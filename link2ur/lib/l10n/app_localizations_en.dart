@@ -14326,4 +14326,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileSetupBothDesc => 'Both online & offline, flexible';
+
+  @override
+  String get expertTermsCheckboxPrefix => 'I have read and agree to the ';
+
+  @override
+  String get expertTermsCheckboxLink => 'Expert Team Payout & Liability Notice';
+
+  @override
+  String get expertTermsRequired =>
+      'Please read and accept the Notice before submitting';
+
+  @override
+  String get expertTermsLoadFailed =>
+      'Failed to load the Notice. Please retry.';
+
+  @override
+  String get expertTermsViewerTitle => 'Expert Team Payout & Liability Notice';
+
+  @override
+  String get expertTermsClose => 'Close';
+
+  @override
+  String expertTeamPayoutHolderNote(String name) {
+    return 'Payments to this team are received by $name in a personal capacity.';
+  }
 }

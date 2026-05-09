@@ -6352,5 +6352,19 @@
   "profileSetupOnlineDesc": "通过视频、文字或远程方式完成任务",
   "profileSetupOfflineLabel": "线下任务",
   "profileSetupOfflineDesc": "面对面、实地协助完成任务",
-  "profileSetupBothDesc": "线上线下均可，灵活接单"
+  "profileSetupBothDesc": "线上线下均可，灵活接单",
+  "expertTermsCheckboxPrefix": "我已阅读并同意",
+  "expertTermsCheckboxLink": "《达人团队收款与责任声明》",
+  "expertTermsRequired": "请先阅读并勾选同意《达人团队收款与责任声明》后再提交",
+  "expertTermsLoadFailed": "加载声明失败，请重试",
+  "expertTermsViewerTitle": "达人团队收款与责任声明",
+  "expertTermsClose": "关闭",
+  "expertTeamPayoutHolderNote": "本团队收款由 {name} 以个人身份代收。",
+  "@expertTeamPayoutHolderNote": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

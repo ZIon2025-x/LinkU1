@@ -50,9 +50,25 @@ class ExpertOut(BaseModel):
     follower_count: int = 0  # 粉丝数（接口层填充）
     is_following: bool = False  # 当前用户是否关注（接口层填充）
     my_role: Optional[str] = None  # 当前用户在此团队中的角色（接口层填充）
+    # migration 229: 团队公开页展示"实际收款人"，明示买家收款进 owner 个人 Stripe 账户
+    payout_holder_user_id: Optional[str] = None
+    payout_holder_name: Optional[str] = None  # 接口层填充（resolver 拼用户名）
 
     class Config:
         from_attributes = True
+
+
+# ==================== Admin-only Expert payload ====================
+
+class ExpertAdminOut(ExpertOut):
+    """Admin 视图：在 ExpertOut 基础上追加 B 端流水阈值字段 (migration 229)。
+
+    这些字段不能放在公开 ExpertOut，否则买家拉团队详情时能看到团队近 30 天流水，
+    会被竞品批量抓取做商业情报。
+    """
+    volume_warning_level: int = 0
+    volume_warning_at: Optional[datetime.datetime] = None
+    last_30d_volume_pence: int = 0
 
 
 class UpcomingClosedDate(BaseModel):
@@ -95,6 +111,9 @@ class ExpertApplicationCreate(BaseModel):
     bio: Optional[str] = None
     avatar: Optional[str] = None
     application_message: Optional[str] = None
+    # migration 229: 必填，前端勾选《达人团队收款与责任声明》后传入。
+    # 路由层会校验版本是否等于当前 EXPERT_TERMS_VERSION，不匹配 → 400
+    agreed_terms_version: str = Field(..., min_length=1, max_length=20)
 
 
 class ExpertApplicationOut(BaseModel):
@@ -108,6 +127,8 @@ class ExpertApplicationOut(BaseModel):
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[datetime.datetime] = None
     review_comment: Optional[str] = None
+    agreed_terms_version: Optional[str] = None
+    agreed_terms_at: Optional[datetime.datetime] = None
     created_at: datetime.datetime
 
     class Config:

@@ -7,6 +7,8 @@ import random
 from sqlalchemy import (
     Column,
     Integer,
+    SmallInteger,
+    BigInteger,
     String,
     Text,
     Boolean,
@@ -83,6 +85,15 @@ class Expert(Base):
     # 每周营业时间 (migration 196)
     # {"mon": {"open": "09:00", "close": "18:00"}, "tue": {...}, "sun": null}
     business_hours = Column(JSON, nullable=True)
+    # migration 229: B 端风险拦截 — 协议接受 / 收款人 / 流水阈值
+    agreed_terms_version = Column(String(20), nullable=True)
+    agreed_terms_at = Column(DateTime(timezone=True), nullable=True)
+    payout_holder_user_id = Column(
+        String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    volume_warning_level = Column(SmallInteger, nullable=False, default=0, server_default="0")
+    volume_warning_at = Column(DateTime(timezone=True), nullable=True)
+    last_30d_volume_pence = Column(BigInteger, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
 
@@ -141,6 +152,9 @@ class ExpertApplication(Base):
     reviewed_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     review_comment = Column(Text, nullable=True)
+    # migration 229: 申请人接受的收款与责任声明版本
+    agreed_terms_version = Column(String(20), nullable=True)
+    agreed_terms_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
 

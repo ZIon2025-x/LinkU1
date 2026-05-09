@@ -35,6 +35,7 @@ from app.schemas_expert import (
     ExpertLocationUpdate, UpcomingClosedDate,
 )
 from app.utils.time_utils import get_utc_time
+from app.expert_terms import EXPERT_TERMS_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,15 @@ async def apply_to_create_expert(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
     """申请创建达人团队"""
+    # 校验《达人团队收款与责任声明》版本号
+    # 用户必须先调 GET /api/legal/expert_terms 拿到当前 version,前端勾选后回传;
+    # 版本号不匹配 → 强制用户重读最新版后重新提交
+    if body.agreed_terms_version != EXPERT_TERMS_VERSION:
+        raise HTTPException(
+            status_code=400,
+            detail="条款版本已更新，请重新阅读最新版《达人团队收款与责任声明》后再提交",
+        )
+
     # 检查是否有待审核的申请
     result = await db.execute(
         select(ExpertApplication).where(
@@ -212,6 +222,8 @@ async def apply_to_create_expert(
         bio=body.bio,
         avatar=body.avatar,
         application_message=body.application_message,
+        agreed_terms_version=body.agreed_terms_version,
+        agreed_terms_at=get_utc_time(),
     )
     db.add(app)
     await db.commit()
@@ -669,6 +681,19 @@ async def get_expert_detail(
     detail.follower_count = follower_count
     detail.is_following = is_following
     detail.my_role = my_role
+
+    # migration 229: 团队公开页"代收人"小字 — 拼出 payout_holder 用户名
+    # 优先从已加载的 members_out 查找(免去额外 query),fallback 单独查 User
+    if detail.payout_holder_user_id:
+        for m in members_out:
+            if m.user_id == detail.payout_holder_user_id:
+                detail.payout_holder_name = m.user_name
+                break
+        if detail.payout_holder_name is None:
+            holder_result = await db.execute(
+                select(models.User.name).where(models.User.id == detail.payout_holder_user_id)
+            )
+            detail.payout_holder_name = holder_result.scalar_one_or_none()
 
     # 计算实时营业状态: business_hours + closed_dates
     detail.is_open = await _compute_is_open(db, expert)
@@ -1308,6 +1333,14 @@ async def transfer_ownership(
     new_owner_member.updated_at = now
     owner_member.role = "admin"
     owner_member.updated_at = now
+
+    # migration 229: 收款人随 owner 转让而刷新（团队公开页"代收人"展示同步变更）
+    expert_obj_result = await db.execute(
+        select(Expert).where(Expert.id == expert_id).with_for_update()
+    )
+    expert_obj = expert_obj_result.scalar_one()
+    expert_obj.payout_holder_user_id = body.new_owner_id
+    expert_obj.updated_at = now
 
     # Phase 9: sync in-flight team task taker_id to new owner (spec §6.5)
     # Tasks still active (not yet completed) should reflect the current team

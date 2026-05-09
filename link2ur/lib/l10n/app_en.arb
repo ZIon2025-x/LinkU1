@@ -6523,5 +6523,19 @@
   "profileSetupOnlineDesc": "Complete tasks via video, text, or remotely",
   "profileSetupOfflineLabel": "Offline tasks",
   "profileSetupOfflineDesc": "In-person, on-site assistance",
-  "profileSetupBothDesc": "Both online & offline, flexible"
+  "profileSetupBothDesc": "Both online & offline, flexible",
+  "expertTermsCheckboxPrefix": "I have read and agree to the ",
+  "expertTermsCheckboxLink": "Expert Team Payout & Liability Notice",
+  "expertTermsRequired": "Please read and accept the Notice before submitting",
+  "expertTermsLoadFailed": "Failed to load the Notice. Please retry.",
+  "expertTermsViewerTitle": "Expert Team Payout & Liability Notice",
+  "expertTermsClose": "Close",
+  "expertTeamPayoutHolderNote": "Payments to this team are received by {name} in a personal capacity.",
+  "@expertTeamPayoutHolderNote": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

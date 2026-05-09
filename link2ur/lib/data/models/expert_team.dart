@@ -52,6 +52,10 @@ class ExpertTeam extends Equatable {
   final bool? isOpen;
   /// 未来 14 天内的临时休息日（详情接口提供，仅用于展示给访客）
   final List<ExpertClosedDate> upcomingClosedDates;
+  /// 实际收款人的用户 ID（migration 229；团队收款进入此用户的个人 Stripe 账户）
+  final String? payoutHolderUserId;
+  /// 实际收款人的展示名（接口层填充）
+  final String? payoutHolderName;
 
   const ExpertTeam({
     required this.id,
@@ -98,6 +102,8 @@ class ExpertTeam extends Equatable {
     this.businessHours,
     this.isOpen,
     this.upcomingClosedDates = const [],
+    this.payoutHolderUserId,
+    this.payoutHolderName,
   });
 
   factory ExpertTeam.fromJson(Map<String, dynamic> json) {
@@ -152,6 +158,8 @@ class ExpertTeam extends Equatable {
                   ExpertClosedDate.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      payoutHolderUserId: json['payout_holder_user_id'] as String?,
+      payoutHolderName: json['payout_holder_name'] as String?,
     );
   }
 
@@ -197,6 +205,7 @@ class ExpertTeam extends Equatable {
         featuredSkills, featuredSkillsEn, achievements, achievementsEn,
         responseTime, responseTimeEn, userLevel, businessHours, isOpen,
         upcomingClosedDates,
+        payoutHolderUserId, payoutHolderName,
       ];
 }
 
@@ -253,6 +262,9 @@ class ExpertTeamApplication extends Equatable {
   final String? reviewComment;
   final DateTime? createdAt;
   final DateTime? reviewedAt;
+  /// 申请人勾选时的《达人团队收款与责任声明》版本（migration 229）
+  final String? agreedTermsVersion;
+  final DateTime? agreedTermsAt;
 
   const ExpertTeamApplication({
     required this.id,
@@ -265,6 +277,8 @@ class ExpertTeamApplication extends Equatable {
     this.reviewComment,
     this.createdAt,
     this.reviewedAt,
+    this.agreedTermsVersion,
+    this.agreedTermsAt,
   });
 
   factory ExpertTeamApplication.fromJson(Map<String, dynamic> json) {
@@ -279,6 +293,10 @@ class ExpertTeamApplication extends Equatable {
       reviewComment: json['review_comment'] as String?,
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
       reviewedAt: json['reviewed_at'] != null ? DateTime.tryParse(json['reviewed_at'].toString()) : null,
+      agreedTermsVersion: json['agreed_terms_version'] as String?,
+      agreedTermsAt: json['agreed_terms_at'] != null
+          ? DateTime.tryParse(json['agreed_terms_at'].toString())
+          : null,
     );
   }
 

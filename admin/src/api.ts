@@ -437,8 +437,18 @@ export const getExperts = async (params?: {
   size?: number;
   category?: string;
   is_active?: number;
+  min_warning_level?: number; // migration 229: 1=仅 L1+, 2=仅 L2
+  sort_by?: 'volume_desc';     // migration 229: 按近 30 天流水降序
 }) => {
-  const res = await api.get('/api/admin/experts', { params: { page: params?.page, page_size: params?.size, status_filter: params?.category } });
+  const res = await api.get('/api/admin/experts', {
+    params: {
+      page: params?.page,
+      page_size: params?.size,
+      status_filter: params?.category,
+      min_warning_level: params?.min_warning_level,
+      sort_by: params?.sort_by,
+    },
+  });
   // New endpoint returns { total, page, page_size, items }
   return { task_experts: res.data.items || [], total: res.data.total || 0 };
 };
