@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Polaroid 成就卡 · PNG 导出预览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Cormorant+Garamond:wght@500;600&family=Special+Elite&family=DM+Mono&display=swap" rel="stylesheet" />
+<style>
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, #2a2520, #1a1612);
+    color: #e8e0d0;
+    font-family: "EB Garamond", "Songti SC", serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  h1 {
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin: 0 0 8px;
+  }
+  .note {
+    text-align: center;
+    opacity: 0.55;
+    font-style: italic;
+    font-size: 13px;
+    max-width: 640px;
+    margin: 0 auto 36px;
+    line-height: 1.7;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 36px;
+    max-width: 1200px;
+    margin: 0 auto 60px;
+  }
+  .card-wrap {
+    background: #1a1612;
+    border: 1px solid rgba(232, 224, 208, 0.15);
+    padding: 24px;
+    text-align: center;
+  }
+  .card-wrap h3 {
+    font-family: "DM Mono", monospace;
+    letter-spacing: 0.3em;
+    font-size: 11px;
+    opacity: 0.6;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+  }
+  .card-wrap .label {
+    font-size: 13px;
+    opacity: 0.5;
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  }
+  .download-btn {
+    display: inline-block;
+    margin-top: 16px;
+    background: transparent;
+    border: 1px solid #d4b070;
+    color: #d4b070;
+    padding: 8px 22px;
+    letter-spacing: 0.3em;
+    font-size: 11px;
+    font-family: "DM Mono", monospace;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .download-btn:hover { background: #d4b070; color: #1a1612; }
+
+  .row-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+    max-width: 1100px;
+    margin: 0 auto 60px;
+    align-items: start;
+  }
+  .row-pair .card-wrap { background: transparent; border: none; padding: 0; }
+
+  .all-export {
+    text-align: center;
+    margin-top: 60px;
+    padding-top: 40px;
+    border-top: 1px solid rgba(232, 224, 208, 0.15);
+  }
+  .all-export h2 {
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+  .all-export p {
+    opacity: 0.55;
+    font-style: italic;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Polaroid 风格 · PNG 导出预览</h1>
+<div class="note">
+  下面是 3 张 canvas 实时渲染的成就卡——这就是用户点 "导出 PNG" 时拿到的图片<br>
+  尺寸 600×720 px，方形主图 + 底部 caption 区，配色按 rarity 三档。<br>
+  和 HTML mockup 不同：<b>不带旋转</b>（PNG 旋转后分享到微信/朋友圈会显歪）<br>
+  每张可单独下载查看。下面有一张是把 3 张拼一起的"日记页"输出——也是给你预览。
+</div>
+
+<div class="row">
+  <div class="card-wrap">
+    <h3>Common · 灰</h3>
+    <div class="label">日常里程碑（BRP / GP / Oyster）</div>
+    <canvas id="card-common" width="600" height="720"></canvas>
+    <button class="download-btn" onclick="downloadCanvas('card-common', 'achievement-common.png')">↓ DOWNLOAD</button>
+  </div>
+  <div class="card-wrap">
+    <h3>Rare · 蓝</h3>
+    <div class="label">完成的副线（Tom / Mark / Mei）</div>
+    <canvas id="card-rare" width="600" height="720"></canvas>
+    <button class="download-btn" onclick="downloadCanvas('card-rare', 'achievement-rare.png')">↓ DOWNLOAD</button>
+  </div>
+  <div class="card-wrap">
+    <h3>Epic · 紫</h3>
+    <div class="label">重感情 beat（父母 / 林南 / Aditi）</div>
+    <canvas id="card-epic" width="600" height="720"></canvas>
+    <button class="download-btn" onclick="downloadCanvas('card-epic', 'achievement-epic.png')">↓ DOWNLOAD</button>
+  </div>
+</div>
+
+<div class="all-export">
+  <h2>整页导出 · 你的成就墙</h2>
+  <p>diary 里点"导出全部"时——所有解锁的成就拼成一张图，方便分享</p>
+  <canvas id="card-collage" width="900" height="1280"></canvas>
+  <br>
+  <button class="download-btn" onclick="downloadCanvas('card-collage', 'achievement-wall.png')">↓ DOWNLOAD WALL</button>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────
+// Polaroid achievement card renderer (matches what the
+// real export function in the game will do)
+// ──────────────────────────────────────────────────────
+
+const TIER = {
+  common: { photoBg: '#2a2520', accent: '#888', label: 'COMMON' },
+  rare:   { photoBg: '#2c4a6e', accent: '#aac0d8', label: 'RARE' },
+  epic:   { photoBg: '#5e3870', accent: '#d8b8e8', label: 'EPIC' },
+};
+
+function renderCard(canvas, ach) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const tier = TIER[ach.tier];
+
+  // --- white polaroid paper background ---
+  ctx.fillStyle = '#f4ead8';
+  ctx.fillRect(0, 0, W, H);
+
+  // subtle paper texture (very light)
+  for (let i = 0; i < 800; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.018})`;
+    ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1);
+  }
+
+  // --- photo area ---
+  const photoMargin = 30;
+  const photoSize = W - photoMargin * 2;
+  const photoY = photoMargin;
+  ctx.fillStyle = tier.photoBg;
+  ctx.fillRect(photoMargin, photoY, photoSize, photoSize);
+
+  // photo gradient overlay (slight light)
+  const grad = ctx.createRadialGradient(
+    photoMargin + photoSize * 0.3, photoY + photoSize * 0.3, 50,
+    photoMargin + photoSize * 0.5, photoY + photoSize * 0.5, photoSize * 0.7
+  );
+  grad.addColorStop(0, 'rgba(255,255,255,0.08)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(photoMargin, photoY, photoSize, photoSize);
+
+  // emoji icon
+  ctx.fillStyle = '#f4ead8';
+  ctx.font = '180px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(ach.icon, W / 2, photoY + photoSize / 2 + 10);
+
+  // small "rarity" tag in photo top-left
+  ctx.font = '11px "DM Mono", monospace';
+  ctx.fillStyle = `rgba(244, 234, 216, 0.65)`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`◆ ${tier.label}`, photoMargin + 14, photoY + 14);
+
+  // week stamp top-right (rotated)
+  ctx.save();
+  ctx.translate(W - photoMargin - 50, photoY + 30);
+  ctx.rotate(8 * Math.PI / 180);
+  ctx.font = 'bold 12px "Special Elite", monospace';
+  ctx.fillStyle = '#b85040';
+  ctx.strokeStyle = '#b85040';
+  ctx.lineWidth = 1.5;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const stampText = ach.week ? `W${ach.week}` : '·';
+  ctx.strokeRect(-22, -12, 44, 24);
+  ctx.fillText(stampText, 0, 0);
+  ctx.restore();
+
+  // --- caption ---
+  const captionY = photoY + photoSize + 40;
+
+  // title
+  ctx.fillStyle = '#2a2520';
+  ctx.font = '500 32px "Cormorant Garamond", "Songti SC", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(ach.title, W / 2, captionY);
+
+  // description (italic, gray)
+  ctx.fillStyle = 'rgba(42, 37, 32, 0.65)';
+  ctx.font = 'italic 18px "EB Garamond", "Songti SC", serif';
+  // word-wrap if too long
+  const desc = ach.desc;
+  const maxWidth = W - 60;
+  const words = desc.split('');
+  let line = '';
+  let lineY = captionY + 50;
+  for (let ch of words) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxWidth) {
+      ctx.fillText(line, W / 2, lineY);
+      line = ch;
+      lineY += 24;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, W / 2, lineY);
+
+  // bottom bar: 异乡 game mark + date
+  ctx.fillStyle = 'rgba(42, 37, 32, 0.4)';
+  ctx.font = '11px "DM Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('异乡 · A STUDY ABROAD RPG', 30, H - 26);
+  ctx.textAlign = 'right';
+  ctx.fillText(ach.date || 'WEEK 01 · 2024', W - 30, H - 26);
+}
+
+// ──────────────────────────────────────────────────────
+// Wall renderer — composite multiple polaroids
+// ──────────────────────────────────────────────────────
+
+function renderWall(canvas, achievements) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // bg gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#2a2520');
+  bg.addColorStop(1, '#1a1612');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // header
+  ctx.fillStyle = '#e8e0d0';
+  ctx.font = '300 36px "Cormorant Garamond", "Songti SC", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('我的成就墙 · 异乡', W / 2, 50);
+  ctx.fillStyle = 'rgba(232, 224, 208, 0.5)';
+  ctx.font = 'italic 14px "EB Garamond", "Songti SC", serif';
+  ctx.fillText(`${achievements.length} / 30 已解锁  ·  导出于 ${new Date().toLocaleDateString('zh-CN')}`, W / 2, 100);
+
+  // card grid 3 cols
+  const cardW = 240;
+  const cardH = 290;
+  const cols = 3;
+  const gap = 30;
+  const startX = (W - cols * cardW - (cols - 1) * gap) / 2;
+  const startY = 160;
+
+  achievements.forEach((ach, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = startX + col * (cardW + gap);
+    const y = startY + row * (cardH + gap);
+    const tier = TIER[ach.tier];
+
+    // tilt for variety
+    const tilt = ((i * 7) % 7 - 3) * 0.6 * Math.PI / 180;
+    ctx.save();
+    ctx.translate(x + cardW / 2, y + cardH / 2);
+    ctx.rotate(tilt);
+
+    // polaroid bg
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = '#f4ead8';
+    ctx.fillRect(-cardW / 2, -cardH / 2, cardW, cardH);
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    // photo area
+    const pm = 14;
+    const ph = cardW - pm * 2;
+    ctx.fillStyle = tier.photoBg;
+    ctx.fillRect(-cardW / 2 + pm, -cardH / 2 + pm, ph, ph);
+
+    // emoji
+    ctx.fillStyle = '#f4ead8';
+    ctx.font = '76px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ach.icon, 0, -cardH / 2 + pm + ph / 2 + 4);
+
+    // title
+    ctx.fillStyle = '#2a2520';
+    ctx.font = '500 16px "Cormorant Garamond", "Songti SC", serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText(ach.title, 0, -cardH / 2 + pm + ph + 16);
+
+    // week tag
+    ctx.fillStyle = 'rgba(42, 37, 32, 0.5)';
+    ctx.font = '10px "DM Mono", monospace';
+    ctx.fillText(`W${ach.week}`, 0, -cardH / 2 + pm + ph + 42);
+
+    ctx.restore();
+  });
+
+  // footer mark
+  ctx.fillStyle = 'rgba(232, 224, 208, 0.3)';
+  ctx.font = 'italic 11px "EB Garamond", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('一年留学，留下来的不是文凭，是这些瞬间。', W / 2, H - 30);
+}
+
+// ──────────────────────────────────────────────────────
+// Sample data
+// ──────────────────────────────────────────────────────
+
+renderCard(document.getElementById('card-common'), {
+  tier: 'common', icon: '🛂',
+  title: 'BRP 收集者',
+  desc: '10 天内取了那张粉色卡。',
+  week: 1, date: 'WEEK 01 · 2024',
+});
+
+renderCard(document.getElementById('card-rare'), {
+  tier: 'rare', icon: '🍻',
+  title: 'Tom 的朋友',
+  desc: 'fire alarm 那晚的"无奈一笑"。',
+  week: 7, date: 'WEEK 07 · 2024',
+});
+
+renderCard(document.getElementById('card-epic'), {
+  tier: 'epic', icon: '🇨🇳',
+  title: '父母来过',
+  desc: 'Heathrow T3 那个拥抱。"对不起 这一年让你一个人。"',
+  week: 19, date: 'WEEK 19 · 2024',
+});
+
+// wall: 9 sample achievements
+renderWall(document.getElementById('card-collage'), [
+  { tier: 'common', icon: '🛂', title: 'BRP 收集者', week: 1 },
+  { tier: 'common', icon: '💉', title: 'NHS 疫苗', week: 4 },
+  { tier: 'common', icon: '☕', title: '第一次 Pret', week: 2 },
+  { tier: 'rare',   icon: '🍻', title: 'Tom 的朋友', week: 7 },
+  { tier: 'rare',   icon: '🥟', title: 'Mei 姐徒弟', week: 24 },
+  { tier: 'rare',   icon: '🎄', title: 'Cotswolds 圣诞', week: 14 },
+  { tier: 'epic',   icon: '🇨🇳', title: '父母来过', week: 19 },
+  { tier: 'epic',   icon: '💍', title: '林南 留下来', week: 51 },
+  { tier: 'epic',   icon: '🎓', title: 'Distinction', week: 52 },
+]);
+
+// ──────────────────────────────────────────────────────
+// Download helper
+// ──────────────────────────────────────────────────────
+
+function downloadCanvas(canvasId, filename) {
+  const canvas = document.getElementById(canvasId);
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+</script>
+
+</body>
+</html>

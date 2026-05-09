@@ -1,0 +1,90 @@
+export const GROUP_MEMBERS = [
+  { id: 'shang_an', name: '上岸了的姐', avatar: '岸', color: '#9080b8', role: 'PhD Y3 · 心灵鸡汤生产者' },
+  { id: 'gou_ge', name: '狗哥', avatar: '狗', color: '#c4615a', role: '永远在抢黄标' },
+  { id: 'lily', name: '@Lily', avatar: 'L', color: '#d4a4c0', role: '小红书风' },
+  { id: 'kaize', name: '凯泽', avatar: '凯', color: '#7a8a6a', role: '情商欠费但热心' },
+  { id: 'xiao_wang', name: '新生小王', avatar: '王', color: '#d4b070', role: '什么都问' },
+  { id: 'qian_shui', name: '潜水的人', avatar: '?', color: '#666', role: '从来不说话' },
+];
+
+// 群消息池 - 按周触发
+export const GROUP_MESSAGES = [
+  { week: 2, members: ['xiao_wang', 'gou_ge', 'shang_an'],
+    messages: [
+      { from: 'xiao_wang', text: '请问大家... Tesco 几点贴黄标啊？' },
+      { from: 'gou_ge', text: '8:30 之后开始 别问 我去过 100 次' },
+      { from: 'shang_an', text: '别老抢黄标 自己做饭便宜健康' },
+      { from: 'gou_ge', text: '@上岸了的姐 你 PhD 学校管饭吧' },
+    ] },
+  { week: 4, members: ['lily', 'gou_ge', 'kaize'],
+    messages: [
+      { from: 'lily', text: '今天发现个超棒的下午茶 Sketch 真的人均艺术品 ✨' },
+      { from: 'kaize', text: '人均多少' },
+      { from: 'lily', text: '£75 左右吧 但值得 真的' },
+      { from: 'gou_ge', text: '£75 我能买一周的菜' },
+    ] },
+  { week: 6, members: ['xiao_wang', 'kaize'],
+    messages: [
+      { from: 'xiao_wang', text: '想家了 今天导师又把我名字念错了 第三次' },
+      { from: 'kaize', text: '常事 我都改英文名了 叫 Kevin' },
+      { from: 'xiao_wang', text: '我不想改' },
+      { from: 'kaize', text: '那就教育他' },
+    ] },
+  { week: 8, members: ['shang_an', 'lily'],
+    messages: [
+      { from: 'shang_an', text: '群里今晚有人 Hyde Park 看烟花吗 Bonfire Night' },
+      { from: 'lily', text: '我去！穿什么暖和啊？' },
+      { from: 'shang_an', text: '羽绒服+围巾+帽子。伦敦 11 月夜里很冷。' },
+    ] },
+  { week: 10, members: ['gou_ge', 'kaize', 'xiao_wang'],
+    messages: [
+      { from: 'gou_ge', text: '紧急求助：地铁罢工 明天 tutorial 怎么办' },
+      { from: 'kaize', text: '走路+公交 提前两小时' },
+      { from: 'xiao_wang', text: '请假吧 又不是不能 zoom' },
+      { from: 'gou_ge', text: '我们专业不能 zoom' },
+    ] },
+  { week: 13, members: ['lily', 'shang_an', 'kaize', 'xiao_wang'],
+    messages: [
+      { from: 'lily', text: '圣诞了 大家都怎么过？' },
+      { from: 'shang_an', text: '回家。每年都回。机票贵也回。' },
+      { from: 'kaize', text: '留下来打工 中餐馆圣诞旺季' },
+      { from: 'xiao_wang', text: '一个人在伦敦... 可能去看个电影' },
+      { from: 'lily', text: '@新生小王 别一个人 我们组个局' },
+    ] },
+  { week: 18, members: ['gou_ge', 'shang_an', 'lily'],
+    messages: [
+      { from: 'gou_ge', text: '大年三十快乐！群里都在哪？' },
+      { from: 'shang_an', text: '伦敦' },
+      { from: 'lily', text: '我已经回国了 现在在三亚 [图片]' },
+      { from: 'gou_ge', text: '@Lily 求别炫了' },
+    ] },
+  { week: 23, members: ['shang_an', 'kaize'],
+    messages: [
+      { from: 'shang_an', text: '大家提醒下 今天英国母亲节 给妈妈发个消息' },
+      { from: 'kaize', text: '中国母亲节是 5 月不是吗' },
+      { from: 'shang_an', text: '都过 多过几次有什么不好' },
+    ] },
+  { week: 31, members: ['xiao_wang', 'gou_ge', 'shang_an'],
+    messages: [
+      { from: 'xiao_wang', text: '考试周... 我感觉我考不过' },
+      { from: 'gou_ge', text: '我觉得我也是 已经躺平' },
+      { from: 'shang_an', text: '别躺。 真的 别躺。 我那时候挂了一门重修花了 £4500' },
+      { from: 'xiao_wang', text: '😱' },
+    ] },
+  { week: 37, members: ['kaize', 'lily', 'qian_shui'],
+    messages: [
+      { from: 'kaize', text: '论文季开始 大家加油' },
+      { from: 'lily', text: '我已经写了一万字了 ✨' },
+      { from: 'kaize', text: '我两个字 [doge]' },
+      { from: 'qian_shui', text: '...' },
+      { from: 'kaize', text: '潜水的居然说话了 ！' },
+    ] },
+  { week: 50, members: ['shang_an', 'gou_ge', 'lily', 'xiao_wang'],
+    messages: [
+      { from: 'gou_ge', text: '论文交了 解放！！' },
+      { from: 'lily', text: '终于' },
+      { from: 'shang_an', text: '恭喜大家。这一年不容易。' },
+      { from: 'xiao_wang', text: '突然觉得有点舍不得离开伦敦' },
+      { from: 'shang_an', text: '都会舍不得的。这就是留学。' },
+    ] },
+];

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>成就卡片设计 mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Special+Elite&family=Cormorant+Garamond:wght@500;600&family=DM+Mono&display=swap" rel="stylesheet" />
+<style>
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, #2a2520, #1a1612);
+    color: #e8e0d0;
+    font-family: "EB Garamond", "Songti SC", serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  h1 {
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin: 0 0 8px;
+  }
+  .subtitle {
+    text-align: center;
+    opacity: 0.5;
+    font-style: italic;
+    margin-bottom: 50px;
+  }
+  .style {
+    max-width: 1100px;
+    margin: 0 auto 80px;
+  }
+  .style-name {
+    font-size: 14px;
+    letter-spacing: 0.3em;
+    opacity: 0.6;
+    border-bottom: 1px solid rgba(232, 224, 208, 0.2);
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+    font-family: "DM Mono", monospace;
+  }
+  .style-name b { color: #d4b070; font-weight: 500; }
+  .row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+
+  /* ─────── Style A: Polaroid 复古照片 ─────── */
+  .polaroid {
+    background: #f4ead8;
+    color: #2a2520;
+    padding: 14px 14px 38px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+    transform: rotate(-1.5deg);
+    position: relative;
+    transition: transform 0.3s;
+    font-family: "Cormorant Garamond", serif;
+  }
+  .polaroid:nth-child(2) { transform: rotate(0.8deg); margin-top: 8px; }
+  .polaroid:nth-child(3) { transform: rotate(-0.5deg); margin-top: -4px; }
+  .polaroid:hover { transform: rotate(0deg) scale(1.02); }
+  .polaroid .photo {
+    background: #1a1612;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f4ead8;
+    margin-bottom: 16px;
+    font-size: 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .polaroid.rare .photo  { background: #2c4a6e; }
+  .polaroid.epic .photo  { background: #5e3870; }
+  .polaroid .photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08), transparent 60%);
+  }
+  .polaroid h3 {
+    margin: 0 0 4px;
+    font-weight: 500;
+    font-size: 22px;
+    text-align: center;
+  }
+  .polaroid p {
+    margin: 0;
+    text-align: center;
+    font-style: italic;
+    font-size: 13px;
+    opacity: 0.7;
+  }
+  .polaroid .stamp {
+    position: absolute;
+    top: 18px;
+    right: 12px;
+    font-family: "Special Elite", monospace;
+    font-size: 10px;
+    color: #b85040;
+    border: 1px solid #b85040;
+    padding: 2px 6px;
+    transform: rotate(8deg);
+    opacity: 0.7;
+  }
+
+  /* ─────── Style B: 票根 Ticket Stub ─────── */
+  .ticket {
+    background: #e8d8b8;
+    color: #1a1612;
+    display: flex;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    font-family: "DM Mono", monospace;
+    position: relative;
+  }
+  .ticket .stub {
+    background: #d4b070;
+    width: 80px;
+    flex-shrink: 0;
+    padding: 14px 8px;
+    border-right: 2px dashed #1a1612;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .ticket .stub .icon {
+    font-size: 36px;
+    line-height: 1;
+  }
+  .ticket .stub .num {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    opacity: 0.7;
+    margin-top: 4px;
+  }
+  .ticket .body {
+    padding: 14px 16px;
+    flex: 1;
+  }
+  .ticket .row1 {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    opacity: 0.6;
+    margin-bottom: 4px;
+  }
+  .ticket h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 500;
+    font-family: "EB Garamond", serif;
+    letter-spacing: 0.02em;
+  }
+  .ticket p {
+    margin: 0 0 8px;
+    font-size: 11px;
+    line-height: 1.6;
+    opacity: 0.75;
+    font-family: "EB Garamond", serif;
+    font-style: italic;
+  }
+  .ticket .meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    opacity: 0.5;
+    border-top: 1px dotted rgba(0,0,0,0.3);
+    padding-top: 6px;
+    margin-top: 4px;
+  }
+  .ticket.rare  .stub { background: #6e8aaa; color: #f4ead8; }
+  .ticket.epic  .stub { background: #8a6090; color: #f4ead8; }
+  .ticket .perf-l, .ticket .perf-r {
+    position: absolute;
+    width: 8px;
+    background: #1a1612;
+    border-radius: 50%;
+  }
+
+  /* ─────── Style C: 邮票 Postage Stamp ─────── */
+  .stamp {
+    background: #fdf6e4;
+    color: #1a1612;
+    padding: 18px 14px 14px;
+    position: relative;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    /* 锯齿邮票边 */
+    -webkit-mask:
+      radial-gradient(circle at 6px 6px, transparent 4px, black 4.5px) -6px -6px / 12px 12px;
+            mask:
+      radial-gradient(circle at 6px 6px, transparent 4px, black 4.5px) -6px -6px / 12px 12px;
+  }
+  .stamp .inner {
+    border: 2px solid currentColor;
+    padding: 14px 12px;
+    position: relative;
+  }
+  .stamp .country {
+    font-family: "DM Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-align: center;
+    margin-bottom: 8px;
+    opacity: 0.7;
+  }
+  .stamp .icon {
+    text-align: center;
+    font-size: 56px;
+    margin: 4px 0 12px;
+  }
+  .stamp h3 {
+    margin: 0 0 4px;
+    text-align: center;
+    font-family: "EB Garamond", serif;
+    font-weight: 500;
+    font-size: 17px;
+  }
+  .stamp p {
+    margin: 0 0 10px;
+    text-align: center;
+    font-family: "EB Garamond", serif;
+    font-style: italic;
+    font-size: 11px;
+    opacity: 0.7;
+  }
+  .stamp .denom {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-family: "DM Mono", monospace;
+    font-size: 11px;
+    font-weight: bold;
+    border: 1px solid currentColor;
+    padding: 2px 6px;
+  }
+  .stamp .postmark {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    font-family: "Special Elite", monospace;
+    font-size: 8px;
+    opacity: 0.5;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-12deg);
+  }
+  .stamp.common { background: #fdf6e4; color: #4a3d2a; }
+  .stamp.rare   { background: #d8e4f0; color: #1a3a5a; }
+  .stamp.epic   { background: #e4d4ec; color: #4a1a5a; }
+
+  /* ─────── Style D: 极简 Brutalist ─────── */
+  .minimal {
+    background: #15110d;
+    color: #e8e0d0;
+    border: 1px solid rgba(232, 224, 208, 0.2);
+    padding: 24px 22px;
+    position: relative;
+    transition: border 0.2s;
+    font-family: "EB Garamond", serif;
+  }
+  .minimal:hover { border-color: rgba(232, 224, 208, 0.5); }
+  .minimal .tier {
+    font-family: "DM Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    opacity: 0.5;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .minimal .icon {
+    font-size: 48px;
+    margin-bottom: 14px;
+    line-height: 1;
+  }
+  .minimal h3 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 400;
+  }
+  .minimal p {
+    margin: 0;
+    opacity: 0.6;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .minimal .dots {
+    display: flex;
+    gap: 4px;
+    margin-top: 14px;
+  }
+  .minimal .dots span {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(232, 224, 208, 0.2);
+  }
+  .minimal.common .dots span:nth-child(1) { background: #888; }
+  .minimal.rare   { border-color: rgba(110, 138, 170, 0.6); }
+  .minimal.rare   .icon, .minimal.rare h3 { color: #aac0d8; }
+  .minimal.rare   .dots span:nth-child(-n+2) { background: #aac0d8; }
+  .minimal.epic   { border-color: rgba(180, 130, 200, 0.6); }
+  .minimal.epic   .icon, .minimal.epic h3 { color: #d8b8e8; }
+  .minimal.epic   .dots span:nth-child(-n+3) { background: #d8b8e8; }
+  .minimal .meta {
+    position: absolute;
+    bottom: 16px; right: 22px;
+    font-family: "DM Mono", monospace;
+    font-size: 10px;
+    opacity: 0.4;
+  }
+
+  /* ─────── 选择按钮 ─────── */
+  .choose {
+    display: block;
+    margin: 16px auto 0;
+    background: transparent;
+    border: 1px solid #d4b070;
+    color: #d4b070;
+    padding: 8px 24px;
+    letter-spacing: 0.3em;
+    font-size: 11px;
+    font-family: "DM Mono", monospace;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .choose:hover { background: #d4b070; color: #1a1612; }
+
+  .legend {
+    text-align: center;
+    margin-top: 60px;
+    opacity: 0.5;
+    font-style: italic;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<h1>成就卡片 · 4 种风格</h1>
+<div class="subtitle">同样 3 个成就（common / rare / epic），4 种视觉。挑你喜欢的一种或混搭。</div>
+
+<!-- ─── A: Polaroid ─── -->
+<div class="style">
+  <div class="style-name"><b>STYLE A</b> · Polaroid 复古照片 — 像是从相册撕下来的一张</div>
+  <div class="row">
+    <div class="polaroid common">
+      <div class="photo">🛂</div>
+      <h3>BRP 收集者</h3>
+      <p>10 天内取了那张粉色卡</p>
+      <div class="stamp">W1</div>
+    </div>
+    <div class="polaroid rare">
+      <div class="photo">🍻</div>
+      <h3>Tom 的朋友</h3>
+      <p>fire alarm + Sunday roast</p>
+      <div class="stamp">W7</div>
+    </div>
+    <div class="polaroid epic">
+      <div class="photo">🇨🇳</div>
+      <h3>父母来过</h3>
+      <p>Heathrow T3 一年一次的拥抱</p>
+      <div class="stamp">W19</div>
+    </div>
+  </div>
+  <button class="choose">选 A · Polaroid</button>
+</div>
+
+<!-- ─── B: Ticket ─── -->
+<div class="style">
+  <div class="style-name"><b>STYLE B</b> · 票根 Ticket Stub — 像 British Rail 老车票</div>
+  <div class="row">
+    <div class="ticket common">
+      <div class="stub">
+        <div class="icon">🛂</div>
+        <div class="num">№ 001</div>
+      </div>
+      <div class="body">
+        <div class="row1">ACHIEVEMENT · COMMON</div>
+        <h3>BRP 收集者</h3>
+        <p>10 天内取了那张粉色卡。</p>
+        <div class="meta"><span>WEEK 01</span><span>ISSUED</span></div>
+      </div>
+    </div>
+    <div class="ticket rare">
+      <div class="stub">
+        <div class="icon">🍻</div>
+        <div class="num">№ 014</div>
+      </div>
+      <div class="body">
+        <div class="row1">ACHIEVEMENT · RARE</div>
+        <h3>Tom 的朋友</h3>
+        <p>fire alarm 那晚的"无奈一笑"开始的友谊。</p>
+        <div class="meta"><span>WEEK 07</span><span>ISSUED</span></div>
+      </div>
+    </div>
+    <div class="ticket epic">
+      <div class="stub">
+        <div class="icon">🇨🇳</div>
+        <div class="num">№ 023</div>
+      </div>
+      <div class="body">
+        <div class="row1">ACHIEVEMENT · EPIC</div>
+        <h3>父母来过</h3>
+        <p>Heathrow T3 那个拥抱。"对不起 这一年让你一个人。"</p>
+        <div class="meta"><span>WEEK 19</span><span>ISSUED</span></div>
+      </div>
+    </div>
+  </div>
+  <button class="choose">选 B · Ticket</button>
+</div>
+
+<!-- ─── C: Postage Stamp ─── -->
+<div class="style">
+  <div class="style-name"><b>STYLE C</b> · 邮票 Postage Stamp — 集邮册质感</div>
+  <div class="row">
+    <div class="stamp common">
+      <div class="inner">
+        <div class="country">UK · LONDON · 2024</div>
+        <div class="icon">🛂</div>
+        <h3>BRP 收集者</h3>
+        <p>10 天内取了那张粉色卡。</p>
+        <div class="denom">1p</div>
+        <div class="postmark">W1</div>
+      </div>
+    </div>
+    <div class="stamp rare">
+      <div class="inner">
+        <div class="country">UK · LONDON · 2024</div>
+        <div class="icon">🍻</div>
+        <h3>Tom 的朋友</h3>
+        <p>fire alarm 那晚的无奈一笑。</p>
+        <div class="denom">5p</div>
+        <div class="postmark">W7</div>
+      </div>
+    </div>
+    <div class="stamp epic">
+      <div class="inner">
+        <div class="country">UK · LONDON · 2024</div>
+        <div class="icon">🇨🇳</div>
+        <h3>父母来过</h3>
+        <p>Heathrow T3 一年一次的拥抱。</p>
+        <div class="denom">10p</div>
+        <div class="postmark">W19</div>
+      </div>
+    </div>
+  </div>
+  <button class="choose">选 C · Stamp</button>
+</div>
+
+<!-- ─── D: Minimal ─── -->
+<div class="style">
+  <div class="style-name"><b>STYLE D</b> · 极简 Brutalist — 跟游戏现有 UI 一致</div>
+  <div class="row">
+    <div class="minimal common">
+      <div class="tier"><span>COMMON</span><span>UNLOCKED</span></div>
+      <div class="icon">🛂</div>
+      <h3>BRP 收集者</h3>
+      <p>10 天内取了那张粉色卡。</p>
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="meta">W01 · 2024</div>
+    </div>
+    <div class="minimal rare">
+      <div class="tier"><span>RARE</span><span>UNLOCKED</span></div>
+      <div class="icon">🍻</div>
+      <h3>Tom 的朋友</h3>
+      <p>fire alarm 那晚的无奈一笑开始的友谊。</p>
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="meta">W07 · 2024</div>
+    </div>
+    <div class="minimal epic">
+      <div class="tier"><span>EPIC</span><span>UNLOCKED</span></div>
+      <div class="icon">🇨🇳</div>
+      <h3>父母来过</h3>
+      <p>Heathrow T3 那个拥抱。"对不起 这一年让你一个人。"</p>
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="meta">W19 · 2024</div>
+    </div>
+  </div>
+  <button class="choose">选 D · Minimal</button>
+</div>
+
+<div class="legend">
+  挑一个告诉我（A / B / C / D 或者具体哪种细节你想混合）<br>
+  四种都可以做导出 PNG，但视觉不一样<br>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>异乡 · UI v5 极简</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=DM+Mono&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+  body {
+    background: #0a0a0b;
+    color: #e0e0e0;
+    font-family: "Inter", -apple-system, sans-serif;
+    padding: 32px 16px 60px; min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-family: "Inter", sans-serif;
+    font-weight: 200; letter-spacing: 0.18em; font-size: 28px;
+    color: #f5f5f7; margin-bottom: 6px;
+  }
+  .lede {
+    text-align: center; opacity: 0.4; font-size: 12px;
+    margin-bottom: 40px; letter-spacing: 0.05em;
+    font-weight: 400;
+  }
+  .phones {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 36px; max-width: 1500px; margin: 0 auto;
+  }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+  .phone-label {
+    font-family: "DM Mono", monospace; font-size: 10px;
+    letter-spacing: 0.3em; color: #999;
+    margin-bottom: 14px; text-transform: uppercase;
+  }
+  .phone-label b { color: #f5f5f7; font-weight: 500; }
+  .phone-label .tag {
+    color: #34C759; font-weight: 700;
+    margin-left: 6px;
+  }
+  .phone {
+    width: 380px; height: 800px;
+    background: #000;
+    border: 10px solid #18181b;
+    border-radius: 44px;
+    overflow: hidden; position: relative;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.7),
+      inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .phone-screen { height: 100%; width: 100%; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .phone-content { flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .phone-content::-webkit-scrollbar { width: 0; }
+
+  .ios-status {
+    height: 44px; flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 22px; font-size: 14px; font-weight: 600;
+  }
+  .ios-status .icons { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 1. 地图 v5 · 极简单色 Tube Map                            */
+  /* ════════════════════════════════════════════════════════ */
+  .tube {
+    height: 100%;
+    background: #fafafa;
+    color: #0a0a0a;
+    font-family: "Inter", "PingFang SC", sans-serif;
+    display: flex; flex-direction: column;
+  }
+  .tube .ios-status { color: #0a0a0a; }
+  .tube-status {
+    padding: 0 22px 16px;
+  }
+  .tube-status .top {
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .tube-status .day-label {
+    font-family: "DM Mono", monospace; font-size: 9.5px;
+    letter-spacing: 0.25em; color: #999;
+    text-transform: uppercase;
+  }
+  .tube-status .day {
+    font-size: 22px; font-weight: 600;
+    color: #0a0a0a; margin-top: 2px;
+    letter-spacing: -0.02em;
+  }
+  .tube-status .actions {
+    display: flex; gap: 5px; padding-bottom: 6px;
+  }
+  .tube-status .actions div {
+    width: 8px; height: 8px; border-radius: 50%;
+    border: 1.5px solid #0a0a0a;
+  }
+  .tube-status .actions .filled { background: #0a0a0a; }
+
+  .tube-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 1px solid #ebebeb;
+    border-bottom: 1px solid #ebebeb;
+    margin: 0 22px;
+  }
+  .tube-stats .stat {
+    padding: 12px 4px;
+    text-align: left;
+    border-right: 1px solid #ebebeb;
+  }
+  .tube-stats .stat:last-child { border-right: none; }
+  .tube-stats .stat .lab {
+    font-family: "DM Mono", monospace; font-size: 8.5px;
+    letter-spacing: 0.2em; color: #999; text-transform: uppercase;
+  }
+  .tube-stats .stat .val {
+    font-size: 18px; font-weight: 600;
+    margin-top: 4px; letter-spacing: -0.02em;
+    color: #0a0a0a;
+  }
+
+  .tube-section-label {
+    padding: 22px 22px 14px;
+    font-family: "DM Mono", monospace; font-size: 9.5px;
+    letter-spacing: 0.25em; color: #999;
+    text-transform: uppercase;
+  }
+  .tube-map {
+    flex: 1;
+    position: relative;
+    margin: 0 22px;
+    min-height: 340px;
+  }
+  .tube-map svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  .tube-station {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 2;
+  }
+  .tube-station .dot {
+    width: 8px; height: 8px;
+    background: #fafafa;
+    border: 2px solid #0a0a0a;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .tube-station:hover .dot { transform: scale(1.5); }
+  .tube-station.interchange .dot {
+    width: 12px; height: 12px;
+    border-width: 2.5px;
+  }
+  .tube-station .name {
+    position: absolute;
+    font-family: "Inter", "PingFang SC", sans-serif;
+    font-weight: 600; font-size: 11px;
+    color: #0a0a0a;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .tube-station .name .en {
+    font-size: 9px; font-weight: 400;
+    color: #999; display: block;
+    letter-spacing: 0; margin-top: 1px;
+  }
+  .tube-station.you .dot {
+    width: 12px; height: 12px;
+    background: #ef4444;
+    border-color: #ef4444;
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.12);
+    animation: tube-pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes tube-pulse {
+    0%,100% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.12); }
+    50%     { box-shadow: 0 0 0 11px rgba(239, 68, 68, 0.2); }
+  }
+
+  .tube-bar {
+    padding: 14px 22px 18px;
+    display: flex; gap: 10px;
+  }
+  .tube-bar .menu {
+    padding: 12px 16px;
+    background: #f5f5f7;
+    border-radius: 8px;
+    font-size: 16px; cursor: pointer;
+  }
+  .tube-bar .end {
+    flex: 1; padding: 12px;
+    background: #0a0a0a; color: white;
+    text-align: center;
+    font-weight: 600; font-size: 13px;
+    letter-spacing: 0.3em;
+    border-radius: 8px; cursor: pointer;
+  }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 2. 微信 v5 · 完全保留                                      */
+  /* ════════════════════════════════════════════════════════ */
+  .wx { height: 100%; display: flex; flex-direction: column; background: #ededed; font-family: -apple-system, "PingFang SC", sans-serif; color: #1a1a1a; }
+  .wx .ios-status { color: #1a1a1a; background: #ededed; }
+  .wx-status-bar { background: #ededed; padding: 8px 16px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .wx-status-bar .title { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
+  .wx-status-bar .icons { display: flex; gap: 16px; color: #1a1a1a; font-size: 22px; }
+  .wx-status-bar .icons .ic { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .wx-search { margin: 0 8px 6px; padding: 7px 12px; background: rgba(0,0,0,0.06); border-radius: 8px; color: #999; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .wx-search .icon { font-size: 14px; opacity: 0.5; }
+  .wx-list { flex: 1; overflow-y: auto; background: white; }
+  .wx-item { padding: 10px 14px; display: flex; gap: 11px; cursor: pointer; position: relative; }
+  .wx-item::after { content: ""; position: absolute; left: 70px; right: 0; bottom: 0; height: 0.5px; background: #e6e6e6; }
+  .wx-item:hover { background: #f5f5f5; }
+  .wx-avatar { width: 44px; height: 44px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: 700; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+  .wx-item .body { flex: 1; min-width: 0; padding-top: 2px; }
+  .wx-item .top-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .wx-item .name { font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wx-item .time { font-size: 11px; color: #b2b2b2; flex-shrink: 0; font-feature-settings: "tnum"; }
+  .wx-item .bot-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 3px; }
+  .wx-item .last { font-size: 13px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .wx-item .badge { background: #fa5151; color: white; border-radius: 9px; padding: 1px 6px; font-size: 11px; min-width: 18px; text-align: center; line-height: 16px; font-weight: 500; box-shadow: 0 1px 3px rgba(250, 81, 81, 0.4); }
+  .wx-tabs { display: flex; background: #f7f7f7; border-top: 0.5px solid #d8d8d8; padding-top: 2px; }
+  .wx-tab { flex: 1; padding: 6px 0 4px; text-align: center; font-size: 10px; color: #888; }
+  .wx-tab.active { color: #07C160; }
+  .wx-tab .ic { font-size: 24px; display: block; margin-bottom: 1px; line-height: 1; }
+  .wx-bottom-spacer { background: #f7f7f7; height: 16px; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 3. Link2Ur v5 · Pure white, monochrome                    */
+  /* ════════════════════════════════════════════════════════ */
+  .l2u {
+    height: 100%; display: flex; flex-direction: column;
+    background: #ffffff;
+    font-family: "Inter", "PingFang SC", sans-serif;
+    color: #0a0a0a;
+  }
+  .l2u .ios-status { color: #0a0a0a; background: #fff; }
+  .l2u-header {
+    background: #fff;
+    color: #0a0a0a;
+    padding: 0 22px 12px;
+  }
+  .l2u-header-row {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .l2u-header .logo { display: flex; align-items: center; gap: 10px; }
+  .l2u-header .l-mark {
+    width: 32px; height: 32px;
+    background: #0a0a0a;
+    color: white;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 17px;
+  }
+  .l2u-header .brand-text .name {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .l2u-header .brand-text .tagline {
+    font-size: 11px; color: #999; margin-top: 1px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .l2u-header .more {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #f5f5f7;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer;
+  }
+
+  .l2u-stats-row {
+    display: flex;
+    border-top: 1px solid #ebebeb;
+    border-bottom: 1px solid #ebebeb;
+    margin: 0 22px;
+  }
+  .l2u-stats-row .stat {
+    flex: 1; padding: 12px 0;
+    border-right: 1px solid #ebebeb;
+  }
+  .l2u-stats-row .stat:last-child { border-right: none; }
+  .l2u-stats-row .stat .lab {
+    font-family: "DM Mono", monospace; font-size: 8.5px;
+    letter-spacing: 0.2em; color: #999; text-transform: uppercase;
+  }
+  .l2u-stats-row .stat .val {
+    font-size: 18px; font-weight: 600;
+    margin-top: 3px; letter-spacing: -0.02em;
+  }
+  .l2u-stats-row .stat .val .unit { font-size: 11px; color: #999; font-weight: 400; }
+
+  .l2u-toggle-wrap { padding: 14px 22px 0; }
+  .l2u-toggle {
+    display: flex; gap: 0;
+    background: #f5f5f7;
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .l2u-toggle button {
+    flex: 1; padding: 7px;
+    border-radius: 6px;
+    font-size: 13px; font-weight: 500;
+    border: none; cursor: pointer;
+    background: transparent; color: #666;
+  }
+  .l2u-toggle .active {
+    background: white; color: #0a0a0a;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  .l2u-chips {
+    display: flex; gap: 6px;
+    padding: 12px 22px 12px;
+    overflow-x: auto;
+  }
+  .l2u-chips::-webkit-scrollbar { display: none; }
+  .l2u-chip {
+    padding: 5px 11px;
+    border: 1px solid #ebebeb;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 500;
+    color: #666; white-space: nowrap;
+    background: white;
+  }
+  .l2u-chip.active {
+    background: #0a0a0a; color: white;
+    border-color: #0a0a0a;
+  }
+
+  .l2u-list {
+    flex: 1; overflow-y: auto;
+    padding: 0 22px 100px;
+  }
+  .l2u-task {
+    padding: 14px 0;
+    border-bottom: 1px solid #ebebeb;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer;
+  }
+  .l2u-task:last-child { border-bottom: none; }
+  .l2u-task .icon-wrap {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    background: #f5f5f7;
+    flex-shrink: 0;
+  }
+  .l2u-task .info { flex: 1; min-width: 0; }
+  .l2u-task .title {
+    font-size: 14.5px; font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    color: #0a0a0a;
+  }
+  .l2u-task .desc {
+    font-size: 12px; color: #999;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .l2u-task .reward {
+    font-size: 17px; font-weight: 700;
+    color: #0a0a0a;
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+  }
+
+  .l2u-fab {
+    position: absolute; bottom: 92px; right: 20px;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: #0a0a0a;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 300;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .l2u-bottom {
+    background: white;
+    border-top: 1px solid #ebebeb;
+    display: flex;
+    padding: 6px 0 20px;
+  }
+  .l2u-bottom .item {
+    flex: 1; padding: 6px 0;
+    text-align: center;
+    font-size: 10px; font-weight: 500;
+    color: #999;
+  }
+  .l2u-bottom .item.active { color: #0a0a0a; }
+  .l2u-bottom .ic { font-size: 19px; display: block; margin-bottom: 2px; line-height: 1; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 4. 日记 v5 · Apple Notes 极简                              */
+  /* ════════════════════════════════════════════════════════ */
+  .diary {
+    height: 100%;
+    background: #fafafa;
+    color: #0a0a0a;
+    font-family: "Inter", "PingFang SC", sans-serif;
+    overflow-y: auto;
+  }
+  .diary .ios-status { color: #0a0a0a; }
+  .diary-header {
+    padding: 0 22px 14px;
+  }
+  .diary-date {
+    font-family: "DM Mono", monospace;
+    font-size: 9.5px; letter-spacing: 0.25em;
+    color: #999; text-transform: uppercase;
+  }
+  .diary-title {
+    font-size: 28px; font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-top: 4px;
+    color: #0a0a0a;
+  }
+  .diary-tabs {
+    display: flex; gap: 0;
+    border-top: 1px solid #ebebeb;
+    border-bottom: 1px solid #ebebeb;
+    margin: 0 22px;
+    overflow-x: auto;
+  }
+  .diary-tabs::-webkit-scrollbar { display: none; }
+  .diary-tab {
+    padding: 13px 14px;
+    font-size: 13px; font-weight: 500;
+    color: #999; white-space: nowrap;
+    cursor: pointer;
+  }
+  .diary-tab.active {
+    color: #0a0a0a;
+    font-weight: 600;
+    border-bottom: 2px solid #0a0a0a;
+    margin-bottom: -1px;
+  }
+
+  .diary-section-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 18px 22px 12px;
+  }
+  .diary-section-header .h {
+    font-size: 14px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .diary-section-header .count {
+    font-family: "DM Mono", monospace;
+    font-size: 11px; color: #999;
+    letter-spacing: 0.1em;
+  }
+
+  /* 简洁 grid 卡片 — 不再倾斜不再 polaroid */
+  .ach-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 22px 22px;
+  }
+  .ach-card {
+    background: white;
+    border: 1px solid #ebebeb;
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .ach-card:hover {
+    border-color: #0a0a0a;
+    transform: translateY(-1px);
+  }
+  .ach-card .photo {
+    aspect-ratio: 1 / 1;
+    background: #f5f5f7;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px;
+    margin-bottom: 10px;
+  }
+  .ach-card.legendary .photo {
+    background: #0a0a0a;
+    color: white;
+  }
+  .ach-card .name {
+    font-size: 13px; font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+  .ach-card .meta {
+    margin-top: 4px;
+    font-family: "DM Mono", monospace;
+    font-size: 9.5px;
+    color: #999;
+    letter-spacing: 0.1em;
+  }
+  .ach-card .rarity {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 5px;
+    background: #f5f5f7;
+    border-radius: 3px;
+    font-size: 9px;
+    color: #666;
+  }
+  .ach-card.legendary .rarity {
+    background: #0a0a0a;
+    color: white;
+  }
+  .ach-card.locked {
+    opacity: 0.4;
+  }
+  .ach-card.locked .photo { color: #ccc; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 5. 故事 v5 · Apple Books 极简                             */
+  /* ════════════════════════════════════════════════════════ */
+  .story {
+    height: 100%;
+    overflow-y: auto;
+    background: #fafafa;
+    color: #0a0a0a;
+    font-family: "Inter", "PingFang SC", sans-serif;
+  }
+  .story .ios-status { color: #0a0a0a; }
+  .story-content {
+    padding: 0 22px 60px;
+  }
+  .story-eyebrow {
+    font-family: "DM Mono", monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.25em;
+    color: #999;
+    text-transform: uppercase;
+  }
+  .story-h2 {
+    font-family: "Noto Serif SC", "Inter", serif;
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: #0a0a0a;
+    margin: 4px 0 4px;
+    line-height: 1;
+  }
+  .story-week {
+    font-size: 14px; color: #666;
+    margin-bottom: 24px;
+    font-weight: 400;
+  }
+  .story-week b { color: #0a0a0a; font-weight: 600; }
+
+  .story-section {
+    margin-bottom: 28px;
+  }
+  .story-section-title {
+    font-family: "DM Mono", monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.25em;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* NPC 卡片 — 一行一张大卡 */
+  .npc-list {
+    display: flex; flex-direction: column;
+    gap: 1px;
+    background: #ebebeb;
+    border: 1px solid #ebebeb;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .npc-row {
+    display: flex; align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: white;
+    cursor: pointer;
+  }
+  .npc-row:hover { background: #fafafa; }
+  .npc-row.locked { opacity: 0.4; }
+  .npc-row .portrait {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: #f5f5f7;
+    color: #0a0a0a;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Noto Serif SC", serif;
+    font-weight: 700; font-size: 19px;
+    flex-shrink: 0;
+  }
+  .npc-row .body { flex: 1; min-width: 0; }
+  .npc-row .top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .npc-row .name {
+    font-size: 15px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .npc-row .ch {
+    font-family: "DM Mono", monospace;
+    font-size: 10px; color: #999;
+    letter-spacing: 0.1em;
+  }
+  .npc-row .progress-bar {
+    display: flex; gap: 3px;
+    margin-bottom: 5px;
+  }
+  .npc-row .progress-bar div {
+    flex: 1; height: 2px;
+    background: #ebebeb;
+    border-radius: 1px;
+  }
+  .npc-row .progress-bar div.done {
+    background: #0a0a0a;
+  }
+  .npc-row .last {
+    font-size: 12px; color: #999;
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .parents-block {
+    background: white;
+    border: 1px solid #ebebeb;
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .parents-block .top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .parents-block .lab {
+    font-size: 14px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .parents-block .ch {
+    font-family: "DM Mono", monospace;
+    font-size: 10px; color: #999;
+    letter-spacing: 0.1em;
+  }
+  .parents-block .progress-bar {
+    display: flex; gap: 3px;
+    margin-bottom: 10px;
+  }
+  .parents-block .progress-bar div {
+    flex: 1; height: 2px;
+    background: #ebebeb;
+    border-radius: 1px;
+  }
+  .parents-block .progress-bar div.done { background: #0a0a0a; }
+  .parents-block .summary {
+    font-size: 13px; color: #666;
+    line-height: 1.5;
+  }
+
+  .term-block {
+    background: white;
+    border: 1px solid #ebebeb;
+    border-radius: 12px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .term-block .lab {
+    font-family: "DM Mono", monospace;
+    font-size: 9.5px; color: #999;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .term-block .big {
+    font-size: 20px; font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 4px 0 6px;
+    color: #0a0a0a;
+  }
+  .term-block .next {
+    font-size: 12px; color: #999;
+  }
+  .term-block .next b { color: #0a0a0a; font-weight: 600; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* Bottom tab bar — 极简                                      */
+  /* ════════════════════════════════════════════════════════ */
+  .bottom-tabs {
+    background: #fff;
+    border-top: 1px solid #ebebeb;
+    padding: 6px 0 22px;
+    display: flex;
+  }
+  .bottom-tabs .tab {
+    flex: 1; text-align: center;
+    color: #b3b3b3;
+    font-size: 10px; padding: 4px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .bottom-tabs .tab.active { color: #0a0a0a; }
+  .bottom-tabs .tab .ic {
+    font-size: 22px; display: block; margin-bottom: 2px; line-height: 1;
+  }
+  .bottom-tabs .tab.l-mark .ic {
+    font-weight: 700; font-size: 14px;
+    width: 22px; height: 22px; line-height: 22px;
+    margin: 0 auto 4px;
+    background: #0a0a0a;
+    color: white;
+    border-radius: 6px;
+  }
+
+  .pick-btn {
+    margin-top: 16px; padding: 9px 24px;
+    background: transparent;
+    border: 1px solid #444;
+    color: #999;
+    font-family: "DM Mono", monospace; font-size: 10px;
+    letter-spacing: 0.3em; cursor: pointer;
+    border-radius: 2px;
+  }
+  .pick-btn:hover {
+    background: #1a1a1a;
+    border-color: #999;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<h1>异 鄉 · v5</h1>
+<div class="lede">极简 · 单色 · 大量留白 · 无装饰</div>
+
+<div class="phones">
+
+  <!-- ───────── 1. 地图 ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">1 · MAP</div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="tube">
+        <div class="ios-status"><span>9:41</span><span class="icons">100%</span></div>
+        <div class="tube-status">
+          <div class="top">
+            <div>
+              <div class="day-label">DAY 037 · WEEK 6</div>
+              <div class="day">第 6 周 · 周三</div>
+            </div>
+            <div class="actions">
+              <div class="filled"></div><div class="filled"></div><div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tube-stats">
+          <div class="stat"><div class="lab">学业</div><div class="val">42%</div></div>
+          <div class="stat"><div class="lab">钱包</div><div class="val">£980</div></div>
+          <div class="stat"><div class="lab">精力</div><div class="val">65%</div></div>
+          <div class="stat"><div class="lab">归属</div><div class="val">??</div></div>
+        </div>
+
+        <div class="tube-section-label">今天去哪</div>
+        <div class="tube-map">
+          <svg viewBox="0 0 380 340" preserveAspectRatio="xMidYMid meet">
+            <!-- 横线 -->
+            <line x1="60" y1="40" x2="320" y2="40" stroke="#0a0a0a" stroke-width="1.5"/>
+            <line x1="60" y1="280" x2="320" y2="280" stroke="#0a0a0a" stroke-width="1.5"/>
+            <!-- 竖线 -->
+            <line x1="60" y1="40" x2="60" y2="280" stroke="#0a0a0a" stroke-width="1.5"/>
+            <line x1="190" y1="40" x2="190" y2="280" stroke="#0a0a0a" stroke-width="1.5"/>
+            <line x1="320" y1="40" x2="320" y2="280" stroke="#0a0a0a" stroke-width="1.5"/>
+          </svg>
+          <div class="tube-station" style="top: 11.7%; left: 16%">
+            <div class="dot"></div>
+            <div class="name" style="left: 14px; top: -4px">公寓<span class="en">Russell Sq</span></div>
+          </div>
+          <div class="tube-station interchange" style="top: 11.7%; left: 50%">
+            <div class="dot"></div>
+            <div class="name" style="left: 50%; transform:translateX(-50%); top: -32px">大学 <span class="en">UCL</span></div>
+          </div>
+          <div class="tube-station interchange" style="top: 11.7%; left: 84%">
+            <div class="dot"></div>
+            <div class="name" style="right: 16px; top: -4px; text-align:right">图书馆<span class="en">Senate House</span></div>
+          </div>
+          <div class="tube-station interchange you" style="top: 47%; left: 50%">
+            <div class="dot"></div>
+            <div class="name" style="left: 18px; top: -4px">中央<span class="en">Bloomsbury</span></div>
+          </div>
+          <div class="tube-station" style="top: 47%; left: 16%">
+            <div class="dot"></div>
+            <div class="name" style="right: 14px; top: -4px; text-align:right">Tesco<span class="en">Express</span></div>
+          </div>
+          <div class="tube-station" style="top: 47%; left: 84%">
+            <div class="dot"></div>
+            <div class="name" style="right: 14px; top: -4px; text-align:right">车站<span class="en">King's X</span></div>
+          </div>
+          <div class="tube-station" style="top: 82%; left: 16%">
+            <div class="dot"></div>
+            <div class="name" style="left: 14px; top: -4px">Mei's<span class="en">Restaurant</span></div>
+          </div>
+          <div class="tube-station" style="top: 82%; left: 50%">
+            <div class="dot"></div>
+            <div class="name" style="left: 50%; transform:translateX(-50%); top: 12px">公园<span class="en">Hyde Park</span></div>
+          </div>
+          <div class="tube-station" style="top: 82%; left: 84%">
+            <div class="dot"></div>
+            <div class="name" style="right: 14px; top: -4px; text-align:right">Pub<span class="en">Camden</span></div>
+          </div>
+        </div>
+
+        <div class="tube-bar">
+          <div class="menu">⚙</div>
+          <div class="end">结束今天</div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab active"><span class="ic">◇</span>地图</div>
+        <div class="tab"><span class="ic">○</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">▭</span>日记</div>
+        <div class="tab"><span class="ic">▤</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 1</button>
+  </div>
+
+  <!-- ───────── 2. 微信 (LOCKED) ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">2 · CHAT <span class="tag">✓ LOCKED</span></div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="wx">
+        <div class="ios-status"><span>9:41</span><span class="icons">📶 100%</span></div>
+        <div class="wx-status-bar">
+          <div class="title">微信 (5)</div>
+          <div class="icons"><div class="ic">🔍</div><div class="ic">＋</div></div>
+        </div>
+        <div class="wx-search"><span class="icon">🔍</span>搜索</div>
+        <div class="wx-list">
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#fa5151,#cc4040)">妈</div><div class="body"><div class="top-row"><div class="name">🇨🇳 妈妈</div><div class="time">14:32</div></div><div class="bot-row"><div class="last">挂了电话妈妈又转了 500 块给你 😊</div><span class="badge">2</span></div></div></div>
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#9080b8,#6e5e9a)">岸</div><div class="body"><div class="top-row"><div class="name">伦敦留学生互助 (15)</div><div class="time">13:50</div></div><div class="bot-row"><div class="last">狗哥：紧急求助 地铁罢工 明天 tutorial 怎么办</div><span class="badge">3</span></div></div></div>
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#d4a574,#b08850)">S</div><div class="body"><div class="top-row"><div class="name">Sarah</div><div class="time">12:08</div></div><div class="bot-row"><div class="last">Hey! Want to study at Senate House tomorrow?</div></div></div></div>
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#a87fb8,#8060a0)">A</div><div class="body"><div class="top-row"><div class="name">Aditi</div><div class="time">10:24</div></div><div class="bot-row"><div class="last">Want some? I think we both need it. ☕</div></div></div></div>
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#5AC8FA,#007AFF)">L</div><div class="body"><div class="top-row"><div class="name">⚡ Link2Ur 通知</div><div class="time">09:00</div></div><div class="bot-row"><div class="last">本周新任务上线 4 个，最高 £85</div></div></div></div>
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#a07060,#7a4530)">M</div><div class="body"><div class="top-row"><div class="name">Mark · 隔壁房</div><div class="time">昨</div></div><div class="bot-row"><div class="last">Mate sorry about the kitchen 😅</div></div></div></div>
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#b85070,#8a3850)">梅</div><div class="body"><div class="top-row"><div class="name">Mei 姐</div><div class="time">周日</div></div><div class="bot-row"><div class="last">傻孩子 这周末有空过来吃饭吗</div></div></div></div>
+          <div class="wx-item"><div class="wx-avatar" style="background:linear-gradient(135deg,#c4615a,#9a4540)">凯</div><div class="body"><div class="top-row"><div class="name">王凯学长</div><div class="time">周日</div></div><div class="bot-row"><div class="last">[doge]</div></div></div></div>
+        </div>
+        <div class="wx-tabs">
+          <div class="wx-tab active"><span class="ic">💬</span>微信</div>
+          <div class="wx-tab"><span class="ic">👤</span>通讯录</div>
+          <div class="wx-tab"><span class="ic">🔍</span>发现</div>
+          <div class="wx-tab"><span class="ic">😀</span>我</div>
+        </div>
+        <div class="wx-bottom-spacer"></div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">◇</span>地图</div>
+        <div class="tab active"><span class="ic">○</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">▭</span>日记</div>
+        <div class="tab"><span class="ic">▤</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">已锁定</button>
+  </div>
+
+  <!-- ───────── 3. Link2Ur ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">3 · LINK2UR</div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="l2u">
+        <div class="ios-status"><span>9:41</span><span class="icons">100%</span></div>
+        <div class="l2u-header">
+          <div class="l2u-header-row">
+            <div class="logo">
+              <div class="l-mark">L</div>
+              <div class="brand-text">
+                <div class="name">Link2Ur</div>
+                <div class="tagline">留学生互助平台</div>
+              </div>
+            </div>
+            <div class="more">⋯</div>
+          </div>
+        </div>
+
+        <div class="l2u-stats-row">
+          <div class="stat"><div class="lab">接单</div><div class="val">7</div></div>
+          <div class="stat"><div class="lab">发单</div><div class="val">3</div></div>
+          <div class="stat"><div class="lab">本周</div><div class="val">£148</div></div>
+          <div class="stat"><div class="lab">评分</div><div class="val">5.0</div></div>
+        </div>
+
+        <div class="l2u-toggle-wrap">
+          <div class="l2u-toggle">
+            <button class="active">接单</button>
+            <button>发单</button>
+          </div>
+        </div>
+
+        <div class="l2u-chips">
+          <div class="l2u-chip active">全部</div>
+          <div class="l2u-chip">代购</div>
+          <div class="l2u-chip">跑腿</div>
+          <div class="l2u-chip">陪同</div>
+          <div class="l2u-chip">翻译</div>
+          <div class="l2u-chip">家教</div>
+        </div>
+
+        <div class="l2u-list">
+          <div class="l2u-task">
+            <div class="icon-wrap">🛍</div>
+            <div class="info">
+              <div class="title">Bicester Burberry 代购</div>
+              <div class="desc">Marylebone → Bicester · 9h</div>
+            </div>
+            <div class="reward">£95</div>
+          </div>
+          <div class="l2u-task">
+            <div class="icon-wrap">🛂</div>
+            <div class="info">
+              <div class="title">陪新生取 BRP</div>
+              <div class="desc">Acton Lane Post Office · 2h</div>
+            </div>
+            <div class="reward">£28</div>
+          </div>
+          <div class="l2u-task">
+            <div class="icon-wrap">📨</div>
+            <div class="info">
+              <div class="title">翻译 council 信</div>
+              <div class="desc">客户收到信 · 4 页 · 30min</div>
+            </div>
+            <div class="reward">£14</div>
+          </div>
+          <div class="l2u-task">
+            <div class="icon-wrap">📦</div>
+            <div class="info">
+              <div class="title">Argos 取件</div>
+              <div class="desc">Tottenham Court Road · 1.5h</div>
+            </div>
+            <div class="reward">£22</div>
+          </div>
+          <div class="l2u-task">
+            <div class="icon-wrap">📚</div>
+            <div class="info">
+              <div class="title">A-Level 数学家教</div>
+              <div class="desc">15 岁学生 · 周末远程</div>
+            </div>
+            <div class="reward">£35</div>
+          </div>
+          <div class="l2u-task">
+            <div class="icon-wrap">🚚</div>
+            <div class="info">
+              <div class="title">搬家帮手</div>
+              <div class="desc">Camden → Whitechapel · 4h</div>
+            </div>
+            <div class="reward">£60</div>
+          </div>
+        </div>
+
+        <div class="l2u-fab">＋</div>
+
+        <div class="l2u-bottom">
+          <div class="item active"><span class="ic">○</span>任务</div>
+          <div class="item"><span class="ic">▭</span>我的</div>
+          <div class="item"><span class="ic">◇</span>消息</div>
+          <div class="item"><span class="ic">◐</span>我</div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">◇</span>地图</div>
+        <div class="tab"><span class="ic">○</span>微信</div>
+        <div class="tab l-mark active"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">▭</span>日记</div>
+        <div class="tab"><span class="ic">▤</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 3</button>
+  </div>
+
+  <!-- ───────── 4. 日记 ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">4 · DIARY</div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="diary">
+        <div class="ios-status"><span>9:41</span><span class="icons">100%</span></div>
+        <div class="diary-header">
+          <div class="diary-date">2026 · APRIL · WEEK 28</div>
+          <div class="diary-title">日记</div>
+        </div>
+        <div class="diary-tabs">
+          <div class="diary-tab active">成就</div>
+          <div class="diary-tab">决定</div>
+          <div class="diary-tab">梦</div>
+          <div class="diary-tab">想家</div>
+        </div>
+        <div class="diary-section-header">
+          <div class="h">已收集</div>
+          <div class="count">8 / 41</div>
+        </div>
+        <div class="ach-grid">
+          <div class="ach-card">
+            <div class="photo">🍻</div>
+            <div class="name">Tom 的朋友</div>
+            <div class="meta">W7 OCT 25 <span class="rarity">RARE</span></div>
+          </div>
+          <div class="ach-card">
+            <div class="photo">🇨🇳</div>
+            <div class="name">父母来过</div>
+            <div class="meta">W19 JAN 26 <span class="rarity">EPIC</span></div>
+          </div>
+          <div class="ach-card legendary">
+            <div class="photo">🌹</div>
+            <div class="name">一辈子的朋友</div>
+            <div class="meta">W34 APR 26 <span class="rarity">LEGENDARY</span></div>
+          </div>
+          <div class="ach-card">
+            <div class="photo">🍗</div>
+            <div class="name">Sunday Roast</div>
+            <div class="meta">W12 NOV 25</div>
+          </div>
+          <div class="ach-card">
+            <div class="photo">🛂</div>
+            <div class="name">BRP 收集者</div>
+            <div class="meta">W2 SEP 25</div>
+          </div>
+          <div class="ach-card locked">
+            <div class="photo">🔒</div>
+            <div class="name">???</div>
+            <div class="meta">未解锁</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">◇</span>地图</div>
+        <div class="tab"><span class="ic">○</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab active"><span class="ic">▭</span>日记</div>
+        <div class="tab"><span class="ic">▤</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 4</button>
+  </div>
+
+  <!-- ───────── 5. 故事 ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">5 · STORY</div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="story">
+        <div class="ios-status"><span>9:41</span><span class="icons">100%</span></div>
+        <div class="story-content">
+          <div class="story-eyebrow">VOLUME I · WEEK 6</div>
+          <h2 class="story-h2">异 鄉</h2>
+          <div class="story-week">本周 · <b>秋学期 W 6 / 12</b></div>
+
+          <div class="story-section">
+            <div class="story-section-title">登场人物</div>
+            <div class="npc-list">
+              <div class="npc-row">
+                <div class="portrait">S</div>
+                <div class="body">
+                  <div class="top">
+                    <div class="name">Sarah</div>
+                    <div class="ch">CH 2 / 4</div>
+                  </div>
+                  <div class="progress-bar"><div class="done"></div><div class="done"></div><div></div><div></div></div>
+                  <div class="last">图书馆的下午</div>
+                </div>
+              </div>
+              <div class="npc-row">
+                <div class="portrait">凯</div>
+                <div class="body">
+                  <div class="top">
+                    <div class="name">王凯</div>
+                    <div class="ch">CH 1 / 5</div>
+                  </div>
+                  <div class="progress-bar"><div class="done"></div><div></div><div></div><div></div><div></div></div>
+                  <div class="last">第一次见面</div>
+                </div>
+              </div>
+              <div class="npc-row">
+                <div class="portrait">A</div>
+                <div class="body">
+                  <div class="top">
+                    <div class="name">Aditi</div>
+                    <div class="ch">CH 1 / 3</div>
+                  </div>
+                  <div class="progress-bar"><div class="done"></div><div></div><div></div></div>
+                  <div class="last">咖啡和叹息</div>
+                </div>
+              </div>
+              <div class="npc-row locked">
+                <div class="portrait">?</div>
+                <div class="body">
+                  <div class="top">
+                    <div class="name">??</div>
+                    <div class="ch">未开启</div>
+                  </div>
+                  <div class="progress-bar"><div></div><div></div><div></div></div>
+                  <div class="last">还没遇见</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="story-section">
+            <div class="story-section-title">家书</div>
+            <div class="parents-block">
+              <div class="top">
+                <div class="lab">父母线</div>
+                <div class="ch">CH 1 / 5</div>
+              </div>
+              <div class="progress-bar"><div class="done"></div><div></div><div></div><div></div><div></div></div>
+              <div class="summary">妈妈问了。等春节。</div>
+            </div>
+          </div>
+
+          <div class="story-section">
+            <div class="story-section-title">学年纪事</div>
+            <div class="term-block">
+              <div class="lab">本周</div>
+              <div class="big">秋学期 W 6 / 12</div>
+              <div class="next">下一里程碑 · <b>W 7 Reading Week</b></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">◇</span>地图</div>
+        <div class="tab"><span class="ic">○</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">▭</span>日记</div>
+        <div class="tab active"><span class="ic">▤</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 5</button>
+  </div>
+
+</div>
+
+<div style="text-align:center; margin: 60px auto 30px; color:#666; font-size:12px; max-width:680px; line-height:1.9; letter-spacing: 0.02em">
+  <b style="color:#f5f5f7;">v5 改动：</b><br><br>
+  · 砍光所有暖色 (牛皮纸 / 烫金 / 香槟金 / 米黄)<br>
+  · 砍光所有装饰 (胶带 / 印章 / 图钉 / ❀ ❦ / 罗盘 / 河流装饰)<br>
+  · 砍光所有装饰字体 (Caveat / Cinzel / Special Elite / Cormorant / Ma Shan Zheng / ZCOOL)<br>
+  · 全部用 <b style="color:#f5f5f7;">Inter + Noto Serif SC + DM Mono</b> 三个字体<br>
+  · 配色：黑白灰，单一红 accent (你的位置)<br>
+  · 大量留白，分隔靠 1px 灰线 (Apple Notes 习惯)<br>
+  · 故事页大标题"异鄉"用 Noto Serif SC，简洁<br>
+  · 日记 polaroid → 简洁卡片 grid (无倾斜)<br>
+  · 故事 NPC 卡 → 列表行 (Apple Settings 风)
+</div>
+
+</body>
+</html>

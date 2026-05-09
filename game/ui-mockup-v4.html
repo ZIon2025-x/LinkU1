@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>异乡 · UI v4</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700&family=Caveat:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Serif+SC:wght@300;400;500;600;700;900&family=DM+Mono&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=ZCOOL+QingKe+HuangYou&family=Special+Elite&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+  body {
+    background: radial-gradient(ellipse at top, #1a1410 0%, #0a0808 60%);
+    color: #e8e0d0;
+    font-family: -apple-system, sans-serif;
+    padding: 32px 16px 60px; min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-family: "Cormorant Garamond", "Noto Serif SC", serif;
+    font-weight: 500; letter-spacing: 0.18em; font-size: 32px;
+    color: #e8d0a8; margin-bottom: 6px;
+    text-shadow: 0 0 30px rgba(232, 208, 168, 0.15);
+  }
+  .lede {
+    text-align: center; opacity: 0.55; font-style: italic;
+    font-size: 13px; margin-bottom: 40px;
+    font-family: "EB Garamond", serif;
+  }
+  .phones {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 36px; max-width: 1500px; margin: 0 auto;
+  }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+  .phone-label {
+    font-family: "DM Mono", monospace; font-size: 10px;
+    letter-spacing: 0.3em; color: #d4b070;
+    margin-bottom: 14px; text-transform: uppercase;
+  }
+  .phone-label b { color: #f4ead8; font-weight: 500; }
+  .phone-label .tag {
+    color: #4a8a4a; font-weight: 700;
+    margin-left: 4px;
+  }
+  .phone-label .tag.locked { color: #34C759; }
+  .phone-label .tag.changed { color: #FFD700; }
+  .phone {
+    width: 380px; height: 800px;
+    background: #000;
+    border: 10px solid #0d0a08;
+    border-radius: 44px;
+    overflow: hidden; position: relative;
+    box-shadow:
+      0 0 60px rgba(212, 176, 112, 0.06),
+      0 30px 80px rgba(0,0,0,0.7),
+      inset 0 0 0 1px rgba(232,224,208,0.08);
+  }
+  .phone-screen { height: 100%; width: 100%; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .phone-content { flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .phone-content::-webkit-scrollbar { width: 0; }
+
+  .ios-status {
+    height: 44px; flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 22px; font-size: 14px; font-weight: 600;
+  }
+  .ios-status .icons { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 1. 地图 v4 · London Tube Map (Harry Beck style)          */
+  /* ════════════════════════════════════════════════════════ */
+  .tube {
+    height: 100%;
+    background: #f6f1e8;
+    color: #1a1a1a;
+    font-family: "Inter", -apple-system, "PingFang SC", sans-serif;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .tube .ios-status { color: #1a1a1a; }
+  .tube-status {
+    padding: 4px 18px 12px;
+    background: #f6f1e8;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .tube-status .top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .tube-status .day-label {
+    font-family: "DM Mono", monospace; font-size: 9.5px;
+    letter-spacing: 0.3em; color: #c1272d;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .tube-status .day {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 19px;
+    color: #1a1a1a; margin-top: 2px;
+    letter-spacing: -0.01em;
+  }
+  .tube-status .day .weather {
+    font-weight: 400; font-size: 12px;
+    margin-left: 6px; opacity: 0.55;
+  }
+  .tube-status .actions { display: flex; gap: 5px; padding-top: 5px; }
+  .tube-status .actions div {
+    width: 11px; height: 11px; border-radius: 50%;
+    border: 1.5px solid #c1272d;
+  }
+  .tube-status .actions .filled {
+    background: #c1272d;
+    box-shadow: 0 0 4px rgba(193, 39, 45, 0.4);
+  }
+  .tube-status .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px; margin-top: 12px;
+  }
+  .tube-status .stats .stat {
+    background: white;
+    padding: 7px 6px; text-align: center;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 4px;
+  }
+  .tube-status .stats .stat .lab {
+    font-family: "DM Mono", monospace; font-size: 8px;
+    letter-spacing: 0.2em; color: #707070; text-transform: uppercase;
+  }
+  .tube-status .stats .stat .val {
+    font-family: "Inter", sans-serif;
+    font-size: 15px; font-weight: 800; margin-top: 2px;
+    letter-spacing: -0.02em; color: #1a1a1a;
+  }
+
+  .tube-header {
+    background: white;
+    margin: 14px 14px 0;
+    border-radius: 8px 8px 0 0;
+    padding: 14px 14px 8px;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-bottom: none;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .tube-roundel {
+    display: flex; align-items: center; gap: 9px;
+  }
+  .tube-roundel .ring {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 5.5px solid #c1272d;
+    background: white;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .tube-roundel .ring::before {
+    content: "";
+    position: absolute;
+    left: -10px; right: -10px;
+    top: 50%; height: 6px;
+    transform: translateY(-50%);
+    background: #003688;
+    z-index: -1;
+  }
+  .tube-roundel .lab {
+    background: #003688; color: white;
+    padding: 1.5px 7px;
+    font-family: "Inter", sans-serif;
+    font-weight: 700; font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .tube-header .title {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 14px;
+    letter-spacing: -0.01em;
+    color: #1a1a1a;
+  }
+  .tube-header .title .sub {
+    display: block;
+    font-size: 9px; font-weight: 500;
+    color: #707070; letter-spacing: 0.15em;
+    text-transform: uppercase; margin-top: 1px;
+  }
+
+  .tube-map {
+    background: white;
+    margin: 0 14px;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-top: none;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-height: 320px;
+  }
+  .tube-map svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  .tube-station {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 2;
+  }
+  .tube-station .dot {
+    width: 12px; height: 12px;
+    background: white;
+    border: 2.5px solid #1a1a1a;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .tube-station:hover .dot {
+    transform: scale(1.3);
+  }
+  .tube-station.interchange .dot {
+    width: 14px; height: 14px;
+    border-width: 3px;
+  }
+  .tube-station .name {
+    position: absolute;
+    font-family: "Inter", "PingFang SC", sans-serif;
+    font-weight: 700; font-size: 9.5px;
+    color: #1a1a1a;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .tube-station .name .en {
+    font-size: 7px; font-weight: 500;
+    opacity: 0.55; display: block;
+    letter-spacing: 0;
+  }
+  .tube-station.you .dot {
+    background: #c1272d;
+    border-color: #c1272d;
+    box-shadow:
+      0 0 0 4px rgba(193, 39, 45, 0.18),
+      0 0 0 8px rgba(193, 39, 45, 0.08);
+    animation: tube-pulse 2s ease-in-out infinite;
+  }
+  @keyframes tube-pulse {
+    0%,100% { box-shadow: 0 0 0 4px rgba(193, 39, 45, 0.18), 0 0 0 8px rgba(193, 39, 45, 0.08); }
+    50%     { box-shadow: 0 0 0 6px rgba(193, 39, 45, 0.28), 0 0 0 14px rgba(193, 39, 45, 0.12); }
+  }
+  .tube-station.you::before {
+    content: "你在这";
+    position: absolute;
+    background: #c1272d; color: white;
+    font-family: "Inter", "PingFang SC", sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    padding: 2px 6px;
+    letter-spacing: 0.1em;
+    top: -22px; left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .tube-legend {
+    margin: 0 14px;
+    background: white;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 8px 12px;
+    display: flex; gap: 9px;
+    align-items: center;
+    overflow-x: auto;
+    font-family: "Inter", sans-serif;
+    font-size: 10px;
+  }
+  .tube-legend::-webkit-scrollbar { display: none; }
+  .tube-legend .li {
+    display: flex; align-items: center; gap: 4px;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .tube-legend .swatch {
+    width: 16px; height: 4px;
+    border-radius: 1px;
+  }
+
+  .tube-bar {
+    padding: 12px 14px;
+    display: flex; gap: 8px;
+    background: #f6f1e8;
+  }
+  .tube-bar .menu {
+    padding: 11px 16px;
+    background: white;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 6px;
+    font-size: 16px; cursor: pointer;
+  }
+  .tube-bar .end {
+    flex: 1; padding: 11px;
+    background: #c1272d; color: white;
+    text-align: center;
+    font-family: "Inter", "PingFang SC", sans-serif;
+    font-weight: 700; font-size: 13px;
+    letter-spacing: 0.4em;
+    border-radius: 6px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(193, 39, 45, 0.3);
+  }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 2. 微信 v4 · 完全保留 v3                                   */
+  /* ════════════════════════════════════════════════════════ */
+  .wx { height: 100%; display: flex; flex-direction: column; background: #ededed; font-family: -apple-system, "PingFang SC", sans-serif; color: #1a1a1a; }
+  .wx .ios-status { color: #1a1a1a; background: #ededed; }
+  .wx-status-bar { background: #ededed; padding: 8px 16px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .wx-status-bar .title { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
+  .wx-status-bar .icons { display: flex; gap: 16px; color: #1a1a1a; font-size: 22px; }
+  .wx-status-bar .icons .ic { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .wx-search { margin: 0 8px 6px; padding: 7px 12px; background: rgba(0,0,0,0.06); border-radius: 8px; color: #999; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .wx-search .icon { font-size: 14px; opacity: 0.5; }
+  .wx-list { flex: 1; overflow-y: auto; background: white; }
+  .wx-item { padding: 10px 14px; display: flex; gap: 11px; cursor: pointer; position: relative; }
+  .wx-item::after { content: ""; position: absolute; left: 70px; right: 0; bottom: 0; height: 0.5px; background: #e6e6e6; }
+  .wx-item:hover { background: #f5f5f5; }
+  .wx-avatar { width: 44px; height: 44px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: 700; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+  .wx-item .body { flex: 1; min-width: 0; padding-top: 2px; }
+  .wx-item .top-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .wx-item .name { font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wx-item .time { font-size: 11px; color: #b2b2b2; flex-shrink: 0; font-feature-settings: "tnum"; }
+  .wx-item .bot-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 3px; }
+  .wx-item .last { font-size: 13px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .wx-item .badge { background: #fa5151; color: white; border-radius: 9px; padding: 1px 6px; font-size: 11px; min-width: 18px; text-align: center; line-height: 16px; font-weight: 500; box-shadow: 0 1px 3px rgba(250, 81, 81, 0.4); }
+  .wx-tabs { display: flex; background: #f7f7f7; border-top: 0.5px solid #d8d8d8; padding-top: 2px; }
+  .wx-tab { flex: 1; padding: 6px 0 4px; text-align: center; font-size: 10px; color: #888; }
+  .wx-tab.active { color: #07C160; }
+  .wx-tab .ic { font-size: 24px; display: block; margin-bottom: 1px; line-height: 1; }
+  .wx-bottom-spacer { background: #f7f7f7; height: 16px; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 3. Link2Ur v4 · Single-color deep navy + champagne gold  */
+  /* ════════════════════════════════════════════════════════ */
+  .l2u {
+    height: 100%; display: flex; flex-direction: column;
+    background: #f5f6fa;
+    font-family: -apple-system, "PingFang SC", sans-serif;
+    color: #0a0e1a;
+  }
+  .l2u .ios-status { color: white; background: #0a2848; }
+  .l2u-header {
+    background: #0a2848;
+    color: white;
+    padding: 0 18px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .l2u-header::before {
+    content: "";
+    position: absolute; top: -30%; right: -20%;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .l2u-header-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 4px;
+  }
+  .l2u-header .logo { display: flex; align-items: center; gap: 10px; }
+  .l2u-header .l-mark {
+    width: 36px; height: 36px;
+    background: white;
+    color: #0a2848;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Cormorant Garamond", serif;
+    font-weight: 700; font-size: 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .l2u-header .brand-text .name {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .l2u-header .brand-text .tagline {
+    font-size: 10px; opacity: 0.65; margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+  .l2u-header .rating-card {
+    text-align: right;
+    line-height: 1.1;
+  }
+  .l2u-header .rating-card .stars { color: #c4a574; font-size: 11px; letter-spacing: 0.1em; }
+  .l2u-header .rating-card .num {
+    font-size: 20px; font-weight: 800;
+    margin-top: 2px;
+    letter-spacing: -0.02em;
+  }
+  .l2u-header .stats {
+    display: flex; gap: 6px; margin-top: 14px;
+  }
+  .l2u-header .stats .pill {
+    padding: 5px 11px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+    display: flex; align-items: center; gap: 5px;
+    color: rgba(255,255,255,0.85);
+  }
+  .l2u-header .stats .pill b { font-weight: 700; color: white; }
+
+  .l2u-toggle-wrap { padding: 12px 16px 6px; background: white; }
+  .l2u-toggle {
+    display: flex; gap: 0;
+    background: #eef0f4;
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .l2u-toggle button {
+    flex: 1; padding: 7px;
+    border-radius: 6px;
+    font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer;
+    background: transparent; color: #6b7280;
+    transition: all 0.2s;
+  }
+  .l2u-toggle .active {
+    background: white; color: #0a2848;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  .l2u-chips { display: flex; gap: 5px; padding: 4px 16px 12px; overflow-x: auto; background: white; }
+  .l2u-chips::-webkit-scrollbar { display: none; }
+  .l2u-chip {
+    padding: 5px 11px; background: #f0f2f5;
+    border-radius: 999px;
+    font-size: 11.5px; font-weight: 500; color: #6b7280;
+    white-space: nowrap;
+  }
+  .l2u-chip.active {
+    background: #0a2848; color: white;
+  }
+
+  .l2u-list { flex: 1; overflow-y: auto; padding: 0 14px 100px; background: #f5f6fa; }
+  .l2u-task {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .l2u-task:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .l2u-task.featured {
+    background: white;
+    border: 1px solid #c4a574;
+    box-shadow:
+      0 0 0 1px rgba(196, 165, 116, 0.2),
+      0 1px 2px rgba(196, 165, 116, 0.1);
+    position: relative;
+  }
+  .l2u-task.featured::before {
+    content: "高薪推荐";
+    position: absolute; top: -1px; right: 12px;
+    background: #c4a574;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 0 0 6px 6px;
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  .l2u-task .row1 { display: flex; gap: 11px; align-items: flex-start; }
+  .l2u-task .icon {
+    width: 40px; height: 40px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; flex-shrink: 0;
+  }
+  .l2u-task.shopping .icon { background: #fff4e6; }
+  .l2u-task.translate .icon { background: #e6f0ff; }
+  .l2u-task.accompany .icon { background: #ffe6ec; }
+  .l2u-task.pickup .icon { background: #e6f7ee; }
+  .l2u-task.tutor .icon { background: #f4e6ff; }
+  .l2u-task .info { flex: 1; min-width: 0; padding-top: 1px; }
+  .l2u-task .title {
+    font-size: 14px; font-weight: 600;
+    letter-spacing: -0.005em;
+    margin-bottom: 3px;
+    line-height: 1.3;
+  }
+  .l2u-task .desc {
+    font-size: 11.5px; color: #6b7280;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .l2u-task .meta {
+    margin-top: 7px;
+    display: flex; gap: 9px;
+    font-size: 10.5px; color: #9ca3af;
+  }
+  .l2u-task .meta span { display: flex; align-items: center; gap: 3px; }
+  .l2u-task .reward {
+    font-weight: 800; font-size: 19px;
+    flex-shrink: 0; align-self: flex-start;
+    letter-spacing: -0.02em;
+    color: #0a2848;
+    font-feature-settings: "tnum";
+    padding-top: 1px;
+  }
+  .l2u-task.featured .reward { color: #a07a3a; }
+
+  .l2u-fab {
+    position: absolute; bottom: 92px; right: 18px;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: #0a2848;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 300;
+    box-shadow:
+      0 6px 16px rgba(10, 40, 72, 0.4),
+      0 2px 6px rgba(10, 40, 72, 0.2);
+    cursor: pointer;
+  }
+
+  .l2u-bottom {
+    background: white;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    display: flex;
+    padding: 6px 0 20px;
+  }
+  .l2u-bottom .item {
+    flex: 1; padding: 6px 0;
+    text-align: center;
+    font-size: 10px; font-weight: 500;
+    color: #9ca3af;
+  }
+  .l2u-bottom .item.active { color: #0a2848; }
+  .l2u-bottom .ic { font-size: 21px; display: block; margin-bottom: 2px; line-height: 1; }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 4. 日记 v4 · Kraft paper + sepia ink                      */
+  /* ════════════════════════════════════════════════════════ */
+  .diary {
+    height: 100%;
+    background: #d8c096;
+    background-image:
+      linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 30%, rgba(0,0,0,0.04) 100%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>");
+    background-blend-mode: multiply;
+    background-color: #d4ba8c;
+    font-family: "Caveat", "Ma Shan Zheng", cursive;
+    color: #3a2818;
+    overflow-y: auto;
+    position: relative;
+  }
+  .diary::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(90, 56, 24, 0.18) 27px, rgba(90, 56, 24, 0.18) 27.5px, transparent 27.5px, transparent 28px);
+    pointer-events: none;
+  }
+  .diary::after {
+    content: "";
+    position: absolute;
+    left: 32px; top: 0; bottom: 0;
+    width: 1.5px;
+    background: linear-gradient(180deg, transparent, rgba(160, 30, 30, 0.55) 8%, rgba(160, 30, 30, 0.55) 92%, transparent);
+    pointer-events: none;
+  }
+  .diary .ios-status { color: #3a2818; }
+  .diary-content {
+    padding: 6px 22px 24px 44px;
+    line-height: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .diary-tape {
+    position: absolute;
+    width: 84px; height: 22px;
+    background:
+      linear-gradient(135deg, rgba(212,176,112,0.85) 0%, rgba(180,140,80,0.7) 100%);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transform: rotate(-3deg);
+    top: 56px; left: 30%;
+    z-index: 3;
+  }
+  .diary-tape::before, .diary-tape::after {
+    content: ""; position: absolute;
+    top: 0; bottom: 0; width: 8px;
+    background: rgba(0,0,0,0.05);
+  }
+  .diary-tape::before { left: 0; }
+  .diary-tape::after { right: 0; }
+
+  .diary-stamp {
+    position: absolute;
+    top: 80px; right: 18px;
+    border: 2.5px solid #a01e1e;
+    color: #a01e1e;
+    padding: 5px 9px;
+    font-family: "Special Elite", "ZCOOL XiaoWei", monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.18em;
+    transform: rotate(11deg);
+    background: rgba(216, 192, 150, 0.5);
+    z-index: 2;
+    box-shadow: inset 0 0 6px rgba(160, 30, 30, 0.15);
+  }
+  .diary-stamp .top {
+    font-size: 8px; letter-spacing: 0.25em;
+    margin-bottom: 1px;
+    text-align: center;
+  }
+
+  .diary-date {
+    font-family: "Special Elite", monospace;
+    font-size: 11px; color: #a01e1e;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transform: rotate(-1deg);
+    display: inline-block;
+  }
+  .diary-title {
+    font-family: "Ma Shan Zheng", "ZCOOL QingKe HuangYou", cursive;
+    font-size: 38px; font-weight: 400;
+    color: #3a2818;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+    transform: rotate(-0.5deg);
+    margin: 4px 0 8px;
+    line-height: 1;
+  }
+  .diary-subtitle {
+    font-family: "Caveat", cursive;
+    font-size: 17px; color: #5a3818;
+    font-weight: 500;
+    transform: rotate(-0.3deg);
+    margin-bottom: 16px;
+    opacity: 0.7;
+    line-height: 1.3;
+  }
+
+  .diary-tabs {
+    display: flex; gap: 2px;
+    margin: 14px 0 18px;
+    border-bottom: 2px dashed rgba(58, 40, 24, 0.45);
+    padding-bottom: 6px;
+    overflow-x: auto;
+  }
+  .diary-tab {
+    padding: 4px 10px;
+    font-family: "Ma Shan Zheng", cursive;
+    font-size: 16px;
+    color: #5a3818; white-space: nowrap;
+    border-radius: 4px 4px 0 0;
+  }
+  .diary-tab.active {
+    color: #a01e1e;
+    background: rgba(160, 30, 30, 0.08);
+    border-bottom: 2.5px solid #a01e1e;
+    margin-bottom: -8.5px;
+    padding-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .diary-section-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 4px 0 12px;
+    transform: rotate(-0.3deg);
+  }
+  .diary-section-header .h {
+    font-family: "Ma Shan Zheng", cursive;
+    font-size: 22px; color: #3a2818;
+  }
+  .diary-section-header .count {
+    font-family: "Special Elite", monospace;
+    font-size: 11px; color: #a01e1e;
+    letter-spacing: 0.15em;
+    border: 1px solid #a01e1e;
+    padding: 2px 6px;
+  }
+
+  /* 2x2 大卡 polaroid */
+  .ach-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .ach-pol {
+    background: white;
+    padding: 9px 9px 26px;
+    box-shadow:
+      0 5px 12px rgba(58, 24, 12, 0.22),
+      0 2px 4px rgba(58, 24, 12, 0.1);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.25s ease;
+  }
+  .ach-pol:nth-child(1) { transform: rotate(-1.5deg); }
+  .ach-pol:nth-child(2) { transform: rotate(1.2deg); }
+  .ach-pol:nth-child(3) { transform: rotate(0.8deg); }
+  .ach-pol:nth-child(4) { transform: rotate(-1deg); }
+  .ach-pol:hover {
+    transform: rotate(0) scale(1.05) translateY(-3px);
+    box-shadow:
+      0 12px 24px rgba(58, 24, 12, 0.3),
+      0 4px 8px rgba(58, 24, 12, 0.15);
+    z-index: 5;
+  }
+  .ach-pol .photo {
+    aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 46px;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,0.18), transparent 60%),
+      linear-gradient(180deg, #2a2520, #1a1612);
+    color: #f4ead8;
+    margin-bottom: 8px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  .ach-pol.rare .photo {
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,0.18), transparent 60%),
+      linear-gradient(180deg, #4a6a8a, #2c4a6e);
+  }
+  .ach-pol.epic .photo {
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,0.2), transparent 60%),
+      linear-gradient(180deg, #7a4d8a, #5e3870);
+  }
+  .ach-pol.legendary .photo {
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,0.3), transparent 60%),
+      linear-gradient(180deg, #d4a050, #a07020);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.3),
+      0 0 16px rgba(255, 215, 0, 0.45);
+  }
+  .ach-pol .name {
+    font-family: "Ma Shan Zheng", "Cormorant Garamond", cursive;
+    font-size: 16px; font-weight: 600;
+    color: #2a2520;
+    text-align: center;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+  }
+  .ach-pol .date {
+    text-align: center;
+    margin-top: 3px;
+    font-family: "Special Elite", monospace;
+    font-size: 9px;
+    color: #888;
+    letter-spacing: 0.2em;
+  }
+  .ach-pol .pin {
+    position: absolute;
+    top: -7px; left: 50%;
+    transform: translateX(-50%);
+    width: 10px; height: 10px;
+    background: radial-gradient(circle at 30% 30%, #d44, #a11);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    z-index: 2;
+  }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* 5. 故事 v4 · Dark fantasy book — deep brown + gold        */
+  /* ════════════════════════════════════════════════════════ */
+  .story {
+    height: 100%;
+    overflow-y: auto;
+    background:
+      radial-gradient(ellipse at center, #2a1f14 0%, #1a1208 100%);
+    color: #e8c898;
+    font-family: "Cormorant Garamond", "Noto Serif SC", serif;
+    position: relative;
+  }
+  .story::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n2'><feTurbulence type='fractalNoise' baseFrequency='0.7'/></filter><rect width='100%' height='100%' filter='url(%23n2)' opacity='0.5'/></svg>");
+    opacity: 0.04;
+    pointer-events: none;
+  }
+  .story .ios-status { color: #e8c898; }
+  .story-spine {
+    position: absolute;
+    left: 50%; top: 50px; bottom: 0;
+    width: 1px;
+    background:
+      linear-gradient(180deg, transparent, rgba(212, 160, 80, 0.3) 15%, rgba(212, 160, 80, 0.3) 85%, transparent);
+    pointer-events: none;
+  }
+  .story-content {
+    padding: 8px 22px 60px;
+    position: relative;
+  }
+
+  .bookmark {
+    position: absolute;
+    top: 0; right: 26px;
+    width: 24px;
+    background: #a01e1e;
+    color: #fdf6e7;
+    text-align: center;
+    padding: 8px 4px 16px;
+    font-family: "DM Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    writing-mode: vertical-rl;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 86%, 0 100%);
+    z-index: 4;
+  }
+
+  .story-vol {
+    text-align: center;
+    font-family: "Cinzel", "Cormorant Garamond", serif;
+    font-size: 10.5px;
+    letter-spacing: 0.5em;
+    color: #d4a050;
+    margin-top: 6px;
+    margin-bottom: 4px;
+  }
+  .story-h2 {
+    text-align: center;
+    font-family: "ZCOOL QingKe HuangYou", "Ma Shan Zheng", "Cinzel", serif;
+    font-size: 50px; font-weight: 400;
+    color: #f0d090;
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: 0.18em;
+    text-shadow:
+      0 0 24px rgba(240, 208, 144, 0.25),
+      0 2px 4px rgba(0,0,0,0.5);
+  }
+  .story-divider {
+    text-align: center; margin: 6px 0 24px;
+    color: #a07020; opacity: 0.7;
+    font-size: 13px; letter-spacing: 0.7em;
+  }
+
+  .story-section { margin-bottom: 24px; }
+  .story-section-title {
+    text-align: center;
+    font-family: "Ma Shan Zheng", "Cormorant Garamond", serif;
+    font-size: 18px; font-weight: 500;
+    color: #d4a050;
+    margin-bottom: 14px;
+    letter-spacing: 0.15em;
+    position: relative;
+  }
+  .story-section-title::before, .story-section-title::after {
+    content: "";
+    display: inline-block;
+    width: 30px; height: 1px;
+    background: linear-gradient(90deg, transparent, #a07020 50%, transparent);
+    vertical-align: middle;
+    margin: 0 14px;
+  }
+
+  /* 2 列大 NPC 卡 */
+  .npc-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .npc-card {
+    background:
+      linear-gradient(180deg, #3a2818 0%, #1f1408 100%);
+    border: 1px solid #a07020;
+    border-radius: 4px;
+    padding: 14px 8px 10px;
+    text-align: center;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(212, 160, 80, 0.15);
+    position: relative;
+  }
+  .npc-card.locked { opacity: 0.45; filter: saturate(0.5); }
+  .npc-card.locked .name { color: #888; }
+  .npc-card .portrait-frame {
+    width: 70px; height: 70px;
+    margin: 0 auto;
+    border-radius: 50%;
+    padding: 2.5px;
+    background: linear-gradient(135deg, #f0d090, #a07020 60%);
+    box-shadow:
+      0 0 18px rgba(212, 160, 80, 0.3),
+      0 2px 4px rgba(0,0,0,0.5);
+  }
+  .npc-card .portrait {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    color: white; font-size: 28px; font-weight: 600;
+    font-family: "Ma Shan Zheng", serif;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+  }
+  .npc-card .name {
+    margin-top: 10px;
+    font-family: "Ma Shan Zheng", "Cormorant Garamond", serif;
+    font-size: 16px; font-weight: 600;
+    color: #f0d090;
+    letter-spacing: 0.08em;
+  }
+  .npc-card .progress {
+    font-family: "Special Elite", monospace;
+    font-size: 9.5px; color: #a07020;
+    letter-spacing: 0.15em;
+    margin-top: 4px;
+  }
+  .npc-card .progress-bar {
+    display: flex; gap: 2px; margin: 6px auto;
+    justify-content: center;
+    width: fit-content;
+  }
+  .npc-card .progress-bar div {
+    width: 10px; height: 3px;
+    background: rgba(212, 160, 80, 0.18);
+    border-radius: 1px;
+  }
+  .npc-card .progress-bar div.done {
+    background: linear-gradient(90deg, #f0d090, #a07020);
+    box-shadow: 0 0 4px rgba(240, 208, 144, 0.4);
+  }
+  .npc-card .last {
+    font-size: 11px; color: #c0a070;
+    font-style: italic; line-height: 1.4;
+    margin-top: 6px;
+    min-height: 30px;
+    font-family: "Cormorant Garamond", "Noto Serif SC", serif;
+  }
+
+  .parents-line {
+    background:
+      linear-gradient(135deg, rgba(160, 30, 30, 0.18) 0%, rgba(160, 30, 30, 0.06) 100%);
+    border: 1px solid rgba(212, 160, 80, 0.4);
+    padding: 14px 16px;
+    border-radius: 4px;
+    position: relative;
+  }
+  .parents-line::before {
+    content: "🇨🇳";
+    position: absolute; top: -10px; left: 16px;
+    background: #1a1208;
+    padding: 0 6px; font-size: 14px;
+  }
+  .parents-line .head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: "Ma Shan Zheng", "Cormorant Garamond", serif;
+    font-size: 15px; font-weight: 600;
+    color: #d4a050;
+    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+  }
+  .parents-line .head .ch {
+    font-family: "Special Elite", monospace; font-size: 10px;
+    color: #a07020;
+  }
+  .parents-line .progress-dots {
+    display: flex; gap: 4px; margin-bottom: 10px;
+  }
+  .parents-line .progress-dots div {
+    flex: 1; height: 3px;
+    background: rgba(212, 160, 80, 0.15);
+    border-radius: 2px;
+  }
+  .parents-line .progress-dots div.done {
+    background: linear-gradient(90deg, #f0d090, #a07020);
+    box-shadow: 0 0 4px rgba(240, 208, 144, 0.3);
+  }
+  .parents-line .summary {
+    font-size: 14px; font-style: italic; color: #e8c898;
+    font-family: "Cormorant Garamond", "Noto Serif SC", serif;
+    line-height: 1.5;
+  }
+
+  /* ════════════════════════════════════════════════════════ */
+  /* Bottom tab bar — 公共 (浅版本 vs 深版本)                  */
+  /* ════════════════════════════════════════════════════════ */
+  .bottom-tabs {
+    background:
+      linear-gradient(180deg, rgba(26, 22, 18, 0.95) 0%, #0a0808 100%);
+    border-top: 1px solid rgba(212, 176, 112, 0.15);
+    padding: 6px 0 22px;
+    display: flex;
+    backdrop-filter: blur(12px);
+  }
+  .bottom-tabs .tab {
+    flex: 1; text-align: center;
+    color: rgba(232, 224, 208, 0.5);
+    font-size: 10px; padding: 4px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    font-family: -apple-system, "PingFang SC", sans-serif;
+  }
+  .bottom-tabs .tab.active { color: #d4b070; }
+  .bottom-tabs .tab.active .ic { text-shadow: 0 0 12px rgba(212, 176, 112, 0.4); }
+  .bottom-tabs .tab .ic {
+    font-size: 22px; display: block; margin-bottom: 2px; line-height: 1;
+  }
+  .bottom-tabs .tab.l-mark .ic {
+    font-family: "Cormorant Garamond", serif;
+    font-weight: 700; font-size: 18px;
+    width: 20px; height: 20px; line-height: 20px;
+    margin: 0 auto 4px;
+    background: linear-gradient(135deg, #007AFF, #5AC8FA);
+    color: white;
+    border-radius: 6px;
+  }
+
+  .pick-btn {
+    margin-top: 16px; padding: 9px 24px;
+    background: transparent;
+    border: 1px solid rgba(212, 176, 112, 0.4);
+    color: #d4b070;
+    font-family: "DM Mono", monospace; font-size: 10px;
+    letter-spacing: 0.3em; cursor: pointer;
+    border-radius: 2px; transition: all 0.3s;
+  }
+  .pick-btn:hover {
+    background: rgba(212, 176, 112, 0.1);
+    border-color: #d4b070;
+  }
+</style>
+</head>
+<body>
+
+<h1>异乡 · UI v4</h1>
+<div class="lede">微信锁定 · 地图换 Tube Map · 其他 3 个调细节</div>
+
+<div class="phones">
+
+  <!-- ───────── 1. 地图 v4 · Tube Map ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">1 · <b>London Tube Map</b> <span class="tag changed">★ 全新</span></div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="tube">
+        <div class="ios-status"><span>9:41</span><span class="icons">📶 100%</span></div>
+        <div class="tube-status">
+          <div class="top">
+            <div>
+              <div class="day-label">DAY 037 · WEEK 6/52</div>
+              <div class="day">第 6 周 · 周三<span class="weather">🌧️ 12°C</span></div>
+            </div>
+            <div class="actions">
+              <div class="filled"></div><div class="filled"></div><div></div>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="lab">学业</div><div class="val">42%</div></div>
+            <div class="stat"><div class="lab">钱包</div><div class="val">£980</div></div>
+            <div class="stat"><div class="lab">精力</div><div class="val">65%</div></div>
+            <div class="stat"><div class="lab">归属</div><div class="val">??</div></div>
+          </div>
+        </div>
+
+        <div class="tube-header">
+          <div class="tube-roundel">
+            <div class="ring"></div>
+            <div class="lab">UNDERGROUND</div>
+          </div>
+          <div class="title" style="text-align:right">
+            今天去哪？
+            <span class="sub">ZONE 1 · BLOOMSBURY</span>
+          </div>
+        </div>
+
+        <div class="tube-map">
+          <svg viewBox="0 0 380 320" preserveAspectRatio="xMidYMid meet">
+            <!-- Bakerloo Line (棕): 公寓 - 大学 - 图书馆 -->
+            <path d="M 60,40 L 190,40 L 320,40" stroke="#894e24" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <!-- Central Line (红): 图书馆 - 中央 - Pub -->
+            <path d="M 320,40 L 320,160 L 320,260" stroke="#dc241f" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <!-- Northern (黑): 公寓 - Tesco -->
+            <path d="M 60,40 L 60,160 L 60,250" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <!-- Piccadilly (深蓝): 中央 - Soho - Mei -->
+            <path d="M 190,160 L 100,260 L 60,260" stroke="#0019a8" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <!-- Victoria (浅蓝): 大学 - 中央 - 公园 -->
+            <path d="M 190,40 L 190,160 L 190,260" stroke="#0098d4" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <!-- District (绿): Tesco - Mei - 公园 - Pub -->
+            <path d="M 60,250 L 100,260 L 190,260 L 320,260" stroke="#00782a" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <!-- 装饰：Thames -->
+            <path d="M 0,290 Q 100,283 190,288 T 380,295" stroke="#7faaca" stroke-width="2" fill="none" opacity="0.5" stroke-dasharray="3,4"/>
+            <text x="195" y="307" font-family="EB Garamond" font-size="8" font-style="italic" fill="#7faaca" text-anchor="middle" letter-spacing="2">River Thames</text>
+          </svg>
+
+          <!-- 站点 -->
+          <div class="tube-station" style="top: 12.5%; left: 16%">
+            <div class="dot"></div>
+            <div class="name" style="left: 16px; top: -4px">公寓<span class="en">Russell Sq</span></div>
+          </div>
+          <div class="tube-station interchange" style="top: 12.5%; left: 50%">
+            <div class="dot"></div>
+            <div class="name" style="left: 50%; transform:translateX(-50%); top: -32px">大学 <span class="en">UCL</span></div>
+          </div>
+          <div class="tube-station interchange" style="top: 12.5%; left: 84%">
+            <div class="dot"></div>
+            <div class="name" style="right: 16px; top: -4px; text-align:right">图书馆<span class="en">Senate House</span></div>
+          </div>
+          <div class="tube-station interchange you" style="top: 50%; left: 50%">
+            <div class="dot"></div>
+            <div class="name" style="left: 18px; top: -4px">中央<span class="en">Bloomsbury</span></div>
+          </div>
+          <div class="tube-station" style="top: 50%; left: 16%">
+            <div class="dot"></div>
+            <div class="name" style="right: 18px; top: -4px; text-align:right">Tesco<span class="en">Express</span></div>
+          </div>
+          <div class="tube-station" style="top: 50%; left: 84%">
+            <div class="dot"></div>
+            <div class="name" style="right: 18px; top: -4px; text-align:right">车站<span class="en">King's X</span></div>
+          </div>
+          <div class="tube-station" style="top: 81%; left: 16%">
+            <div class="dot"></div>
+            <div class="name" style="left: 18px; top: -4px">Mei's<span class="en">Soho</span></div>
+          </div>
+          <div class="tube-station" style="top: 81%; left: 27%">
+            <div class="dot"></div>
+            <div class="name" style="left: 50%; transform:translateX(-50%); top: 10px">Soho</div>
+          </div>
+          <div class="tube-station" style="top: 81%; left: 50%">
+            <div class="dot"></div>
+            <div class="name" style="left: 50%; transform:translateX(-50%); top: 10px">公园<span class="en">Hyde Park</span></div>
+          </div>
+          <div class="tube-station" style="top: 81%; left: 84%">
+            <div class="dot"></div>
+            <div class="name" style="right: 16px; top: -4px; text-align:right">Pub<span class="en">Camden</span></div>
+          </div>
+        </div>
+
+        <div class="tube-legend">
+          <div class="li"><div class="swatch" style="background:#894e24"></div>Bakerloo</div>
+          <div class="li"><div class="swatch" style="background:#dc241f"></div>Central</div>
+          <div class="li"><div class="swatch" style="background:#000"></div>Northern</div>
+          <div class="li"><div class="swatch" style="background:#0019a8"></div>Piccadilly</div>
+          <div class="li"><div class="swatch" style="background:#0098d4"></div>Victoria</div>
+          <div class="li"><div class="swatch" style="background:#00782a"></div>District</div>
+        </div>
+
+        <div class="tube-bar">
+          <div class="menu">⚙</div>
+          <div class="end">🌙 结束今天</div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab active"><span class="ic">🗺️</span>地图</div>
+        <div class="tab"><span class="ic">💬</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">📔</span>日记</div>
+        <div class="tab"><span class="ic">📖</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 1 · Tube Map</button>
+  </div>
+
+  <!-- ───────── 2. 微信 v4 (LOCKED) ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">2 · <b>WeChat clone</b> <span class="tag locked">✓ LOCKED</span></div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="wx">
+        <div class="ios-status"><span>9:41</span><span class="icons">📶 100%</span></div>
+        <div class="wx-status-bar">
+          <div class="title">微信 (5)</div>
+          <div class="icons"><div class="ic">🔍</div><div class="ic">＋</div></div>
+        </div>
+        <div class="wx-search"><span class="icon">🔍</span>搜索</div>
+        <div class="wx-list">
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#fa5151,#cc4040)">妈</div>
+            <div class="body"><div class="top-row"><div class="name">🇨🇳 妈妈</div><div class="time">14:32</div></div><div class="bot-row"><div class="last">挂了电话妈妈又转了 500 块给你 😊</div><span class="badge">2</span></div></div>
+          </div>
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#9080b8,#6e5e9a)">岸</div>
+            <div class="body"><div class="top-row"><div class="name">伦敦留学生互助 (15)</div><div class="time">13:50</div></div><div class="bot-row"><div class="last">狗哥：紧急求助 地铁罢工 明天 tutorial 怎么办</div><span class="badge">3</span></div></div>
+          </div>
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#d4a574,#b08850)">S</div>
+            <div class="body"><div class="top-row"><div class="name">Sarah</div><div class="time">12:08</div></div><div class="bot-row"><div class="last">Hey! Want to study at Senate House tomorrow?</div></div></div>
+          </div>
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#a87fb8,#8060a0)">A</div>
+            <div class="body"><div class="top-row"><div class="name">Aditi</div><div class="time">10:24</div></div><div class="bot-row"><div class="last">Want some? I think we both need it. ☕</div></div></div>
+          </div>
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#5AC8FA,#007AFF)">L</div>
+            <div class="body"><div class="top-row"><div class="name">⚡ Link2Ur 通知</div><div class="time">09:00</div></div><div class="bot-row"><div class="last">本周新任务上线 4 个，最高 £85</div></div></div>
+          </div>
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#a07060,#7a4530)">M</div>
+            <div class="body"><div class="top-row"><div class="name">Mark · 隔壁房</div><div class="time">昨</div></div><div class="bot-row"><div class="last">Mate sorry about the kitchen 😅</div></div></div>
+          </div>
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#b85070,#8a3850)">梅</div>
+            <div class="body"><div class="top-row"><div class="name">Mei 姐</div><div class="time">周日</div></div><div class="bot-row"><div class="last">傻孩子 这周末有空过来吃饭吗</div></div></div>
+          </div>
+          <div class="wx-item">
+            <div class="wx-avatar" style="background:linear-gradient(135deg,#c4615a,#9a4540)">凯</div>
+            <div class="body"><div class="top-row"><div class="name">王凯学长</div><div class="time">周日</div></div><div class="bot-row"><div class="last">[doge]</div></div></div>
+          </div>
+        </div>
+        <div class="wx-tabs">
+          <div class="wx-tab active"><span class="ic">💬</span>微信</div>
+          <div class="wx-tab"><span class="ic">👤</span>通讯录</div>
+          <div class="wx-tab"><span class="ic">🔍</span>发现</div>
+          <div class="wx-tab"><span class="ic">😀</span>我</div>
+        </div>
+        <div class="wx-bottom-spacer"></div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">🗺️</span>地图</div>
+        <div class="tab active"><span class="ic">💬</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">📔</span>日记</div>
+        <div class="tab"><span class="ic">📖</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">微信 已锁定</button>
+  </div>
+
+  <!-- ───────── 3. Link2Ur v4 ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">3 · <b>Link2Ur</b> <span class="tag changed">改</span> 单色海军蓝 + 香槟金</div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="l2u">
+        <div class="ios-status"><span>9:41</span><span class="icons">📶 100%</span></div>
+        <div class="l2u-header">
+          <div class="l2u-header-row">
+            <div class="logo">
+              <div class="l-mark">L</div>
+              <div class="brand-text">
+                <div class="name">Link2Ur</div>
+                <div class="tagline">留学生互助平台</div>
+              </div>
+            </div>
+            <div class="rating-card">
+              <div class="stars">★ ★ ★ ★ ★</div>
+              <div class="num">5.0</div>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="pill">📥 <b>7</b> 接单</div>
+            <div class="pill">📤 <b>3</b> 发单</div>
+            <div class="pill">📅 W6</div>
+            <div class="pill">£<b>148</b> 本周</div>
+          </div>
+        </div>
+        <div class="l2u-toggle-wrap">
+          <div class="l2u-toggle">
+            <button class="active">📥 接单 · 7</button>
+            <button>📤 发单 · 3</button>
+          </div>
+        </div>
+        <div class="l2u-chips">
+          <div class="l2u-chip active">全部</div>
+          <div class="l2u-chip">代购</div>
+          <div class="l2u-chip">跑腿</div>
+          <div class="l2u-chip">陪同</div>
+          <div class="l2u-chip">翻译</div>
+          <div class="l2u-chip">家教</div>
+          <div class="l2u-chip">搬家</div>
+        </div>
+        <div class="l2u-list">
+          <div class="l2u-task featured shopping">
+            <div class="row1">
+              <div class="icon">🛍️</div>
+              <div class="info">
+                <div class="title">Bicester Burberry 代购</div>
+                <div class="desc">Marylebone → Bicester · 排 1h</div>
+                <div class="meta"><span>⏱ 9h</span><span>🔥 -22 精力</span></div>
+              </div>
+              <div class="reward">£95</div>
+            </div>
+          </div>
+          <div class="l2u-task accompany">
+            <div class="row1">
+              <div class="icon">🛂</div>
+              <div class="info">
+                <div class="title">陪新生取 BRP</div>
+                <div class="desc">Acton Lane Post Office · 排 40min</div>
+                <div class="meta"><span>⏱ 2h</span><span>🔥 -8</span></div>
+              </div>
+              <div class="reward">£28</div>
+            </div>
+          </div>
+          <div class="l2u-task translate">
+            <div class="row1">
+              <div class="icon">📨</div>
+              <div class="info">
+                <div class="title">翻译 council 信</div>
+                <div class="desc">客户收到 council 信 · 4 页</div>
+                <div class="meta"><span>⏱ 30min</span><span>🔥 -2</span></div>
+              </div>
+              <div class="reward">£14</div>
+            </div>
+          </div>
+          <div class="l2u-task pickup">
+            <div class="row1">
+              <div class="icon">📦</div>
+              <div class="info">
+                <div class="title">Argos 取件</div>
+                <div class="desc">Tottenham Court Road · 折叠椅+台灯</div>
+                <div class="meta"><span>⏱ 1.5h</span><span>🔥 -8</span></div>
+              </div>
+              <div class="reward">£22</div>
+            </div>
+          </div>
+          <div class="l2u-task tutor">
+            <div class="row1">
+              <div class="icon">📚</div>
+              <div class="info">
+                <div class="title">A-Level 数学家教</div>
+                <div class="desc">15 岁学生 · 周末远程</div>
+                <div class="meta"><span>⏱ 2h/次</span><span>🔥 -6</span></div>
+              </div>
+              <div class="reward">£35</div>
+            </div>
+          </div>
+        </div>
+        <div class="l2u-fab">＋</div>
+        <div class="l2u-bottom">
+          <div class="item active"><span class="ic">📥</span>任务</div>
+          <div class="item"><span class="ic">📂</span>我的</div>
+          <div class="item"><span class="ic">💬</span>消息</div>
+          <div class="item"><span class="ic">⚙️</span>设置</div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">🗺️</span>地图</div>
+        <div class="tab"><span class="ic">💬</span>微信</div>
+        <div class="tab l-mark active"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">📔</span>日记</div>
+        <div class="tab"><span class="ic">📖</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 3 · Link2Ur</button>
+  </div>
+
+  <!-- ───────── 4. 日记 v4 ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">4 · <b>Journal</b> <span class="tag changed">改</span> 牛皮纸 + 大 polaroid</div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="diary">
+        <div class="ios-status"><span>9:41</span><span class="icons">📶 100%</span></div>
+        <div class="diary-tape"></div>
+        <div class="diary-stamp">
+          <div class="top">VOL · I</div>
+          已收藏
+        </div>
+        <div class="diary-content">
+          <div class="diary-date">2026 · APRIL · WEEK 28</div>
+          <h2 class="diary-title">我的留学日记</h2>
+          <div class="diary-subtitle">A diary from London —</div>
+          <div class="diary-tabs">
+            <span class="diary-tab active">🎖 成就</span>
+            <span class="diary-tab">◆ 决定</span>
+            <span class="diary-tab">☾ 梦</span>
+            <span class="diary-tab">🏮 想家</span>
+          </div>
+          <div class="diary-section-header">
+            <div class="h">已收集</div>
+            <div class="count">8 / 41</div>
+          </div>
+          <div class="ach-grid">
+            <div class="ach-pol rare">
+              <div class="pin"></div>
+              <div class="photo">🍻</div>
+              <div class="name">Tom 的朋友</div>
+              <div class="date">W7 · OCT 2025</div>
+            </div>
+            <div class="ach-pol epic">
+              <div class="pin"></div>
+              <div class="photo">🇨🇳</div>
+              <div class="name">父母来过</div>
+              <div class="date">W19 · JAN 2026</div>
+            </div>
+            <div class="ach-pol legendary">
+              <div class="pin"></div>
+              <div class="photo">🌹</div>
+              <div class="name">一辈子的朋友</div>
+              <div class="date">W34 · APR 2026</div>
+            </div>
+            <div class="ach-pol">
+              <div class="pin"></div>
+              <div class="photo">🍗</div>
+              <div class="name">Sunday Roast</div>
+              <div class="date">W12 · NOV 2025</div>
+            </div>
+          </div>
+          <div style="font-family:'Caveat',cursive;font-size:16px;text-align:center;color:#5a3818;margin:8px 0;line-height:1.7;font-style:italic;opacity:0.75">
+            点 → 弹大图 → 下载分享
+          </div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">🗺️</span>地图</div>
+        <div class="tab"><span class="ic">💬</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab active"><span class="ic">📔</span>日记</div>
+        <div class="tab"><span class="ic">📖</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 4 · 日记</button>
+  </div>
+
+  <!-- ───────── 5. 故事 v4 ───────── -->
+  <div class="phone-wrap">
+    <div class="phone-label">5 · <b>Storybook</b> <span class="tag changed">改</span> 深褐烫金</div>
+    <div class="phone"><div class="phone-screen">
+      <div class="phone-content"><div class="story">
+        <div class="ios-status"><span>9:41</span><span class="icons">📶 100%</span></div>
+        <div class="story-spine"></div>
+        <div class="bookmark">CHAPTER VI</div>
+        <div class="story-content">
+          <div class="story-vol">VOLUME I · WEEK 6</div>
+          <h2 class="story-h2">异 鄉</h2>
+          <div class="story-divider">❦ &nbsp; ❦ &nbsp; ❦</div>
+
+          <div class="story-section">
+            <div class="story-section-title">登场人物</div>
+            <div class="npc-cards">
+              <div class="npc-card">
+                <div class="portrait-frame">
+                  <div class="portrait" style="background:linear-gradient(135deg,#d4a574,#a07843)">S</div>
+                </div>
+                <div class="name">Sarah</div>
+                <div class="progress">CH 2 / 4</div>
+                <div class="progress-bar"><div class="done"></div><div class="done"></div><div></div><div></div></div>
+                <div class="last">"图书馆的下午"</div>
+              </div>
+              <div class="npc-card">
+                <div class="portrait-frame">
+                  <div class="portrait" style="background:linear-gradient(135deg,#c4615a,#7a3530)">凯</div>
+                </div>
+                <div class="name">王凯</div>
+                <div class="progress">CH 1 / 5</div>
+                <div class="progress-bar"><div class="done"></div><div></div><div></div><div></div><div></div></div>
+                <div class="last">"第一次见面"</div>
+              </div>
+              <div class="npc-card">
+                <div class="portrait-frame">
+                  <div class="portrait" style="background:linear-gradient(135deg,#a87fb8,#5e3870)">A</div>
+                </div>
+                <div class="name">Aditi</div>
+                <div class="progress">CH 1 / 3</div>
+                <div class="progress-bar"><div class="done"></div><div></div><div></div></div>
+                <div class="last">"咖啡和叹息"</div>
+              </div>
+              <div class="npc-card locked">
+                <div class="portrait-frame">
+                  <div class="portrait" style="background:linear-gradient(135deg,#666,#333)">?</div>
+                </div>
+                <div class="name">??</div>
+                <div class="progress">未开启</div>
+                <div class="progress-bar"><div></div><div></div><div></div><div></div><div></div></div>
+                <div class="last">还没遇见</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="story-section">
+            <div class="story-section-title">家书</div>
+            <div class="parents-line">
+              <div class="head">
+                <span>父母线</span>
+                <span class="ch">CH 1 / 5</span>
+              </div>
+              <div class="progress-dots">
+                <div class="done"></div><div></div><div></div><div></div><div></div>
+              </div>
+              <div class="summary">妈妈问了。等春节。</div>
+            </div>
+          </div>
+
+          <div class="story-section" style="text-align:center">
+            <div class="story-section-title">学年纪事</div>
+            <div style="color:#c0a070;line-height:1.9">
+              <div style="font-size:13px;font-style:italic">本周</div>
+              <div style="font-size:20px;font-weight:600;color:#f0d090;letter-spacing:0.08em">秋学期 W 6 / 12</div>
+              <div style="font-size:11px;font-style:italic;opacity:0.7;margin-top:4px;color:#a07020">下一里程碑：W 7 Reading Week</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="bottom-tabs">
+        <div class="tab"><span class="ic">🗺️</span>地图</div>
+        <div class="tab"><span class="ic">💬</span>微信</div>
+        <div class="tab l-mark"><span class="ic">L</span>Link2Ur</div>
+        <div class="tab"><span class="ic">📔</span>日记</div>
+        <div class="tab active"><span class="ic">📖</span>故事</div>
+      </div>
+    </div></div>
+    <button class="pick-btn">选 5 · 故事</button>
+  </div>
+
+</div>
+
+<div style="text-align:center; margin: 60px auto 30px; color:#888; font-style:italic; font-size:13px; max-width:680px; line-height:1.9; font-family:'EB Garamond',serif">
+  <b style="color:#d4b070; font-style:normal">v4 vs v3 改动：</b><br><br>
+  <b style="color:#fff; font-style:normal">地图</b> · 完全重做：手绘伦敦地图 → London Tube Map (Harry Beck 1933 经典)。<br>
+  红圈站点 = 你能去的地方，黑加粗 = 重要。彩色线 = 6 条 tube line。<br>
+  你的位置 = 红色脉冲圆。底部图例标明每条线。<br><br>
+  <b style="color:#fff; font-style:normal">Link2Ur</b> · header 蓝紫渐变 → 单色 deep navy #0a2848。<br>
+  featured 卡的金色 → 香槟金 (低饱和)，卡片更紧凑 5 张/屏，<br>
+  toggle 改 iOS 风 segmented control。<br><br>
+  <b style="color:#fff; font-style:normal">日记</b> · 蓝线纸 (学生本) → 牛皮纸 + 深褐墨线。<br>
+  3×3 polaroid → 2×2 大卡，每张右上有一颗"图钉"，<br>
+  右上角加红色"已收藏 VOL·I"印章。<br>
+  主标题字体换 Ma Shan Zheng (毛笔体)，副标题 Caveat 保留。<br><br>
+  <b style="color:#fff; font-style:normal">故事</b> · 米黄羊皮纸 → 深褐烫金 dark fantasy。<br>
+  ❀ 装饰角去掉，保留装订线 + 红色书签条。<br>
+  NPC 3 列 → 2 列大卡，金边相框 + 烫金字。<br>
+  主标题"异鄉"放大到 50px，加发光 text-shadow。<br><br>
+  挑哪个就告诉我，或者继续提细节调整。
+</div>
+
+</body>
+</html>
