@@ -453,9 +453,10 @@ def revert_unpaid_application_approvals(db: Session):
                 if application:
                     # 撤销申请批准：将申请状态改回 pending
                     application.status = "pending"
-                    
+
                     # 回滚任务状态：清除接受者，状态改回 open
                     task.taker_id = None
+                    task.taker_expert_id = None  # 团队任务回滚时也清，防止打款定位到旧团队
                     task.status = "open"
                     task.is_paid = 0
                     task.payment_intent_id = None
@@ -514,6 +515,7 @@ def revert_unpaid_application_approvals(db: Session):
                             except Exception as e:
                                 logger.warning(f"清除商品缓存失败: {e}")
                     task.taker_id = None
+                    task.taker_expert_id = None  # 团队任务回滚时也清，防止打款定位到旧团队
                     task.status = "open"
                     task.is_paid = 0
                     task.payment_intent_id = None

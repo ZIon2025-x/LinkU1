@@ -515,6 +515,8 @@ async def get_task_chat_list(
 
         if all_task_ids:
             # ServiceApplication: dual-key lookup
+            # 加 ORDER BY id DESC: 多条 SA 共 task_id 时(historical/重建/dual-state),
+            # setdefault 取最新一条,避免 DB 行序不稳定导致列表 row 上的 SA 抖动。
             sa_query = select(
                 models.ServiceApplication.task_id,
                 models.ServiceApplication.consultation_task_id,
@@ -524,7 +526,7 @@ async def get_task_chat_list(
                     models.ServiceApplication.task_id.in_(all_task_ids),
                     models.ServiceApplication.consultation_task_id.in_(all_task_ids),
                 )
-            )
+            ).order_by(models.ServiceApplication.id.desc())
             sa_result = await db.execute(sa_query)
             for sa_task_id, sa_consultation_task_id, sa_id in sa_result.all():
                 # 优先 task_id 匹配(post-approve 真任务),fallback consultation_task_id(pre-approve 占位)
@@ -533,7 +535,7 @@ async def get_task_chat_list(
                 if sa_consultation_task_id in all_task_ids:
                     service_app_map.setdefault(sa_consultation_task_id, sa_id)
 
-            # FleaMarketPurchaseRequest: dual-key lookup
+            # FleaMarketPurchaseRequest: dual-key lookup (同上加 ORDER BY)
             flea_query = select(
                 models.FleaMarketPurchaseRequest.task_id,
                 models.FleaMarketPurchaseRequest.consultation_task_id,
@@ -543,7 +545,7 @@ async def get_task_chat_list(
                     models.FleaMarketPurchaseRequest.task_id.in_(all_task_ids),
                     models.FleaMarketPurchaseRequest.consultation_task_id.in_(all_task_ids),
                 )
-            )
+            ).order_by(models.FleaMarketPurchaseRequest.id.desc())
             flea_result = await db.execute(flea_query)
             for flea_task_id, flea_consultation_task_id, flea_id in flea_result.all():
                 if flea_task_id in all_task_ids:
@@ -579,13 +581,14 @@ async def get_task_chat_list(
 
             if real_candidate_ids:
                 # 真实任务 TA：不含 'cancelled'，防止被拒绝的申请错误路由到咨询UI
+                # ORDER BY id DESC: 与上面 placeholder 分支保持一致,setdefault 取最新一条
                 ta_query = select(
                     models.TaskApplication.task_id,
                     models.TaskApplication.id
                 ).where(
                     models.TaskApplication.task_id.in_(real_candidate_ids),
                     models.TaskApplication.status.in_(["consulting", "negotiating", "price_agreed"]),
-                )
+                ).order_by(models.TaskApplication.id.desc())
                 ta_result = await db.execute(ta_query)
                 for row in ta_result.all():
                     task_app_map.setdefault(row[0], row[1])
@@ -1523,6 +1526,9 @@ async def send_task_message(
                         participant_ids.add(row[0])
 
             # 构建消息响应
+            # application_id: 前端用 (task_id, application_id) 复合键精准定位 chat row,
+            # 避免单 task_id 多 application 场景下消息串行到错误的会话。
+            # SA 流程下 application_id 为 NULL(每个 SA 有独立 placeholder task,task_id 已唯一)。
             message_response = {
                 "type": "task_message",
                 "message": {
@@ -1532,6 +1538,7 @@ async def send_task_message(
                     "sender_avatar": getattr(current_user, 'avatar', None),
                     "content": new_message.content,
                     "task_id": new_message.task_id,
+                    "application_id": new_message.application_id,
                     "message_type": new_message.message_type,
                     "created_at": format_iso_utc(new_message.created_at) if new_message.created_at else None,
                     "attachments": attachments_data
@@ -2096,6 +2103,39 @@ async def accept_application(
                 locked_task.status = "in_progress"
                 if application.negotiated_price is not None:
                     locked_task.agreed_reward = application.negotiated_price
+
+                # 同步更新 Stripe PaymentIntent metadata：原 PI 的 taker_id/taker_name 还
+                # 冻结在前一个被取消的接受人。不更新会让 Stripe Dashboard、税务报表、
+                # 客服排查在 taker 这一列拿到错误的人（虽然实际 Transfer 走的是
+                # 实时 task.taker_id，钱不会转错，但审计追踪会断）。
+                if locked_task.payment_intent_id:
+                    try:
+                        import stripe
+                        new_applicant = await db.get(models.User, application.applicant_id)
+                        new_taker_name = (
+                            new_applicant.name
+                            if new_applicant and new_applicant.name
+                            else f"User {application.applicant_id}"
+                        )
+                        stripe.PaymentIntent.modify(
+                            locked_task.payment_intent_id,
+                            metadata={
+                                "taker_id": str(application.applicant_id),
+                                "taker_name": new_taker_name,
+                                "application_id": str(application_id),
+                                "reassigned_after_cancel": "true",
+                            },
+                        )
+                        logger.info(
+                            f"✅ PI metadata 更新: pi={locked_task.payment_intent_id}, "
+                            f"new_taker_id={application.applicant_id}, application_id={application_id}"
+                        )
+                    except Exception as pi_modify_err:
+                        # 元数据更新失败不阻塞主流程（资金路径不依赖它）
+                        logger.warning(
+                            f"⚠️ PI metadata 更新失败: pi={locked_task.payment_intent_id}, "
+                            f"error={pi_modify_err}"
+                        )
 
                 # 更新可靠度画像（任务分配）
                 try:

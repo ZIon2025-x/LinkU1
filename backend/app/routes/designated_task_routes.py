@@ -152,6 +152,7 @@ async def reject_designated_task(
 
     task.status = "open"
     task.taker_id = None
+    task.taker_expert_id = None
 
     # Mark any consulting/negotiating/pending applications from this user as rejected
     # and send system message to active chat sessions
@@ -231,6 +232,7 @@ async def withdraw_designated_request(
 
     task.status = "open"
     task.taker_id = None
+    task.taker_expert_id = None
 
     apps_q = await db.execute(
         select(models.TaskApplication).where(

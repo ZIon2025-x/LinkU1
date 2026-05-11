@@ -1761,14 +1761,56 @@ async def create_wechat_checkout_session(
             try:
                 pi = stripe.PaymentIntent.retrieve(task.payment_intent_id)
                 pi_metadata = pi.get("metadata", {})
-                taker_id_from_metadata = pi_metadata.get("taker_id")
+                # 防御性：不直接信 PI metadata 里的 taker_id（若 PI 由旧批准遗留下来,
+                # metadata 还指向已取消的接受人）。走 application_id → DB 拿权威 applicant_id。
+                application_id_from_metadata = pi_metadata.get("application_id")
                 taker_stripe_account_from_metadata = pi_metadata.get("taker_stripe_account_id")
-                
-                if not taker_id_from_metadata or not taker_stripe_account_from_metadata:
-                    logger.warning(f"PaymentIntent {task.payment_intent_id} 缺少 taker 信息: taker_id={taker_id_from_metadata}, stripe_account={taker_stripe_account_from_metadata}")
+
+                if not application_id_from_metadata:
+                    logger.warning(f"PaymentIntent {task.payment_intent_id} 缺少 application_id: metadata={pi_metadata}")
                     raise HTTPException(status_code=400, detail="支付信息不完整，请重新批准申请")
-                
-                logger.info(f"微信支付：任务 {task_id} 状态为 {task.status}，从 PaymentIntent metadata 获取 taker_id={taker_id_from_metadata}")
+
+                try:
+                    application_id_int = int(application_id_from_metadata)
+                except (ValueError, TypeError):
+                    logger.warning(f"PaymentIntent {task.payment_intent_id} application_id 非法: {application_id_from_metadata}")
+                    raise HTTPException(status_code=400, detail="支付信息不完整，请重新批准申请")
+
+                _app_for_pi = db.query(models.TaskApplication).filter(
+                    and_(
+                        models.TaskApplication.id == application_id_int,
+                        models.TaskApplication.task_id == task_id,
+                    )
+                ).first()
+                if not _app_for_pi:
+                    logger.warning(
+                        f"PaymentIntent {task.payment_intent_id} 引用的申请 {application_id_int} "
+                        f"在任务 {task_id} 下找不到（数据不一致或 PI 陈旧）"
+                    )
+                    raise HTTPException(status_code=400, detail="支付链路已失效，请重新批准申请")
+                if _app_for_pi.status in ("rejected", "cancelled", "withdrawn"):
+                    logger.warning(
+                        f"PaymentIntent {task.payment_intent_id} 引用的申请 {application_id_int} "
+                        f"状态={_app_for_pi.status}，已不可再支付"
+                    )
+                    raise HTTPException(status_code=400, detail="该申请已撤回或被拒绝，请重新批准申请")
+
+                # 用 DB 里的 applicant_id 作为权威 taker_id，而不是 metadata 里冻结的快照
+                taker_id_from_metadata = _app_for_pi.applicant_id
+
+                # 与 PI metadata 里的 taker_id 不一致 → 留一条 warning 便于排查
+                pi_taker_id_snapshot = pi_metadata.get("taker_id")
+                if pi_taker_id_snapshot and str(pi_taker_id_snapshot) != str(taker_id_from_metadata):
+                    logger.warning(
+                        f"PaymentIntent {task.payment_intent_id} metadata.taker_id={pi_taker_id_snapshot} "
+                        f"与申请 {application_id_int} 的 applicant_id={taker_id_from_metadata} 不一致，"
+                        f"以 DB 为准"
+                    )
+
+                logger.info(
+                    f"微信支付：任务 {task_id} 状态为 {task.status}，"
+                    f"从 application_id={application_id_int} 解析 taker_id={taker_id_from_metadata}"
+                )
             except HTTPException:
                 raise
             except Exception as e:

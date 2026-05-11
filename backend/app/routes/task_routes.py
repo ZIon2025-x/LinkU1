@@ -591,6 +591,7 @@ def reject_task_taker(
     # 重置任务状态为open，清除接受者
     db_task.status = "open"
     db_task.taker_id = None
+    db_task.taker_expert_id = None
     db.commit()
     db.refresh(db_task)
     

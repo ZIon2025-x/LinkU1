@@ -1636,6 +1636,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"🔄 [WEBHOOK] 撤销申请批准: application_id={application_id}")
                     application.status = "pending"
                     task.taker_id = None
+                    task.taker_expert_id = None  # 团队任务回滚时也清，防止 payout 定位到旧团队
                     task.status = "open"
                     task.is_paid = 0
                     task.payment_intent_id = None

@@ -499,6 +499,7 @@ def cancel_task(
                 logging.getLogger(__name__).warning(f"更新可靠度失败(task_cancelled): {e}")
         task.status = "open"
         task.taker_id = None
+        task.taker_expert_id = None  # 团队任务接受人取消时清掉，防止 resolve_payout_destination 把钱转给旧团队
         # 保留 is_paid、payment_intent_id、escrow_amount — 下次批准时免支付
         logger.info(f"Task {task.id} reverted to open (paid, no refund), old taker={original_taker_id}")
 
