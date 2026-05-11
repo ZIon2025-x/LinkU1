@@ -2169,7 +2169,9 @@ def auto_transfer_expired_tasks(db: Session):
                         amount=auto_transfer_amount,
                         currency=task.currency or "GBP",
                         taker_expert_id=task.taker_expert_id,  # spec §3.2 v2
-                        idempotency_key=f"task_{task.id}_transfer",
+                        # 不再传 idempotency_key，用 create_transfer_record 的默认
+                        # f"task_{task_id}_user_{taker_id}_transfer"（含 taker_id），
+                        # 让 A 取消后 B 再接的场景能各自生成独立记录,不被 UNIQUE 吞掉
                         metadata={
                             "transfer_source": "auto_confirm_expired",
                             "original_escrow": str(escrow),
@@ -2193,8 +2195,10 @@ def auto_transfer_expired_tasks(db: Session):
 
                 if taker:
                     payout_currency = (task.currency or "GBP").upper()
-                    # spec §1.3 — unified idempotency key matches create_transfer_record's DB row
-                    payout_idempotency_key = f"task_{task.id}_transfer"
+                    # Stripe 侧统一用 earning:task:X:user:Y 格式 (与 confirm_task_completion
+                    # 和 process_pending_transfers 的 task 分支对齐),避免两条路径打到同一笔
+                    # 钱时各用不同 Stripe key 触发双付
+                    payout_idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
 
                     # Team-aware destination: spec §3.2 v2
                     from app.services.expert_task_resolver import resolve_payout_destination

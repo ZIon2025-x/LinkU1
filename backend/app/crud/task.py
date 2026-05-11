@@ -482,12 +482,19 @@ def cancel_task(
         if task.poster_id != user_id and task.taker_id != user_id:
             return "not_participant"
 
-    # 保存原 taker_id（用于通知，因为可能会被清除）
+    # 保存原 taker_id / taker_expert_id（用于通知 + 决定 cancel 走 revert 还是终态）
     original_taker_id = task.taker_id
+    original_taker_expert_id = task.taker_expert_id
     reverted_to_open = False
 
-    # 已付款的 in_progress 任务：取消后回到 open（不退款），允许发布者选择新申请人
-    if is_admin_review and task.status == "in_progress" and getattr(task, 'is_paid', 0) == 1:
+    # 已付款的 in_progress 任务：取消后回到 open（不退款），允许发布者选择新申请人。
+    # 但团队任务（taker_expert_id 非空）例外：poster 期望的是某个团队的服务,
+    # reopen 后让团队外的人接会改变任务性质,且原团队上下文一旦清掉打款逻辑会丢失,
+    # 所以团队任务取消直接走 else 分支 cancelled+退款,让 poster 自行重新发布。
+    is_team_task = bool(original_taker_expert_id)
+    if (is_admin_review and task.status == "in_progress"
+            and getattr(task, 'is_paid', 0) == 1
+            and not is_team_task):
         reverted_to_open = True
         # 更新可靠度画像（taker 被取消）
         if original_taker_id:
@@ -502,19 +509,6 @@ def cancel_task(
         task.taker_expert_id = None  # 团队任务接受人取消时清掉，防止 resolve_payout_destination 把钱转给旧团队
         # 保留 is_paid、payment_intent_id、escrow_amount — 下次批准时免支付
         logger.info(f"Task {task.id} reverted to open (paid, no refund), old taker={original_taker_id}")
-
-        # 将原接取人的申请状态设为 rejected
-        if original_taker_id:
-            from app.models import TaskApplication
-            old_apps = db.execute(
-                select(TaskApplication).where(
-                    TaskApplication.task_id == task_id,
-                    TaskApplication.applicant_id == original_taker_id,
-                    TaskApplication.status == "approved"
-                )
-            ).scalars().all()
-            for app in old_apps:
-                app.status = "rejected"
     else:
         task.status = "cancelled"
         # 更新可靠度画像（taker 取消）
@@ -562,6 +556,20 @@ def cancel_task(
             except Exception as e:
                 logger.error(f"Auto-refund failed for task {task.id}: {e}", exc_info=True)
                 # Do NOT block cancellation — admin can handle refund manually
+
+    # 通用清理：原接取人的 approved application 一律标 rejected (无论 revert 还是 cancel)
+    # 防止 zombie approved application 误导评价/统计/首页推荐
+    if original_taker_id:
+        from app.models import TaskApplication
+        old_apps = db.execute(
+            select(TaskApplication).where(
+                TaskApplication.task_id == task_id,
+                TaskApplication.applicant_id == original_taker_id,
+                TaskApplication.status == "approved"
+            )
+        ).scalars().all()
+        for app in old_apps:
+            app.status = "rejected"
 
     task_time_slot_relation = (
         db.query(TaskTimeSlotRelation)

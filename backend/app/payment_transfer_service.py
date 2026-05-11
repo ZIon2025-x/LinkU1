@@ -62,7 +62,10 @@ def create_transfer_record(
 
     Args:
         taker_expert_id: 达人团队接单时传入 experts.id (spec §3.2 v2)
-        idempotency_key: Stripe 转账幂等键，默认 f"task_{task_id}_transfer"
+        idempotency_key: Stripe 转账幂等键，默认 f"task_{task_id}_user_{taker_id}_transfer"。
+                带 taker_id 是为了支持任务取消后换人接受的场景 —— 旧格式
+                f"task_{id}_transfer" 只按 task_id 区分，会让 B 的新记录因
+                UNIQUE 冲突被吞掉。
         commit: 是否立即提交。设为 False 可在 SAVEPOINT 内使用 flush 代替 commit，
                 避免破坏外层事务隔离。调用方需自行提交。
 
@@ -91,7 +94,7 @@ def create_transfer_record(
         retry_count=0,
         max_retries=len(RETRY_DELAYS),
         taker_expert_id=taker_expert_id,
-        idempotency_key=idempotency_key or f"task_{task_id}_transfer",
+        idempotency_key=idempotency_key or f"task_{task_id}_user_{taker_id}_transfer",
         extra_metadata=metadata or {}
     )
     db.add(transfer_record)
