@@ -520,9 +520,19 @@ def cancel_task(
                 import logging
                 logging.getLogger(__name__).warning(f"更新可靠度失败(task_cancelled): {e}")
 
-        # Auto-refund for paid tasks cancelled via admin/CS review
+        # Auto-refund for paid tasks whenever they enter the cancelled terminal state.
+        # 覆盖三种触发:
+        #   1) CS approve 团队任务取消 (team task → 直接 cancelled+退款,不 reopen)
+        #   2) poster 直接取消 status=open 任务,但任务带着上一轮 reverted_to_open
+        #      留下的 escrow (用户报告的"取消了有接单人的之后,再次取消"场景)
+        #   3) CS approve 其他罕见 paid+cancelled 路径
+        # is_admin_review 守卫去掉了 (原来只覆盖 #1 #3);加 escrow > 0 防御性检查,
+        # 避免对已经无余额的任务再发一次 Stripe 调用。
         # Full refund (including platform fee) — omit amount param to refund entire charge
-        if is_admin_review and getattr(task, 'is_paid', 0) == 1 and task.payment_intent_id:
+        _escrow_remaining = task.escrow_amount or 0
+        if (getattr(task, 'is_paid', 0) == 1
+                and task.payment_intent_id
+                and _escrow_remaining > 0):
             try:
                 import stripe
                 import hashlib
