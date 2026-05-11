@@ -443,20 +443,45 @@ def admin_review_cancel_request(
     from app.utils.time_utils import get_utc_time
     
     if decision == "approve":
+        # ⚠️ 关键修复:原来直接 task.status="cancelled" 一行就完,完全不做资金/状态清理:
+        #   - 不退款 (escrow 卡死)
+        #   - 不清 is_paid / payment_intent_id / escrow_amount
+        #   - 不清 taker_id / taker_expert_id
+        #   - 不 reject 旧 application (zombie approved row)
+        #   - 不回滚 ServiceApplication (团队服务流程会留 dangling 引用)
+        # 改成调用 crud.cancel_task(is_admin_review=True),复用 cs_routes 用的同一个
+        # 经过加固的取消路径 —— 自动退款 + 字段清理 + reverted_to_open vs cancelled
+        # 分支判断 + 团队任务走 cancelled 终态等全部行为统一。
+        # 顺序: 先执行实际取消,成功后再标 request=approved。万一 crud.cancel_task
+        # 失败,cancel_request 保留 pending 状态便于重试,而不是留下"已批准但任务没取消"
+        # 的悬空状态。
+        try:
+            crud.cancel_task(
+                db,
+                cancel_request.task_id,
+                cancel_request.requester_id,
+                is_admin_review=True,
+            )
+        except Exception as e:
+            logger.error(
+                f"admin_review_cancel_request: crud.cancel_task 失败 "
+                f"request_id={request_id} task_id={cancel_request.task_id} err={e}",
+                exc_info=True,
+            )
+            raise HTTPException(status_code=500, detail="任务取消执行失败,请检查后台日志")
         cancel_request.status = "approved"
-        # 取消对应的任务
-        task = crud.get_task(db, cancel_request.task_id)
-        if task:
-            task.status = "cancelled"
-            crud.add_task_history(db, task.id, None, "admin_approved_cancel", 
-                                  f"管理员批准了取消请求")
+        # 仍保留 admin 自己的历史记录条目,便于审计区分 admin 路径 vs CS 路径
+        crud.add_task_history(
+            db, cancel_request.task_id, None, "admin_approved_cancel",
+            f"管理员批准了取消请求"
+        )
     else:
         cancel_request.status = "rejected"
-    
+
     cancel_request.admin_id = current_user.id
     cancel_request.reviewed_at = get_utc_time()
     cancel_request.admin_comment = admin_comment
-    
+
     db.commit()
 
     log_admin_action(
