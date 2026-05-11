@@ -3688,7 +3688,17 @@ async def respond_taker_counter_offer(
                 detail="只有任务发布方才能响应反报价"
             )
 
-        # 5. 400 如果没有待处理的反报价
+        # 5a. 400 任务状态不允许响应反报价
+        # 防御性: 反报价仅在 pending_acceptance 阶段有意义。若任务已 cancelled / open /
+        # in_progress / 等其他状态,即使 counter_offer_status 还遗留 "pending" 也不应该
+        # 让 poster 触发任何 side effect (例如复活已取消任务,或在 in_progress 期间偷换价格)。
+        if task.status != "pending_acceptance":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"只有 pending_acceptance 状态的任务才能响应反报价 (当前: {task.status})"
+            )
+
+        # 5b. 400 如果没有待处理的反报价
         if task.counter_offer_status != "pending" or task.counter_offer_price is None or task.counter_offer_user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

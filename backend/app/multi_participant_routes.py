@@ -1789,6 +1789,14 @@ def delete_expert_activity(
                                 idempotency_key=f"act_cancel_refund_{task.id}",
                             )
                             logger.info(f"活动 {activity_id} 取消: task {task.id} 退款成功")
+                            # 清理 task 字段防止 zombie 态: refund 成功后不应该再让任何
+                            # payout 路径 (auto-confirm / process_pending_transfers) 误以为
+                            # 这个任务还有 escrow 可以转
+                            task.is_paid = 0
+                            task.payment_intent_id = None
+                            task.escrow_amount = 0.0
+                            task.taker_id = None
+                            task.taker_expert_id = None
                     except Exception as ref_err:
                         logger.error(f"退款失败 task={task.id}: {ref_err}")
                         stripe_refund_failures.append({"task_id": task.id, "error": str(ref_err)[:200]})
@@ -1804,6 +1812,12 @@ def delete_expert_activity(
                         ):
                             _stripe.PaymentIntent.cancel(task.payment_intent_id)
                             logger.info(f"活动 {activity_id} 取消: task {task.id} PI {task.payment_intent_id} 已 cancel")
+                        # PI 不论 cancel 成功还是已经是 succeeded/canceled 等终态,
+                        # task 已经标 cancelled,继续保留 pi_id 没有意义,清掉防止下游误用。
+                        # 若是 succeeded 漏网状态,会被 charge.refunded webhook 兜底处理。
+                        task.payment_intent_id = None
+                        task.taker_id = None
+                        task.taker_expert_id = None
                     except Exception as pi_err:
                         logger.warning(f"PI cancel 失败 task={task.id}: {pi_err}")
             except Exception as outer:

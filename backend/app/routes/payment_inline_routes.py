@@ -1804,6 +1804,19 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     task.is_paid = 0
                     task.payment_intent_id = None
                     task.escrow_amount = 0.0
+                    # 全额 refund 后,task 应该是终止状态。如果是 admin 在 Stripe Dashboard
+                    # 直接 refund 或外部触发(没走我们的 cancel_task 流程),task.status 可能
+                    # 还停在 in_progress / pending_confirmation —— 这是 zombie 态:taker 还在
+                    # 做活,但 escrow 已经空了,confirm_task_completion 没钱可转。
+                    # 这里兜底改成 cancelled,并把接受人清掉。
+                    if task.status not in ("completed", "cancelled"):
+                        logger.warning(
+                            f"⚠️ 任务 {task.id} 全额退款时状态={task.status}, "
+                            f"强制改为 cancelled 防止 zombie 态"
+                        )
+                        task.status = "cancelled"
+                        task.taker_id = None
+                        task.taker_expert_id = None
                     logger.info(f"✅ 全额退款，已更新任务支付状态")
                 else:
                     # 部分退款：更新托管金额
@@ -1942,39 +1955,83 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         status = dispute.get("status")
         logger.info(f"Dispute closed for charge {charge_id}, task {task_id}: status={status}")
         
-        # ✅ Stripe争议解冻：争议关闭后解冻任务状态
+        # ✅ Stripe争议解冻：仅在争议结果对平台无害时才解冻
+        # 关键: status="lost" 或 "charge_refunded" 说明平台已被划走钱(chargeback 成功),
+        # 此时若解冻让 auto-confirm / transfer 路径继续给 taker 转账,平台会二次失血。
         if task_id:
             task = crud.get_task(db, task_id)
             if task and hasattr(task, 'stripe_dispute_frozen') and task.stripe_dispute_frozen == 1:
-                task.stripe_dispute_frozen = 0
-                logger.info(f"✅ 任务 {task_id} 的Stripe争议已关闭，已解冻任务状态")
-                
+                # 平台保住资金的状态: won (平台赢) / warning_closed (没真正进 dispute)
+                safe_to_unfreeze = status in ("won", "warning_closed")
+                # 平台已失血的状态: lost (chargeback 成功) / charge_refunded (退款给消费者)
+                money_already_gone = status in ("lost", "charge_refunded")
+
+                if safe_to_unfreeze:
+                    task.stripe_dispute_frozen = 0
+                    logger.info(
+                        f"✅ 任务 {task_id} Stripe 争议关闭 (status={status}), 已解冻"
+                    )
+                    notify_content_zh = (
+                        f"✅ Stripe争议已关闭（状态: {status}），任务状态已解冻，资金操作已恢复正常。"
+                    )
+                    notify_content_en = (
+                        f"✅ Stripe dispute has been closed (status: {status}). "
+                        f"Task status is now unfrozen and fund operations have resumed."
+                    )
+                elif money_already_gone:
+                    # 不解冻 + 留 critical 给运维。需要管理员人工决定:
+                    #   - 任务是否标 cancelled
+                    #   - taker 是否要补偿
+                    #   - 资金是否要追讨
+                    logger.critical(
+                        f"🚨 任务 {task_id} Stripe 争议结果={status} (平台已失血), "
+                        f"保持冻结. 需要人工裁决"
+                    )
+                    notify_content_zh = (
+                        f"⚠️ Stripe争议已关闭（结果: {status}），平台已退款给消费者。"
+                        f"任务保持冻结，待管理员处理。"
+                    )
+                    notify_content_en = (
+                        f"⚠️ Stripe dispute closed (outcome: {status}). Funds returned "
+                        f"to the cardholder. Task remains frozen pending admin review."
+                    )
+                else:
+                    # 中间状态(under_review/needs_response 等)不应该来到 closed event,
+                    # 防御性处理: 保持冻结 + log warning。
+                    logger.warning(
+                        f"⚠️ 任务 {task_id} dispute.closed 收到非终态 status={status}, 保持冻结"
+                    )
+                    notify_content_zh = (
+                        f"⚠️ Stripe争议状态更新（{status}），任务保持冻结。"
+                    )
+                    notify_content_en = (
+                        f"⚠️ Stripe dispute status update ({status}). Task remains frozen."
+                    )
+
                 # 发送系统消息
                 try:
                     from app.models import Message
                     import json
-                    
-                    content_zh = f"✅ Stripe争议已关闭（状态: {status}），任务状态已解冻，资金操作已恢复正常。"
-                    content_en = f"✅ Stripe dispute has been closed (status: {status}). Task status is now unfrozen and fund operations have resumed."
+
                     system_message = Message(
                         sender_id=None,
                         receiver_id=None,
-                        content=content_zh,
+                        content=notify_content_zh,
                         task_id=task.id,
                         message_type="system",
                         conversation_type="task",
                         meta=json.dumps({
-                            "system_action": "stripe_dispute_unfrozen",
+                            "system_action": "stripe_dispute_unfrozen" if safe_to_unfreeze else "stripe_dispute_closed_no_unfreeze",
                             "charge_id": charge_id,
                             "status": status,
-                            "content_en": content_en
+                            "content_en": notify_content_en,
                         }),
                         created_at=get_utc_time()
                     )
                     db.add(system_message)
                     db.commit()
                 except Exception as e:
-                    logger.error(f"Failed to send system message for dispute unfreeze: {e}")
+                    logger.error(f"Failed to send system message for dispute close: {e}")
                     db.rollback()
     
     elif event_type == "charge.dispute.funds_withdrawn":

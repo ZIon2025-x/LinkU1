@@ -712,6 +712,26 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
         for transfer_record in pending_transfers:
             stats["processed"] += 1
 
+            # 行锁: 并发 Celery worker 都跑 process_pending_transfers 时,bulk SELECT 会
+            # 返回相同候选集,如果不在此处 SKIP LOCKED 各自抢锁,两个 worker 会同时调
+            # stripe.Transfer.create (idempotency_key 防止双付,但 DB 侧 status/释放金额
+            # 会被重复 update,统计/对账记录污染)。
+            # SELECT FOR UPDATE SKIP LOCKED 让落后的 worker 直接拿不到这条记录而 skip,
+            # 不阻塞。前提是处理完调用 safe_commit 释放锁,这个循环本来就做了。
+            _locked = db.query(models.PaymentTransfer).filter(
+                and_(
+                    models.PaymentTransfer.id == transfer_record.id,
+                    models.PaymentTransfer.status.in_(["pending", "retrying"]),
+                )
+            ).with_for_update(skip_locked=True).first()
+            if _locked is None:
+                logger.info(
+                    f"PaymentTransfer {transfer_record.id} 已被其他 worker 占用或状态已变,跳过"
+                )
+                stats["skipped"] += 1
+                continue
+            transfer_record = _locked  # 用加锁后的实例,后续 mutation 走它
+
             try:
                 # ── Package branch ────────────────────────────────────────────────────
                 # Package transfers have no individual taker; destination is resolved

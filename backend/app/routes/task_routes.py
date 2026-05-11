@@ -1176,9 +1176,18 @@ def cancel_task(
         except Exception as e:
             logger.warning(f"回滚 ServiceApplication 失败: {e}")
 
-        # 3) 任务标记为 cancelled
+        # 3) 任务标记为 cancelled + 清理引用字段
+        # 防止留 taker_id / payment_intent_id 等悬空引用 —— 如果 PI 在 Stripe 侧的
+        # cancel 调用之后还有 webhook 漂回来(罕见的乱序),task 不会被错认成已付款。
         task.status = "cancelled"
         task.cancelled_at = get_utc_time()
+        task.taker_id = None
+        task.taker_expert_id = None
+        task.payment_intent_id = None
+        # is_paid / escrow_amount 此时应该都是 0 (pending_payment 阶段 PI 还没成功),
+        # 但为防御性还是显式清零
+        task.is_paid = 0
+        task.escrow_amount = 0.0
 
         # 原任务取消 → 所有指向它的咨询占位一并归档
         try:
