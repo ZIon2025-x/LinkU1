@@ -136,7 +136,11 @@ class _MessageContent extends StatelessWidget {
                     index: chatIndex,
                     maxAnimatedIndex: 11,
                     child: SwipeActionCell(
-                      key: ValueKey('swipe_${taskChat.taskId}'),
+                      // 复合 key (taskId + serviceApplicationId): 同 taskId 多咨询行场景下,
+                      // 避免 Flutter 列表 reconcile 时复用错误的 swipe / animation state
+                      key: ValueKey(
+                        'swipe_${taskChat.taskId}_${taskChat.serviceApplicationId ?? "main"}',
+                      ),
                     actionMargin: const EdgeInsets.only(bottom: AppSpacing.sm),
                     actions: [
                       // 置顶/取消置顶

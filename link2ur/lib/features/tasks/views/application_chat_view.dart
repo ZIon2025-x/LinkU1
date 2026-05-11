@@ -115,7 +115,8 @@ class _ApplicationChatContent extends StatefulWidget {
       _ApplicationChatContentState();
 }
 
-class _ApplicationChatContentState extends State<_ApplicationChatContent> {
+class _ApplicationChatContentState extends State<_ApplicationChatContent>
+    with WidgetsBindingObserver {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _imagePicker = ImagePicker();
@@ -131,6 +132,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   bool _hasMore = false;
   String? _nextCursor;
   StreamSubscription? _wsSubscription;
+  StreamSubscription<bool>? _wsConnectionSubscription;
+  DateTime? _lastReloadAt; // 节流:防止 WS 重连 + lifecycle resume 同时触发
 
   // Consultation mode state
   Map<String, dynamic>? _consultationApp;
@@ -140,6 +143,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _currentUserId = StorageService.instance.getUserId();
     if (widget.isConsultation) {
       _consultationActions = ConsultationActions.of(
@@ -153,6 +157,34 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       _loadConsultationStatus();
     }
     _wsSubscription = WebSocketService.instance.messageStream.listen(_onWsMessage);
+    // 监听 WS 重连:重连期间漏掉的消息靠 reload 拉回(后端不补推历史)
+    _wsConnectionSubscription =
+        WebSocketService.instance.connectionStream.listen((connected) {
+      if (connected && mounted) {
+        _reloadMessagesThrottled(reason: 'ws_reconnect');
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 切回前台时 reload — 后台期间 WS 心跳被降频,可能漏消息
+    if (state == AppLifecycleState.resumed && mounted) {
+      _reloadMessagesThrottled(reason: 'app_resumed');
+    }
+  }
+
+  /// 节流式 reload: 2 秒内只跑一次,避免 WS 重连 + lifecycle resume 同时触发双拉。
+  /// silent=true: 不闪 loading, 失败时不清空已显示消息, 只往现有列表里补漏掉的。
+  void _reloadMessagesThrottled({required String reason}) {
+    if (_isLoadingMessages) return; // 初次加载还在进行,跳过
+    final now = DateTime.now();
+    if (_lastReloadAt != null &&
+        now.difference(_lastReloadAt!).inMilliseconds < 2000) {
+      return;
+    }
+    _lastReloadAt = now;
+    _loadMessages(silent: true);
   }
 
   void _onWsMessage(WebSocketMessage wsMessage) {
@@ -220,17 +252,23 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _wsConnectionSubscription?.cancel();
     _wsSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadMessages() async {
-    setState(() {
-      _isLoadingMessages = true;
-      _messagesError = null;
-    });
+  /// silent=true: WS 重连 / 前台恢复时调用,不闪 loading,失败时不清空已显示消息,
+  /// 只往现有列表里按 id 合并漏掉的消息;不更新 _hasMore/_nextCursor (避免影响后续 loadMore)
+  Future<void> _loadMessages({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoadingMessages = true;
+        _messagesError = null;
+      });
+    }
 
     try {
       final apiService = context.read<ApiService>();
@@ -250,23 +288,49 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         // 保持后端顺序：新→旧，配合 ListView reverse:true
         final messages = MessageRepository.parseTaskChatMessagesResponse(data);
         setState(() {
-          _messages = messages;
-          _hasMore = data['has_more'] == true;
-          _nextCursor = data['next_cursor'] as String?;
-          _isLoadingMessages = false;
+          if (silent) {
+            // reload 路径: 只补 _messages 里没有的(WS 漏掉的);
+            // 不动 _hasMore/_nextCursor/_messagesError/_isLoadingMessages
+            final existingIds = _messages.map((m) => m.id).toSet();
+            final missing = messages
+                .where((m) => !existingIds.contains(m.id))
+                .toList();
+            if (missing.isNotEmpty) {
+              final merged = [...missing, ..._messages];
+              merged.sort((a, b) => b.id.compareTo(a.id)); // 新→旧
+              _messages = merged;
+            }
+          } else {
+            // 初次加载: 把 race 期间(initState 后到 await 完成前) WS 推到 _messages
+            // 的新消息(id 比 history 最新还大)保留在前面
+            if (messages.isEmpty) {
+              // history 空,保留可能的 race wsNewer(_messages 本身)
+            } else {
+              final histMaxId = messages.first.id;
+              final wsNewer =
+                  _messages.where((m) => m.id > histMaxId).toList();
+              _messages = [...wsNewer, ...messages];
+            }
+            _hasMore = data['has_more'] == true;
+            _nextCursor = data['next_cursor'] as String?;
+            _isLoadingMessages = false;
+          }
         });
-      } else {
+      } else if (!silent) {
         setState(() {
           _isLoadingMessages = false;
           _messagesError = 'chat_load_more_failed';
         });
       }
+      // silent 模式下静默失败,UI 保持现状,下次重连/resume 再试
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _isLoadingMessages = false;
-        _messagesError = 'chat_load_more_failed';
-      });
+      if (!silent) {
+        setState(() {
+          _isLoadingMessages = false;
+          _messagesError = 'chat_load_more_failed';
+        });
+      }
     }
   }
 

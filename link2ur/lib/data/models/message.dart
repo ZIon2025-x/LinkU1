@@ -406,37 +406,72 @@ class TaskChat extends Equatable {
 
   /// 创建副本，仅覆盖指定字段
   TaskChat copyWith({
-    int? unreadCount,
+    int? taskId,
+    String? taskTitle,
+    String? titleEn,
+    String? titleZh,
+    String? taskStatus,
+    String? taskType,
+    String? taskSource,
+    String? posterId,
+    String? takerId,
+    String? expertCreatorId,
+    List<String>? images,
+    bool? isMultiParticipant,
+    List<UserBrief>? participants,
     String? lastMessage,
     ChatLastMessage? lastMessageObj,
     DateTime? lastMessageTime,
+    int? unreadCount,
+    int? serviceApplicationId,
+    bool? isConsultationPlaceholder,
   }) {
     return TaskChat(
-      taskId: taskId,
-      taskTitle: taskTitle,
-      titleEn: titleEn,
-      titleZh: titleZh,
-      taskStatus: taskStatus,
-      taskType: taskType,
-      taskSource: taskSource,
-      posterId: posterId,
-      takerId: takerId,
-      expertCreatorId: expertCreatorId,
-      images: images,
-      isMultiParticipant: isMultiParticipant,
-      participants: participants,
+      taskId: taskId ?? this.taskId,
+      taskTitle: taskTitle ?? this.taskTitle,
+      titleEn: titleEn ?? this.titleEn,
+      titleZh: titleZh ?? this.titleZh,
+      taskStatus: taskStatus ?? this.taskStatus,
+      taskType: taskType ?? this.taskType,
+      taskSource: taskSource ?? this.taskSource,
+      posterId: posterId ?? this.posterId,
+      takerId: takerId ?? this.takerId,
+      expertCreatorId: expertCreatorId ?? this.expertCreatorId,
+      images: images ?? this.images,
+      isMultiParticipant: isMultiParticipant ?? this.isMultiParticipant,
+      participants: participants ?? this.participants,
       lastMessage: lastMessage ?? this.lastMessage,
       lastMessageObj: lastMessageObj ?? this.lastMessageObj,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
-      serviceApplicationId: serviceApplicationId,
-      isConsultationPlaceholder: isConsultationPlaceholder,
+      serviceApplicationId: serviceApplicationId ?? this.serviceApplicationId,
+      isConsultationPlaceholder:
+          isConsultationPlaceholder ?? this.isConsultationPlaceholder,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [taskId, lastMessage, lastMessageTime, unreadCount, serviceApplicationId];
+  List<Object?> get props => [
+        taskId,
+        taskTitle,
+        titleEn,
+        titleZh,
+        taskStatus,
+        taskType,
+        taskSource,
+        posterId,
+        takerId,
+        expertCreatorId,
+        images,
+        isMultiParticipant,
+        participants,
+        lastMessage,
+        lastMessageObj,
+        lastMessageTime,
+        unreadCount,
+        serviceApplicationId,
+        isConsultationPlaceholder,
+      ];
 }
 
 /// 发送消息请求
