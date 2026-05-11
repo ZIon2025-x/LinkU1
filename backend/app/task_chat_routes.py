@@ -1545,6 +1545,17 @@ async def send_task_message(
                 }
             }
             
+            # 诊断日志: 每条 chat message 推送前 log 一行,便于在 Railway 上对照
+            # 排查"实时消息没收到"——通过 task_id/sender 能定位到具体场景,
+            # recipients 列表能直接看出 participant_ids 收集逻辑有没有漏人。
+            recipients = sorted(participant_ids - {current_user.id})
+            logger.info(
+                f"[chat-broadcast] task_id={task_id} sender={current_user.id} "
+                f"app_id={request.application_id} "
+                f"task_source={getattr(task, 'task_source', None)} "
+                f"recipients={recipients}"
+            )
+
             # 向所有参与者（除了发送者）广播消息并发送推送通知
             for participant_id in participant_ids:
                 if participant_id != current_user.id:
@@ -1553,8 +1564,14 @@ async def send_task_message(
                     if success:
                         logger.debug(f"Task message broadcasted to participant {participant_id} via WebSocket (user is in app, skipping push notification)")
                     else:
-                        # WebSocket发送失败，说明用户不在app中，需要发送推送通知
-                        logger.debug(f"Task message WebSocket failed for participant {participant_id} (user is not in app, sending push notification)")
+                        # WS 发送失败 → 用户当前可能不在 app / WS 断了 / connection 死了。
+                        # 这里 warning 而非 debug, 单 worker 部署下这条日志直接对应
+                        # "用户应该实时收到但没收到"的事故。具体失败原因看 [ws-send] log。
+                        logger.warning(
+                            f"[chat-broadcast] ws_failed task_id={task_id} "
+                            f"sender={current_user.id} target={participant_id} "
+                            f"→ fallback push notification"
+                        )
                         try:
                             # 截取消息内容（最多50个字符），图片/附件等无文本内容时使用描述性占位
                             raw_content = (new_message.content or "").strip()
@@ -3685,15 +3702,57 @@ async def respond_taker_counter_offer(
 
         if request.action == "accept":
             # 7a. 接受反报价
+            # ⚠️ 关键修复：不再直接把 task.status 改成 in_progress (会让 poster 完全
+            # 绕过支付; taker 完工后 confirm_task_completion 在 escrow=0 路径上 no-op,
+            # taker 白干)。改成把价格写到对应的 TaskApplication 上,task 保持
+            # pending_acceptance,poster 后续通过 approve_application 创建 PI + 完成支付,
+            # webhook 才能正确把 task 推进到 in_progress (对齐 designated_task_routes.py
+            # 的 accept_designated_task 流程)。
             task.base_reward = task.counter_offer_price
             task.agreed_reward = task.counter_offer_price
-            task.taker_id = taker_id
-            task.status = "in_progress"
-            task.accepted_at = current_time
             task.counter_offer_status = "accepted"
 
-            content = f"发布方已接受您对任务「{task.title}」的反报价：£{float(task.agreed_reward):.2f}"
-            content_en = f"The poster accepted your counter offer for task「{task.title}」: £{float(task.agreed_reward):.2f}"
+            # 查或建 TaskApplication: poster 后续 approve_application 需要 application_id
+            from decimal import Decimal as _Decimal
+            new_price = _Decimal(str(task.counter_offer_price))
+
+            existing_app_q = await db.execute(
+                select(models.TaskApplication).where(
+                    and_(
+                        models.TaskApplication.task_id == task_id,
+                        models.TaskApplication.applicant_id == taker_id,
+                    )
+                ).with_for_update()
+            )
+            existing_app = existing_app_q.scalar_one_or_none()
+
+            if existing_app:
+                # 升级现有 application (可能是 consulting/negotiating/rejected/pending)
+                existing_app.status = "pending"
+                existing_app.negotiated_price = new_price
+                existing_app.message = "反报价已被发布方接受,等待支付"
+            else:
+                # 创建新 application (taker 没先调 /designated/accept 就直接反报价的场景)
+                new_app = models.TaskApplication(
+                    task_id=task_id,
+                    applicant_id=taker_id,
+                    status="pending",
+                    negotiated_price=new_price,
+                    currency=task.currency or "GBP",
+                    message="反报价已被发布方接受,等待支付",
+                    created_at=current_time,
+                )
+                db.add(new_app)
+
+            # 通知 taker: 反报价已被接受,等待 poster 支付
+            content = (
+                f"发布方已接受您对任务「{task.title}」的反报价:£{float(task.agreed_reward):.2f}, "
+                f"等待发布方完成支付"
+            )
+            content_en = (
+                f"The poster accepted your counter offer for task「{task.title}」: "
+                f"£{float(task.agreed_reward):.2f}. Awaiting payment."
+            )
             new_notification = models.Notification(
                 user_id=taker_id,
                 type="task_counter_offer_accepted",
@@ -3706,6 +3765,27 @@ async def respond_taker_counter_offer(
                 created_at=current_time,
             )
             db.add(new_notification)
+
+            # 通知 poster: 该去批准并支付了 (UI 提示下一步)
+            poster_notification = models.Notification(
+                user_id=task.poster_id,
+                type="counter_offer_payment_required",
+                title="请批准并支付以开始任务",
+                title_en="Approve & pay to start the task",
+                content=(
+                    f"您已接受任务「{task.title}」的反报价 £{float(task.agreed_reward):.2f}, "
+                    f"请批准并支付以开始任务"
+                ),
+                content_en=(
+                    f'You accepted the counter offer for task "{task.title}" '
+                    f"(£{float(task.agreed_reward):.2f}). Approve & pay to start."
+                ),
+                related_id=task_id,
+                related_type="task_id",
+                created_at=current_time,
+            )
+            db.add(poster_notification)
+
             await db.commit()
 
             # 发送推送通知
@@ -3727,9 +3807,10 @@ async def respond_taker_counter_offer(
                 logger.warning(f"发送反报价接受推送通知失败: {e}")
 
             return {
-                "message": "已接受反报价，任务进入进行中",
-                "task_status": task.status,
+                "message": "已接受反报价,请通过批准+支付完成任务启动",
+                "task_status": task.status,  # 仍为 pending_acceptance
                 "agreed_price": float(task.agreed_reward),
+                "next_step": "approve_and_pay",
             }
 
         else:

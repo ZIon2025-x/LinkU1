@@ -152,17 +152,35 @@ class WebSocketManager:
         return self.connection_locks[user_id]
     
     async def send_to_user(self, user_id: str, message: dict) -> bool:
-        """向指定用户发送消息"""
+        """向指定用户发送消息。
+
+        失败时区分 3 种原因记日志(便于排查"实时消息没收到"投诉):
+          - not_connected: 用户根本没连到本进程 WS (app 没开 / WS 没建立 / 跨进程)
+          - dead:          曾连过但 connection 已被标记 dead (心跳超时 / 之前 send 出错)
+          - send_error:    send_json 实际抛错 (写 socket 失败)
+        """
+        msg_type = message.get("type", "?") if isinstance(message, dict) else "?"
         connection = self.connections.get(user_id)
-        if not connection or not connection.is_alive:
+        if connection is None:
+            logger.warning(
+                f"[ws-send] not_connected user={user_id} msg_type={msg_type} "
+                f"active_conns={len(self.connections)}"
+            )
             return False
-        
+        if not connection.is_alive:
+            logger.warning(
+                f"[ws-send] dead_connection user={user_id} msg_type={msg_type}"
+            )
+            return False
+
         try:
             await connection.websocket.send_json(message)
             connection.update_activity()
             return True
         except Exception as e:
-            logger.warning(f"向用户 {user_id} 发送消息失败: {e}")
+            logger.warning(
+                f"[ws-send] send_error user={user_id} msg_type={msg_type} err={e}"
+            )
             connection.is_alive = False
             return False
     
