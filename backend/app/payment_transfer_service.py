@@ -395,8 +395,19 @@ def execute_transfer(
             except Exception as balance_error:
                 logger.warning(f"无法获取余额详情: {balance_error}")
         
-        # 对于余额不足等可重试的错误，更新转账记录状态为 retrying
-        if error_code in ['balance_insufficient', 'account_invalid', 'rate_limit']:
+        # 错误分类:
+        # - 已知可重试 (余额不足 / 账户暂不可用 / 限流): 进 retry 循环
+        # - 网络异常 (APIConnectionError): 也重试,Stripe 可能已收到请求,带原
+        #   idempotency_key 重试是安全的
+        # - 其他 (idempotency_error / invalid_request / 等): 不靠重试解决,直接
+        #   标 failed,否则会卡在 retrying 状态永远等 next_retry_at 但 retry_count
+        #   不增 → 永远不进 failed 终态,占着 process_pending_transfers 资源
+        is_retryable = (
+            error_code in ('balance_insufficient', 'account_invalid', 'rate_limit')
+            or isinstance(e, stripe.error.APIConnectionError)
+        )
+
+        if is_retryable:
             transfer_record.status = "retrying"
             transfer_record.last_error = error_msg
             transfer_record.retry_count += 1
@@ -409,15 +420,27 @@ def execute_transfer(
                 transfer_record.status = "failed"
                 transfer_record.next_retry_at = None
                 logger.error(f"❌ 转账失败且已达到最大重试次数: transfer_record_id={transfer_record.id}")
-            if commit:
-                # 使用安全提交，带错误处理和回滚
-                from app.transaction_utils import safe_commit
-                if not safe_commit(db, f"更新转账记录状态 transfer_record_id={transfer_record.id}"):
-                    logger.error(f"更新转账记录状态失败: transfer_record_id={transfer_record.id}")
-            else:
-                # 仅 flush，保持 SAVEPOINT 隔离
-                db.flush()
-        
+        else:
+            # 非白名单错误 (如 idempotency_error/invalid_request/authentication_error 等)
+            # 自动重试解决不了,直接标 failed 让管理员介入。不再静默吞掉让记录卡在
+            # pending/retrying 永远不进终态。
+            transfer_record.status = "failed"
+            transfer_record.last_error = error_msg
+            transfer_record.next_retry_at = None
+            logger.error(
+                f"❌ 转账失败,错误码={error_code} (类型={error_type}) 不在自动重试白名单, "
+                f"直接标 failed: transfer_record_id={transfer_record.id}"
+            )
+
+        if commit:
+            # 使用安全提交，带错误处理和回滚
+            from app.transaction_utils import safe_commit
+            if not safe_commit(db, f"更新转账记录状态 transfer_record_id={transfer_record.id}"):
+                logger.error(f"更新转账记录状态失败: transfer_record_id={transfer_record.id}")
+        else:
+            # 仅 flush，保持 SAVEPOINT 隔离
+            db.flush()
+
         return False, None, error_msg
     except Exception as e:
         error_msg = f"转账处理错误: {str(e)}"

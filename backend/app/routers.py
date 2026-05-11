@@ -672,29 +672,28 @@ def _handle_dispute_team_reversal(db, task_id: int) -> None:
     import logging
     logger = logging.getLogger(__name__)
 
-    # 查找该任务对应的 PaymentTransfer 记录
+    # 查找该任务对应的成功 PaymentTransfer 记录。
+    # 关键: 用 status=succeeded 直接过滤,而不是先 .first() 再判 status。
+    # 因为 idempotency_key 加 taker_id 后,同一 task_id 可能有多条
+    # PaymentTransfer (例如 A 接受 → 取消 → B 接受,会留 A 的 failed
+    # 记录 + B 的 succeeded 记录)。无序的 .first() 拿到 A 的 failed 行
+    # 就会让 if pt.status != "succeeded" 命中、直接 return,真正的 B
+    # 的成功转账反而 never reverse,造成争议时资金没回拢的事故。
     pt = db.query(models.PaymentTransfer).filter(
-        models.PaymentTransfer.task_id == task_id
-    ).first()
+        models.PaymentTransfer.task_id == task_id,
+        models.PaymentTransfer.status == "succeeded",
+    ).order_by(models.PaymentTransfer.succeeded_at.desc()).first()
 
     if not pt:
-        # 没有转账记录 —— 说明尚未结算，争议在结算前触发，无需反转
+        # 没有成功的转账记录 —— 尚未结算/已反转/从未成功,无需 reversal
         logger.info(
-            f"Dispute on task {task_id}: no PaymentTransfer record yet, "
-            f"no reversal needed"
+            f"Dispute on task {task_id}: no succeeded PaymentTransfer, "
+            f"no reversal needed (idempotent)"
         )
         return
 
     if not pt.taker_expert_id:
-        # 个人任务，由原冻结流程处理，此处早退
-        return
-
-    if pt.status != "succeeded":
-        # 已反转 / 从未成功 / 仍在重试 —— 幂等保护
-        logger.info(
-            f"Dispute on task {task_id}: PaymentTransfer status is {pt.status}, "
-            f"no reversal action (idempotent)"
-        )
+        # 个人任务,由原冻结流程处理,此处早退
         return
 
     if not pt.transfer_id:
