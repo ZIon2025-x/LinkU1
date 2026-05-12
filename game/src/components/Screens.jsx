@@ -230,7 +230,9 @@ export function PlayingScreen(props) {
   }[weekInfo?.type || 'term'];
 
   return (
-    <div className="animate-fadein">
+    <div className="animate-fadein flex flex-col h-[100dvh] -mx-3 -my-6">
+      {/* === A: HEADER === */}
+      <div className="flex-shrink-0 px-3 pt-[env(safe-area-inset-top)]">
       {/* 顶部状态栏 */}
       <div className="mb-3 pb-3 border-b border-current/30">
         <div className="flex justify-between items-baseline mb-2">
@@ -386,7 +388,10 @@ export function PlayingScreen(props) {
           📔 手账{diaryTotal > 0 && <span className="ml-1 opacity-50">·{diaryTotal}</span>}
         </TabBtn>
       </div>
+      </div>{/* === /A: HEADER === */}
 
+      {/* === B: CONTENT === */}
+      <div className="flex-1 overflow-y-auto px-3">
       {tab === 'map' && (
         <MapView locations={LOCATIONS} actionsLeft={actionsLeft} onGoToLocation={onGoToLocation}
           currentLocation={currentLocation} setCurrentLocation={setCurrentLocation}
@@ -432,7 +437,11 @@ export function PlayingScreen(props) {
         />
       )}
 
-      <div className="flex gap-2 mt-4">
+      </div>{/* === /B: CONTENT === */}
+
+      {/* === C: FOOTER === */}
+      <div className="flex-shrink-0 px-3 py-3 border-t border-current/30 bg-[#1a1612] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="flex gap-2">
         {onOpenBag && (
           <button onClick={onOpenBag} aria-label="菜单"
             className="px-4 py-3 border border-current/60 hover:bg-current/10 transition-colors text-sm">
@@ -444,6 +453,7 @@ export function PlayingScreen(props) {
           🌙 结束今天
         </button>
       </div>
+      </div>{/* === /C: FOOTER === */}
     </div>
   );
 }
