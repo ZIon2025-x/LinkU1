@@ -71,6 +71,30 @@ export const LINK2UR_CS_MESSAGES = [
       + '不留名，只用数字。可以吗？\n\n'
       + '（不回我也行，默认同意。这事没那么严肃。）',
   },
+  {
+    id: 'cs_phase_pivot',
+    flag: 'l2u_cs_phase_pivot',
+    delayMs: 1200,
+    condition: ({ flags = {}, link2urPhase }) =>
+      link2urPhase === 2 && !flags.l2u_cs_phase_pivot,
+    text:
+      '🚀 你升 Phase 2 了。\n\n'
+      + '我看了一眼后台 — 客户跟你三个月前不一样了, 单价跳, '
+      + '撑住, 这是好事。\n\n'
+      + '——你做得对。',
+  },
+  {
+    id: 'cs_mama_call',
+    flag: 'l2u_cs_mama_call',
+    delayMs: 1500,
+    condition: ({ flags = {} }) =>
+      !!flags.l2u_mama_call_during_merger && !flags.l2u_cs_mama_call,
+    text:
+      '🪧 妈妈电话之后多说一句:\n\n'
+      + '不管你选哪个 — 留下/回去/合并/独立 — '
+      + '我们这边的数据都说你做出来过。\n\n'
+      + '这是真的。',
+  },
 ];
 
 /**
