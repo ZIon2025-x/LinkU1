@@ -589,3 +589,139 @@ def admin_review_cancel_request(
         "request_id": request_id,
         "status": cancel_request.status
     }
+
+
+@router.post("/admin/internal/recover-stuck-task-payout/{task_id}")
+def admin_recover_stuck_task_payout(
+    task_id: int,
+    current_user=Depends(get_current_admin),
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    """
+    人工恢复因 confirm_task_completion 失败 (历史 UnboundLocalError bug 等) 卡在
+    zombie 态的任务: status=completed + is_confirmed=0 + escrow>0 + paid_to_user_id NULL。
+
+    auto_transfer_expired_tasks 调度器查询要求 confirmed_at IS NULL, zombie 任务
+    confirmed_at 已被设上, 调度器永远拿不到, 必须人工触发恢复。
+
+    行为: 把 escrow 余额通过 credit_wallet 入到 taker 的本地钱包, 清 escrow,
+    标 is_confirmed=1, 写 paid_to_user_id。幂等键 earning:task:X:user:Y 与
+    confirm_task_completion 路径一致, 重复调安全。
+    """
+    from decimal import Decimal
+    from app.wallet_service import credit_wallet
+
+    task = (
+        db.query(models.Task)
+        .filter(models.Task.id == task_id)
+        .with_for_update()
+        .first()
+    )
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+    before = {
+        "status": task.status,
+        "is_confirmed": int(task.is_confirmed or 0),
+        "escrow_amount": str(task.escrow_amount or 0),
+        "paid_to_user_id": task.paid_to_user_id,
+        "taker_id": task.taker_id,
+        "is_paid": int(task.is_paid or 0),
+    }
+
+    if task.is_confirmed == 1:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task {task_id} is_confirmed=1, 已结算过,不需要恢复",
+        )
+    if task.status != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task {task_id} status={task.status}, 仅支持 completed 态的 zombie 恢复",
+        )
+    if not task.taker_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task {task_id} 没有 taker_id, 无法恢复",
+        )
+    if not task.escrow_amount or task.escrow_amount <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task {task_id} escrow_amount=0, 没钱可补",
+        )
+
+    net = Decimal(str(task.escrow_amount))
+    gross_raw = task.agreed_reward or task.base_reward or task.reward or net
+    gross = Decimal(str(gross_raw))
+    fee = gross - net if gross > net else Decimal("0")
+    currency = (task.currency or "GBP").upper()
+    idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
+
+    try:
+        credit_wallet(
+            db=db,
+            user_id=task.taker_id,
+            amount=net,
+            source="task_earning",
+            related_id=str(task.id),
+            related_type="task",
+            description=f"任务 #{task.id} 奖励 (admin 人工恢复 confirm payout 卡死)",
+            fee_amount=fee,
+            gross_amount=gross,
+            idempotency_key=idempotency_key,
+            currency=currency,
+        )
+    except Exception as e:
+        logger.error(
+            f"admin_recover_stuck_task_payout: credit_wallet 失败 "
+            f"task_id={task_id} taker={task.taker_id} amount={net}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail=f"credit_wallet failed: {e}")
+
+    task.escrow_amount = Decimal("0.00")
+    task.paid_to_user_id = task.taker_id
+    task.is_confirmed = 1
+    try:
+        crud.add_task_history(
+            db, task.id, None, "admin_recovered_stuck_payout",
+            f"管理员恢复卡死的 payout, 通过 wallet 补 £{net} 给 {task.taker_id}",
+        )
+    except Exception as e:
+        logger.warning(f"add_task_history 失败 (不阻塞): {e}")
+
+    db.commit()
+    db.refresh(task)
+
+    after = {
+        "status": task.status,
+        "is_confirmed": int(task.is_confirmed or 0),
+        "escrow_amount": str(task.escrow_amount or 0),
+        "paid_to_user_id": task.paid_to_user_id,
+    }
+
+    log_admin_action(
+        action="recover_stuck_task_payout",
+        admin_id=current_user.id,
+        request=request,
+        target_type="task",
+        target_id=str(task_id),
+        details={
+            "amount": str(net),
+            "currency": currency,
+            "taker_id": task.taker_id,
+            "before": before,
+            "after": after,
+        },
+    )
+
+    return {
+        "message": f"Recovered task {task_id}: credited £{net} to taker {task.taker_id}",
+        "task_id": task_id,
+        "amount": str(net),
+        "currency": currency,
+        "taker_id": task.taker_id,
+        "before": before,
+        "after": after,
+    }
