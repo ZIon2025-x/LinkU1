@@ -209,7 +209,7 @@ export function PlayingScreen(props) {
     chatThreads, chatThreadUnread, seenChatOptions, seenChatOptionsToday,
     onPickChatOption, onMarkThreadRead, onPickGroupOption,
     onTriggerPret, onTriggerEssay, onTriggerMatch,
-    onOpenMenu,
+    onOpenBag,
     link2urProps } = props;
 
   const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
@@ -433,8 +433,8 @@ export function PlayingScreen(props) {
       )}
 
       <div className="flex gap-2 mt-4">
-        {onOpenMenu && (
-          <button onClick={onOpenMenu} aria-label="菜单"
+        {onOpenBag && (
+          <button onClick={onOpenBag} aria-label="菜单"
             className="px-4 py-3 border border-current/60 hover:bg-current/10 transition-colors text-sm">
             ⚙️
           </button>

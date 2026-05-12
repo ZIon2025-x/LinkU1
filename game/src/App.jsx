@@ -1722,7 +1722,7 @@ export default function App() {
             onTriggerPret={() => withLoading({ type: 'pret' }, () => setActiveMinigamePret(true))}
             onTriggerEssay={() => withLoading({ type: 'essay' }, () => setActiveMinigameEssay(true))}
             onTriggerMatch={() => setActiveMinigameMatch(true)}
-            onOpenMenu={() => setBagOpen(true)}
+            onOpenBag={() => setBagOpen(true)}
             link2urProps={{
               board: state.link2urBoard,
               completed: state.link2urCompleted,
