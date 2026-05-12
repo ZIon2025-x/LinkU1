@@ -138,6 +138,43 @@ export const ENDINGS = [
   // ============================================================
   // Tier 1 — 双 flag 组合（最稀有）
   // ============================================================
+
+  // Link2Ur 创业线 Tier 1 双 flag — 优先于其他 Tier 1 结局
+  {
+    id: 'y_double',
+    tier: 1,
+    condition: ({ flags, link2urTeamMembers = [] }) =>
+      !!flags?.l2u_y_invited &&
+      !!flags?.link2urPath_team &&
+      !!flags?.l2u_y_merger_accepted &&
+      link2urTeamMembers.length >= 4,
+    ending: {
+      title: 'LinkU Bespoke + AI 创始合伙人',
+      subtitle: 'Founders of the New Hybrid',
+      text: `W52 毕业典礼那天 Y 姐发了一条朋友圈:
+"我五年前 UCL 毕业那年 没人告诉我可以这样活。但我告诉了 ta。
+LinkU Bespoke 多了一个 founder。
+而且 ta 带来的是我没有的:AI 让我们一个客户能赚两次。"
+
+三年后,你们拿到 €5M A 轮。
+媒体专访标题《The Hybrid That Took Over Bespoke Travel》:
+"They sold a £600 day trip and a £2000 AI content pack to the same client.
+That's not bundling. That's understanding what wealthy clients now expect."
+
+Lily 的婚礼上她说: "我老公是我自己找的,
+但我的伴娘是 Link2Ur 推荐的。我们结婚照的 AI 后期 也是 ta 的团队做的。"
+
+W47 那个下午之后,你妈再没问过你"王阿姨女儿的选调"。
+那天 BBC 那篇采访火了之后,她转发了三遍朋友圈。配文:
+"我女儿/儿子 比我懂这个时代。"
+
+你在 Sketch 的 pink room 跟 Y 姐喝今年的下午茶。
+她说:"五年前我在这里坐着想 someday I want someone to share this with.
+Now you're here. Different rooms next year — we're moving to Shoreditch."
+你想: AI 替不了我们这种关系。`,
+    },
+  },
+
   {
     id: 'sarah_double',
     condition: ({ flags }) => flags.cotswolds_xmas && flags.eurotrip_sarah,
@@ -248,6 +285,73 @@ export const ENDINGS = [
     },
   },
 
+  // Link2Ur 创业线 Tier 2 单 flag 结局
+  {
+    id: 'link2ur_team_founded',
+    tier: 2,
+    condition: ({ flags, link2urTeamMembers = [] }) =>
+      !!flags?.link2urPath_team &&
+      !!flags?.l2u_y_merger_declined_independent &&
+      link2urTeamMembers.length >= 2,
+    ending: {
+      title: '我自己的 AI Studio',
+      subtitle: 'My Own Studio',
+      text: `你拒了 Y 姐的合并。
+
+她在 Sketch 把那张 napkin 收起来:"OK. 你年轻 你应该试试自己。
+五年后如果你想合并 我还在。If we're both still here. And if AI hasn't replaced both of us by then. (笑)"
+
+W52 你的团队 6 人 · 年流水 £180k · 评分 4.92 · 跨境品牌客户 retention 71%。
+
+你没有 Y 姐的 grandfather money,也没有她 8 年的客户网络。
+但你的团队全是你亲手挑的人 —— 小雨拿着 PhD 申请书来找你写推荐信,
+Aman 写了一个开源的小红书投放优化脚本,GitHub 上拿了 1.2k stars。
+你的客户都说这是"伦敦最懂双语的 AI 广告公司"。
+
+Sarah 第一次看你给她男友 startup 做的 demo 视频。她说:
+"This is the most 'you' thing you've ever made.
+And I had no idea AI could do this."
+
+Y 姐 W50 在 Sketch 二访时跟你说:"你能跟我打 说明我老了。"
+你笑了 但你知道她其实在夸你。
+Paul 的 BBC 第二季也找你了 — 你成为了"AI 时代留学生工作者"的代表。`,
+    },
+  },
+
+  {
+    id: 'link2ur_solo_apex',
+    tier: 2,
+    condition: ({ flags, link2urRating = 0, link2urCompletedCount = 0 }) =>
+      !!flags?.link2urPath_solo &&
+      !!flags?.l2u_solo_niche_chosen &&
+      link2urRating >= 4.95 &&
+      link2urCompletedCount >= 40,
+    ending: {
+      title: '伦敦最难约的 AI Pro',
+      subtitle: 'The One Brand Calls First',
+      text: `你拒了 Y 姐的邀请。
+
+那一年你接了 31 个品牌客户,完单 67。Omar 家族 startup 出海全套素材、
+蓝瓶茶饮的 UK launch campaign、Paul 那本 AI 时代书的封面 AI insight art ——
+你做的不是"内容生成",是"内容策略"。 你拒掉了 50+ 个想约你的客户,
+因为你说"我只接懂双语品牌战略的活","我一周只接 3 个 brief","客户给我 deck 我就不接"。
+
+W50 Y 姐在 Sketch 主动 DM 你:
+"我招过你 你没来。现在你单价比我团队任何 senior 都高。Pret 喝杯咖啡?
+就这一次 我想问你一个问题。"
+
+Pret Tottenham Court Road。她: "你怎么活下来的?一个人? AI 这两年那么卷。"
+你: "我也不知道。但我每次出 brief 都是从客户那边的真问题出发,
+不是从 AI 模型能做什么出发。这可能是 AI 替不掉的最后一公里。"
+她笑了。结账的时候她说: "Send me your portfolio sometime. I might want to refer clients to you."
+
+回国的飞机上 妈跟你视频说: "你王阿姨女儿那个选调还行 但她妈说从来没像你这么懂自己在干什么。"
+
+你打开 Link2Ur,inbox 里 24 个未读。最早的那条预约写 8 个月后 — 一个中资 luxury 品牌。
+你回:"sorry 我满了 推荐你试 Y 姐的团队"。然后关机。今晚要去 Mei's 吃最后一顿饭。`,
+    },
+  },
+
   // ============================================================
   // 林南 · 恋爱线结局（player must complete linnan ch5）
   // ============================================================
@@ -296,7 +400,7 @@ export const ENDINGS = [
     allowLink2UrEcho: true,
     ending: {
       title: '牛津的录取信', subtitle: 'The Oxford Letter',
-      text: '4 月。一封 DPhil offer 躺在你的邮箱里。Christ Church 给的全奖。\n\n你想起一年前坐在 Heathrow 的样子——什么都不懂，什么都怕。\n\n你打开 Whitmore 的邮件回他："Thank you. I don\'t know how to thank you." 他回了三个字："Earn it."\n\n你在伦敦的 flat 里坐了很久。你来留学的所有理由——证明给爸妈看，证明给前男友/女友看，证明给那个自己看——都已经不重要了。\n\n你只是想知道更多。这就够了。',
+      text: '4 月。一封 DPhil offer 躺在你的邮箱里。Christ Church 给的全奖。\n\n你想起一年前坐在 Heathrow 的样子——什么都不懂，什么都怕。\n\n你打开 Whitmore 的邮件回他："Thank you. I don\'t know how to thank you." 他回了三个字："Earn it."\n\n你在伦敦的 flat 里坐了很久。你来留学的所有理由——证明给爸妈看，证明给前男友/女友看，证明给那个自己看——都已经不重要了。\n\n你只是想知道更多。这就够了。\n\n你在 DPhil 第一个学期还兼着接 Whitmore 介绍的学术 AI 校对客户',
     },
   },
   {
@@ -304,7 +408,7 @@ export const ENDINGS = [
     condition: ({ flags }) => flags.returned_with_wk,
     ending: {
       title: '回去创业', subtitle: 'The Bet',
-      text: '你跟王凯回了国。第一年开了 3 家奶茶店。第二年扩到 12 家。第三年——你不知道。\n\n但你父母再也不催你"找份稳定的工作"了。你妈在朋友圈发你的店开业的照片，配文"我儿子/女儿在创业"。\n\n伦敦的两年好像一场梦。你偶尔会想念 Sarah，想念 Aditi，想念图书馆 4 楼。\n\n但你不后悔。这次是你自己选的路。',
+      text: '你跟王凯回了国。第一年开了 3 家奶茶店。第二年扩到 12 家。第三年——你不知道。\n\n但你父母再也不催你"找份稳定的工作"了。你妈在朋友圈发你的店开业的照片，配文"我儿子/女儿在创业"。\n\n伦敦的两年好像一场梦。你偶尔会想念 Sarah，想念 Aditi，想念图书馆 4 楼。\n\n但你不后悔。这次是你自己选的路。\n\n王凯三年后追加 "Y 姐去年来上海找我谈合作 — 中国茶饮品牌进 UK 跟我谈分销 跟她团队谈定制游 我说你应该是中间的那个人"',
     },
   },
   {
@@ -334,7 +438,7 @@ export const ENDINGS = [
     allowLink2UrEcho: true,
     ending: {
       title: '找到自己', subtitle: 'Becoming',
-      text: '毕业典礼那天下着小雨。你穿着学袍，在 quad 里和朋友们拍照——他们来自六个不同的国家。\n\n你没有变成一个"英国人"，也没有变回出国前的那个你。你成了一个新的人。\n\n你不知道接下来去哪里。但第一次，你不害怕。',
+      text: '毕业典礼那天下着小雨。你穿着学袍，在 quad 里和朋友们拍照——他们来自六个不同的国家。\n\n你没有变成一个"英国人"，也没有变回出国前的那个你。你成了一个新的人。\n\n你不知道接下来去哪里。但第一次，你不害怕。\n\n你在 Link2Ur 上服务的最后一个跨境品牌客户给你寄了一张明信片到杭州 —— 印着 ta 们 IG 上你做的那条广告的截图。',
     },
   },
   {
@@ -350,7 +454,7 @@ export const ENDINGS = [
     condition: ({ stats }) => stats.wallet >= 1500 && stats.belonging < 45,
     ending: {
       title: '打工人', subtitle: 'Survivor',
-      text: '你毕业的时候存款比来的时候还多。你在中餐馆、奶茶店、代购、家教之间来回切换。\n\n你的英语进步很慢，因为你说得最多的是"哥要不要加波霸"。\n\n但你不后悔。你证明了自己可以靠自己活下来。',
+      text: '你毕业的时候存款比来的时候还多。你在中餐馆、奶茶店、代购、家教之间来回切换。\n\n你的英语进步很慢，因为你说得最多的是"哥要不要加波霸"。\n\n但你不后悔。你证明了自己可以靠自己活下来。\n\nLink2Ur 给你写过一封感谢信 — 你删了 — 它代表的不是 dignity 而是另一种被 AI 算法消耗的劳动',
     },
   },
   // postGrad 路径分流（在 catch-all 之前，保证选了对应路径的玩家拿到对应叙事）
