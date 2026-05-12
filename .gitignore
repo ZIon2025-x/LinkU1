@@ -93,6 +93,9 @@ backend/app/.env
 *.tmp
 *.temp
 
+# Asset originals (kept locally only — too large for git, see game/src/assets/)
+*.orig
+
 # Windows reserved names
 nul
 
