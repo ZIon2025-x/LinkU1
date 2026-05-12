@@ -45,6 +45,33 @@ def _is_connect_not_ready_error(msg) -> bool:
     return CONNECT_NOT_COMPLETE_MSG in s or CONNECT_NOT_ENABLED_MSG in s
 
 
+def _audit_gross_fee_for_task(db, task_id, net_amount: Decimal) -> tuple:
+    """
+    给 wallet_transactions 的审计字段计算 (gross_amount, fee_amount)。
+
+    语义: gross 是任务约定毛额 (taker 角度赚到的总额), fee 是平台从该
+    任务收取的费用; 三者关系 net + fee = gross。这反映"任务约定经济
+    模型", 不一定等于平台实际从 Stripe 收到的现金 —— poster 用了
+    coupon/wallet 时实收 < gross, 缺的那部分是平台市场成本, 不应
+    计入"taker 的费率审计"。
+
+    若 task 找不到或没有约定毛额, 退化到 (net, 0), 不抛错。
+    """
+    if not task_id:
+        return net_amount, Decimal("0")
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        return net_amount, Decimal("0")
+    raw_gross = task.agreed_reward if task.agreed_reward is not None else (
+        task.base_reward if task.base_reward is not None else task.reward
+    )
+    if raw_gross is None:
+        return net_amount, Decimal("0")
+    gross = Decimal(str(raw_gross))
+    fee = gross - net_amount if gross > net_amount else Decimal("0")
+    return gross, fee
+
+
 def create_transfer_record(
     db: Session,
     task_id: int,
@@ -542,15 +569,19 @@ def retry_failed_transfer(
         try:
             from app.wallet_service import credit_wallet
             from decimal import Decimal
+            _net = Decimal(str(transfer_record.amount))
+            _gross, _fee = _audit_gross_fee_for_task(db, transfer_record.task_id, _net)
             wallet_tx = credit_wallet(
                 db,
                 user_id=taker.id,
-                amount=Decimal(str(transfer_record.amount)),
+                amount=_net,
                 source="task_earning",
                 related_id=str(transfer_record.task_id),
                 related_type="task",
                 description=f"任务 #{transfer_record.task_id} 收入（转账重试转钱包）",
                 currency=transfer_record.currency or "GBP",
+                gross_amount=_gross,
+                fee_amount=_fee,
             )
             transfer_record.status = "succeeded"
             transfer_record.last_error = None
@@ -926,6 +957,7 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                                 f"error={error_msg}"
                             )
                             from app.wallet_service import credit_wallet
+                            _gross, _fee = _audit_gross_fee_for_task(db, transfer_record.task_id, transfer_amount)
                             credit_wallet(
                                 db,
                                 user_id=taker.id,
@@ -936,6 +968,8 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                                 description=f"任务 #{transfer_record.task_id} 收入（Stripe转账失败，入钱包）",
                                 currency=transfer_currency,
                                 idempotency_key=payout_idempotency_key,
+                                gross_amount=_gross,
+                                fee_amount=_fee,
                             )
                         # 如果是 retrying，跳过后续的 succeeded 处理
                         if transfer_record.status == "retrying":
@@ -943,6 +977,7 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                 else:
                     # 无 Stripe Connect → 入本地钱包
                     from app.wallet_service import credit_wallet
+                    _gross, _fee = _audit_gross_fee_for_task(db, transfer_record.task_id, transfer_amount)
                     credit_wallet(
                         db,
                         user_id=taker.id,
@@ -953,6 +988,8 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                         description=f"任务 #{transfer_record.task_id} 收入（待处理转账）",
                         currency=transfer_currency,
                         idempotency_key=payout_idempotency_key,
+                        gross_amount=_gross,
+                        fee_amount=_fee,
                     )
                     logger.info(
                         f"✅ 待处理转账入钱包: transfer_record_id={transfer_record.id}, "

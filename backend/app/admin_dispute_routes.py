@@ -501,6 +501,16 @@ def resolve_task_dispute(
                         taker = crud.get_user_by_id(db, task.taker_id)
                         if taker:
                             from app.wallet_service import credit_wallet
+                            # B4 修复: 补 gross/fee 审计字段
+                            _raw_gross = task.agreed_reward or task.base_reward or task.reward
+                            _gross_for_audit = (
+                                Decimal(str(_raw_gross)) if _raw_gross is not None else transfer_amount
+                            )
+                            _fee_for_audit = (
+                                _gross_for_audit - transfer_amount
+                                if _gross_for_audit > transfer_amount
+                                else Decimal("0")
+                            )
                             wallet_tx = credit_wallet(
                                 db,
                                 user_id=taker.id,
@@ -510,6 +520,8 @@ def resolve_task_dispute(
                                 related_type="task",
                                 description=f"任务 #{task.id} 收入（争议裁决）",
                                 currency=(task.currency or "GBP").upper(),
+                                gross_amount=_gross_for_audit,
+                                fee_amount=_fee_for_audit,
                             )
                             transfer_record.status = "succeeded"
                             transfer_record.succeeded_at = get_utc_time()

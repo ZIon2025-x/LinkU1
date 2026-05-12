@@ -1841,6 +1841,13 @@ def confirm_task_completion(
             currency = (task.currency or "GBP").upper()
 
             # Determine gross amount: agreed_reward > base_reward > reward (fallback to net)
+            # B5 注: gross_amount / fee_amount 反映"任务约定经济模型" (taker 角度
+            # 赚到多少 / 平台从该任务约定收多少费), 不一定等于平台实际从 Stripe
+            # 收到的现金。当 poster 用 coupon/wallet/points 混合支付时, 实收现金 <
+            # gross_amount, 缺的部分是平台市场成本 (coupon) 或内部账目结算
+            # (wallet → 来自其他任务的收入)。**不要**用 SUM(WalletTransaction.fee_amount)
+            # 当平台费收入,会高估 (没扣 coupon 成本)。平台收入要算
+            # SUM(PaymentHistory.stripe_amount) - SUM(escrow paid out) - 等。
             _raw_gross = task.agreed_reward if task.agreed_reward is not None else (
                 task.base_reward if task.base_reward is not None else task.reward
             )

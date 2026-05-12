@@ -46,11 +46,19 @@ def process_refund(
         refund_transfer_id = None
         
         # 1. 处理 Stripe 支付退款
+        # ⚠️ B1 修复: 把 Stripe 退款金额按"实际 Stripe charge"封顶。
+        # 之前直接用 refund_amount(等于任务约定金额) 调 stripe.Refund.create,
+        # 当 poster 用了优惠券/钱包/积分混合支付时 stripe_amount < task_amount,
+        # Stripe 会拒绝 amount > charge 的退款,整个 process_refund 500。
+        # 真实 stripe charge 金额来源: PaymentHistory.stripe_amount (单位:便士)。
+        # 同一 task 可能多条 PaymentHistory (top-up 场景), 这里只看当前
+        # task.payment_intent_id 对应的那条 (是最近一次活跃 PI 的支付历史)。
+        # Wallet/coupon 退款由后面 2.5 那一段 (line 160+) 单独处理, 不在这里 cover。
         if task.payment_intent_id:
             try:
                 # 获取 PaymentIntent
                 payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
-                
+
                 # 检查是否已经退款
                 if payment_intent.status == "canceled":
                     logger.warning(f"PaymentIntent {task.payment_intent_id} 已取消，无需退款")
@@ -58,35 +66,80 @@ def process_refund(
                     # ✅ 修复金额精度：使用Decimal计算，然后转换为便士
                     refund_amount_decimal = Decimal(str(refund_amount))
                     refund_amount_pence = int(refund_amount_decimal * 100)
-                    
-                    # 获取 Charge ID（PaymentIntent 可能有多个 Charge，取第一个成功的）
-                    charges = stripe.Charge.list(payment_intent=task.payment_intent_id, limit=1)
-                    if charges.data:
-                        charge_id = charges.data[0].id
-                        
-                        # ✅ 修复Stripe Idempotency：生成idempotency_key防止重复退款
-                        idempotency_key = hashlib.sha256(
-                            f"refund_{task.id}_{refund_request.id}_{refund_amount_pence}".encode()
-                        ).hexdigest()
-                        
-                        # 创建退款（使用idempotency_key）
-                        refund = stripe.Refund.create(
-                            charge=charge_id,
-                            amount=refund_amount_pence,
-                            reason="requested_by_customer",
-                            idempotency_key=idempotency_key,
-                            metadata={
-                                "task_id": str(task.id),
-                                "refund_request_id": str(refund_request.id),
-                                "poster_id": str(task.poster_id),
-                                "taker_id": str(task.taker_id) if task.taker_id else "",
-                            }
+
+                    # 查当前 PI 对应的 PaymentHistory, 拿到实际 Stripe charge 的金额
+                    ph_for_pi = db.query(models.PaymentHistory).filter(
+                        models.PaymentHistory.task_id == task.id,
+                        models.PaymentHistory.payment_intent_id == task.payment_intent_id,
+                        models.PaymentHistory.status == "succeeded",
+                    ).order_by(models.PaymentHistory.created_at.desc()).first()
+                    actual_stripe_charged_pence = (
+                        int(ph_for_pi.stripe_amount) if ph_for_pi and ph_for_pi.stripe_amount else None
+                    )
+
+                    # 按实际 charge 封顶 Stripe 退款
+                    if actual_stripe_charged_pence is not None and actual_stripe_charged_pence > 0:
+                        if refund_amount_pence > actual_stripe_charged_pence:
+                            logger.info(
+                                f"Stripe 退款金额按实际 charge 封顶: 请求退 {refund_amount_pence}p, "
+                                f"实际 charge {actual_stripe_charged_pence}p (poster 可能用了 coupon/wallet)"
+                            )
+                        stripe_refund_pence = min(refund_amount_pence, actual_stripe_charged_pence)
+                    elif actual_stripe_charged_pence == 0:
+                        # PaymentHistory 显示 Stripe charge 是 0 (例如全 coupon 抵扣),
+                        # 没东西可以走 Stripe 退,跳过 Stripe 这步,后面的 wallet 退款
+                        # 和外层调用者负责其他部分。
+                        logger.info(
+                            f"PaymentHistory 显示 stripe_amount=0 (全 coupon/wallet 支付), "
+                            f"跳过 Stripe 退款"
                         )
-                        
-                        refund_intent_id = refund.id
-                        logger.info(f"✅ Stripe 退款创建成功: refund_id={refund.id}, amount=£{refund_amount:.2f}")
+                        stripe_refund_pence = 0
                     else:
-                        logger.warning(f"PaymentIntent {task.payment_intent_id} 没有找到 Charge")
+                        # 没找到 PaymentHistory (旧数据/异常), 保守用原 refund_amount_pence,
+                        # 让 Stripe 自己判断 (Stripe 会按 charge 金额自动 cap 或拒绝)
+                        logger.warning(
+                            f"找不到 PI {task.payment_intent_id} 的 PaymentHistory, "
+                            f"按 refund_amount 原值调 Stripe (可能被 Stripe 拒)"
+                        )
+                        stripe_refund_pence = refund_amount_pence
+
+                    if stripe_refund_pence > 0:
+                        # 获取 Charge ID（PaymentIntent 可能有多个 Charge，取第一个成功的）
+                        charges = stripe.Charge.list(payment_intent=task.payment_intent_id, limit=1)
+                        if charges.data:
+                            charge_id = charges.data[0].id
+
+                            # ✅ idempotency_key 用 stripe_refund_pence (实际退给 Stripe 的数),
+                            # 不用 refund_amount_pence,避免相同 task+request 但实际 Stripe 金额
+                            # 不同时撞 key
+                            idempotency_key = hashlib.sha256(
+                                f"refund_{task.id}_{refund_request.id}_{stripe_refund_pence}".encode()
+                            ).hexdigest()
+
+                            # 创建退款（使用idempotency_key）
+                            refund = stripe.Refund.create(
+                                charge=charge_id,
+                                amount=stripe_refund_pence,
+                                reason="requested_by_customer",
+                                idempotency_key=idempotency_key,
+                                metadata={
+                                    "task_id": str(task.id),
+                                    "refund_request_id": str(refund_request.id),
+                                    "poster_id": str(task.poster_id),
+                                    "taker_id": str(task.taker_id) if task.taker_id else "",
+                                    "requested_amount_pence": str(refund_amount_pence),
+                                    "actual_stripe_refund_pence": str(stripe_refund_pence),
+                                }
+                            )
+
+                            refund_intent_id = refund.id
+                            logger.info(
+                                f"✅ Stripe 退款创建成功: refund_id={refund.id}, "
+                                f"Stripe 退 £{stripe_refund_pence/100:.2f} "
+                                f"(请求总退 £{refund_amount:.2f})"
+                            )
+                        else:
+                            logger.warning(f"PaymentIntent {task.payment_intent_id} 没有找到 Charge")
             except stripe.error.StripeError as e:
                 logger.error(f"Stripe 退款失败: {e}")
                 return False, None, None, f"Stripe 退款失败: {str(e)}"

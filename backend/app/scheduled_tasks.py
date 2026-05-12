@@ -2200,6 +2200,21 @@ def auto_transfer_expired_tasks(db: Session):
                     # 钱时各用不同 Stripe key 触发双付
                     payout_idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
 
+                    # B2 修复: 给钱包入账补 gross/fee 审计字段 (与 confirm_task_completion
+                    # 一致),否则 WalletTransaction 上的 gross_amount/fee_amount 为 NULL。
+                    # 注意 gross/fee 反映任务约定经济模型 (taker 角度),不一定等于平台
+                    # 实际从 Stripe 收到的钱 —— poster 用 coupon/wallet 时实收 < gross,
+                    # 那部分 coupon 是平台市场成本, 不应计入"taker 的费率"。
+                    _raw_gross = task.agreed_reward or task.base_reward or task.reward
+                    _gross_for_audit = (
+                        Decimal(str(_raw_gross)) if _raw_gross is not None else auto_transfer_amount
+                    )
+                    _fee_for_audit = (
+                        _gross_for_audit - auto_transfer_amount
+                        if _gross_for_audit > auto_transfer_amount
+                        else Decimal("0")
+                    )
+
                     # Team-aware destination: spec §3.2 v2
                     from app.services.expert_task_resolver import resolve_payout_destination
                     is_team_task = bool(task.taker_expert_id)
@@ -2265,6 +2280,8 @@ def auto_transfer_expired_tasks(db: Session):
                                 description=f"任务 #{task.id} 收入（自动确认，Stripe失败回退）",
                                 currency=payout_currency,
                                 idempotency_key=payout_idempotency_key,
+                                gross_amount=_gross_for_audit,
+                                fee_amount=_fee_for_audit,
                             )
                         except Exception as unexpected_err:
                             # 网络超时等不确定异常 → 不回退钱包（Stripe 可能已成功）
@@ -2292,6 +2309,8 @@ def auto_transfer_expired_tasks(db: Session):
                             description=f"任务 #{task.id} 收入（自动确认）",
                             currency=payout_currency,
                             idempotency_key=payout_idempotency_key,
+                            gross_amount=_gross_for_audit,
+                            fee_amount=_fee_for_audit,
                         )
                         logger.info(
                             f"✅ 任务 {task.id} 自动入账钱包：£{auto_transfer_amount} → 接单方 {task.taker_id}（无 Stripe Connect）"
