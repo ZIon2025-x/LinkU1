@@ -1683,8 +1683,13 @@ def confirm_task_completion(
         try:
             from app.coupon_points_crud import add_points_transaction
             from app.models import Activity
-            import stripe
-            import os
+            # 注意: 不能在这里 `import stripe`!
+            # 文件顶部第 22 行已经 import 过 stripe。在函数里 `import stripe`
+            # 会让整个 confirm_task_completion 函数把 stripe 当成局部变量,
+            # 进而当 task 不带 parent_activity_id (这个 if 块被跳过) 时,
+            # 下面 1861 行的 stripe.Transfer.create 会抛 UnboundLocalError,
+            # 触发 payout_savepoint.rollback() 让 escrow 永远卡死。
+            # `import os` 同样删除 —— 整个文件没用到 os。
 
             # 查询关联的活动
             activity = db.query(Activity).filter(Activity.id == task.parent_activity_id).first()
