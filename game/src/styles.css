@@ -9,7 +9,11 @@
     color: #e8e0d0;
     font-family: 'EB Garamond', 'Songti SC', 'Source Han Serif', serif;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    -webkit-touch-callout: none;
   }
+
+  button, .ui-chrome { user-select: none; -webkit-user-select: none; }
 
   /* ── 全局极简滚动条 ──
      · WebKit (Chrome/Safari/Edge): 4px 细条，hover 才显形
