@@ -1614,6 +1614,31 @@ export async function reviewAdminCancelRequest(
   return res.data;
 }
 
+// ==================== 卡死任务 payout 恢复 API ====================
+
+export interface StuckTaskPayout {
+  task_id: number;
+  title: string;
+  status: string;
+  taker_id: string;
+  poster_id: string;
+  escrow_amount: string;
+  currency: string;
+  confirmed_at: string | null;
+  parent_activity_id: number | null;
+  taker_expert_id: string | null;
+}
+
+export async function getStuckTaskPayouts(limit: number = 100): Promise<StuckTaskPayout[]> {
+  const res = await api.get('/api/admin/internal/stuck-task-payouts', { params: { limit } });
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+export async function recoverStuckTaskPayout(taskId: number) {
+  const res = await api.post(`/api/admin/internal/recover-stuck-task-payout/${taskId}`);
+  return res.data;
+}
+
 export default api;
 
 // ===== Dashboard Stats Trends =====

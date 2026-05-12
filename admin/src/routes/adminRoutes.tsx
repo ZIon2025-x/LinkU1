@@ -30,6 +30,7 @@ const RecommendationManagement = lazy(() => import('../pages/admin/recommendatio
 const StudentVerificationManagement = lazy(() => import('../pages/admin/student-verification/StudentVerificationManagement'));
 const OAuthClientsManagement = lazy(() => import('../pages/admin/oauth-clients/OAuthClientsManagement'));
 const CancelRequestsManagement = lazy(() => import('../pages/admin/cancel-requests/CancelRequestsManagement'));
+const StuckPayoutsManagement = lazy(() => import('../pages/admin/stuck-payouts/StuckPayoutsManagement'));
 const ContentModerationPage = lazy(() => import('../pages/admin/content-moderation').then(m => ({ default: m.ContentModerationPage })));
 const NewbieTaskConfig = lazy(() => import('../pages/admin/newbie-tasks/NewbieTaskConfig'));
 const OfficialTaskManagement = lazy(() => import('../pages/admin/official-tasks/OfficialTaskManagement'));
@@ -79,6 +80,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Cancel Requests (任务取消申请) */}
           <Route path="cancel-requests" element={<CancelRequestsManagement />} />
+
+          {/* Stuck Task Payouts (卡死任务 payout 恢复) */}
+          <Route path="stuck-payouts" element={<StuckPayoutsManagement />} />
 
           {/* Job Position Management */}
           <Route path="job-positions" element={<JobPositionManagement />} />

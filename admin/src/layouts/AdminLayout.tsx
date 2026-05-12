@@ -45,6 +45,12 @@ const defaultMenuItems: MenuItem[] = [
     path: '/admin/cancel-requests',
   },
   {
+    key: 'stuck-payouts',
+    label: '卡死任务恢复',
+    icon: '🛟',
+    path: '/admin/stuck-payouts',
+  },
+  {
     key: 'customer-service',
     label: '客服管理',
     icon: '🎧',
@@ -220,6 +226,7 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/experts': '专家管理',
   '/admin/tasks': '任务管理',
   '/admin/cancel-requests': '取消申请',
+  '/admin/stuck-payouts': '卡死任务恢复',
   '/admin/job-positions': '岗位管理',
   '/admin/customer-service': '客服管理',
   '/admin/coupons': '优惠券管理',

@@ -591,6 +591,52 @@ def admin_review_cancel_request(
     }
 
 
+@router.get("/admin/internal/stuck-task-payouts")
+def admin_list_stuck_task_payouts(
+    limit: int = Query(100, ge=1, le=500),
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    列出所有 confirm payout 卡死的任务。匹配条件:
+    - status = 'completed'
+    - is_confirmed = 0
+    - escrow_amount > 0
+    - is_paid = 1
+    - taker_id IS NOT NULL
+    - paid_to_user_id IS NULL  (尚未支付出去)
+    """
+    rows = (
+        db.query(models.Task)
+        .filter(
+            models.Task.status == "completed",
+            models.Task.is_confirmed == 0,
+            models.Task.escrow_amount > 0,
+            models.Task.is_paid == 1,
+            models.Task.taker_id.isnot(None),
+            models.Task.paid_to_user_id.is_(None),
+        )
+        .order_by(models.Task.confirmed_at.desc().nullslast())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "task_id": t.id,
+            "title": t.title,
+            "status": t.status,
+            "taker_id": t.taker_id,
+            "poster_id": t.poster_id,
+            "escrow_amount": str(t.escrow_amount or 0),
+            "currency": (t.currency or "GBP").upper(),
+            "confirmed_at": t.confirmed_at.isoformat() if t.confirmed_at else None,
+            "parent_activity_id": t.parent_activity_id,
+            "taker_expert_id": t.taker_expert_id,
+        }
+        for t in rows
+    ]
+
+
 @router.post("/admin/internal/recover-stuck-task-payout/{task_id}")
 def admin_recover_stuck_task_payout(
     task_id: int,
