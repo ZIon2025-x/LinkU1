@@ -388,7 +388,9 @@ export default function App() {
   // Game start
   // ============================================================
   function startGame() {
-    audio.init(); audio.click();
+    // unlock() 必须在 user gesture 同步栈内，否则 iOS Safari / Android Chrome
+    // 之后异步触发的 ambient HTMLAudio.play() 会被 autoplay policy 拒掉。
+    audio.unlock(); audio.click();
     setShowBirthdayPrompt(true);
   }
 

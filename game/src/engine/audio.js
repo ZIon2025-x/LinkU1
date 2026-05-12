@@ -31,6 +31,11 @@ const LOCATION_AMBIENT_GAIN_MAP = {
   rain:    0.6,  // 雨声经验上要压一档别盖过对话
 };
 
+// 1-sample 静音 WAV (data URI) —— 仅用于 iOS Safari 的 HTMLAudio session unlock
+// (浏览器要求首次 play() 必须同步发生在 user gesture 内才会"解锁"该 origin 的音频)
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+
 class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -39,12 +44,45 @@ class AudioEngine {
     this._currentAmbientId = null;
     // 缓存已创建的 HTMLAudioElement —— 避免切回同一地点时重新下载
     this._ambientCache = {};
+    // mobile autoplay 解锁状态 + retry handler
+    this._unlocked = false;
+    this._retryHandler = null;
   }
   init() {
     if (this.ctx) return;
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     } catch (e) { /* unavailable */ }
+  }
+  // ────────────────────────────────────────────────────────
+  // Mobile autoplay unlock
+  //
+  // 必须在 user gesture handler **同步**栈内调用 (e.g. button onClick)，
+  // 否则 iOS Safari / Android Chrome 会拒绝后续异步触发的 audio play()。
+  // 桌面浏览器调用也无副作用 (resume() 是 idempotent，silent dummy 0 ms 静音)。
+  // ────────────────────────────────────────────────────────
+  unlock() {
+    this.init();
+    // 1. 解锁 Web Audio (SFX click/ding/...)
+    if (this.ctx && this.ctx.state === 'suspended') {
+      try { this.ctx.resume(); } catch (e) { /* ignore */ }
+    }
+    if (this._unlocked) return;
+    // 2. 解锁 HTMLAudio session：用 1-sample 静音 WAV play+pause
+    //    成功一次后，本页内所有后续 HTMLAudio.play() (包括从 useEffect 异步触发) 都不会被 block
+    try {
+      const dummy = new Audio(SILENT_WAV);
+      dummy.volume = 0;
+      const p = dummy.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          dummy.pause();
+          this._unlocked = true;
+        }).catch(() => { /* 仍未解锁：靠 _scheduleAmbientRetry 在下次 gesture 兜底 */ });
+      } else {
+        this._unlocked = true;
+      }
+    } catch (e) { /* ignore */ }
   }
   setMuted(m) { this.muted = m; if (m) this.stopAmbient(); }
   click() {
@@ -130,7 +168,14 @@ class AudioEngine {
     }
     const perLoc = LOCATION_AMBIENT_GAIN_MAP[ambientId] ?? 1.0;
     el.volume = Math.max(0, Math.min(1, MASTER_AMBIENT_GAIN * perLoc));
-    el.play().catch(() => { /* autoplay block — 下次 click 后会过 */ });
+    const p = el.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        // mobile autoplay block (常见于 reload 后直接落到 playing screen，无 BEGIN gesture)
+        // 装一次性 gesture 监听，在下次任意 tap/click/key 时重试
+        this._scheduleAmbientRetry(ambientId);
+      });
+    }
     this._currentAmbientId = ambientId;
     this.ambientNodes.push({
       _isHtmlAudio: true,
@@ -138,6 +183,28 @@ class AudioEngine {
       // 不调 disconnect / 不清 src —— 留 cache 给下次复用
       disconnect: () => {},
     });
+  }
+
+  _scheduleAmbientRetry(ambientId) {
+    if (this._retryHandler) return; // 已有 pending 监听
+    const retry = () => {
+      document.removeEventListener('pointerdown', retry);
+      document.removeEventListener('touchend', retry);
+      document.removeEventListener('keydown', retry);
+      this._retryHandler = null;
+      if (this.muted) return;
+      // 解锁一次 + 重试当前 ambient (用户可能已切到别的地点，所以读最新的 _currentAmbientId)
+      this.unlock();
+      const targetId = this._currentAmbientId || ambientId;
+      const el = this._ambientCache[targetId];
+      if (el) { try { el.play().catch(() => {}); } catch (e) {} }
+    };
+    this._retryHandler = retry;
+    if (typeof document !== 'undefined') {
+      document.addEventListener('pointerdown', retry, { passive: true });
+      document.addEventListener('touchend', retry, { passive: true });
+      document.addEventListener('keydown', retry);
+    }
   }
 
   // 单纯的低频 sine drone — 仅在没有对应音频文件时 fallback 用

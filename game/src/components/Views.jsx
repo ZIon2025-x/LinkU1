@@ -33,7 +33,11 @@ const MapMarker = React.memo(function MapMarker({ loc, pos, isHome, isSelected, 
     <button
       onClick={onClick}
       style={{ left: pos.x, top: pos.y }}
-      className="absolute -translate-x-1/2 -translate-y-1/2 z-10 group focus:outline-none"
+      // ::before 透明扩展点击热区到 ~44px (Apple HIG 推荐)，不影响视觉布局
+      // 视觉点仍是 12px (w-3 h-3)，但手指点周围 16px 也能触发
+      className="absolute -translate-x-1/2 -translate-y-1/2 z-10 group focus:outline-none
+        before:content-[''] before:absolute before:left-1/2 before:top-1/2
+        before:-translate-x-1/2 before:-translate-y-1/2 before:w-11 before:h-11"
     >
       {/* 选中时的 ring pulse */}
       {isSelected && (
