@@ -253,7 +253,7 @@ def withdraw(
             amount=amount_pence,
             currency=currency.lower(),
             destination=stripe_account_id,
-            description=f"Wallet withdrawal for user {current_user.id}",
+            description="任务收入提现 / Task earnings payout",
             metadata={
                 "user_id": str(current_user.id),
                 "wallet_tx_id": str(pending_tx.id),
