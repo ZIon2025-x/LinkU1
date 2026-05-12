@@ -233,161 +233,63 @@ export function PlayingScreen(props) {
     <div className="animate-fadein flex flex-col h-[100dvh] -mx-3 -my-6">
       {/* === A: HEADER === */}
       <div className="flex-shrink-0 px-3 pt-[env(safe-area-inset-top)]">
-      {/* 顶部状态栏 */}
-      <div className="mb-3 pb-3 border-b border-current/30">
-        <div className="flex justify-between items-baseline mb-2">
-          <div>
-            <div className="text-xs tracking-[0.2em] opacity-60" style={{ fontFamily: 'monospace' }}>
-              DAY {String(day).padStart(3, '0')} · WEEK {week}/52
-              {weekInfo && (
-                <span className="ml-2" style={{ color: weekColor }}>{weekInfo.label}</span>
-              )}
-            </div>
-            <div className="text-lg mt-0.5 flex items-baseline flex-wrap gap-x-2">
-              <span>第{week}周 · 周{dayNames[dayOfWeek-1]}</span>
-              {weekInfo && (
-                <span className="text-sm" style={{ color: weekColor }}>
-                  {weekTypeIcon} {weekInfo.cn}
-                </span>
-              )}
-              {weekInfo?.deadline && (
-                <span className="text-xs px-1.5 py-0.5 border border-orange-400/60 text-orange-300 animate-pulse"
-                  style={{ fontFamily: 'monospace' }}>⏰ DEADLINE</span>
-              )}
-              {weather && <span className="ml-1 opacity-70 text-sm">{WEATHERS[weather]?.emoji} {WEATHERS[weather]?.cn}</span>}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs opacity-60" style={{ fontFamily: 'monospace' }}>ACTIONS</div>
-            <div className="flex gap-1 mt-1 justify-end">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className={`w-3 h-3 rounded-full border ${i < actionsLeft ? 'bg-current/80 border-current' : 'border-current/30'}`} />
-              ))}
-            </div>
-            {(() => {
-              const meals = props.gameState?.mealsToday ?? 0;
-              const mealColor = meals >= 2 ? '#22c55e' : meals === 1 ? '#eab308' : '#ef4444';
-              return (
-                <div className="text-[10px] mt-1.5 opacity-80" style={{ fontFamily: 'monospace', color: mealColor }}>
-                  🍴 {meals}/2 顿
-                </div>
-              );
-            })()}
+      <button
+        type="button"
+        onClick={() => { audio.click(); onOpenBag(); }}
+        className="w-full text-left pt-2 pb-1.5 border-b border-current/20
+                   active:bg-current/5 transition-colors"
+      >
+        {/* row 1: pill + ACTIONS dots */}
+        <div className="flex justify-between items-center">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-wider"
+                style={{
+                  background: 'rgba(212,176,112,0.15)',
+                  border: '1px solid rgba(212,176,112,0.4)',
+                  color: '#d4b070',
+                }}>
+            D{day} · W{week} · 周{dayNames[dayOfWeek-1]}
+            {weekInfo && <> · {weekTypeIcon} {weekInfo.cn}</>}
+            {weather && <> · {WEATHERS[weather]?.emoji}</>}
+            {weekInfo?.deadline && <span className="ml-1.5 text-orange-300">⏰</span>}
+          </span>
+          <div className="flex gap-1">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className={`w-2 h-2 rounded-full ${
+                i < actionsLeft ? 'bg-current/80' : 'bg-current/15 border border-current/30'
+              }`} />
+            ))}
           </div>
         </div>
-        <div className="grid grid-cols-5 gap-1.5 text-xs">
+
+        {/* row 2: 4 stats inline */}
+        <div className="mt-1.5 flex justify-between text-[11px]" style={{ fontFamily: 'monospace' }}>
           {(() => {
-            // 5 个 stat 都按区间映射成文字 + 颜色（不显示精确数字，更沉浸）。
-            // 区间值参考各 stat 实际游戏中常见的分布。
-            // 学业是渐进进度，玩家需要明确知道分数 → 显示真实 %，按区间染色
-            const academic = (() => {
-              const v = stats.academic;
-              let color;
-              if (v >= 70) color = '#22c55e';
-              else if (v >= 50) color = undefined;
-              else if (v >= 35) color = '#f97316';
-              else color = '#ef4444';
-              return { text: `${v}%`, color };
-            })();
-            const wallet = (() => {
-              const v = stats.wallet;
-              // 钱包直接显示 £N，按区间染色（玩家需要精确知道能买什么）
-              let color;
-              if (v < 0)         color = '#ef4444';
-              else if (v < 150)  color = '#f97316';
-              else if (v < 400)  color = '#eab308';
-              else if (v < 800)  color = undefined;
-              else               color = '#22c55e';
-              return { text: `£${v}`, color };
-            })();
-            const energy = (() => {
-              const v = stats.energy;
-              if (v >= 75) return { text: '充沛',  color: '#22c55e' };
-              if (v >= 50) return { text: '还行',  color: undefined };
-              if (v >= 25) return { text: '疲惫',  color: '#eab308' };
-              if (v >= 10) return { text: '虚脱',  color: '#f97316' };
-              return            { text: '濒崩',  color: '#ef4444' };
-            })();
-            const stress = (() => {
-              const v = props.gameState?.stress ?? 25;
-              if (v >= 95) return { text: '崩盘',     color: '#ef4444' };
-              if (v >= 85) return { text: '濒崩',     color: '#ef4444' };
-              if (v >= 75) return { text: '紧绷',     color: '#f97316' };
-              if (v >= 60) return { text: '有点累',   color: '#eab308' };
-              if (v >= 30) return { text: '能扛',     color: undefined };
-              return            { text: '平静',     color: '#22c55e' };
-            })();
-            const belonging = (() => {
-              const v = stats.belonging;
-              if (v >= 75) return { text: '找到了',   color: '#22c55e' };
-              if (v >= 50) return { text: '渐入佳境', color: '#a0c890' };
-              if (v >= 30) return { text: '适应中',   color: undefined };
-              if (v >= 15) return { text: '有点疏离', color: '#f97316' };
-              return            { text: '孤岛感',   color: '#ef4444' };
-            })();
+            const a = stats.academic;
+            const aColor = a >= 70 ? '#22c55e' : a >= 50 ? undefined : a >= 35 ? '#f97316' : '#ef4444';
+            const w = stats.wallet;
+            const wColor = w < 0 ? '#ef4444' : w < 150 ? '#f97316' : w < 400 ? '#eab308' : w < 800 ? undefined : '#22c55e';
+            const e = stats.energy;
+            const eText = e >= 75 ? '充沛' : e >= 50 ? '还行' : e >= 25 ? '疲惫' : e >= 10 ? '虚脱' : '濒崩';
+            const eColor = e >= 75 ? '#22c55e' : e >= 50 ? undefined : e >= 25 ? '#eab308' : e >= 10 ? '#f97316' : '#ef4444';
+            const s = props.gameState?.stress ?? 25;
+            const sText = s >= 95 ? '崩盘' : s >= 85 ? '濒崩' : s >= 75 ? '紧绷' : s >= 60 ? '有点累' : s >= 30 ? '能扛' : '平静';
+            const sColor = s >= 85 ? '#ef4444' : s >= 75 ? '#f97316' : s >= 60 ? '#eab308' : s >= 30 ? undefined : '#22c55e';
             return (
               <>
-                <MiniStat label="学业" value={academic.text} valueColor={academic.color} />
-                <MiniStat label="钱包" value={wallet.text}   valueColor={wallet.color} />
-                <MiniStat label="精力" value={energy.text}   valueColor={energy.color} />
-                <MiniStat label="压力" value={stress.text}   valueColor={stress.color} />
-                <MiniStat label="归属" value={belonging.text} valueColor={belonging.color} />
+                <span>📚 <span style={{ color: aColor }}>{a}%</span></span>
+                <span style={{ color: wColor }}>💰 £{w}</span>
+                <span>💪 <span style={{ color: eColor }}>{eText}</span></span>
+                <span>🧠 <span style={{ color: sColor }}>{sText}</span></span>
               </>
             );
           })()}
         </div>
-      </div>
 
-      {/* 出勤提示（已合并 N/4 课进度）*/}
-      {week > 1 && tab === 'map' && weekInfo?.requireClass && (
-        <div className="mb-3 px-3 py-1.5 border border-current/20 text-xs flex justify-between items-center flex-wrap gap-2">
-          <span style={{ fontFamily: 'monospace' }}>本周 {classesAttendedThisWeek}/6 课 · 累计 <span style={{ color: attendanceColor }}>{attendanceRate}%</span></span>
-          {currentMonthRate !== null && (
-            <span style={{ fontFamily: 'monospace' }}>上月 {currentMonthRate}%</span>
-          )}
-          <span style={{ fontFamily: 'monospace' }}>本周 {classesAttendedThisWeek}/6</span>
+        {/* row 3: tap hint */}
+        <div className="text-center text-[9px] opacity-40 mt-1" style={{ fontFamily: 'monospace' }}>
+          ▼ 点击查看完整状态
         </div>
-      )}
-
-      {/* 论文进度（论文季显示） */}
-      {weekInfo?.type === 'dissertation' && dissertationTopic && (
-        <div className="mb-3 px-3 py-2 border border-purple-300/40 bg-purple-300/5">
-          <div className="flex justify-between items-baseline text-xs mb-1.5">
-            <span style={{ fontFamily: 'monospace' }}>📝 论文进度</span>
-            <span style={{ fontFamily: 'monospace' }}>{dissertationProgress}%</span>
-          </div>
-          <div className="h-1 bg-current/10 relative overflow-hidden">
-            <div className="absolute inset-y-0 left-0 bg-purple-300/70 transition-all duration-700"
-                 style={{ width: `${dissertationProgress}%` }} />
-          </div>
-          <div className="text-xs opacity-60 italic mt-1.5">
-            题目：{dissertationTopic.label}
-          </div>
-        </div>
-      )}
-
-      {/* Tab 切换 — 4 个一行（地图 / 消息 / Link2Ur / 手账）*/}
-      <div className="grid grid-cols-4 gap-1 mb-4 text-xs">
-        <TabBtn active={tab === 'map'} onClick={() => setTab('map')}>🗺️ 地图</TabBtn>
-        <TabBtn active={tab === 'phone'} onClick={() => {
-          setTab('phone'); onReadMessages(); onReadGroup && onReadGroup();
-        }}>
-          💬 消息{(unreadMessages + unreadGroup) > 0 &&
-            <span className="ml-1 text-orange-300">·{unreadMessages + unreadGroup}</span>}
-        </TabBtn>
-        {flags?.link2ur_discovered ? (
-          <TabBtn active={tab === 'link2ur'} onClick={() => setTab('link2ur')}>
-            <span style={{ color: '#007AFF' }}>L</span> Link2Ur
-          </TabBtn>
-        ) : (
-          <TabBtn active={false} onClick={() => {}}>
-            <span className="opacity-30">—锁定—</span>
-          </TabBtn>
-        )}
-        <TabBtn active={tab === 'journal'} onClick={() => setTab('journal')}>
-          📔 手账{diaryTotal > 0 && <span className="ml-1 opacity-50">·{diaryTotal}</span>}
-        </TabBtn>
-      </div>
+      </button>
       </div>{/* === /A: HEADER === */}
 
       {/* === B: CONTENT === */}
@@ -440,19 +342,61 @@ export function PlayingScreen(props) {
       </div>{/* === /B: CONTENT === */}
 
       {/* === C: FOOTER === */}
-      <div className="flex-shrink-0 px-3 py-3 border-t border-current/30 bg-[#1a1612] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div className="flex gap-2">
-        {onOpenBag && (
-          <button onClick={onOpenBag} aria-label="菜单"
-            className="px-4 py-3 border border-current/60 hover:bg-current/10 transition-colors text-sm">
-            ⚙️
+      <div className="flex-shrink-0 bg-[#1a1612]">
+        {/* 上层：🎒 + 🌙 结束今天 */}
+        <div className="px-3 pt-3 pb-2 flex gap-2 border-t border-current/30">
+          <button onClick={() => { audio.click(); onOpenBag(); }}
+            aria-label="背包"
+            className="px-4 min-h-[44px] border border-current/60 hover:bg-current/10 active:bg-current/15 transition-colors text-sm">
+            🎒
           </button>
-        )}
-        <button onClick={onEndDay}
-          className="flex-1 py-3 border border-current/60 tracking-[0.3em] text-sm hover:bg-current hover:text-black transition-colors duration-500">
-          🌙 结束今天
-        </button>
-      </div>
+          <button onClick={onEndDay}
+            className="flex-1 min-h-[44px] py-3 border border-current/60 tracking-[0.3em] text-sm hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-300">
+            🌙 结束今天
+          </button>
+        </div>
+
+        {/* 下层：4 tabs */}
+        <div className="grid grid-cols-4 border-t border-current/20
+                        pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <button onClick={() => { audio.click(); setTab('map'); }}
+            className={`flex flex-col items-center py-2 active:bg-current/10 transition-colors ${tab === 'map' ? 'text-[#d4b070]' : 'opacity-55'}`}>
+            <span className="text-[18px] leading-none">🗺️</span>
+            <span className="text-[10px] mt-0.5 tracking-wide">地图</span>
+          </button>
+          <button onClick={() => {
+            audio.click();
+            setTab('phone'); onReadMessages(); onReadGroup && onReadGroup();
+          }}
+            className={`flex flex-col items-center py-2 active:bg-current/10 transition-colors ${tab === 'phone' ? 'text-[#d4b070]' : 'opacity-55'}`}>
+            <span className="text-[18px] leading-none">💬</span>
+            <span className="text-[10px] mt-0.5 tracking-wide">
+              消息{(unreadMessages + unreadGroup) > 0 &&
+                <span className="ml-0.5 px-1 rounded text-white text-[8px]" style={{ background: '#f97316' }}>
+                  {unreadMessages + unreadGroup}
+                </span>}
+            </span>
+          </button>
+          {flags?.link2ur_discovered ? (
+            <button onClick={() => { audio.click(); setTab('link2ur'); }}
+              className={`flex flex-col items-center py-2 active:bg-current/10 transition-colors ${tab === 'link2ur' ? 'text-[#d4b070]' : 'opacity-55'}`}>
+              <span className="text-[18px] leading-none" style={{ color: '#007AFF' }}>L</span>
+              <span className="text-[10px] mt-0.5 tracking-wide">Link2Ur</span>
+            </button>
+          ) : (
+            <div className="flex flex-col items-center py-2 opacity-30">
+              <span className="text-[18px] leading-none">🔒</span>
+              <span className="text-[10px] mt-0.5 tracking-wide">锁定</span>
+            </div>
+          )}
+          <button onClick={() => { audio.click(); setTab('journal'); }}
+            className={`flex flex-col items-center py-2 active:bg-current/10 transition-colors ${tab === 'journal' ? 'text-[#d4b070]' : 'opacity-55'}`}>
+            <span className="text-[18px] leading-none">📔</span>
+            <span className="text-[10px] mt-0.5 tracking-wide">
+              手账{diaryTotal > 0 && <span className="ml-0.5 opacity-60">·{diaryTotal}</span>}
+            </span>
+          </button>
+        </div>
       </div>{/* === /C: FOOTER === */}
     </div>
   );
