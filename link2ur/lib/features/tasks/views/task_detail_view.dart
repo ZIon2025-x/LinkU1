@@ -226,8 +226,7 @@ class _TaskDetailContent extends StatelessWidget {
           child: Scaffold(
           extendBodyBehindAppBar: true,
           appBar: _buildAppBar(context, state),
-          body: Align(
-            alignment: Alignment.topCenter,
+          body: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
               child: _buildBody(context, state, isPoster, isTaker, currentUserId),
@@ -533,6 +532,7 @@ class _TaskDetailContent extends StatelessWidget {
               children: [
                 // 标题和状态卡片
                 AnimatedListItem(
+                  key: const ValueKey('task-header'),
                   index: 0,
                   child: _TaskHeaderCard(task: task, isDark: isDark, currentUserId: currentUserId),
                 ),
@@ -540,6 +540,7 @@ class _TaskDetailContent extends StatelessWidget {
 
                 // 任务信息卡片
                 AnimatedListItem(
+                  key: const ValueKey('task-info'),
                   index: 1,
                   child: _TaskInfoCard(task: task, isDark: isDark),
                 ),
@@ -550,6 +551,7 @@ class _TaskDetailContent extends StatelessWidget {
                 // 发布者提示 (isPoster && open)
                 if (isPoster && task.status == AppConstants.taskStatusOpen) ...[
                   AnimatedListItem(
+                    key: const ValueKey('poster-info'),
                     index: 2,
                     child: PosterInfoCard(isDark: isDark),
                   ),
@@ -562,6 +564,7 @@ class _TaskDetailContent extends StatelessWidget {
                     isPoster &&
                     task.confirmationDeadline != null) ...[
                   AnimatedListItem(
+                    key: const ValueKey('confirm-reminder'),
                     index: 2,
                     child: ConfirmationReminderCard(
                       deadline: task.confirmationDeadline!,
@@ -577,6 +580,7 @@ class _TaskDetailContent extends StatelessWidget {
                         AppConstants.taskStatusPendingConfirmation &&
                     isTaker) ...[
                   AnimatedListItem(
+                    key: const ValueKey('waiting-confirmation'),
                     index: 2,
                     child: WaitingConfirmationCard(isDark: isDark),
                   ),
@@ -589,6 +593,7 @@ class _TaskDetailContent extends StatelessWidget {
                     task.paymentExpiresAt != null &&
                     task.paymentExpiresAt!.isNotEmpty) ...[
                   AnimatedListItem(
+                    key: const ValueKey('pending-payment'),
                     index: 2,
                     child: PendingPaymentCard(
                       paymentExpiresAt: task.paymentExpiresAt!,
@@ -614,6 +619,7 @@ class _TaskDetailContent extends StatelessWidget {
                     task.completionEvidence != null &&
                     task.completionEvidence!.isNotEmpty) ...[
                   AnimatedListItem(
+                    key: const ValueKey('completion-evidence'),
                     index: 3,
                     child: CompletionEvidenceCard(
                       evidenceList: task.completionEvidence!,
@@ -629,6 +635,7 @@ class _TaskDetailContent extends StatelessWidget {
                     (state.userApplication?.status != 'pending' ||
                         task.userApplicationStatus != 'pending')) ...[
                   AnimatedListItem(
+                    key: const ValueKey('application-status'),
                     index: 3,
                     child: ApplicationStatusCard(
                       task: task,
@@ -641,6 +648,7 @@ class _TaskDetailContent extends StatelessWidget {
 
                 // Q&A section — visible to all users on all task statuses
                 AnimatedListItem(
+                  key: const ValueKey('qa-section'),
                   index: 3,
                   child: QASection(
                     targetType: 'task',
@@ -674,6 +682,7 @@ class _TaskDetailContent extends StatelessWidget {
                      task.status == AppConstants.taskStatusConsulting ||
                      task.status == AppConstants.taskStatusPendingAcceptance)) ...[
                   AnimatedListItem(
+                    key: const ValueKey('applications-list'),
                     index: 4,
                     child: ApplicationsListView(
                       applications: state.applications,
@@ -708,6 +717,7 @@ class _TaskDetailContent extends StatelessWidget {
                     return Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.md),
                       child: AnimatedListItem(
+                        key: const ValueKey('task-reviews'),
                         index: 4,
                         child: TaskReviewsSection(
                           reviews: visibleReviews,
@@ -723,6 +733,7 @@ class _TaskDetailContent extends StatelessWidget {
                     (isPoster || isTaker)) ...[
                   const SizedBox(height: AppSpacing.md),
                   AnimatedListItem(
+                    key: const ValueKey('profile-visibility'),
                     index: 5,
                     child: _ProfileVisibilityCard(
                       task: task,
@@ -736,6 +747,7 @@ class _TaskDetailContent extends StatelessWidget {
                 if (isPoster || isTaker) ...[
                   const SizedBox(height: AppSpacing.md),
                   AnimatedListItem(
+                    key: const ValueKey('counterparty'),
                     index: 6,
                     child: _CounterpartyCard(
                       task: task,
