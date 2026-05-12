@@ -113,3 +113,33 @@ describe('Ch 7 · 论文期低维持', () => {
     expect(ericEvent.week).toBe(41);
   });
 });
+
+describe('Ch 8 · Y 姐合并提议 (对撞妈妈电话)', () => {
+  const ch8 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch8');
+
+  test('Omar 升级 W45', () => {
+    const omarUpgrade = ch8.events.find((e) => e.id === 'ch8_omar_upgrade');
+    expect(omarUpgrade.week).toBe(45);
+  });
+
+  test('W47 Sketch 合并提议 + 妈妈电话 同周', () => {
+    const merger = ch8.events.find((e) => e.sceneId === 'yjie_merger_offer');
+    const mama = ch8.events.find((e) => e.id === 'ch8_mama_call_overlap');
+    expect(merger.week).toBe(47);
+    expect(mama.week).toBe(47);
+  });
+});
+
+describe('Ch 9 · 终局抉择 + 结局', () => {
+  const ch9 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch9');
+
+  test('W50 Y 姐告别', () => {
+    const farewell = ch9.events.find((e) => e.sceneId === 'yjie_farewell');
+    expect(farewell.weekStart).toBeLessThanOrEqual(52);
+  });
+
+  test('W52 结局触发', () => {
+    const endTrigger = ch9.events.find((e) => e.id === 'ch9_ending_walk_down');
+    expect(endTrigger.week).toBe(52);
+  });
+});

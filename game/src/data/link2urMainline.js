@@ -316,8 +316,81 @@ export const LINK2UR_CHAPTERS = [
       },
     ],
   },
-  { chapterId: 'link2ur_ch8', title: 'Y 姐合并提议', weekStart: 45, weekEnd: 47, summary: '', events: [] },
-  { chapterId: 'link2ur_ch9', title: '终局抉择 + 结局', weekStart: 48, weekEnd: 52, summary: '', events: [] },
+  // ── Ch 8 · W45-W47 · Y 姐合并提议 (对撞妈妈电话) ──
+  {
+    chapterId: 'link2ur_ch8',
+    title: 'Y 姐合并提议',
+    weekStart: 45,
+    weekEnd: 47,
+    summary: 'Omar 升级 £30k/年 → Y 姐发现 → Sketch 二访合并提议。妈妈电话同周 W47, 留下做事业 vs 回国稳定的双重 pressure 浓缩。',
+    events: [
+      {
+        id: 'ch8_omar_upgrade',
+        week: 45,
+        type: 'inbox_task',
+        customerId: 'cust_omar',
+        title: 'Omar · 家族基金年度 retainer £30k',
+        reward: 30000,
+        recurring: 'yearly',
+        narrative: 'Omar: "We want you on retainer for the family\'s sustainability portfolio. £30k/year. 12 deliverables. Sponsor visa is on the table if you want."',
+        flagOnAccept: 'l2u_omar_retainer_signed',
+      },
+      {
+        id: 'ch8_y_merger',
+        week: 47,
+        type: 'npc_scene',
+        sceneId: 'yjie_merger_offer',
+        narrative: 'Y 姐 Sketch 二访合并提议: "客户复用 cross-sell" napkin model。三/四选一根据 path。',
+      },
+      {
+        id: 'ch8_mama_call_overlap',
+        week: 47,
+        type: 'flag_set',
+        flagOnSet: 'l2u_mama_call_during_merger',
+        narrative: 'Y 姐提议同一天下午, 妈妈打来电话 (主线 W47): "你王阿姨女儿选调上岸了 25w + 户口" — 双重 pressure',
+      },
+    ],
+  },
+
+  // ── Ch 9 · W48-W52 · 终局抉择 + 结局 ──
+  {
+    chapterId: 'link2ur_ch9',
+    title: '终局抉择 + 结局',
+    weekStart: 48,
+    weekEnd: 52,
+    summary: '根据 Ch 8 决定不同走向: 合并 / 独立 Team / Solo。W50 Y 姐 Sketch 再约。W51-52 和主线离别周并行。W52 毕业典礼后结局 walk-down。',
+    events: [
+      {
+        id: 'ch9_post_merger_setup',
+        week: 48,
+        type: 'flag_set',
+        flagOnSet: 'l2u_path_finalized',
+        narrative: '合并 path: 起草协议 + 联合署名 LinkU Bespoke + AI Studio / 独立 Team: 品牌升级 6 人团队 / Solo: 成"伦敦最难约的 AI 内容专家"',
+      },
+      {
+        id: 'ch9_y_farewell',
+        week: 51,
+        weekStart: 51,
+        type: 'npc_scene',
+        sceneId: 'yjie_farewell',
+        narrative: 'Y 姐 RFH 旁咖啡店最后一面 (不同 path 不同对白 + 不同礼物)',
+      },
+      {
+        id: 'ch9_lily_scarf',
+        week: 51,
+        type: 'flag_set',
+        flagOnSet: 'l2u_lily_scarf_packed',
+        requireRelationship: { customerId: 'cust_lily', minRelationship: 'fan_unlocked' },
+        narrative: '寄箱子时把 Lily 送的 Mulberry 围巾装进去 (跨阶段陪伴 callback)',
+      },
+      {
+        id: 'ch9_ending_walk_down',
+        week: 52,
+        type: 'ending_resolve',
+        narrative: '毕业典礼后结局表 walk-down 触发对应 ending (y_double / link2ur_solo_apex / link2ur_team_founded / Tier 4 兜底)',
+      },
+    ],
+  },
 ];
 
 export function getActiveChapter(day) {
