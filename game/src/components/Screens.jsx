@@ -4,7 +4,6 @@ import {
   NPCS, STORYLINES, LOCATIONS, EXAM_PAPERS, DISSERTATION_TOPICS, WEATHERS,
   PLANE_SCENE, HEATHROW_INTRO, TRANSPORT_OPTIONS, APARTMENT_ARRIVAL,
 } from '../data/index.js';
-import { TabBtn, MiniStat } from './Atoms.jsx';
 import { MapView, PhoneView, JournalView } from './Views.jsx';
 import { Link2UrView } from './Link2UrView.jsx';
 import { NpcAvatar } from './NpcAvatar.jsx';
