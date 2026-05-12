@@ -9,7 +9,16 @@ const OPACITIES = [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95];
 
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      spacing: {
+        'safe-b': 'env(safe-area-inset-bottom)',
+        'safe-t': 'env(safe-area-inset-top)',
+        'safe-l': 'env(safe-area-inset-left)',
+        'safe-r': 'env(safe-area-inset-right)',
+      },
+    },
+  },
   plugins: [
     function ({ addUtilities }) {
       const utils = {};
