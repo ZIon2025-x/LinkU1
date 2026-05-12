@@ -1,7 +1,7 @@
 # 《异乡》剧情大纲与结构
 
 > 本文从 `src/data/` 25+ 数据文件抽取的真实剧情骨架，作为开发回顾文档。
-> 最后更新：2026-05-09
+> 最后更新：2026-05-13
 
 ---
 
@@ -194,7 +194,7 @@
 
 ---
 
-## 6 个 NPC 主线总览
+## 7 个 NPC 主线总览
 
 | NPC | 线名 | 章数 | 关键节点 | 最高 flag |
 |---|---|---|---|---|
@@ -204,6 +204,7 @@
 | **Whitmore** 🎓 | 学术线 | 5 | Office hours → essay 62 分 → tutorial 举手 → coffee 投稿 → 牛津 reference | `high_table` + `thesis_polished` |
 | **Mei 姐** 🍜 | 温情线 | 3 | "傻孩子" → 兼职 → 打烊后 1995 年的故事 | `mei_family` + `mei_manager` |
 | **林可儿/林楠** 💗 | 恋爱线（可选） | 5 | 借笔记 → Nando's → Trafalgar 跨年告白 → 春节相亲错过 → long-distance/留下/分手 | `linnan_*` 三结局 |
+| **Y 姐 💼** | **Link2Ur 技能创业线** | 9 | 试水 → 第一回头客 → 撞档 → Sketch 邀请 → 路径分化 → 复活节深化 → 论文期低维持 → Y 姐合并提议 → 终局抉择 | `y_double` 双 flag |
 
 ### NPC 跨圈联动事件
 - 王凯引荐 Mei 姐 — 闽南话开场
@@ -212,6 +213,12 @@
 - 三人午餐（Sarah + Aditi）— 主动当桥梁 vs 让她们自己处理
 - 王凯遇到 Sarah 在 pub — 中英两个世界第一次碰头
 - Mei 姐说起王凯（去年圣诞独自一人）
+- `cross_yjie_wangkai_pub` · W26-30 · 王凯 Soho pub 偶遇 Y 姐 — 事后跟玩家："那 Y 姐有意思啊 哥们感觉她想撬你的 AI 团队跟她合并"
+- `cross_yjie_whitmore_indirect` · W33-37 · Whitmore office hours — "Heard you've built an AI thing. Make sure it's still you doing the thinking."
+- `cross_yjie_mei_dinner` · W30+ · Y 姐带 Bespoke 客户来 Mei's 吃饭 — Mei："她跟你王凯不一样 — 王凯亲,她精。"
+- `cross_yjie_aditi_referral` · W22-30 · Aditi 论文写完想找 AI 翻译兼职 — 玩家选：推给 Y 姐网络 / 自留
+- `cross_wangkai_eric_steal` · W41-45 · Eric 两头打工（AI 视觉 + 奶茶店海报）— 王凯：三选一（让 Eric 选 / 涨 cut 抢人 / 散伙让）
+- `cross_yjie_paul_bbc` · W38 · 🔴 Paul BBC "AI Times: Immigrant Labor in the Age of Algorithms" 专题采访 — Y 姐也在名单上，合采访由玩家决定；**整线最深母题反思场景**
 
 ---
 
@@ -226,7 +233,34 @@
 - W12+ 教他洗烧黑炒锅 → `mark_friend`（之后他每周日来问做饭）
 - W50-52 他爸生病搬走 → 留 £3 Tesco 卡片 → `mark_kept_in_touch`
 
-### 3. Wellbeing 心理 / 身体 / 家庭线（散布 W8-W50）
+### 3. Y 姐 · Link2Ur 技能创业线 (第 7 主线, 9 章 · W2-W52)
+权重: 主线 NPC 级别。引入 AI 广告 niche + Solo vs Team 二岔 + Phase 1/2 双阶段。
+
+**核心张力**: Solo 自由职业者 vs Team Leader 二选一。
+
+**NPC**: 陈思敏 / Yvonne Chan, 28 岁广东中山人, UCL Tourism MSc, LinkU Bespoke 8 人达人团队创始人。她是玩家的"5 年后未来版"。
+
+**双阶段**:
+- Phase 1 (W2-W22): 服务同道留学生 (网红/电商/品牌主理人), 客单 £50-500
+- Phase 2 (W23-W52): 转型跨境 AI Studio (中资进 UK / 英资进华), 客单 £300-3000
+
+**9 章**:
+1. **Ch 1 · W2-W7 · 试水** — Lily 第一个回头客
+2. **Ch 2 · W8-W12 · 第一个回头客** — Inbox 解锁
+3. **Ch 3 · W13-W17 · 撞档·初体验** — 圣诞撞档 + Lily 签约 Phase 2 hook
+4. **Ch 4 · W21-W22 · Sketch 下午茶** — Y 姐邀请 + Phase pivot
+5. **Ch 5 · W23-W26 · 第一步分化** — 蓝瓶茶饮首单, Path A Solo niche / Path B 招小雨
+6. **Ch 6 · W27-W30 · 复活节深化** — Omar £1500 单 + Y 姐 capstone
+7. **Ch 7 · W31-W42 · 论文期低维持** — 🔴 Paul BBC AI 时代 immigrant labor 采访 (母题反思核心)
+8. **Ch 8 · W45-W47 · Y 姐合并提议** — 与 W47 妈妈电话同周, 双重 pressure 浓缩
+9. **Ch 9 · W48-W52 · 终局抉择 + 结局** — Y 姐 RFH 告别
+
+**核心母题对照**:
+- 王凯 = 实体生意 (重资产, 留下 vs 回国)
+- Y 姐 = 平台技能 (轻资产, Solo vs Team)
+- Paul BBC 采访 = AI 时代 immigrant labor: "你是被替代的还是替代别人的?"
+
+### 4. Wellbeing 心理 / 身体 / 家庭线（散布 W8-W50）
 **身体**：
 - 维 D 不足（妈视频远程发现脸色不对）
 - Pret 增重（一周 5 次 meal deal = 3,750 多余 cal）
@@ -245,14 +279,14 @@
 
 ---
 
-## 22 + 2 结局完整列表
+## 25 + 2 结局完整列表
 
 ### Tier 0 · 至高单 flag — 父母权重（1 个）
 | ID | 触发 | 标题 | 中心情节 |
 |---|---|---|---|
 | `parents_visited_academic` | `parents_visited` + 学业 ≥ 55 | **我让他们看到了** What They Saw | 爸第一次说"对不起"，发家族群"这孩子让我和她妈这一辈子值了"，群里安静 30 秒 |
 
-### Tier 1 · 双 NPC 暗线组合（5 个最稀有）
+### Tier 1 · 双 NPC 暗线组合（6 个最稀有）
 | ID | 双 flag | 标题 |
 |---|---|---|
 | `sarah_double` | cotswolds + eurotrip | **一辈子的朋友** Sarah's Best Mate（三年后参加 Sarah 婚礼，伴娘致辞 "her family is my family"） |
@@ -260,8 +294,9 @@
 | `mei_double` | family + manager | **Lucky Star 的少东家** Auntie's Heir（30% 干股管伦敦扩张，5 年 7 家店） |
 | `whitmore_double` | high table + polished | **《剑桥评论》的作者** A Voice in Print（论文 distinction + 期刊发表，他退休前对你说 "Call me James"） |
 | `wangkai_double` | xmas grind + apprentice | **"哥们 仗义"** Brothers in Bubble Tea（Lucky Tea 32 家店，福布斯 30 under 30） |
+| `y_double` | `l2u_y_invited` + `link2urPath_team` + `l2u_y_merger_accepted` (团员 ≥ 4) | **LinkU Bespoke + AI 创始合伙人** Founders of the New Hybrid（€5M A 轮，媒体《The Hybrid That Took Over Bespoke Travel》） |
 
-### Tier 2 · 单 NPC 延伸（6 个）
+### Tier 2 · 单 NPC 延伸（8 个）
 | ID | 单 flag | 标题 |
 |---|---|---|
 | `sarah_cotswolds` | cotswolds_xmas | **Cotswolds 的窗** A Window in the Hills（妈跟 Sarah 妈在厨房比手势教做饺子和 Yorkshire pudding） |
@@ -271,6 +306,8 @@
 | `wangkai_grind_or_apprentice` | xmas OR easter | **£2500 的那个晚上** The £2500 Night |
 | `eurotrip_sarah` | eurotrip_sarah | **5 个国家的春天** Spring in Five Countries（每年 4 月她发"I miss." 你回"Me too."） |
 | `easter_aditi_pact` | easter_aditi_pact | **把彼此变好的人** Made Each Other Better（毕业后 6 年每天 7am zoom） |
+| `link2ur_team_founded` | `link2urPath_team` + `l2u_y_merger_declined_independent` (团员 ≥ 2) | **我自己的 AI Studio** My Own Studio（团队 6 人，年流水 £180k，"伦敦最懂双语的 AI 广告公司"） |
+| `link2ur_solo_apex` | `link2urPath_solo` + `l2u_solo_niche_chosen` (评分 ≥ 4.95 + 完单 ≥ 40) | **伦敦最难约的 AI Pro** The One Brand Calls First（inbox 24 个未读，最早预约 8 个月后） |
 
 ### 林可儿/林楠 三结局（恋爱线）
 | ID | 触发 | 标题 |
@@ -322,8 +359,8 @@
 | `onboarding.js` | Day 0 机舱 + Heathrow + 三选一交通 + 公寓门口 |
 | `welcomeWeek.js` | W1 必办行政（BRP/GP/银行/Council Tax/Oyster/Freshers/Bicester/Loon Fung） |
 | `dailyLife.js` | 日常事件池（Mark 厨房 / 房间 paper-thin walls / Tesco 黄标 etc） |
-| `npcs.js` | 6 NPC 定义 + 跨圈联动事件 |
-| `storylines.js` | 6 NPC 主线 3-5 章 |
+| `npcs.js` | 7 NPC 定义 + 跨圈联动事件 |
+| `storylines.js` | 7 NPC 主线 3-9 章 |
 | `parentsStory.js` | 父母线 5 章 |
 | `markArc.js` | Mark 救赎 3 章 |
 | `wellbeing.js` | 身心健康 + 家庭冲突散布事件 |
@@ -339,5 +376,5 @@
 | `dreams.js` `insomnia.js` `nostalgia.js` | 失眠 / 梦境 / 想家 散布事件 |
 | `festivals.js` | 中秋 / 春节 / Bonfire Night / Boxing Day Sale |
 | `echoes.js` | 结局回响（NPC 留下的话）|
-| `endings.js` | 22 + 2 结局表 + resolveEnding 函数 |
+| `endings.js` | 25 + 2 结局表 + resolveEnding 函数 |
 | `achievements.js` | 41 个成就（按稀有度 common/rare/epic/legendary）|
