@@ -156,13 +156,50 @@ describe('achievements · Link2Ur milestones (6 new)', () => {
     expect(buckets.legendary).toBe(1);
   });
 
-  test('Link2Ur check predicates respond to flags', () => {
+  test('l2u_first_repeat fires with l2u_first_repeat_unlocked flag', () => {
+    expect(ACHIEVEMENT_BY_ID.l2u_first_repeat.check({ flags: {} })).toBe(false);
     expect(ACHIEVEMENT_BY_ID.l2u_first_repeat.check({ flags: { l2u_first_repeat_unlocked: true } })).toBe(true);
-    expect(ACHIEVEMENT_BY_ID.l2u_clash_survived.check({ flags: { l2u_clash_survived_unlocked: true } })).toBe(true);
-    expect(ACHIEVEMENT_BY_ID.l2u_y_audience.check({ flags: { l2u_y_audience_unlocked: true } })).toBe(true);
-    expect(ACHIEVEMENT_BY_ID.l2u_first_hire.check({ flags: { l2u_first_hire_unlocked: true } })).toBe(true);
-    expect(ACHIEVEMENT_BY_ID.l2u_team_5.check({ flags: { l2u_team_5_unlocked: true } })).toBe(true);
-    expect(ACHIEVEMENT_BY_ID.l2u_ai_anxiety_resolved.check({ flags: { l2u_ai_anxiety_resolved_unlocked: true } })).toBe(true);
+  });
+
+  test('l2u_clash_survived fires with clash count >= 1', () => {
+    expect(ACHIEVEMENT_BY_ID.l2u_clash_survived.check({ link2urClashCount: 0 })).toBe(false);
+    expect(ACHIEVEMENT_BY_ID.l2u_clash_survived.check({ link2urClashCount: 1 })).toBe(true);
+    expect(ACHIEVEMENT_BY_ID.l2u_clash_survived.check({ link2urClashCount: 3 })).toBe(true);
+  });
+
+  test('l2u_y_audience fires with l2u_y_invited flag', () => {
+    expect(ACHIEVEMENT_BY_ID.l2u_y_audience.check({ flags: {} })).toBe(false);
+    expect(ACHIEVEMENT_BY_ID.l2u_y_audience.check({ flags: { l2u_y_invited: true } })).toBe(true);
+  });
+
+  test('l2u_first_hire fires with team member count >= 1', () => {
+    expect(ACHIEVEMENT_BY_ID.l2u_first_hire.check({ link2urTeamMembers: [] })).toBe(false);
+    expect(ACHIEVEMENT_BY_ID.l2u_first_hire.check({ link2urTeamMembers: [{ memberId: 'team_xiaoyu' }] })).toBe(true);
+  });
+
+  test('l2u_team_5 fires with team size >= 5 AND revenue >= £600', () => {
+    // Both missing
+    expect(ACHIEVEMENT_BY_ID.l2u_team_5.check({ link2urTeamMembers: [], link2urTeamRevenue: 0 })).toBe(false);
+    // Only team size satisfied
+    expect(ACHIEVEMENT_BY_ID.l2u_team_5.check({
+      link2urTeamMembers: [1, 2, 3, 4, 5],
+      link2urTeamRevenue: 500,
+    })).toBe(false);
+    // Only revenue satisfied
+    expect(ACHIEVEMENT_BY_ID.l2u_team_5.check({
+      link2urTeamMembers: [1, 2, 3],
+      link2urTeamRevenue: 600,
+    })).toBe(false);
+    // Both satisfied
+    expect(ACHIEVEMENT_BY_ID.l2u_team_5.check({
+      link2urTeamMembers: [1, 2, 3, 4, 5],
+      link2urTeamRevenue: 600,
+    })).toBe(true);
+  });
+
+  test('l2u_ai_anxiety_resolved fires with l2u_ai_anxiety_resolved flag', () => {
+    expect(ACHIEVEMENT_BY_ID.l2u_ai_anxiety_resolved.check({ flags: {} })).toBe(false);
+    expect(ACHIEVEMENT_BY_ID.l2u_ai_anxiety_resolved.check({ flags: { l2u_ai_anxiety_resolved: true } })).toBe(true);
   });
 });
 

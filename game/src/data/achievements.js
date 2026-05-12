@@ -498,31 +498,32 @@ export const ACHIEVEMENTS = [
     id: 'l2u_clash_survived', tier: 'rare', icon: '⚔️',
     title: '撞档大王',
     desc: '在一周内同时完成 3 个指定任务',
-    check: ({ flags = {} }) => !!flags.l2u_clash_survived_unlocked,
+    check: ({ link2urClashCount = 0 }) => link2urClashCount >= 1,
   },
   {
     id: 'l2u_y_audience', tier: 'rare', icon: '🍰',
     title: 'Sketch Pink Room',
     desc: '收到 Y 姐的邀请',
-    check: ({ flags = {} }) => !!flags.l2u_y_audience_unlocked,
+    check: ({ flags = {} }) => !!flags.l2u_y_invited,
   },
   {
     id: 'l2u_first_hire', tier: 'epic', icon: '🤲',
     title: '我招到了第一个人',
     desc: '招到第一个团员',
-    check: ({ flags = {} }) => !!flags.l2u_first_hire_unlocked,
+    check: ({ link2urTeamMembers = [] }) => link2urTeamMembers.length >= 1,
   },
   {
     id: 'l2u_team_5', tier: 'legendary', icon: '👑',
     title: '小小帝国',
     desc: '团队达到 5 人 + 团队周流水 £600+',
-    check: ({ flags = {} }) => !!flags.l2u_team_5_unlocked,
+    check: ({ link2urTeamMembers = [], link2urTeamRevenue = 0 }) =>
+      link2urTeamMembers.length >= 5 && link2urTeamRevenue >= 600,
   },
   {
     id: 'l2u_ai_anxiety_resolved', tier: 'epic', icon: '🧠',
     title: '我是匠人 不是工具人',
     desc: '完成 Paul BBC 采访 + 通过 Whitmore office hour 的 AI 警句',
-    check: ({ flags = {} }) => !!flags.l2u_ai_anxiety_resolved_unlocked,
+    check: ({ flags = {} }) => !!flags.l2u_ai_anxiety_resolved,
   },
 ];
 
