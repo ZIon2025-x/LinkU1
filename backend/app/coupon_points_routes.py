@@ -739,6 +739,156 @@ def create_task_payment(
                         "note": "任务已支付"
                     }
                 elif payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
+                    # ⚠️ Bug 修复: 用户勾选钱包余额且余额够覆盖 PI 剩余金额时,
+                    # 应该走全钱包支付,而不是返回 PI.client_secret 让用户白白走 Stripe。
+                    # 场景: approve_application 在批准时就创建了 PI (新流程,
+                    # 详见 task_chat_routes.py:2313),用户随后点支付 → 进 PI reuse 分支
+                    # → 旧代码直接 return PI.client_secret,完全忽略 use_wallet_balance 选项。
+                    if payment_request.use_wallet_balance and payment_intent.amount > 0:
+                        try:
+                            from app.wallet_service import lock_wallet, debit_wallet, complete_debit
+                            _wallet_currency = getattr(task, "currency", None) or "GBP"
+                            _wallet_account = lock_wallet(db, str(current_user.id), _wallet_currency)
+                            _balance_pence = int(_wallet_account.balance * 100)
+
+                            if _balance_pence >= payment_intent.amount:
+                                logger.info(
+                                    f"钱包余额 {_balance_pence}p 够付 PI.amount {payment_intent.amount}p, "
+                                    f"作废 PI 走全钱包: task_id={task_id}, pi={task.payment_intent_id}"
+                                )
+
+                                # 1) 取消 Stripe PI (best-effort, 不阻塞)
+                                _canceled_pi_id = task.payment_intent_id
+                                try:
+                                    if payment_intent.status == "requires_payment_method":
+                                        stripe.PaymentIntent.cancel(task.payment_intent_id)
+                                        logger.info(f"已取消 PI {_canceled_pi_id}")
+                                except Exception as cancel_err:
+                                    logger.warning(f"取消旧 PI 失败 (不阻塞主流程): {cancel_err}")
+
+                                # 2) 钱包扣款 (pending → complete)
+                                _wallet_amount_pounds = Decimal(str(payment_intent.amount)) / Decimal("100")
+                                _idem_key = f"wallet_task_payment_pi_reuse_{task_id}_{current_user.id}"
+                                _wallet_tx = debit_wallet(
+                                    db=db,
+                                    user_id=str(current_user.id),
+                                    amount=_wallet_amount_pounds,
+                                    source="task_payment",
+                                    related_id=str(task_id),
+                                    related_type="task",
+                                    description=f"任务 #{task_id} 余额支付(PI 转钱包)",
+                                    status="pending",
+                                    idempotency_key=_idem_key,
+                                    currency=_wallet_currency,
+                                )
+                                complete_debit(db, _wallet_tx.id)
+
+                                # 3) 标记任务已支付
+                                _task_amount_local = (
+                                    float(task.agreed_reward) if task.agreed_reward is not None
+                                    else float(task.base_reward) if task.base_reward is not None
+                                    else 0.0
+                                )
+                                _task_amount_pence_local = int(_task_amount_local * 100)
+                                from app.utils.fee_calculator import calculate_application_fee_pence as _calc_fee
+                                _ts = getattr(task, "task_source", None)
+                                _tt = getattr(task, "task_type", None)
+                                _app_fee_pence_local = _calc_fee(_task_amount_pence_local, _ts, _tt)
+                                _taker_amount_local = _task_amount_local - (_app_fee_pence_local / 100.0)
+
+                                task.is_paid = 1
+                                task.payment_intent_id = None
+                                task.escrow_amount = max(0.0, _taker_amount_local)
+                                if task.status in ("pending_payment", "open"):
+                                    task.status = "in_progress"
+
+                                # 4) PaymentHistory
+                                _payment_history = models.PaymentHistory(
+                                    order_no=models.PaymentHistory.generate_order_no(),
+                                    task_id=task_id,
+                                    user_id=current_user.id,
+                                    payment_intent_id=None,
+                                    payment_method="wallet",
+                                    total_amount=_task_amount_pence_local,
+                                    points_used=0,
+                                    coupon_discount=0,
+                                    stripe_amount=0,
+                                    final_amount=0,
+                                    currency=task.currency or "GBP",
+                                    status="succeeded",
+                                    application_fee=_app_fee_pence_local,
+                                    escrow_amount=_taker_amount_local,
+                                    extra_metadata={
+                                        "wallet_only_pi_canceled": True,
+                                        "canceled_pi_id": _canceled_pi_id,
+                                        "wallet_deduction_pence": payment_intent.amount,
+                                        "wallet_tx_id": _wallet_tx.id,
+                                        "task_title": task.title,
+                                    },
+                                )
+                                db.add(_payment_history)
+                                db.commit()
+
+                                return {
+                                    "payment_id": None,
+                                    "fee_type": "task_amount",
+                                    "original_amount": _task_amount_pence_local,
+                                    "original_amount_display": f"{_task_amount_pence_local / 100:.2f}",
+                                    "coupon_discount": None,
+                                    "coupon_discount_display": None,
+                                    "coupon_name": None,
+                                    "coupon_type": None,
+                                    "coupon_description": None,
+                                    "wallet_deduction": payment_intent.amount,
+                                    "wallet_deduction_display": f"{payment_intent.amount / 100:.2f}",
+                                    "final_amount": 0,
+                                    "final_amount_display": "0.00",
+                                    "currency": task.currency or "GBP",
+                                    "payment_type": "wallet",
+                                    "client_secret": None,
+                                    "payment_intent_id": None,
+                                    "customer_id": None,
+                                    "ephemeral_key_secret": None,
+                                    "calculation_steps": [
+                                        {
+                                            "label": "任务金额",
+                                            "amount": _task_amount_pence_local,
+                                            "amount_display": f"{_task_amount_pence_local / 100:.2f}",
+                                            "type": "original",
+                                        },
+                                        {
+                                            "label": "钱包余额抵扣",
+                                            "amount": -payment_intent.amount,
+                                            "amount_display": f"-{payment_intent.amount / 100:.2f}",
+                                            "type": "wallet",
+                                        },
+                                        {
+                                            "label": "最终支付金额",
+                                            "amount": 0,
+                                            "amount_display": "0.00",
+                                            "type": "final",
+                                        },
+                                    ],
+                                    "note": (
+                                        f"任务金额已支付（钱包余额全额抵扣,原 Stripe PI 已作废）,"
+                                        f"任务接受人将获得 {_taker_amount_local:.2f} 镑"
+                                        f"（已扣除平台服务费 {_app_fee_pence_local / 100.0:.2f} 镑）"
+                                    ),
+                                }
+                            else:
+                                logger.info(
+                                    f"钱包余额 {_balance_pence}p 不足以覆盖 PI {payment_intent.amount}p, "
+                                    f"继续走原 PI reuse 路径 (用户最终需 Stripe 补差)"
+                                )
+                        except HTTPException:
+                            raise
+                        except Exception as wallet_reuse_err:
+                            logger.error(
+                                f"PI 复用→钱包路径转换失败,降级到原 PI reuse 逻辑: {wallet_reuse_err}",
+                                exc_info=True,
+                            )
+                            # 失败时不抛错,降级到原逻辑让 Stripe 继续
+
                     # PaymentIntent 存在但未完成，返回 client_secret 让用户完成支付
                     logger.info(f"PaymentIntent 状态为 {payment_intent.status}，返回 client_secret")
                     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
