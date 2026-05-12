@@ -18,7 +18,7 @@ import { STARTING_WALLET, STARTING_ACADEMIC } from '../data/onboarding.js';
 // flat messages list 当系统通知用。
 export const INTERACTIVE_NPC_IDS = [
   'sarah', 'aditi', 'wangkai', 'mei', 'whitmore', 'linnan', 'mark', 'tom', 'mom',
-  'priya',  // Link2Ur Ops · 30 单后主动联系 → 招你做合伙人
+  'yjie',  // Y 姐 / 陈思敏 / Yvonne Chan · Link2Ur 创业线 mentor · 30 单后主动 DM
 ];
 
 export function initialState() {

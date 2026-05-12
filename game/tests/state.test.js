@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { reducer, initialState, applyEffect } from '../src/engine/state.js';
+import { reducer, initialState, applyEffect, INTERACTIVE_NPC_IDS } from '../src/engine/state.js';
 
 describe('reducer initial state', () => {
   test('starts on intro screen with default stats', () => {
@@ -149,5 +149,12 @@ describe('weather + festival tracking', () => {
     s = reducer(s, { type: 'MARK_FESTIVAL_SEEN', id: 'halloween' });
     s = reducer(s, { type: 'MARK_FESTIVAL_SEEN', id: 'halloween' });
     expect(s.seenFestivals.filter(id => id === 'halloween').length).toBe(1);
+  });
+});
+
+describe('Y 姐 NPC ID', () => {
+  test('uses yjie as the npc id (not priya placeholder)', () => {
+    expect(INTERACTIVE_NPC_IDS).toContain('yjie');
+    expect(INTERACTIVE_NPC_IDS).not.toContain('priya');
   });
 });
