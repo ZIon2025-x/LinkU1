@@ -248,12 +248,14 @@ def withdraw(
         raise HTTPException(status_code=400, detail=str(e))
 
     # Phase 2: Stripe Transfer
+    # description 带用户名,Stripe Dashboard / 用户银行流水一眼看清是谁的转账
+    _user_display = (current_user.name or "").strip() or f"User {current_user.id}"
     try:
         transfer = stripe.Transfer.create(
             amount=amount_pence,
             currency=currency.lower(),
             destination=stripe_account_id,
-            description="任务收入提现 / Task earnings payout",
+            description=f"任务金额转账 {_user_display}",
             metadata={
                 "user_id": str(current_user.id),
                 "wallet_tx_id": str(pending_tx.id),
