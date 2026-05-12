@@ -591,6 +591,29 @@ def admin_review_cancel_request(
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 卡死任务 payout 恢复端点 (临时/紧急工具)
+#
+# 用途: 修历史上 confirm_task_completion bug 留下的 zombie 任务
+# (status=completed + is_confirmed=0 + escrow>0 + paid_to_user_id=NULL)。
+#
+# 这是个"紧急工具",随时可以禁用 —— 业务正常运行时不应该有 zombie 任务
+# (代码层面已修, 见 commit 947a194e0)。如果几个月没看到列表里有新条目,
+# 把环境变量 STUCK_PAYOUT_RECOVERY_ENABLED 设成 false 即可禁用这俩端点。
+#
+# 风险等级: HIGH (直接动钱包余额)。已加的防护见每个端点的 docstring。
+# ─────────────────────────────────────────────────────────────────────────────
+import os as _os
+
+def _stuck_payout_recovery_enabled() -> bool:
+    """读取 env var,默认 true。设成 false 可一键禁用整个工具。"""
+    return _os.getenv("STUCK_PAYOUT_RECOVERY_ENABLED", "true").lower() in ("true", "1", "yes")
+
+# 单笔恢复金额硬上限 (GBP)。超过此值需走人工 SQL/工程师介入,防止
+# admin 账号被攻陷一键转走大额资金。
+STUCK_PAYOUT_MAX_AMOUNT_GBP = 5000
+
+
 @router.get("/admin/internal/stuck-task-payouts")
 def admin_list_stuck_task_payouts(
     limit: int = Query(100, ge=1, le=500),
@@ -605,7 +628,15 @@ def admin_list_stuck_task_payouts(
     - is_paid = 1
     - taker_id IS NOT NULL
     - paid_to_user_id IS NULL  (尚未支付出去)
+    - stripe_dispute_frozen != 1  (不展示争议冻结中的任务)
+
+    可通过环境变量 STUCK_PAYOUT_RECOVERY_ENABLED=false 禁用本端点。
     """
+    if not _stuck_payout_recovery_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="卡死任务恢复工具已被禁用 (STUCK_PAYOUT_RECOVERY_ENABLED=false)",
+        )
     rows = (
         db.query(models.Task)
         .filter(
@@ -615,6 +646,7 @@ def admin_list_stuck_task_payouts(
             models.Task.is_paid == 1,
             models.Task.taker_id.isnot(None),
             models.Task.paid_to_user_id.is_(None),
+            models.Task.stripe_dispute_frozen != 1,  # 争议冻结中的任务不展示
         )
         .order_by(models.Task.confirmed_at.desc().nullslast())
         .limit(limit)
@@ -654,7 +686,23 @@ def admin_recover_stuck_task_payout(
     行为: 把 escrow 余额通过 credit_wallet 入到 taker 的本地钱包, 清 escrow,
     标 is_confirmed=1, 写 paid_to_user_id。幂等键 earning:task:X:user:Y 与
     confirm_task_completion 路径一致, 重复调安全。
+
+    防护栈:
+    - env STUCK_PAYOUT_RECOVERY_ENABLED=false 一键禁用整个端点
+    - status / is_confirmed / taker_id / escrow_amount 白名单校验
+    - paid_to_user_id IS NULL 校验 (防绕过 list 端点构造 URL 直调)
+    - stripe_dispute_frozen != 1 校验 (争议中的任务不能补钱给 taker,
+      否则争议 lost 时平台两头亏)
+    - 金额硬上限 STUCK_PAYOUT_MAX_AMOUNT_GBP (默认 £5000),超过的要工程师介入
+    - 幂等键 + with_for_update 行锁防并发/双付
+    - log_admin_action 全程审计
     """
+    if not _stuck_payout_recovery_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="卡死任务恢复工具已被禁用 (STUCK_PAYOUT_RECOVERY_ENABLED=false)",
+        )
+
     from decimal import Decimal
     from app.wallet_service import credit_wallet
 
@@ -674,6 +722,7 @@ def admin_recover_stuck_task_payout(
         "paid_to_user_id": task.paid_to_user_id,
         "taker_id": task.taker_id,
         "is_paid": int(task.is_paid or 0),
+        "stripe_dispute_frozen": int(getattr(task, "stripe_dispute_frozen", 0) or 0),
     }
 
     if task.is_confirmed == 1:
@@ -696,8 +745,44 @@ def admin_recover_stuck_task_payout(
             status_code=400,
             detail=f"Task {task_id} escrow_amount=0, 没钱可补",
         )
+    # 防御深度: list 端点已过滤 paid_to_user_id IS NULL, 这里复查
+    # 防止 admin 构造 URL 绕过 list 直调
+    if task.paid_to_user_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Task {task_id} paid_to_user_id={task.paid_to_user_id} 已被记录支付过, "
+                f"拒绝重复恢复"
+            ),
+        )
+    # 争议冻结中的任务不能补钱给 taker. 如果争议 lost, 平台已被 Stripe 划走
+    # 一份钱, 这里再补一份给 taker → 平台两头亏。
+    if getattr(task, "stripe_dispute_frozen", 0) == 1:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Task {task_id} 正在 Stripe 争议冻结中 (stripe_dispute_frozen=1), "
+                f"等争议关闭并确认平台未失血后才能恢复"
+            ),
+        )
 
     net = Decimal(str(task.escrow_amount))
+
+    # 金额硬上限: admin 账号被攻陷场景下,防一键转走大额。超过的让工程师
+    # 直接看一眼/手工恢复。
+    if net > Decimal(STUCK_PAYOUT_MAX_AMOUNT_GBP):
+        logger.critical(
+            f"🚨 admin {current_user.id} 试图恢复超大金额 task: "
+            f"task_id={task_id} amount=£{net} > £{STUCK_PAYOUT_MAX_AMOUNT_GBP} (上限). 拒绝"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Task {task_id} escrow=£{net} 超过单笔恢复上限 "
+                f"£{STUCK_PAYOUT_MAX_AMOUNT_GBP}, 需联系工程师手工恢复"
+            ),
+        )
+
     gross_raw = task.agreed_reward or task.base_reward or task.reward or net
     gross = Decimal(str(gross_raw))
     fee = gross - net if gross > net else Decimal("0")
