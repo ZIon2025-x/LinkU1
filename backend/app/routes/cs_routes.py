@@ -679,7 +679,7 @@ def get_customer_service_chats(
     # 获取用户信息和未读消息数量
     user_chats = []
     for chat in chats:
-        user = db.query(User).filter(User.id == chat["user_id"]).first()
+        user = db.query(models.User).filter(models.User.id == chat["user_id"]).first()
         if user:
             # 计算未读消息数量
             unread_count = crud.get_unread_customer_service_messages_count(
