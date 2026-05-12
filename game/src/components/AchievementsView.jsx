@@ -4,6 +4,7 @@ import { renderAchievementCard, renderToBlob } from '../engine/achievementCard.j
 import { renderWrappedPoster, renderWrappedToBlob } from '../engine/wrappedPoster.js';
 import { pronounize } from '../engine/pronouns.js';
 import { download } from '../engine/diaryExport.js';
+import { BottomSheet } from './BottomSheet.jsx';
 
 export function AchievementsView({ unlockedAchievements, gender, gameState }) {
   const [filter, setFilter] = useState('all');  // all | unlocked | locked
@@ -162,37 +163,33 @@ export function WrappedPosterModal({ gameState, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'rgba(10, 8, 6, 0.92)' }}
-      onClick={onClose}>
-      <div className="max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-        <div className="text-xs tracking-[0.3em] opacity-60 mb-2 text-center" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
-          ◆ YEAR-END WRAPPED
-        </div>
-        <canvas ref={canvasRef} width={1080} height={1920}
-          className="w-full mb-4 shadow-2xl"
-          style={{ aspectRatio: '1080 / 1920' }} />
-        <div className="grid grid-cols-3 gap-2">
-          <button onClick={handleDownload} disabled={!!busy}
-            className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
-            style={{ borderColor: '#d4b070a0', color: '#d4b070', background: '#d4b07012' }}>
-            {busy === 'download' ? '生成中…' : '↓ 下载'}
-          </button>
-          <button onClick={handleShare} disabled={!!busy}
-            className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
-            style={{ borderColor: '#a0c890a0', color: '#a0c890', background: '#a0c89012' }}>
-            {busy === 'share' ? '生成中…' : '↗ 分享'}
-          </button>
-          <button onClick={onClose}
-            className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
-            取消
-          </button>
-        </div>
-        <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
-          {hint}
-        </div>
+    <BottomSheet open={true} onClose={onClose}>
+      <div className="text-xs tracking-[0.3em] opacity-60 mb-2 text-center" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
+        ◆ YEAR-END WRAPPED
       </div>
-    </div>
+      <canvas ref={canvasRef} width={1080} height={1920}
+        className="w-full mb-4 shadow-2xl"
+        style={{ aspectRatio: '1080 / 1920' }} />
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={handleDownload} disabled={!!busy}
+          className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
+          style={{ borderColor: '#d4b070a0', color: '#d4b070', background: '#d4b07012' }}>
+          {busy === 'download' ? '生成中…' : '↓ 下载'}
+        </button>
+        <button onClick={handleShare} disabled={!!busy}
+          className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
+          style={{ borderColor: '#a0c890a0', color: '#a0c890', background: '#a0c89012' }}>
+          {busy === 'share' ? '生成中…' : '↗ 分享'}
+        </button>
+        <button onClick={onClose}
+          className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
+          取消
+        </button>
+      </div>
+      <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
+        {hint}
+      </div>
+    </BottomSheet>
   );
 }
 
@@ -238,36 +235,32 @@ export function AchievementCardModal({ achievement, gender, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'rgba(10, 8, 6, 0.92)' }}
-      onClick={onClose}>
-      <div className="max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-        <div className="text-xs tracking-[0.3em] opacity-60 mb-2 text-center" style={{ fontFamily: 'monospace' }}>
-          ◆ {TIER_META[achievement.tier]?.label || 'COMMON'}
-        </div>
-        <canvas ref={canvasRef} width={600} height={720}
-          className="w-full mb-4 shadow-2xl"
-          style={{ aspectRatio: '600 / 720' }} />
-        <div className="grid grid-cols-3 gap-2">
-          <button onClick={handleDownload} disabled={!!busy}
-            className="py-2.5 border border-amber-300/60 hover:bg-amber-300/10 transition-colors text-sm tracking-[0.2em] disabled:opacity-50"
-            style={{ color: '#d4b070' }}>
-            {busy === 'download' ? '生成中…' : '↓ 下载'}
-          </button>
-          <button onClick={handleShare} disabled={!!busy}
-            className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
-            style={{ borderColor: '#a0c890a0', color: '#a0c890', background: '#a0c89012' }}>
-            {busy === 'share' ? '生成中…' : '↗ 分享'}
-          </button>
-          <button onClick={onClose}
-            className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
-            取消
-          </button>
-        </div>
-        <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
-          {hint}
-        </div>
+    <BottomSheet open={true} onClose={onClose}>
+      <div className="text-xs tracking-[0.3em] opacity-60 mb-2 text-center" style={{ fontFamily: 'monospace' }}>
+        ◆ {TIER_META[achievement.tier]?.label || 'COMMON'}
       </div>
-    </div>
+      <canvas ref={canvasRef} width={600} height={720}
+        className="w-full mb-4 shadow-2xl"
+        style={{ aspectRatio: '600 / 720' }} />
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={handleDownload} disabled={!!busy}
+          className="py-2.5 border border-amber-300/60 hover:bg-amber-300/10 transition-colors text-sm tracking-[0.2em] disabled:opacity-50"
+          style={{ color: '#d4b070' }}>
+          {busy === 'download' ? '生成中…' : '↓ 下载'}
+        </button>
+        <button onClick={handleShare} disabled={!!busy}
+          className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
+          style={{ borderColor: '#a0c890a0', color: '#a0c890', background: '#a0c89012' }}>
+          {busy === 'share' ? '生成中…' : '↗ 分享'}
+        </button>
+        <button onClick={onClose}
+          className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
+          取消
+        </button>
+      </div>
+      <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
+        {hint}
+      </div>
+    </BottomSheet>
   );
 }
