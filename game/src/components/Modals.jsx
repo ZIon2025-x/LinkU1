@@ -2,68 +2,65 @@ import React from 'react';
 import { NpcAvatar } from './NpcAvatar.jsx';
 import { getSceneForEvent, getNpcImage } from '../engine/imageRegistry.js';
 import { pronounize } from '../engine/pronouns.js';
+import { BottomSheet } from './BottomSheet.jsx';
 // Modals are mostly self-contained — they receive everything they need via props.
 
 export function EventModal({ event, feedback, onChoose, onDismiss }) {
   const banner = getSceneForEvent(event?.id);
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: 'rgba(10, 8, 6, 0.85)' }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full max-h-[90vh] overflow-y-auto animate-fadein">
-        {banner && (
-          <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
-            <img src={banner} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0"
-              style={{ background: 'linear-gradient(180deg, transparent 60%, #1a1612 100%)' }} />
-          </div>
-        )}
-        <div className="p-5">
-        <div className="text-xs tracking-[0.3em] opacity-50 mb-2" style={{ fontFamily: 'monospace' }}>EVENT</div>
-        <h2 className="text-xl mb-3 font-light">{event.title}</h2>
-        <div className="text-sm leading-relaxed mb-5 opacity-90" style={{ lineHeight: '1.8' }}>{event.body}</div>
-        {!feedback ? (
-          (event.choices || [{ label: '继续', effect: event.effect || {}, feedback: event.feedback || '...' }]).map((c, i) => (
-            <button key={i} onClick={() => onChoose(c)}
-              className="w-full text-left p-3 mb-2 border border-current/40 hover:border-current hover:bg-current/5 transition-all">
-              <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65+i)}.</span>
-              {c.label}
-            </button>
-          ))
-        ) : (
-          <>
-            <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
-          </>
-        )}
+    <BottomSheet open={true} onClose={onDismiss}
+      title={<>EVENT</>}>
+      {banner && (
+        <div className="relative w-full -mx-5 mb-3" style={{ aspectRatio: '16 / 9' }}>
+          <img src={banner} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(180deg, transparent 60%, #1a1612 100%)' }} />
         </div>
+      )}
+      <h2 className="text-xl mb-3 font-light">{event.title}</h2>
+      <div className="text-sm leading-relaxed mb-4 opacity-90" style={{ lineHeight: '1.8' }}>
+        {event.body}
       </div>
-    </div>
+      {!feedback ? (
+        (event.choices || [{ label: '继续', effect: event.effect || {}, feedback: event.feedback || '...' }]).map((c, i) => (
+          <button key={i} onClick={() => onChoose(c)}
+            className="w-full text-left p-3 mb-2 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all min-h-[44px]">
+            <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65+i)}.</span>
+            {c.label}
+          </button>
+        ))
+      ) : (
+        <>
+          <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors min-h-[44px]">CONTINUE</button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
 export function StoryModal({ chapter, lineName, feedback, onChoose, onDismiss }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: 'rgba(10, 8, 6, 0.9)' }}>
-      <div className="bg-[#1a1612] border border-amber-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5 animate-fadein">
-        <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#d4b070' }}>📖 STORY · {lineName}</div>
-        <div className="text-xs opacity-50 mb-3" style={{ fontFamily: 'monospace' }}>CHAPTER · {chapter.title}</div>
-        <h2 className="text-xl mb-3 font-light">{chapter.title_full}</h2>
-        <div className="text-sm leading-relaxed mb-5 opacity-90" style={{ lineHeight: '1.8' }}>{chapter.body}</div>
-        {!feedback ? (
-          chapter.choices.map((c, i) => (
-            <button key={i} onClick={() => onChoose(c)}
-              className="w-full text-left p-3 mb-2 border border-current/40 hover:border-current hover:bg-current/5 transition-all">
-              <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65+i)}.</span>
-              {c.label}
-            </button>
-          ))
-        ) : (
-          <>
-            <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
-          </>
-        )}
-      </div>
-    </div>
+    <BottomSheet open={true} onClose={onDismiss}
+      title={<span style={{ color: '#d4b070' }}>📖 STORY · {lineName}</span>}>
+      <div className="text-xs opacity-50 mb-3" style={{ fontFamily: 'monospace' }}>CHAPTER · {chapter.title}</div>
+      <h2 className="text-xl mb-3 font-light">{chapter.title_full}</h2>
+      <div className="text-sm leading-relaxed mb-4 opacity-90" style={{ lineHeight: '1.8' }}>{chapter.body}</div>
+      {!feedback ? (
+        chapter.choices.map((c, i) => (
+          <button key={i} onClick={() => onChoose(c)}
+            className="w-full text-left p-3 mb-2 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all min-h-[44px]">
+            <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65+i)}.</span>
+            {c.label}
+          </button>
+        ))
+      ) : (
+        <>
+          <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors min-h-[44px]">CONTINUE</button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -89,37 +86,35 @@ export function NpcDialogModal({ npc, rel, feedback, onChoose, onDismiss, gender
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: 'rgba(10, 8, 6, 0.85)' }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-5 animate-fadein">
-        <div className="flex items-center gap-3 mb-4">
-          <NpcAvatar npc={npc} gender={gender} size={48} />
-          <div>
-            <div className="text-lg">{npcName}</div>
-            <div className="text-xs opacity-60 italic">{npc.role} · 关系 {rel}</div>
-          </div>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="flex items-center gap-3 mb-4">
+        <NpcAvatar npc={npc} gender={gender} size={48} />
+        <div>
+          <div className="text-lg">{npcName}</div>
+          <div className="text-xs opacity-60 italic">{npc.role} · 关系 {rel}</div>
         </div>
-        <div className="text-sm opacity-80 italic mb-4" style={{ lineHeight: '1.7' }}>{npc.bio}</div>
-        {!feedback ? (
-          <>
-            <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>选个话题</div>
-            {topics.map((t, i) => (
-              <button key={i} onClick={() => onChoose(t)}
-                className="w-full text-left p-2.5 mb-2 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
-                {t.label}
-              </button>
-            ))}
-            <button onClick={onDismiss} className="w-full mt-2 p-2 text-xs opacity-60 hover:opacity-100">
-              先这样吧 →
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
-          </>
-        )}
       </div>
-    </div>
+      <div className="text-sm opacity-80 italic mb-4" style={{ lineHeight: '1.7' }}>{npc.bio}</div>
+      {!feedback ? (
+        <>
+          <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>选个话题</div>
+          {topics.map((t, i) => (
+            <button key={i} onClick={() => onChoose(t)}
+              className="w-full text-left p-2.5 mb-2 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
+              {t.label}
+            </button>
+          ))}
+          <button onClick={onDismiss} className="w-full mt-2 p-2 text-xs opacity-60 hover:opacity-100">
+            先这样吧 →
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
