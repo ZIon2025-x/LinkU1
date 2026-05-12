@@ -8,6 +8,7 @@ import { MapView, PhoneView, JournalView } from './Views.jsx';
 import { Link2UrView } from './Link2UrView.jsx';
 import { NpcAvatar } from './NpcAvatar.jsx';
 import { getLocationImage, getSceneImage, getMiscImage } from '../engine/imageRegistry.js';
+import { BottomSheet } from './BottomSheet.jsx';
 
 export function PlaneScreen({ onContinue }) {
   const banner = getSceneImage('plane');
@@ -413,78 +414,76 @@ export function HolidayScreen({ type, choices, secrets, stats, npcRel, storyProg
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-amber-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5 animate-fadein">
-        <div className="text-xs tracking-[0.3em] opacity-50 mb-1" style={{ fontFamily: 'monospace' }}>HOLIDAY</div>
-        <h2 className="text-2xl mb-1 font-light">{config.title}</h2>
-        <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>{config.subtitle}</div>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.3em] opacity-50 mb-1" style={{ fontFamily: 'monospace' }}>HOLIDAY</div>
+      <h2 className="text-2xl mb-1 font-light">{config.title}</h2>
+      <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>{config.subtitle}</div>
 
-        {!feedback ? (
-          <>
-            <div className="text-sm opacity-90 mb-5 whitespace-pre-line" style={{ lineHeight: '1.8' }}>{config.intro}</div>
+      {!feedback ? (
+        <>
+          <div className="text-sm opacity-90 mb-5 whitespace-pre-line" style={{ lineHeight: '1.8' }}>{config.intro}</div>
 
-            {/* 隐藏剧情区域（如果有解锁的） */}
-            {unlockedSecrets.length > 0 && (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex-1 h-px bg-amber-300/30" />
-                  <div className="text-xs tracking-[0.3em]" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
-                    ⭐ SPECIAL
-                  </div>
-                  <div className="flex-1 h-px bg-amber-300/30" />
+          {/* 隐藏剧情区域（如果有解锁的） */}
+          {unlockedSecrets.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 h-px bg-amber-300/30" />
+                <div className="text-xs tracking-[0.3em]" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
+                  ⭐ SPECIAL
                 </div>
-                <div className="space-y-2">
-                  {unlockedSecrets.map((s) => {
-                    const cantAfford = (s.effect.wallet || 0) < 0 && stats.wallet + s.effect.wallet < 0;
-                    const npc = s.npc ? NPCS[s.npc] : null;
-                    return (
-                      <button key={s.id} onClick={() => !cantAfford && onChoose(s)} disabled={cantAfford}
-                        className={`w-full text-left p-3 border-2 transition-all relative ${cantAfford ? 'border-amber-300/20 opacity-30 cursor-not-allowed' : 'border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5'}`}
-                        style={{ background: cantAfford ? undefined : 'linear-gradient(135deg, rgba(212,176,112,0.04), transparent)' }}>
-                        <div className="flex items-start gap-2">
-                          {npc && <NpcAvatar npc={npc} gender={gender} size={28} />}
-                          <div className="flex-1">
-                            <div className="text-sm font-medium flex items-center gap-2">
-                              <span>{s.label}</span>
-                              <span className="text-xs px-1.5 py-0.5 border border-amber-300/40 rounded" style={{ color: '#d4b070', fontFamily: 'monospace' }}>SECRET</span>
-                            </div>
-                            <div className="text-xs opacity-60 italic mt-0.5">{s.desc}{cantAfford && ' · 钱不够'}</div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center gap-2 mt-2 mb-3">
-                  <div className="flex-1 h-px bg-current/20" />
-                  <div className="text-xs opacity-50" style={{ fontFamily: 'monospace' }}>OR</div>
-                  <div className="flex-1 h-px bg-current/20" />
-                </div>
+                <div className="flex-1 h-px bg-amber-300/30" />
               </div>
-            )}
-
-            {/* 普通选项 */}
-            <div className="space-y-2">
-              {choices.map((c, i) => {
-                const cantAfford = (c.effect.wallet || 0) < 0 && stats.wallet + c.effect.wallet < 0;
-                return (
-                  <button key={i} onClick={() => !cantAfford && onChoose(c)} disabled={cantAfford}
-                    className={`w-full text-left p-3 border ${cantAfford ? 'border-current/10 opacity-30 cursor-not-allowed' : 'border-current/40 hover:border-current hover:bg-current/5'} transition-all`}>
-                    <div className="text-sm font-medium">{c.label}</div>
-                    <div className="text-xs opacity-60 italic mt-0.5">{c.desc}{cantAfford && ' · 钱不够'}</div>
-                  </button>
-                );
-              })}
+              <div className="space-y-2">
+                {unlockedSecrets.map((s) => {
+                  const cantAfford = (s.effect.wallet || 0) < 0 && stats.wallet + s.effect.wallet < 0;
+                  const npc = s.npc ? NPCS[s.npc] : null;
+                  return (
+                    <button key={s.id} onClick={() => !cantAfford && onChoose(s)} disabled={cantAfford}
+                      className={`w-full text-left p-3 border-2 transition-all relative ${cantAfford ? 'border-amber-300/20 opacity-30 cursor-not-allowed' : 'border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5'}`}
+                      style={{ background: cantAfford ? undefined : 'linear-gradient(135deg, rgba(212,176,112,0.04), transparent)' }}>
+                      <div className="flex items-start gap-2">
+                        {npc && <NpcAvatar npc={npc} gender={gender} size={28} />}
+                        <div className="flex-1">
+                          <div className="text-sm font-medium flex items-center gap-2">
+                            <span>{s.label}</span>
+                            <span className="text-xs px-1.5 py-0.5 border border-amber-300/40 rounded" style={{ color: '#d4b070', fontFamily: 'monospace' }}>SECRET</span>
+                          </div>
+                          <div className="text-xs opacity-60 italic mt-0.5">{s.desc}{cantAfford && ' · 钱不够'}</div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-2 mt-2 mb-3">
+                <div className="flex-1 h-px bg-current/20" />
+                <div className="text-xs opacity-50" style={{ fontFamily: 'monospace' }}>OR</div>
+                <div className="flex-1 h-px bg-current/20" />
+              </div>
             </div>
-          </>
-        ) : (
-          <>
-            <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">回到伦敦</button>
-          </>
-        )}
-      </div>
-    </div>
+          )}
+
+          {/* 普通选项 */}
+          <div className="space-y-2">
+            {choices.map((c, i) => {
+              const cantAfford = (c.effect.wallet || 0) < 0 && stats.wallet + c.effect.wallet < 0;
+              return (
+                <button key={i} onClick={() => !cantAfford && onChoose(c)} disabled={cantAfford}
+                  className={`w-full text-left p-3 border ${cantAfford ? 'border-current/10 opacity-30 cursor-not-allowed' : 'border-current/40 hover:border-current hover:bg-current/5'} transition-all`}>
+                  <div className="text-sm font-medium">{c.label}</div>
+                  <div className="text-xs opacity-60 italic mt-0.5">{c.desc}{cantAfford && ' · 钱不够'}</div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">回到伦敦</button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -516,95 +515,91 @@ export function ExamScreen({ exam, academic, onFinish }) {
   function done() { audio.click(); onFinish(score); }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-red-400/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5 animate-fadein">
-        <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#c86060' }}>✍️ FINAL EXAM</div>
-        <h2 className="text-xl mb-1 font-light">{exam.subject}</h2>
-        <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>{exam.cn}</div>
+    <BottomSheet open={true} onClose={() => {}}>
+      <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#c86060' }}>✍️ FINAL EXAM</div>
+      <h2 className="text-xl mb-1 font-light">{exam.subject}</h2>
+      <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>{exam.cn}</div>
 
-        {phase === 'intro' && (
-          <>
-            <div className="text-sm opacity-90 mb-5" style={{ lineHeight: '1.8' }}>
-              考试时间：3 小时<br/>
-              形式：5 道选择题<br/>
-              <span className="opacity-70 italic">最终成绩 = 60% 答题正确率 + 40% 平时学业积累。所以平时不下功夫，临场也救不了你。</span>
-            </div>
-            <button onClick={start} className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm">
-              开始考试
-            </button>
-          </>
-        )}
+      {phase === 'intro' && (
+        <>
+          <div className="text-sm opacity-90 mb-5" style={{ lineHeight: '1.8' }}>
+            考试时间：3 小时<br/>
+            形式：5 道选择题<br/>
+            <span className="opacity-70 italic">最终成绩 = 60% 答题正确率 + 40% 平时学业积累。所以平时不下功夫，临场也救不了你。</span>
+          </div>
+          <button onClick={start} className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm">
+            开始考试
+          </button>
+        </>
+      )}
 
-        {phase === 'quiz' && (
-          <>
-            <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>问题 {currentQ + 1} / {exam.questions.length}</div>
-            <div className="text-sm mb-4 leading-relaxed" style={{ lineHeight: '1.7' }}>{exam.questions[currentQ].q}</div>
-            <div className="space-y-2">
-              {exam.questions[currentQ].options.map((opt, i) => (
-                <button key={i} onClick={() => answer(i)}
-                  className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
-                  <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+      {phase === 'quiz' && (
+        <>
+          <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>问题 {currentQ + 1} / {exam.questions.length}</div>
+          <div className="text-sm mb-4 leading-relaxed" style={{ lineHeight: '1.7' }}>{exam.questions[currentQ].q}</div>
+          <div className="space-y-2">
+            {exam.questions[currentQ].options.map((opt, i) => (
+              <button key={i} onClick={() => answer(i)}
+                className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
+                <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
+                {opt}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
-        {phase === 'result' && (
-          <>
-            <div className="text-center my-6">
-              <div className="text-xs opacity-60 mb-1" style={{ fontFamily: 'monospace' }}>YOUR MARK</div>
-              <div className="text-6xl font-light" style={{ color: score >= 70 ? '#a0c890' : score >= 50 ? '#d4b070' : '#c86060', fontFamily: 'monospace' }}>{score}</div>
-              <div className="text-sm opacity-70 italic mt-2">
-                {score >= 70 ? 'Distinction · 优秀' : score >= 60 ? 'Merit · 良好' : score >= 50 ? 'Pass · 及格' : 'Fail · 挂科'}
-              </div>
+      {phase === 'result' && (
+        <>
+          <div className="text-center my-6">
+            <div className="text-xs opacity-60 mb-1" style={{ fontFamily: 'monospace' }}>YOUR MARK</div>
+            <div className="text-6xl font-light" style={{ color: score >= 70 ? '#a0c890' : score >= 50 ? '#d4b070' : '#c86060', fontFamily: 'monospace' }}>{score}</div>
+            <div className="text-sm opacity-70 italic mt-2">
+              {score >= 70 ? 'Distinction · 优秀' : score >= 60 ? 'Merit · 良好' : score >= 50 ? 'Pass · 及格' : 'Fail · 挂科'}
             </div>
-            <div className="text-sm opacity-80 italic mb-5 text-center" style={{ lineHeight: '1.7' }}>
-              {score >= 70 ? '走出考场你给自己买了杯 £4.5 的拿铁。今天值得。'
-                : score >= 50 ? '没有大获全胜，但也没翻车。这就够了。'
-                : '你坐在长椅上发了 20 分钟呆。然后你回家煮了一碗面。明天还要继续。'}
-            </div>
-            <button onClick={done} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+          <div className="text-sm opacity-80 italic mb-5 text-center" style={{ lineHeight: '1.7' }}>
+            {score >= 70 ? '走出考场你给自己买了杯 £4.5 的拿铁。今天值得。'
+              : score >= 50 ? '没有大获全胜，但也没翻车。这就够了。'
+              : '你坐在长椅上发了 20 分钟呆。然后你回家煮了一碗面。明天还要继续。'}
+          </div>
+          <button onClick={done} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
 export function DissertationTopicScreen({ feedback, onChoose, onDismiss }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-purple-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5 animate-fadein">
-        <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#9080b8' }}>📝 DISSERTATION</div>
-        <h2 className="text-xl mb-1 font-light">选一个论文方向</h2>
-        <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>15,000 字 · 接下来 16 周</div>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#9080b8' }}>📝 DISSERTATION</div>
+      <h2 className="text-xl mb-1 font-light">选一个论文方向</h2>
+      <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>15,000 字 · 接下来 16 周</div>
 
-        {!feedback ? (
-          <>
-            <div className="text-sm opacity-90 mb-5" style={{ lineHeight: '1.8' }}>
-              这是你硕士的 50%。Whitmore 让你在三个方向里选一个。<br/>
-              <span className="opacity-70 italic">你的选择不只决定分数，也决定你这一年到底想成为一个什么样的人。</span>
-            </div>
-            <div className="space-y-2">
-              {DISSERTATION_TOPICS.map((t, i) => (
-                <button key={i} onClick={() => onChoose(t)}
-                  className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all">
-                  <div className="text-sm font-medium">{t.label}</div>
-                  <div className="text-xs opacity-60 italic mt-0.5">{t.desc}</div>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="border-l-2 border-purple-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">开始动笔</button>
-          </>
-        )}
-      </div>
-    </div>
+      {!feedback ? (
+        <>
+          <div className="text-sm opacity-90 mb-5" style={{ lineHeight: '1.8' }}>
+            这是你硕士的 50%。Whitmore 让你在三个方向里选一个。<br/>
+            <span className="opacity-70 italic">你的选择不只决定分数，也决定你这一年到底想成为一个什么样的人。</span>
+          </div>
+          <div className="space-y-2">
+            {DISSERTATION_TOPICS.map((t, i) => (
+              <button key={i} onClick={() => onChoose(t)}
+                className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all">
+                <div className="text-sm font-medium">{t.label}</div>
+                <div className="text-xs opacity-60 italic mt-0.5">{t.desc}</div>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="border-l-2 border-purple-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">开始动笔</button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 export function BirthdayPromptScreen({ onSelect }) {
@@ -616,46 +611,43 @@ export function BirthdayPromptScreen({ onSelect }) {
     { num: 10, name: '十月' }, { num: 11, name: '十一月' }, { num: 12, name: '十二月' },
   ];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-amber-300/40 max-w-md w-full p-6">
-        <div className="text-xs tracking-[0.3em] opacity-50 mb-2" style={{ fontFamily: 'monospace' }}>BEFORE WE BEGIN</div>
+    <BottomSheet open={true} onClose={() => {}}>
+      <div className="text-xs tracking-[0.3em] opacity-50 mb-2" style={{ fontFamily: 'monospace' }}>BEFORE WE BEGIN</div>
 
-        <h2 className="text-xl mb-2 font-light">你是男生还是女生？</h2>
-        <div className="text-xs opacity-60 italic mb-3" style={{ lineHeight: '1.6' }}>
-          影响 NPC 怎么称呼你（学弟/学妹、哥/姐、儿子/女儿）。
-        </div>
-        <div className="grid grid-cols-2 gap-2 mb-6">
-          <button onClick={() => setGender('male')}
-            className={`p-3 border transition-all text-sm ${gender === 'male'
-              ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70'}`}>
-            ♂ 男生
-          </button>
-          <button onClick={() => setGender('female')}
-            className={`p-3 border transition-all text-sm ${gender === 'female'
-              ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70'}`}>
-            ♀ 女生
-          </button>
-        </div>
-
-        <h2 className="text-xl mb-2 font-light">你的生日是哪个月？</h2>
-        <div className="text-sm opacity-80 italic mb-4" style={{ lineHeight: '1.7' }}>
-          这一年里你会经历它一次。<br/>
-          <span className="opacity-60">在异乡过的第一个生日，是会被记住的。</span>
-        </div>
-        <div className={`grid grid-cols-3 gap-2 ${!gender ? 'opacity-40 pointer-events-none' : ''}`}>
-          {months.map(m => (
-            <button key={m.num} onClick={() => gender && onSelect(m.num, gender)}
-              className="p-2.5 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm">
-              {m.name}
-            </button>
-          ))}
-        </div>
-        {!gender && (
-          <div className="text-xs opacity-50 italic text-center mt-3">先选个性别 ↑</div>
-        )}
+      <h2 className="text-xl mb-2 font-light">你是男生还是女生？</h2>
+      <div className="text-xs opacity-60 italic mb-3" style={{ lineHeight: '1.6' }}>
+        影响 NPC 怎么称呼你（学弟/学妹、哥/姐、儿子/女儿）。
       </div>
-    </div>
+      <div className="grid grid-cols-2 gap-2 mb-6">
+        <button onClick={() => setGender('male')}
+          className={`p-3 border transition-all text-sm ${gender === 'male'
+            ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70'}`}>
+          ♂ 男生
+        </button>
+        <button onClick={() => setGender('female')}
+          className={`p-3 border transition-all text-sm ${gender === 'female'
+            ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70'}`}>
+          ♀ 女生
+        </button>
+      </div>
+
+      <h2 className="text-xl mb-2 font-light">你的生日是哪个月？</h2>
+      <div className="text-sm opacity-80 italic mb-4" style={{ lineHeight: '1.7' }}>
+        这一年里你会经历它一次。<br/>
+        <span className="opacity-60">在异乡过的第一个生日，是会被记住的。</span>
+      </div>
+      <div className={`grid grid-cols-3 gap-2 ${!gender ? 'opacity-40 pointer-events-none' : ''}`}>
+        {months.map(m => (
+          <button key={m.num} onClick={() => gender && onSelect(m.num, gender)}
+            className="p-2.5 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm">
+            {m.name}
+          </button>
+        ))}
+      </div>
+      {!gender && (
+        <div className="text-xs opacity-50 italic text-center mt-3">先选个性别 ↑</div>
+      )}
+    </BottomSheet>
   );
 }
 export function TravelScreen({ destination, daysLeft, totalDays, events, allEvents, seenEvents,
@@ -671,72 +663,69 @@ export function TravelScreen({ destination, daysLeft, totalDays, events, allEven
   const dayUsed = totalDays - daysLeft + 1;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: cityBg }}>
-      <div className="bg-[#1a1612]/95 border border-amber-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5 backdrop-blur">
-        <div className="text-xs tracking-[0.4em] mb-1" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
-          ✈️ TRAVEL
+    <BottomSheet open={true} onClose={onFinish}>
+      <div className="text-xs tracking-[0.4em] mb-1" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
+        ✈️ TRAVEL
+      </div>
+      <div className="flex justify-between items-baseline mb-3">
+        <div>
+          <h2 className="text-2xl font-light">{destination.name}</h2>
+          <div className="text-xs opacity-60 italic" style={{ fontFamily: 'monospace' }}>{destination.desc}</div>
         </div>
-        <div className="flex justify-between items-baseline mb-3">
-          <div>
-            <h2 className="text-2xl font-light">{destination.name}</h2>
-            <div className="text-xs opacity-60 italic" style={{ fontFamily: 'monospace' }}>{destination.desc}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs opacity-60" style={{ fontFamily: 'monospace' }}>DAY {dayUsed}/{totalDays}</div>
-            <div className="flex gap-1 mt-1 justify-end">
-              {[...Array(totalDays)].map((_, i) => (
-                <div key={i} className={`w-2 h-2 rounded-full border ${i < totalDays - daysLeft + 1 ? 'bg-amber-300/80 border-amber-300' : 'border-current/30'}`} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 已收集的明信片 */}
-        {seenEvents.length > 0 && (
-          <div className="mb-4 px-3 py-2 border border-amber-300/30 bg-amber-300/5">
-            <div className="text-xs tracking-[0.2em] opacity-60 mb-1.5" style={{ fontFamily: 'monospace' }}>
-              ✉️ POSTCARDS · {seenEvents.length}/{allEvents.length}
-            </div>
-            <div className="text-xs opacity-80 italic space-y-0.5">
-              {allEvents.filter(e => seenEvents.includes(e.id) && e.postcard).map(e => (
-                <div key={e.id}>· {e.postcard}</div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="text-xs tracking-[0.2em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>今天做什么？</div>
-
-        {events.length > 0 ? (
-          <div className="space-y-2 mb-3">
-            {events.map(ev => (
-              <button key={ev.id} onClick={() => onChooseEvent(ev)}
-                className="w-full text-left p-3 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
-                <div className="text-sm">{ev.title}</div>
-                <div className="text-xs opacity-60 italic mt-0.5 line-clamp-2">{ev.body.split('\n')[0]}</div>
-              </button>
+        <div className="text-right">
+          <div className="text-xs opacity-60" style={{ fontFamily: 'monospace' }}>DAY {dayUsed}/{totalDays}</div>
+          <div className="flex gap-1 mt-1 justify-end">
+            {[...Array(totalDays)].map((_, i) => (
+              <div key={i} className={`w-2 h-2 rounded-full border ${i < totalDays - daysLeft + 1 ? 'bg-amber-300/80 border-amber-300' : 'border-current/30'}`} />
             ))}
           </div>
-        ) : (
-          <div className="text-sm opacity-70 italic mb-4">你已经看过了{destination.name}所有的角落。该回家了。</div>
-        )}
-
-        <div className="flex gap-2 mt-4">
-          <button onClick={onSkipDay}
-            className="flex-1 py-2 border border-current/40 text-sm hover:border-current transition-all">
-            跳过今天 →
-          </button>
-          {(daysLeft <= 1 || events.length === 0) && (
-            <button onClick={onFinish}
-              className="flex-1 py-2 border border-amber-300/60 text-sm hover:bg-amber-300/10 transition-all"
-              style={{ color: '#d4b070' }}>
-              回伦敦 ✈️
-            </button>
-          )}
         </div>
       </div>
-    </div>
+
+      {/* 已收集的明信片 */}
+      {seenEvents.length > 0 && (
+        <div className="mb-4 px-3 py-2 border border-amber-300/30 bg-amber-300/5">
+          <div className="text-xs tracking-[0.2em] opacity-60 mb-1.5" style={{ fontFamily: 'monospace' }}>
+            ✉️ POSTCARDS · {seenEvents.length}/{allEvents.length}
+          </div>
+          <div className="text-xs opacity-80 italic space-y-0.5">
+            {allEvents.filter(e => seenEvents.includes(e.id) && e.postcard).map(e => (
+              <div key={e.id}>· {e.postcard}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="text-xs tracking-[0.2em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>今天做什么？</div>
+
+      {events.length > 0 ? (
+        <div className="space-y-2 mb-3">
+          {events.map(ev => (
+            <button key={ev.id} onClick={() => onChooseEvent(ev)}
+              className="w-full text-left p-3 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
+              <div className="text-sm">{ev.title}</div>
+              <div className="text-xs opacity-60 italic mt-0.5 line-clamp-2">{ev.body.split('\n')[0]}</div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm opacity-70 italic mb-4">你已经看过了{destination.name}所有的角落。该回家了。</div>
+      )}
+
+      <div className="flex gap-2 mt-4">
+        <button onClick={onSkipDay}
+          className="flex-1 py-2 border border-current/40 text-sm hover:border-current transition-all">
+          跳过今天 →
+        </button>
+        {(daysLeft <= 1 || events.length === 0) && (
+          <button onClick={onFinish}
+            className="flex-1 py-2 border border-amber-300/60 text-sm hover:bg-amber-300/10 transition-all"
+            style={{ color: '#d4b070' }}>
+            回伦敦 ✈️
+          </button>
+        )}
+      </div>
+    </BottomSheet>
   );
 }
 export function EndingScreen({ ending, stats, npcRel, attendanceRate, storyProgress, examResults, dissertationProgress, postcards, flags, addedStrangers, gender, onRestart }) {
