@@ -436,12 +436,18 @@ def admin_review_cancel_request(
     
     if not cancel_request:
         raise HTTPException(status_code=404, detail="Cancel request not found")
-    
+
     if cancel_request.status != "pending":
         raise HTTPException(status_code=400, detail="Cancel request has already been reviewed")
-    
+
     from app.utils.time_utils import get_utc_time
-    
+    from app.push_notification_service import send_push_notification
+
+    # 提前读 task,需要在 crud.cancel_task 之前保存 taker_id —— reverted_to_open
+    # 分支会把 task.taker_id 清成 None,失去通知"另一方"的信息源。
+    task = crud.get_task(db, cancel_request.task_id)
+    original_taker_id = task.taker_id if task else None
+
     if decision == "approve":
         # ⚠️ 关键修复:原来直接 task.status="cancelled" 一行就完,完全不做资金/状态清理:
         #   - 不退款 (escrow 卡死)
@@ -475,8 +481,93 @@ def admin_review_cancel_request(
             db, cancel_request.task_id, None, "admin_approved_cancel",
             f"管理员批准了取消请求"
         )
+
+        # 通知请求者 + 另一方 (对齐 cs_routes 的通知模式)
+        if task:
+            try:
+                crud.create_notification(
+                    db,
+                    cancel_request.requester_id,
+                    "cancel_request_approved",
+                    "取消请求已通过",
+                    f'您的任务 "{task.title}" 取消请求已通过审核',
+                    task.id,
+                )
+            except Exception as e:
+                logger.warning(f"admin 通知请求者(approved)失败: {e}")
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=cancel_request.requester_id,
+                    notification_type="cancel_request_approved",
+                    data={"task_id": task.id},
+                    template_vars={"task_title": task.title, "task_id": task.id},
+                )
+            except Exception as e:
+                logger.warning(f"admin push 通知请求者(approved)失败: {e}")
+
+            # 另一方: 用 crud.cancel_task 之前抓到的 original_taker_id
+            # (reverted_to_open 路径下 task.taker_id 已被清成 None)
+            other_user_id = (
+                task.poster_id
+                if cancel_request.requester_id == original_taker_id
+                else original_taker_id
+            )
+            if other_user_id and other_user_id != cancel_request.requester_id:
+                try:
+                    crud.create_notification(
+                        db,
+                        other_user_id,
+                        "task_cancelled",
+                        "任务已取消",
+                        f'任务 "{task.title}" 已被取消',
+                        task.id,
+                    )
+                except Exception as e:
+                    logger.warning(f"admin 通知另一方(cancelled)失败: {e}")
+                try:
+                    send_push_notification(
+                        db=db,
+                        user_id=other_user_id,
+                        notification_type="task_cancelled",
+                        data={"task_id": task.id},
+                        template_vars={"task_title": task.title, "task_id": task.id},
+                    )
+                except Exception as e:
+                    logger.warning(f"admin push 通知另一方(cancelled)失败: {e}")
+
+        # 清缓存,跟 cs_routes 对齐
+        try:
+            TaskService.invalidate_cache(cancel_request.task_id)
+            from app.redis_cache import invalidate_tasks_cache
+            invalidate_tasks_cache()
+        except Exception as e:
+            logger.warning(f"清任务缓存失败: {e}")
     else:
         cancel_request.status = "rejected"
+        # 通知请求者: 拒绝
+        if task:
+            try:
+                crud.create_notification(
+                    db,
+                    cancel_request.requester_id,
+                    "cancel_request_rejected",
+                    "取消请求被拒绝",
+                    f'您的任务 "{task.title}" 取消请求被拒绝，原因：{admin_comment or "无"}',
+                    task.id,
+                )
+            except Exception as e:
+                logger.warning(f"admin 通知请求者(rejected)失败: {e}")
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=cancel_request.requester_id,
+                    notification_type="cancel_request_rejected",
+                    data={"task_id": task.id},
+                    template_vars={"task_title": task.title, "task_id": task.id},
+                )
+            except Exception as e:
+                logger.warning(f"admin push 通知请求者(rejected)失败: {e}")
 
     cancel_request.admin_id = current_user.id
     cancel_request.reviewed_at = get_utc_time()

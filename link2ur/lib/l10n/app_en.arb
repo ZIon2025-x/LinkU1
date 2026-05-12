@@ -4840,7 +4840,7 @@
   "taskDetailPosterCounterOfferPrice": "Proposed price",
   "taskDetailAcceptCounterOffer": "Accept Price",
   "taskDetailRejectCounterOffer": "Reject",
-  "taskDetailCounterOfferAccepted": "Counter-offer accepted",
+  "taskDetailCounterOfferAccepted": "Counter-offer accepted. Approve and pay to start the task.",
   "taskDetailCounterOfferRejected": "Counter-offer rejected",
   "commonDiscardChanges": "Discard Changes?",
   "commonDiscardChangesMessage": "You have unsaved changes. Are you sure you want to discard them?",

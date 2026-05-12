@@ -9944,7 +9944,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailRejectCounterOffer => '拒绝';
 
   @override
-  String get taskDetailCounterOfferAccepted => '已接受反报价';
+  String get taskDetailCounterOfferAccepted => '已接受反报价，请完成支付以开始任务';
 
   @override
   String get taskDetailCounterOfferRejected => '已拒绝反报价';
@@ -23667,7 +23667,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailRejectCounterOffer => '拒絕';
 
   @override
-  String get taskDetailCounterOfferAccepted => '已接受反報價';
+  String get taskDetailCounterOfferAccepted => '已接受反報價，請完成支付以開始任務';
 
   @override
   String get taskDetailCounterOfferRejected => '已拒絕反報價';

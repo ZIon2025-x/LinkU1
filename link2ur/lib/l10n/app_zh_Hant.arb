@@ -4641,7 +4641,7 @@
   "taskDetailPosterCounterOfferPrice": "對方報價",
   "taskDetailAcceptCounterOffer": "同意報價",
   "taskDetailRejectCounterOffer": "拒絕",
-  "taskDetailCounterOfferAccepted": "已接受反報價",
+  "taskDetailCounterOfferAccepted": "已接受反報價，請完成支付以開始任務",
   "taskDetailCounterOfferRejected": "已拒絕反報價",
   "commonDiscardChanges": "放棄更改？",
   "commonDiscardChangesMessage": "您有未儲存的更改，確定要放棄嗎？",

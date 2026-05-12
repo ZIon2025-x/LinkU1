@@ -10372,7 +10372,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailRejectCounterOffer => 'Reject';
 
   @override
-  String get taskDetailCounterOfferAccepted => 'Counter-offer accepted';
+  String get taskDetailCounterOfferAccepted => 'Counter-offer accepted. Approve and pay to start the task.';
 
   @override
   String get taskDetailCounterOfferRejected => 'Counter-offer rejected';

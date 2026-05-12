@@ -4669,7 +4669,7 @@
   "taskDetailPosterCounterOfferPrice": "对方报价",
   "taskDetailAcceptCounterOffer": "同意报价",
   "taskDetailRejectCounterOffer": "拒绝",
-  "taskDetailCounterOfferAccepted": "已接受反报价",
+  "taskDetailCounterOfferAccepted": "已接受反报价，请完成支付以开始任务",
   "taskDetailCounterOfferRejected": "已拒绝反报价",
   "commonDiscardChanges": "放弃更改？",
   "commonDiscardChangesMessage": "您有未保存的更改，确定要放弃吗？",
