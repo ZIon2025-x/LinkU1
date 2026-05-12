@@ -74,3 +74,42 @@ describe('Ch 5 · 第一步分化', () => {
     expect(nicheEvent.week).toBe(26);
   });
 });
+
+describe('Ch 6 · 复活节深化', () => {
+  const ch6 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch6');
+
+  test('Omar 上线 W28', () => {
+    const omarEvent = ch6.events.find((e) => e.id === 'ch6_omar_first');
+    expect(omarEvent.week).toBe(28);
+    expect(omarEvent.customerId).toBe('cust_omar');
+  });
+
+  test('复活节 capstone scene 引用', () => {
+    const capstone = ch6.events.find((e) => e.sceneId === 'yjie_easter_capstone');
+    expect(capstone).toBeTruthy();
+  });
+});
+
+describe('Ch 7 · 论文期低维持', () => {
+  const ch7 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch7');
+
+  test('陈一帆推 Whitmore W33 (跨圈联动)', () => {
+    const chenEvent = ch7.events.find((e) => e.id === 'ch7_chen_recommends_whitmore');
+    expect(chenEvent.week).toBe(33);
+  });
+
+  test('Paul BBC 采访 W38', () => {
+    const paulEvent = ch7.events.find((e) => e.id === 'ch7_paul_bbc_interview');
+    expect(paulEvent.week).toBe(38);
+  });
+
+  test('Aman clash W40', () => {
+    const amanEvent = ch7.events.find((e) => e.id === 'ch7_aman_clash');
+    expect(amanEvent.week).toBe(40);
+  });
+
+  test('王凯介绍 Eric W41', () => {
+    const ericEvent = ch7.events.find((e) => e.id === 'ch7_wangkai_introduces_eric');
+    expect(ericEvent.week).toBe(41);
+  });
+});
