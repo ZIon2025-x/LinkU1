@@ -83,11 +83,11 @@ import {
   PlaneScreen, ArrivalScreen,
 } from './components/Screens.jsx';
 import {
-  GameMenuPanel,
   EventModal, StoryModal, NpcDialogModal, StrangerEncounterModal,
   AtYouModal, DreamModal, InsomniaModal, NostalgiaModal,
   ParentsChapterModal, StrangerEventModal, CrisisModal, TravelEventModal,
 } from './components/Modals.jsx';
+import { BagSheet } from './components/BagSheet.jsx';
 // Minigames 只在玩家触发对应任务时渲染，懒加载剪掉首屏 ~22KB
 const YellowLabelMinigame = lazy(() => import('./components/Minigames.jsx').then(m => ({ default: m.YellowLabelMinigame })));
 const PretMinigame        = lazy(() => import('./components/Minigames.jsx').then(m => ({ default: m.PretMinigame })));
@@ -144,7 +144,7 @@ export default function App() {
   // Link2Ur 完成时正在跑的 minigame —— { task, type } 形如 { task, type: 'yellow'|'pret'|'essay'|'match' }
   const [activeL2uMinigame, setActiveL2uMinigame] = useState(null);
 
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [bagOpen, setBagOpen] = useState(false);
 
   // -- Derived (memoized to skip recompute on unrelated re-renders) --
   const week = useMemo(() => derive.week(state), [state.day]);
@@ -1627,14 +1627,20 @@ export default function App() {
           {muted ? '🔇' : '🔊'}
         </button>
       )}
-      {menuOpen && (
-        <GameMenuPanel
-          muted={muted}
-          onToggleMute={() => setMuted(!muted)}
-          onRestart={restart}
-          onClose={() => setMenuOpen(false)}
-        />
-      )}
+      <BagSheet
+        open={bagOpen}
+        onClose={() => setBagOpen(false)}
+        stats={state.stats}
+        mealsToday={state.mealsToday ?? 0}
+        weekInfo={weekInfo}
+        attendanceRate={attendanceRate}
+        classesAttendedThisWeek={state.classesAttendedThisWeek}
+        dissertationProgress={state.dissertationProgress}
+        dissertationTopic={state.dissertationTopic}
+        muted={muted}
+        onToggleMute={() => setMuted(!muted)}
+        onRestart={restart}
+      />
 
       {showStoryNotification && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 border border-amber-300/60 bg-[#1a1612]/95 animate-fadein-slow">
@@ -1716,7 +1722,7 @@ export default function App() {
             onTriggerPret={() => withLoading({ type: 'pret' }, () => setActiveMinigamePret(true))}
             onTriggerEssay={() => withLoading({ type: 'essay' }, () => setActiveMinigameEssay(true))}
             onTriggerMatch={() => setActiveMinigameMatch(true)}
-            onOpenMenu={() => setMenuOpen(true)}
+            onOpenMenu={() => setBagOpen(true)}
             link2urProps={{
               board: state.link2urBoard,
               completed: state.link2urCompleted,

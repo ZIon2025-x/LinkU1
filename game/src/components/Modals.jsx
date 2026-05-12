@@ -1,66 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NpcAvatar } from './NpcAvatar.jsx';
 import { getSceneForEvent, getNpcImage } from '../engine/imageRegistry.js';
 import { pronounize } from '../engine/pronouns.js';
 // Modals are mostly self-contained — they receive everything they need via props.
-
-/**
- * Game settings panel — overlay only. The trigger button is inlined into
- * PlayingScreen next to the "结束今天" button. Restart goes through a 2-step
- * confirm to avoid accidents.
- */
-export function GameMenuPanel({ muted, onToggleMute, onRestart, onClose }) {
-  const [confirmRestart, setConfirmRestart] = useState(false);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'rgba(10, 8, 6, 0.85)' }}
-      onClick={() => { setConfirmRestart(false); onClose(); }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-xs w-full p-5"
-        onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-baseline mb-4">
-          <div className="text-xs tracking-[0.3em] opacity-60" style={{ fontFamily: 'monospace' }}>MENU</div>
-          <button onClick={() => { setConfirmRestart(false); onClose(); }}
-            className="text-xs opacity-60 hover:opacity-100">✕</button>
-        </div>
-
-        <button onClick={onToggleMute}
-          className="w-full text-left p-3 mb-2 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm flex items-center justify-between">
-          <span>{muted ? '🔇 已静音' : '🔊 声音开'}</span>
-          <span className="text-xs opacity-50" style={{ fontFamily: 'monospace' }}>
-            {muted ? 'OFF' : 'ON'}
-          </span>
-        </button>
-
-        {!confirmRestart ? (
-          <button onClick={() => setConfirmRestart(true)}
-            className="w-full text-left p-3 border border-current/40 hover:border-red-400 hover:bg-red-400/5 transition-all text-sm">
-            🗑️ 清空存档 · 重新开始
-          </button>
-        ) : (
-          <div className="border border-red-400/60 p-3 bg-red-400/5">
-            <div className="text-xs opacity-80 italic mb-3" style={{ lineHeight: '1.7' }}>
-              真的要清空当前进度并重开吗？这一年的所有选择都会消失。
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => { setConfirmRestart(false); onClose(); onRestart(); }}
-                className="flex-1 py-1.5 border border-red-400/60 text-red-300 hover:bg-red-400/10 text-xs tracking-[0.2em]">
-                确认
-              </button>
-              <button onClick={() => setConfirmRestart(false)}
-                className="flex-1 py-1.5 border border-current/40 hover:border-current text-xs tracking-[0.2em]">
-                取消
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-4 pt-3 border-t border-current/20 text-xs opacity-50 italic" style={{ lineHeight: '1.7' }}>
-          每次行动会自动存档到本地。
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function EventModal({ event, feedback, onChoose, onDismiss }) {
   const banner = getSceneForEvent(event?.id);
