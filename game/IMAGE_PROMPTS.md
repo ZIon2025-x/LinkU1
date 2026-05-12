@@ -330,3 +330,111 @@ src/assets/illustrations/
 - 政治 + 学术诚信 4 张：climate_strike / ucu_solidarity / daixie_refused / daixie_reported
 
 文件名用我列的那个 ID 严格对应（我代码会按这套 ID 引用）。生成完一批扔进对应文件夹，告诉我"成就 20 张做完了"，我接一批。
+
+---
+
+# 🆕 第 7 主线 · Link2Ur AI 广告创业线 (Y 姐线) — 11 张核心 + 11 张可选
+
+> 2026-05-13 新增。Plan/Spec 见 `docs/superpowers/plans/2026-05-12-link2ur-skill-entrepreneurship-line.md`。
+> 玩家主营 AI 广告 (Phase 1 留学生服务 → Phase 2 跨境 AI Studio),核心 NPC 陈思敏 / Yvonne Chan / Y 姐。
+> 画风沿用前面的 Style Brief (米色 #f4ead8 + 水彩 + 钢笔线稿)。
+
+## 7.1 · NPC 肖像 (1 张必画)
+
+**规格**:1024 × 1024 px,半身像,放 `assets/illustrations/npcs/`
+
+### 100. `npc-yjie.png` — Y 姐 / 陈思敏
+> **28 岁广东中山女生**,在伦敦 6 年。半身像构图,坐在 Sketch 餐厅 pink room 的粉色绒面卡座旁。穿米色 trench coat、内搭白衬衫,Mulberry tote 摆在椅背上。短直发齐肩,刘海略斜剪,妆淡。表情:商业理性 + 粤式温情 — 嘴角微抿但眼神带笑。手里端一杯 cappuccino,另一只手摆在打开的 MacBook 旁。背景虚化粉色丝绒墙 + 一束 peony。光线:窗光柔。**不要**戴太多 jewelry,要给人一种"product 姐"而不是"金主"的气质。
+
+---
+
+## 7.2 · 成就卡插画 (6 张必画)
+
+**规格**:1080 × 1080 px,放 `assets/illustrations/achievements/`,沿用现有 rarity 配色 (common 灰 / rare 蓝 / epic 紫 / legendary 金)。
+
+### 101. `achievement-l2u_first_repeat.png` — 记得你 ⭐ (Common 灰底)
+> 笔电屏幕上方一个微信通知气泡:"Lily 给了你 5 星 + 留言"。屏幕在 Pret a Manger 木桌上,旁边一杯燕麦拿铁、AirPods、一支笔。光线柔黄。重点突出"被记住"的小确幸感。
+
+### 102. `achievement-l2u_clash_survived.png` — 撞档大王 ⚔️ (Rare 蓝底)
+> 笔电屏幕上 3 个 inbox 任务卡片重叠堆叠,每张红色 ⏰ 过期 countdown 闪烁。桌上 3 个 Pret 杯 + 1 个空 Lemsip 包装 + 钢笔。深夜台灯光,玻璃窗外伦敦雨。一个亚洲面孔留学生手撑额头但嘴角倔强。
+
+### 103. `achievement-l2u_y_audience.png` — Sketch Pink Room 🍰 (Rare 蓝底)
+> Sketch 餐厅那个标志性的 millennial pink 卵形房间内景。两个杯子 (黑咖 + 燕麦拿铁) 摆在大理石小圆桌上,中间一本印好的 menu booklet,旁边一只 Mulberry tote 露出皮搭扣。两人坐姿,只画到肩部以下 — 一只手 (亚洲面孔留学生的) 端杯子,对面一只手 (Y 姐) 正翻开 booklet 第一页。重点突出空间梦幻感 + 邀请前一秒的 anticipation。
+
+### 104. `achievement-l2u_first_hire.png` — 我招到了第一个人 🤲 (Epic 紫底)
+> Pret Tottenham Court Road 周三下午。木桌两侧,一个 23 岁亚洲女生 (小雨,穿米色运动外套,头发整齐,微紧张) 坐对面。前景能看到桌面有两张笔记纸:一张写着 "cut 18%",另一张被笔尖按住。两人手交换递笔的瞬间。背景虚化是 Pret 玻璃门 + 路过的西装人。
+
+### 105. `achievement-l2u_team_5.png` — 小小帝国 👑 (Legendary 金底)
+> 自上而下俯视构图。一张 Bloomsbury 共享办公室的会议桌,围坐 5 个人:小雨 (亚洲女,翻译笔记) / Kenji (日本男,看 MacBook 上 Sora 预览) / Aman (印度男,Meta ads 仪表盘) / Chloe (ABC 女,通话耳机+笔记本) / Eric (亚洲男,平板上 Midjourney 出图) + 主位玩家头顶视角。桌中央一张 LinkU brand spec sheet + 多杯 Pret + 一只 succulent 盆栽。窗外是 London 雨景,但室内是暖色台灯。
+
+### 106. `achievement-l2u_ai_anxiety_resolved.png` — 我是匠人 不是工具人 🧠 (Epic 紫底)
+> BBC News 录制现场幕后小化妆间。前景:一面圆形化妆镜,镜框灯泡亮起。亚洲留学生坐在镜前,镜中映出自己 + 后面挂着的"AI Times: Immigrant Labor in the Age of Algorithms"演播海报。手里拿着 Paul 给的采访稿 — 但稿子上是手写的、不是 AI 生成的。表情:经过一场艰难采访后的 calm。
+
+---
+
+## 7.3 · 结局场景画 (3 张必画)
+
+**规格**:1920 × 1080 px,放 `assets/illustrations/scenes/`,作为结局 walk-down 文本下方的大图。
+
+### 107. `scene-ending_y_double.png` — Tier 1 《LinkU Bespoke + AI 创始合伙人》
+> 媒体专访照构图。亚洲留学生 + Y 姐两人并肩站在 Sketch pink room 门口,Y 姐穿深绿丝绒外套,主角穿白衬衫+米色西装。两人都笑,眼神有 founder-level confidence。门楣上挂"LinkU Bespoke + AI Studio"双联名 brand 牌。底部一行小字:"Two Women / Founders Who Built a Travel Empire on Whatsapp" — 但字模糊到不可读 (按 Style Brief: 不要文字)。
+
+### 108. `scene-ending_team_founded.png` — Tier 2 《我自己的 AI Studio》
+> 自家小工作室视角。一面墙挂着团队 6 人的合影 polaroids + 一面是手写的 retention 71% / 4.92 evaluation。前景一张桌子,亚洲留学生坐着写小雨的 PhD 推荐信,旁边放一杯 Mei's 的红烧肉打包盒 + 王凯送的奶茶。窗外晨光。整体调子:**独立但温暖**,不是 LinkedIn glossy 而是 lived-in 的小公司。
+
+### 109. `scene-ending_solo_apex.png` — Tier 2 《伦敦最难约的 AI Pro》
+> Pret Tottenham Court Road,黄昏。亚洲留学生独自坐窗边长凳,前面摊开 MacBook,屏幕显示 inbox 18 条未读,最早一条预约日期是 "6 个月后"。手机屏亮:Y 姐 DM "Send me one of your Cotswolds photos sometime"。桌上一杯黑咖、一份没动的 chicken caesar wrap。窗外行人来往。**关键**:孤独 + 自给自足 + dignity intact 的对比。
+
+---
+
+## 7.4 · 关键场景插画 (1 张必画)
+
+### 110. `scene-sketch_pink_room.png` — Sketch 邀请场景
+> 比成就 #103 更大景的 Sketch pink room 全景。1920 × 1080 px。卵形空间,粉色丝绒墙 + 金属吊灯 + 几个圆形小桌 + 弧形长卡座。空间梦幻、tea-time 时段、玻璃天窗洒柔光。**不要**画人,只画空间 — Y 姐和玩家会作为人物 overlay 叠加上去。放在 `assets/illustrations/scenes/scene-sketch_pink_room.png`。
+
+---
+
+## 7.5 · 可选轻量插画 (11 张,客户/团员 avatar,优先级低)
+
+> 当前代码用 **emoji + 色块**渲染客户/团员头像 (见 `link2urCustomers.js` / `link2urTeam.js` 的 `avatar` 字段)。如果想替换成手绘 avatar,以下 prompts。**不画也不影响发版** — 这些只是 polish。
+> 规格:512 × 512 px,头像方框居中,文件名 `npc-{id}.png`。
+
+### 客户 (6 张可选)
+- 111. `npc-lily.png` — 25 岁北京二代,穿 Burberry 风衣,手提 IG 拍照,30万粉网红气质
+- 112. `npc-jess_wong.png` — 22 岁香港 ABC,DTC 美妆主理人,妆精致但年轻,IG-first
+- 113. `npc-marcus_okafor.png` — 21 岁 Black British (尼日利亚 diaspora),LSE 学生,反诈公益 vibe,工党红色 hoodie
+- 114. `npc-carrie_brand_tea.png` — 32 岁中资品牌 marketing director,工业风、Apple Watch、深色西装
+- 115. `npc-omar.png` — 25 岁迪拜留学生,巨富但孤独的眼神,白色 thobe / 现代 smart casual
+- 116. `npc-paul_hartwell.png` — 35 岁 BBC 记者,左倾工党,Hackney 公寓 vibe,胡须短、戴 NHS 眼镜
+
+### 团员 (5 张可选)
+- 117. `npc-xiaoyu.png` — 23 岁北方亚洲女,KCL 应用语言学,运动外套,内敛
+- 118. `npc-kenji.png` — 24 岁日本男,Goldsmiths Media,小圆眼镜 + 黑色 turtleneck,东京街拍 vibe
+- 119. `npc-aman_singh.png` — 25 岁印度男,Imperial MEng,精瘦,Sikh 头巾 (turban) 黑色,理性目光
+- 120. `npc-chloe.png` — 22 岁 ABC,KCL English Lit,Reformation 连衣裙,3 语切换的伶俐感
+- 121. `npc-eric.png` — 22 岁中国二代,Brunel Design,中性发型,围裙挂脖上 (奶茶店打工痕迹)
+
+---
+
+## 7.6 · 文件夹结构 (新增)
+
+```
+assets/illustrations/
+├── achievements/
+│   └── ... (49 + 6 新 = 55 张)
+├── locations/ (10 张不变)
+├── npcs/
+│   └── npc-yjie.png ← 新增 1 张 (必画)
+│   └── npc-{lily/jess/marcus/carrie/omar/paul}.png ← 可选 6 张
+│   └── npc-{xiaoyu/kenji/aman/chloe/eric}.png ← 可选 5 张
+├── scenes/
+│   ├── scene-ending_y_double.png         ← 新增必画
+│   ├── scene-ending_team_founded.png     ← 新增必画
+│   ├── scene-ending_solo_apex.png        ← 新增必画
+│   └── scene-sketch_pink_room.png        ← 新增必画
+└── misc/ (12 张不变)
+
+新增必画:11 张 (1 NPC + 6 成就 + 3 结局 + 1 场景)
+新增可选:11 张 (客户/团员 avatar)
+画完总数:99 + 11 = 110 张 (基础) / 110 + 11 = 121 张 (含可选 polish)
+```
