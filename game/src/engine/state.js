@@ -12,6 +12,7 @@
 import { clamp } from './util.js';
 import { DAILY_ACTIONS } from '../data/calendar.js';
 import { STARTING_WALLET, STARTING_ACADEMIC } from '../data/onboarding.js';
+import { maybePromoteToRepeat } from './link2urRepeat.js';
 
 // 哪些 message sender 是"可点开私聊的真人"——他们的消息会同时进 chatThreads。
 // 其它 sender (uni / l2u / l2u_cs / l2u_review / Faculty Office 等) 留在
@@ -746,6 +747,90 @@ export function reducer(state, action) {
 
     case 'SET_ENDING':
       return { ...state, ending: action.ending, screen: 'ending' };
+
+    // ── Link2Ur 创业线 actions ──
+    case 'L2U_INBOX_RECEIVED':
+      return { ...state, link2urInbox: [...state.link2urInbox, action.task] };
+
+    case 'L2U_INBOX_ACCEPTED': {
+      const task = state.link2urInbox.find((t) => t.id === action.taskId);
+      if (!task) return state;
+      // 移除 inbox / 加 wallet / 加 completed / 升级 customer
+      const afterPromote = maybePromoteToRepeat(
+        { ...state,
+          link2urInbox: state.link2urInbox.filter((t) => t.id !== action.taskId),
+          stats: { ...state.stats, wallet: state.stats.wallet + (task.reward || 0) },
+          link2urCompleted: [...state.link2urCompleted, task.id],
+        },
+        { customerId: task.customerId, taskRating: task.taskRating || 5, day: state.day }
+      );
+      return afterPromote;
+    }
+
+    case 'L2U_INBOX_DECLINED': {
+      const task = state.link2urInbox.find((t) => t.id === action.taskId);
+      if (!task) return state;
+      const p = task.declinePenalty || {};
+      return {
+        ...state,
+        link2urInbox: state.link2urInbox.filter((t) => t.id !== action.taskId),
+        link2urRating: Math.max(0, state.link2urRating - (p.ratingDecay || 0)),
+        // customer 关系倒退 (简化版,后续可加 lastDeclinedDay)
+      };
+    }
+
+    case 'L2U_CLASH_RESOLVED': {
+      // action.resolution: 'self' / 'decline_a' / 'decline_b' / 'team'
+      // 委托各自的 L2U_INBOX_* action 拆分处理 (此 case 仅记录)
+      return {
+        ...state,
+        link2urClashCount: state.link2urClashCount + 1,
+        link2urClashEvents: [
+          ...state.link2urClashEvents,
+          { day: state.day, taskIds: action.taskIds, resolution: action.resolution },
+        ],
+      };
+    }
+
+    case 'L2U_PHASE_PIVOT':
+      if (state.link2urPhase === 2) return state;  // 已 pivot 不重做
+      return {
+        ...state,
+        link2urPhase: 2,
+        link2urPhaseShiftDay: state.day,
+      };
+
+    case 'L2U_PATH_DECIDED':
+      return {
+        ...state,
+        link2urPath: action.path,
+        link2urPathDecidedDay: state.day,
+      };
+
+    case 'L2U_TEAM_RECRUIT':
+      return {
+        ...state,
+        link2urTeamMembers: [
+          ...state.link2urTeamMembers,
+          {
+            memberId: action.memberId,
+            joinedDay: state.day,
+            specialty: action.specialty,
+            energy: action.baseEnergy || 80,
+            completed: 0,
+            cutPercent: action.cutPercent || 18,
+            status: 'active',
+          },
+        ],
+      };
+
+    case 'L2U_TEAM_MEMBER_LEAVE':
+      return {
+        ...state,
+        link2urTeamMembers: state.link2urTeamMembers.map((m) =>
+          m.memberId === action.memberId ? { ...m, status: action.status || 'departed' } : m
+        ),
+      };
 
     default:
       return state;

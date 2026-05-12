@@ -195,3 +195,54 @@ describe('Link2Ur 创业线 state 字段 (v2 spec)', () => {
     expect(s.yjieChapter).toBe(0);
   });
 });
+
+describe('Link2Ur 创业线 reducer actions', () => {
+  test('L2U_INBOX_RECEIVED push task', () => {
+    const s = initialState();
+    const next = reducer(s, {
+      type: 'L2U_INBOX_RECEIVED',
+      task: { id: 'inbox_x', customerId: 'cust_lily', reward: 100 },
+    });
+    expect(next.link2urInbox.length).toBe(1);
+    expect(next.link2urInbox[0].id).toBe('inbox_x');
+  });
+
+  test('L2U_INBOX_ACCEPTED 移除 + 加 wallet + 加 completed', () => {
+    const s = { ...initialState(),
+      link2urInbox: [{ id: 'inbox_x', customerId: 'cust_lily', reward: 100, taskRating: 5 }],
+    };
+    const next = reducer(s, { type: 'L2U_INBOX_ACCEPTED', taskId: 'inbox_x' });
+    expect(next.link2urInbox.length).toBe(0);
+    expect(next.stats.wallet).toBe(s.stats.wallet + 100);
+    expect(next.link2urCompleted).toContain('inbox_x');
+    expect(next.link2urRepeatCustomers.cust_lily.count).toBe(1);
+  });
+
+  test('L2U_PHASE_PIVOT 不可逆', () => {
+    const s = initialState();
+    const next = reducer(s, { type: 'L2U_PHASE_PIVOT' });
+    expect(next.link2urPhase).toBe(2);
+    expect(next.link2urPhaseShiftDay).toBe(s.day);
+  });
+
+  test('L2U_PATH_DECIDED 锁定路径', () => {
+    const s = initialState();
+    const next = reducer(s, { type: 'L2U_PATH_DECIDED', path: 'team' });
+    expect(next.link2urPath).toBe('team');
+    expect(next.link2urPathDecidedDay).toBe(s.day);
+  });
+
+  test('L2U_TEAM_RECRUIT 加团员到 runtime 数组', () => {
+    const s = initialState();
+    const next = reducer(s, {
+      type: 'L2U_TEAM_RECRUIT',
+      memberId: 'team_xiaoyu',
+      specialty: 'ai_copywriting_bilingual',
+      cutPercent: 18,
+    });
+    expect(next.link2urTeamMembers.length).toBe(1);
+    expect(next.link2urTeamMembers[0].memberId).toBe('team_xiaoyu');
+    expect(next.link2urTeamMembers[0].status).toBe('active');
+    expect(next.link2urTeamMembers[0].energy).toBe(80);  // 默认初始 energy
+  });
+});
