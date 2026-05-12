@@ -54,6 +54,13 @@ const ForumCreatePost: React.FC = () => {
     }
     loadCategories();
     if (postId) {
+      // 校验 postId 是合法正整数;外部坏链/微信旧卡片缓存可能给到 NaN/字符串
+      const postIdNum = Number(postId);
+      if (!Number.isInteger(postIdNum) || postIdNum <= 0) {
+        message.error('帖子不存在');
+        setTimeout(() => navigate(`/${lang}/forum`, { replace: true }), 1500);
+        return;
+      }
       setIsEdit(true);
       loadPost();
     } else {

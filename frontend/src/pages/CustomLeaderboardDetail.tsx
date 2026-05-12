@@ -558,6 +558,13 @@ const CustomLeaderboardDetail: React.FC = () => {
 
   useEffect(() => {
     if (leaderboardId) {
+      // 校验 leaderboardId 是合法正整数;外部坏链/微信旧卡片缓存可能给到 NaN/字符串
+      const lbIdNum = Number(leaderboardId);
+      if (!Number.isInteger(lbIdNum) || lbIdNum <= 0) {
+        message.error('榜单不存在');
+        setTimeout(() => navigate(`/${lang}/forum/leaderboard`, { replace: true }), 1500);
+        return;
+      }
       loadData();
       fetchCurrentUser().then(setUser).catch(() => setUser(null));
     }

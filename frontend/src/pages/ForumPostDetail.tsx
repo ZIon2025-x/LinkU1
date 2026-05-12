@@ -110,6 +110,11 @@ const ForumPostDetail: React.FC = () => {
   
   // 确保 lang 有值，防止路由错误
   const lang = langParam || language || 'zh';
+
+  // 校验 URL 上的 postId 是合法正整数；外部分享/收藏/微信卡片缓存可能给到 NaN/undefined/字符串
+  const postIdNum = postId ? Number(postId) : NaN;
+  const isValidPostId = Number.isInteger(postIdNum) && postIdNum > 0;
+
   const { user: currentUser } = useCurrentUser();
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
@@ -531,7 +536,13 @@ const ForumPostDetail: React.FC = () => {
   }, [showShareModal, post, updateWeixinMetaTags]);
 
   useEffect(() => {
-    if (postId) {
+    if (postId && !isValidPostId) {
+      // postId 不是合法正整数（外部坏链 / 微信旧卡片缓存），不要发 NaN 给后端
+      message.error('帖子不存在');
+      setTimeout(() => navigate(`/${lang}/forum`, { replace: true }), 1500);
+      return;
+    }
+    if (isValidPostId) {
       loadPost();
       loadReplies();
       // 注意：浏览数会在 getForumPost 接口中自动增加，无需单独调用

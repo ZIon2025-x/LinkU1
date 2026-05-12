@@ -451,12 +451,21 @@ const TaskDetail: React.FC = () => {
   // 加载任务数据
   useEffect(() => {
     if (!id) return;
-    
+
+    // 校验 id 是合法正整数;外部坏链/微信旧卡片缓存可能给到 NaN/字符串,避免发坏请求洗 422 日志
+    const idNum = Number(id);
+    if (!Number.isInteger(idNum) || idNum <= 0) {
+      message.error('任务不存在');
+      setTimeout(() => navigate('/tasks', { replace: true }), 1500);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    
+
     // P1 优化：预取用户信息（在任务加载时预取）
     prefetchUserInfo();
-    
+
     // 添加时间戳参数绕过缓存，确保获取最新数据
     api.get(`/api/tasks/${id}`, {
       params: { _t: Date.now() },

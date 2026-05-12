@@ -56,6 +56,13 @@ const LeaderboardItemDetail: React.FC = () => {
 
   useEffect(() => {
     if (itemId) {
+      // 校验 itemId 是合法正整数;外部坏链/微信旧卡片缓存可能给到 NaN/字符串
+      const itemIdNum = Number(itemId);
+      if (!Number.isInteger(itemIdNum) || itemIdNum <= 0) {
+        message.error('榜单条目不存在');
+        setTimeout(() => navigate('/forum/leaderboard', { replace: true }), 1500);
+        return;
+      }
       loadData();
       fetchCurrentUser().then(setUser).catch(() => setUser(null));
     }

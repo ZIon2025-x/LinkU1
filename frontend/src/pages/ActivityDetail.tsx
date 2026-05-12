@@ -31,10 +31,18 @@ const ActivityDetail: React.FC = () => {
   // 加载活动详情
   const loadActivity = useCallback(async () => {
     if (!id) return;
-    
+
+    // 校验 id 是合法正整数;外部坏链/微信旧卡片缓存可能给到 NaN/字符串,避免发坏请求
+    const idNum = Number(id);
+    if (!Number.isInteger(idNum) || idNum <= 0) {
+      message.error('活动不存在');
+      setTimeout(() => navigateLocalized('/tasks', { replace: true }), 1500);
+      return;
+    }
+
     try {
       setLoading(true);
-      const activityData = await getActivityDetail(parseInt(id));
+      const activityData = await getActivityDetail(idNum);
       setActivity(activityData);
       
       // 如果是时间段服务，加载时间段列表

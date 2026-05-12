@@ -84,6 +84,13 @@ const ForumPostList: React.FC = () => {
 
   useEffect(() => {
     if (categoryId) {
+      // 校验 categoryId 是合法正整数;外部坏链/微信旧卡片缓存可能给到 NaN/字符串
+      const catIdNum = Number(categoryId);
+      if (!Number.isInteger(catIdNum) || catIdNum <= 0) {
+        message.error('板块不存在');
+        setTimeout(() => navigate(`/${lang}/forum`, { replace: true }), 1500);
+        return;
+      }
       loadCategory();
       loadPosts();
     }

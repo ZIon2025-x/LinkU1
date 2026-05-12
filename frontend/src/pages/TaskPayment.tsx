@@ -81,7 +81,16 @@ const TaskPayment: React.FC = () => {
   useEffect(() => {
     const loadTaskInfo = async () => {
       if (!taskId) return;
-      
+
+      // 校验 taskId 是合法正整数;外部坏链可能给到 NaN/字符串,避免发坏请求
+      const taskIdNum = Number(taskId);
+      if (!Number.isInteger(taskIdNum) || taskIdNum <= 0) {
+        message.error('任务不存在');
+        setLoadingTask(false);
+        setTimeout(() => localizedNavigate('/tasks', { replace: true }), 1500);
+        return;
+      }
+
       try {
         setLoadingTask(true);
         const response = await api.get(`/api/tasks/${taskId}`);
