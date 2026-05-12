@@ -117,9 +117,112 @@ export const LINK2UR_CHAPTERS = [
     ],
   },
 
-  // Ch 4-9 在 Task 3.2-3.4 续写,先放 placeholder 让测试通过
-  { chapterId: 'link2ur_ch4', title: 'Sketch 下午茶', weekStart: 21, weekEnd: 22, summary: '', events: [] },
-  { chapterId: 'link2ur_ch5', title: '第一步分化', weekStart: 23, weekEnd: 26, summary: '', events: [] },
+  // ── Ch 4 · W21-W22 · Sketch 下午茶 + Phase pivot ──
+  {
+    chapterId: 'link2ur_ch4',
+    title: 'Sketch 下午茶',
+    weekStart: 21,
+    weekEnd: 22,
+    summary: '父母走后撞档第 3 次 + Lily 正式介绍品牌方 → Y 姐 DM Sketch 邀请。无论玩家选什么 path, Phase 1 → 2 不可逆 pivot。',
+    events: [
+      {
+        id: 'ch4_clash_third',
+        week: 21,
+        type: 'clash_trigger',
+        narrative: '父母周末后第三次时间撞档 (累计 3 次, 满足 Y 姐邀请条件)',
+      },
+      {
+        id: 'ch4_lily_brand_intro',
+        week: 21,
+        type: 'flag_set',
+        flagOnSet: 'l2u_lily_brand_intro_pending',
+        narrative: 'Lily 正式介绍蓝瓶茶饮 marketing director Carrie 给你',
+      },
+      {
+        id: 'ch4_y_sketch_invite',
+        week: 22,
+        type: 'npc_scene',
+        sceneId: 'yjie_sketch_invitation',
+        narrative: 'Y 姐 inbox DM 约你 Sketch pink room 下午茶。三选一: 加入 Team / 委婉拒绝 / 限定接单',
+      },
+      {
+        id: 'ch4_phase_pivot',
+        week: 22,
+        type: 'flag_set',
+        flagOnSet: 'l2u_phase_2_active',
+        statePatch: { link2urPhase: 2 },
+        narrative: 'Phase 1 → 2 不可逆 pivot。玩家开始服务 Carrie / 品牌方,客单跳变。',
+      },
+    ],
+  },
+
+  // ── Ch 5 · W23-W26 · 第一步分化 ──
+  {
+    chapterId: 'link2ur_ch5',
+    title: '第一步分化',
+    weekStart: 23,
+    weekEnd: 26,
+    summary: '蓝瓶茶饮首单 £1200。Phase 1 客户 (Marcus / Jess) 部分流失或留下。Path A 玩家选 niche / Path B 招小雨。',
+    events: [
+      {
+        id: 'ch5_brand_tea_first',
+        week: 23,
+        type: 'inbox_task',
+        customerId: 'cust_brand_tea',
+        title: '蓝瓶茶饮 · UK Launch Campaign',
+        reward: 1200,
+        narrative: 'Carrie: "我们 4 月 1 号 launch。 brief 后天给。如果做得好, 年度合约 retainer 直接谈。"',
+        flagOnAccept: 'l2u_brand_tea_signed',
+      },
+      {
+        id: 'ch5_marcus_introduces_paul',
+        week: 23,
+        type: 'flag_set',
+        flagOnSet: 'l2u_marcus_paul_intro',
+        narrative: 'Marcus 推荐 Paul (BBC 记者) 给你 — Phase 2 客户引荐 + 跨圈联动 hook',
+      },
+      // Path A · Solo
+      {
+        id: 'ch5_solo_capacity_limit',
+        week: 24,
+        type: 'flag_set',
+        requireFlag: 'link2urPath_solo',
+        flagOnSet: 'l2u_solo_capacity_learned',
+        narrative: 'Solo 路径: 玩家学到"接单上限 N/周"机制 (UI slider 启用)',
+      },
+      {
+        id: 'ch5_solo_niche_choice',
+        week: 26,
+        type: 'choice',
+        requireFlag: 'link2urPath_solo',
+        flagOnComplete: 'l2u_solo_niche_chosen',
+        prompt: 'AI 4 专精方向 (4 选 1)',
+        choices: [
+          { id: 'ai_copy_pro', label: 'AI 文案专家', flag: 'l2u_solo_niche_copy' },
+          { id: 'ai_visual_pro', label: 'AI 视觉专家', flag: 'l2u_solo_niche_visual' },
+          { id: 'ai_video_pro', label: 'AI 视频专家', flag: 'l2u_solo_niche_video' },
+          { id: 'ai_ads_pro', label: 'AI 投放策略专家', flag: 'l2u_solo_niche_ads' },
+        ],
+      },
+      // Path B · Team
+      {
+        id: 'ch5_team_recruit_xiaoyu',
+        week: 24,
+        type: 'npc_scene',
+        sceneId: 'yjie_team_referral_xiaoyu',
+        requireFlag: 'link2urPath_team',
+        narrative: 'Y 姐 DM 介绍小雨。玩家面谈后决定是否招人',
+      },
+      {
+        id: 'ch5_team_assign_learned',
+        week: 26,
+        type: 'flag_set',
+        requireFlag: 'l2u_team_recruited_xiaoyu',
+        flagOnSet: 'l2u_team_assign_learned',
+        narrative: 'Team 路径: 玩家学到 inbox 分单机制 (UI assign button 启用)',
+      },
+    ],
+  },
   { chapterId: 'link2ur_ch6', title: '复活节深化', weekStart: 27, weekEnd: 30, summary: '', events: [] },
   { chapterId: 'link2ur_ch7', title: '论文期低维持', weekStart: 31, weekEnd: 42, summary: '', events: [] },
   { chapterId: 'link2ur_ch8', title: 'Y 姐合并提议', weekStart: 45, weekEnd: 47, summary: '', events: [] },

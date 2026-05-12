@@ -42,3 +42,35 @@ describe('Link2Ur 9 章主线', () => {
     expect(getActiveChapter(7 * 51).chapterId).toBe('link2ur_ch9');  // W51
   });
 });
+
+describe('Ch 4 · Sketch 下午茶', () => {
+  const ch4 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch4');
+
+  test('Ch 4 events 包含 Sketch 邀请 + Phase pivot', () => {
+    const eventIds = ch4.events.map((e) => e.id);
+    expect(eventIds).toContain('ch4_y_sketch_invite');
+    expect(eventIds).toContain('ch4_phase_pivot');
+  });
+
+  test('Phase pivot 落在 W22 周末', () => {
+    const pivot = ch4.events.find((e) => e.id === 'ch4_phase_pivot');
+    expect(pivot.week).toBe(22);
+  });
+});
+
+describe('Ch 5 · 第一步分化', () => {
+  const ch5 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch5');
+
+  test('Ch 5 events 包含蓝瓶茶饮首单 + 团员招募 (Path B)', () => {
+    const eventIds = ch5.events.map((e) => e.id);
+    expect(eventIds).toContain('ch5_brand_tea_first');
+    expect(eventIds).toContain('ch5_team_recruit_xiaoyu');
+  });
+
+  test('Solo 路径 Ch 5 选 niche 事件', () => {
+    const ch5 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch5');
+    const nicheEvent = ch5.events.find((e) => e.id === 'ch5_solo_niche_choice');
+    expect(nicheEvent).toBeTruthy();
+    expect(nicheEvent.week).toBe(26);
+  });
+});
