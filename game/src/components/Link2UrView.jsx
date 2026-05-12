@@ -3,6 +3,7 @@ import { LINK2UR_BRAND, availablePosts } from '../data/link2ur.js';
 import { LINK2UR_REVIEWS } from '../data/link2urReviews.js';
 import { renderLink2UrWall, renderWallToBlob } from '../engine/link2urWall.js';
 import { download } from '../engine/diaryExport.js';
+import { InboxCard, PhaseIndicator, TeamMemberRow, ClashWarningModal } from './Atoms.jsx';
 
 const PRIMARY = LINK2UR_BRAND.primary;   // #007AFF
 const ACCENT = LINK2UR_BRAND.accent;     // #FF8033
@@ -20,6 +21,7 @@ function Stars({ rating }) {
 export function Link2UrView({
   board, completed, posted, rating, earnings, walletNow, actionsLeft, postsAvailable,
   flags, gameState, onComplete, onPost, week, onApply,
+  onInboxAccept, onInboxDecline, onInboxAssign,
 }) {
   const [tab, setTab] = useState('accept');
   const [wallOpen, setWallOpen] = useState(false);
@@ -35,6 +37,33 @@ export function Link2UrView({
   const rejected = gameState?.link2urRejected || [];
   // 是否有 emergency post（urgent 标记的）—— 用于在 post tab 上加 red dot
   const urgentPostCount = postsAvailable.filter(p => p.urgent).length;
+
+  // Phase 4 additions
+  const inbox = gameState?.link2urInbox || [];
+  const teamMembers = gameState?.link2urTeamMembers || [];
+  const phase = gameState?.link2urPhase || 1;
+  const link2urPath = gameState?.link2urPath || 'freelance';
+  const activeClash = gameState?.activeClash || null;
+  const hasTeam = link2urPath === 'team' && teamMembers.length > 0;
+  const teamRevenue = gameState?.link2urTeamRevenue || 0;
+  const teamWeekCompleted = gameState?.link2urTeamWeekCompleted || 0;
+
+  // Inbox action callbacks — Task 5.2 will wire these at the call site;
+  // fall back to no-ops so the UI renders without errors.
+  const handleInboxAccept  = (taskId) => onInboxAccept?.(taskId);
+  const handleInboxDecline = (taskId) => onInboxDecline?.(taskId);
+  const handleInboxAssign  = (taskId) => onInboxAssign?.(taskId);
+
+  // Clash modal close (local for now; Task 5.2 wires dismiss action)
+  const [clashDismissed, setClashDismissed] = useState(false);
+  const showClash = !!activeClash && !clashDismissed;
+
+  // Determine tab grid columns (add Inbox always, Team only when link2urPath === 'team')
+  const showTeamTab = link2urPath === 'team';
+  const tabCount = 4 + (inbox.length >= 0 ? 1 : 0) + (showTeamTab ? 1 : 0);
+  // Always show Inbox tab (even if empty — shows badge when non-empty)
+  // grid: 5 cols normally, 6 if team path
+  const gridCols = showTeamTab ? 'grid-cols-6' : 'grid-cols-5';
 
   return (
     <div className="animate-fadein">
@@ -55,6 +84,11 @@ export function Link2UrView({
         </div>
       </div>
 
+      {/* Phase Indicator */}
+      <div className="mb-3">
+        <PhaseIndicator phase={phase} daysUntilShift={gameState?.link2urDaysUntilShift} />
+      </div>
+
       {/* Export wall button */}
       <button
         onClick={() => setWallOpen(true)}
@@ -66,8 +100,8 @@ export function Link2UrView({
         <span>导出我的成就墙 · 朋友圈分享卡</span>
       </button>
 
-      {/* sub-tab switcher · 4 tabs */}
-      <div className="grid grid-cols-4 gap-1 mb-3 text-xs">
+      {/* sub-tab switcher */}
+      <div className={`grid ${gridCols} gap-1 mb-3 text-xs`}>
         <button onClick={() => setTab('accept')}
           className={`py-2 border ${tab === 'accept' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
           style={tab === 'accept' ? { borderColor: PRIMARY, color: PRIMARY } : {}}>
@@ -92,6 +126,24 @@ export function Link2UrView({
           style={tab === 'reviews' ? { borderColor: GOLD, color: GOLD } : {}}>
           ⭐ 评价 · {unlockedReviews.length}
         </button>
+        {/* Inbox tab — always shown, red dot when non-empty */}
+        <button onClick={() => setTab('inbox')}
+          className={`py-2 border relative ${tab === 'inbox' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
+          style={tab === 'inbox' ? { borderColor: '#6366f1', color: '#6366f1' } : {}}>
+          📨 收件 · {inbox.length}
+          {inbox.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full"
+              style={{ background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} />
+          )}
+        </button>
+        {/* Team tab — only when link2urPath === 'team' */}
+        {showTeamTab && (
+          <button onClick={() => setTab('team')}
+            className={`py-2 border ${tab === 'team' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
+            style={tab === 'team' ? { borderColor: '#8b5cf6', color: '#8b5cf6' } : {}}>
+            👥 团队 · {teamMembers.length}
+          </button>
+        )}
       </div>
 
       {tab === 'accept' && (
@@ -108,6 +160,22 @@ export function Link2UrView({
       {tab === 'reviews' && (
         <ReviewList reviews={unlockedReviews} totalReviews={LINK2UR_REVIEWS.length} />
       )}
+      {tab === 'inbox' && (
+        <InboxList
+          inbox={inbox}
+          hasTeam={hasTeam}
+          onAccept={handleInboxAccept}
+          onDecline={handleInboxDecline}
+          onAssign={handleInboxAssign}
+        />
+      )}
+      {tab === 'team' && showTeamTab && (
+        <TeamPanel
+          members={teamMembers}
+          teamRevenue={teamRevenue}
+          teamWeekCompleted={teamWeekCompleted}
+        />
+      )}
 
       <div className="mt-4 text-xs opacity-40 italic text-center" style={{ lineHeight: '1.7' }}>
         Link2Ur · 留学生互助平台 · 任务每周一刷新<br/>
@@ -116,6 +184,20 @@ export function Link2UrView({
 
       {wallOpen && gameState && (
         <Link2UrWallModal gameState={gameState} onClose={() => setWallOpen(false)} />
+      )}
+
+      {/* ClashWarningModal — reducer wired in Task 5.2 */}
+      {showClash && (
+        <ClashWarningModal
+          taskA={activeClash.taskA}
+          taskB={activeClash.taskB}
+          hasTeam={hasTeam}
+          onResolve={(resolution) => {
+            onInboxAccept?.({ type: 'clash_resolve', resolution, clash: activeClash });
+            setClashDismissed(true);
+          }}
+          onClose={() => setClashDismissed(true)}
+        />
       )}
     </div>
   );
@@ -388,6 +470,65 @@ function ReviewList({ reviews, totalReviews }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function InboxList({ inbox, hasTeam, onAccept, onDecline, onAssign }) {
+  if (inbox.length === 0) {
+    return (
+      <div className="p-6 border border-current/20 text-center text-xs opacity-60 italic" style={{ lineHeight: '1.9' }}>
+        暂无新指定任务。<br/>
+        客户直接找你时任务会出现在这里。
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <div className="text-xs opacity-60 italic mb-1" style={{ lineHeight: '1.7' }}>
+        客户指定找你的任务 · 接受即进入申请队列。
+      </div>
+      {inbox.map(task => (
+        <InboxCard
+          key={task.id}
+          task={task}
+          hasTeam={hasTeam}
+          onAccept={() => onAccept(task.id)}
+          onDecline={() => onDecline(task.id)}
+          onAssign={() => onAssign(task.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TeamPanel({ members, teamRevenue, teamWeekCompleted }) {
+  if (members.length === 0) {
+    return (
+      <div className="p-6 border border-current/20 text-center text-xs opacity-60 italic" style={{ lineHeight: '1.9' }}>
+        团队暂无成员。<br/>
+        完成足够多的单后系统会帮你匹配团员。
+      </div>
+    );
+  }
+  return (
+    <div>
+      {/* Team stats bar */}
+      <div className="mb-3 px-3 py-2 border text-xs flex items-center justify-between"
+        style={{ borderColor: '#8b5cf660', background: '#8b5cf608' }}>
+        <span style={{ color: '#8b5cf6', fontFamily: 'monospace' }}>
+          本周完成 {teamWeekCompleted} 单
+        </span>
+        <span style={{ color: '#8b5cf6', fontFamily: 'monospace' }}>
+          团队累计收入 £{teamRevenue}
+        </span>
+      </div>
+      {/* Member rows */}
+      <div className="border border-current/20 divide-y divide-current/10">
+        {members.map(member => (
+          <TeamMemberRow key={member.id} member={member} />
+        ))}
+      </div>
     </div>
   );
 }
