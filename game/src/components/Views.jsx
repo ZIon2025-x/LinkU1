@@ -466,7 +466,7 @@ function ChatDetailView({
   const avatarUrl = getNpcImage(npcId, gender);
 
   return (
-    <div className="animate-fadein flex flex-col" style={{ height: 'calc(100vh - 120px)', maxHeight: 600 }}>
+    <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
       {/* 顶栏 · back + name */}
       <div className="flex items-center gap-2 pb-3 border-b border-current/20">
         <button onClick={onBack} className="text-base hover:opacity-100 opacity-60 px-1">←</button>
@@ -551,7 +551,7 @@ function GroupChatDetailView({
   }, [groupChat.length]);
 
   return (
-    <div className="animate-fadein flex flex-col" style={{ height: 'calc(100vh - 120px)', maxHeight: 600 }}>
+    <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
       <div className="flex items-center gap-2 pb-3 border-b border-current/20">
         <button onClick={onBack} className="text-base hover:opacity-100 opacity-60 px-1">←</button>
         <div className="w-8 h-8 rounded flex items-center justify-center text-sm font-bold text-white"
@@ -701,7 +701,7 @@ export function PhoneView({
   }
   if (openId === '_system') {
     return (
-      <div className="animate-fadein flex flex-col" style={{ height: 'calc(100vh - 120px)', maxHeight: 600 }}>
+      <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
         <div className="flex items-center gap-2 pb-3 border-b border-current/20">
           <button onClick={() => setOpenId(null)} className="text-base hover:opacity-100 opacity-60 px-1">←</button>
           <div className="w-8 h-8 rounded flex items-center justify-center text-sm font-bold text-white"
