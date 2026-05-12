@@ -121,41 +121,39 @@ export function NpcDialogModal({ npc, rel, feedback, onChoose, onDismiss, gender
 export function StrangerEncounterModal({ stranger, onAdd, onReject }) {
   const strangerImg = getNpcImage(stranger.id);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.92)' }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-5">
-        <div className="text-xs tracking-[0.3em] opacity-50 mb-1" style={{ fontFamily: 'monospace' }}>📱 偶遇</div>
-        <h2 className="text-xl mb-1 font-light">{stranger.encounterTitle}</h2>
-        <div className="text-sm leading-relaxed mb-5 opacity-90 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
-          {stranger.encounterBody}
-        </div>
+    <BottomSheet open={true} onClose={onReject}>
+      <div className="text-xs tracking-[0.3em] opacity-50 mb-1" style={{ fontFamily: 'monospace' }}>📱 偶遇</div>
+      <h2 className="text-xl mb-1 font-light">{stranger.encounterTitle}</h2>
+      <div className="text-sm leading-relaxed mb-5 opacity-90 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
+        {stranger.encounterBody}
+      </div>
 
-        <div className="flex items-center gap-3 px-3 py-2 mb-4 border border-current/20 bg-current/5">
-          {strangerImg ? (
-            <img src={strangerImg} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
-              style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="text-sm">{stranger.name}</div>
-            <div className="text-xs opacity-60 italic" style={{ fontFamily: 'monospace' }}>{stranger.role}</div>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <button onClick={() => onAdd(stranger)}
-            className="w-full text-left p-3 border border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
-            <div className="text-sm">扫码加好友 · 拉进群</div>
-            <div className="text-xs opacity-60 italic mt-0.5">+1 群成员 · +少量归属感</div>
-          </button>
-          <button onClick={onReject}
-            className="w-full text-left p-3 border border-current/30 hover:border-current/60 transition-all">
-            <div className="text-sm">"今天有点忙 改天" 客气拒绝</div>
-            <div className="text-xs opacity-60 italic mt-0.5">下次可能就遇不到了</div>
-          </button>
+      <div className="flex items-center gap-3 px-3 py-2 mb-4 border border-current/20 bg-current/5">
+        {strangerImg ? (
+          <img src={strangerImg} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+        ) : (
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+            style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="text-sm">{stranger.name}</div>
+          <div className="text-xs opacity-60 italic" style={{ fontFamily: 'monospace' }}>{stranger.role}</div>
         </div>
       </div>
-    </div>
+
+      <div className="space-y-2">
+        <button onClick={() => onAdd(stranger)}
+          className="w-full text-left p-3 border border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
+          <div className="text-sm">扫码加好友 · 拉进群</div>
+          <div className="text-xs opacity-60 italic mt-0.5">+1 群成员 · +少量归属感</div>
+        </button>
+        <button onClick={onReject}
+          className="w-full text-left p-3 border border-current/30 hover:border-current/60 transition-all">
+          <div className="text-sm">"今天有点忙 改天" 客气拒绝</div>
+          <div className="text-xs opacity-60 italic mt-0.5">下次可能就遇不到了</div>
+        </button>
+      </div>
+    </BottomSheet>
   );
 }
 
@@ -163,306 +161,282 @@ export function AtYouModal({ event, members, strangers, feedback, onChoose, onDi
   const member = (members || []).find(g => g.id === event.askerId)
               || (strangers || []).find(s => s.id === event.askerId);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.92)' }}>
-      <div className="bg-[#1a1612] border border-orange-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5">
-        <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#d49060' }}>👥 群里有人 @ 你</div>
-        <div className="text-xs opacity-60 italic mb-3" style={{ fontFamily: 'monospace' }}>{event.setup}</div>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#d49060' }}>👥 群里有人 @ 你</div>
+      <div className="text-xs opacity-60 italic mb-3" style={{ fontFamily: 'monospace' }}>{event.setup}</div>
 
-        {/* 群消息气泡 */}
-        {member && (
-          <div className="flex gap-2 items-start mb-4 p-3 bg-current/5 rounded">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-              style={{ background: member.color, color: '#1a1612' }}>{member.avatar}</div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs opacity-60 mb-0.5" style={{ fontFamily: 'monospace' }}>{member.name}</div>
-              <div className="text-sm" style={{ lineHeight: '1.6' }}>{event.askerMsg}</div>
-            </div>
+      {/* 群消息气泡 */}
+      {member && (
+        <div className="flex gap-2 items-start mb-4 p-3 bg-current/5 rounded">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+            style={{ background: member.color, color: '#1a1612' }}>{member.avatar}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs opacity-60 mb-0.5" style={{ fontFamily: 'monospace' }}>{member.name}</div>
+            <div className="text-sm" style={{ lineHeight: '1.6' }}>{event.askerMsg}</div>
           </div>
-        )}
+        </div>
+      )}
 
-        {!feedback ? (
-          <>
-            <div className="text-xs tracking-[0.2em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>怎么回？</div>
-            <div className="space-y-2">
-              {event.choices.map((c, i) => (
-                <button key={i} onClick={() => onChoose(c)}
-                  className="w-full text-left p-3 border border-current/40 hover:border-orange-300 hover:bg-orange-300/5 transition-all">
-                  <div className="text-sm">{c.label}</div>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="border-l-2 border-orange-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>
-              {feedback}
-            </div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
-              CONTINUE
-            </button>
-          </>
-        )}
-      </div>
-    </div>
+      {!feedback ? (
+        <>
+          <div className="text-xs tracking-[0.2em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>怎么回？</div>
+          <div className="space-y-2">
+            {event.choices.map((c, i) => (
+              <button key={i} onClick={() => onChoose(c)}
+                className="w-full text-left p-3 border border-current/40 hover:border-orange-300 hover:bg-orange-300/5 transition-all">
+                <div className="text-sm">{c.label}</div>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="border-l-2 border-orange-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>
+            {feedback}
+          </div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+            CONTINUE
+          </button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 export function DreamModal({ dream, onDismiss }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'radial-gradient(ellipse at center, rgba(40, 30, 60, 0.94) 0%, rgba(10, 8, 20, 0.98) 100%)' }}>
-      <div className="bg-[#181420] border border-purple-300/30 max-w-md w-full p-6"
-        style={{ boxShadow: '0 0 80px rgba(120, 90, 180, 0.15)' }}>
-        <div className="text-xs tracking-[0.4em] mb-2" style={{ fontFamily: 'monospace', color: '#a89cc0' }}>
-          ☾ 凌晨 · 一场梦
-        </div>
-        <h2 className="text-xl mb-4 font-light italic" style={{ color: '#c8b8e0' }}>{dream.title}</h2>
-        <div className="text-sm leading-relaxed mb-6 opacity-85 whitespace-pre-line italic" style={{ lineHeight: '2', color: '#d8d0e8' }}>
-          {dream.body}
-        </div>
-        <button onClick={onDismiss}
-          className="w-full px-6 py-2 border border-purple-300/40 text-sm tracking-[0.2em] hover:bg-purple-300/10 transition-colors"
-          style={{ color: '#c8b8e0' }}>
-          醒来
-        </button>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.4em] mb-2" style={{ fontFamily: 'monospace', color: '#a89cc0' }}>
+        ☾ 凌晨 · 一场梦
       </div>
-    </div>
+      <h2 className="text-xl mb-4 font-light italic" style={{ color: '#c8b8e0' }}>{dream.title}</h2>
+      <div className="text-sm leading-relaxed mb-6 opacity-85 whitespace-pre-line italic" style={{ lineHeight: '2', color: '#d8d0e8' }}>
+        {dream.body}
+      </div>
+      <button onClick={onDismiss}
+        className="w-full px-6 py-2 border border-purple-300/40 text-sm tracking-[0.2em] hover:bg-purple-300/10 transition-colors"
+        style={{ color: '#c8b8e0' }}>
+        醒来
+      </button>
+    </BottomSheet>
   );
 }
 
 export function InsomniaModal({ thought, onDismiss }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'rgba(8, 6, 4, 0.96)' }}>
-      <div className="bg-[#15110d] border border-current/20 max-w-md w-full p-6">
-        <div className="text-xs tracking-[0.4em] mb-2 opacity-60" style={{ fontFamily: 'monospace' }}>☾ 失眠</div>
-        <h2 className="text-xl mb-4 font-light italic opacity-90">{thought.title}</h2>
-        <div className="text-sm leading-relaxed mb-6 opacity-80 whitespace-pre-line" style={{ lineHeight: '2.1' }}>
-          {thought.body}
-        </div>
-        <button onClick={onDismiss}
-          className="w-full px-6 py-2 border border-current/40 text-sm tracking-[0.2em] hover:bg-current/10 transition-colors opacity-80">
-          天亮了
-        </button>
-        <div className="text-xs opacity-40 italic mt-3 text-center">+5 精力 · -3 归属</div>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.4em] mb-2 opacity-60" style={{ fontFamily: 'monospace' }}>☾ 失眠</div>
+      <h2 className="text-xl mb-4 font-light italic opacity-90">{thought.title}</h2>
+      <div className="text-sm leading-relaxed mb-6 opacity-80 whitespace-pre-line" style={{ lineHeight: '2.1' }}>
+        {thought.body}
       </div>
-    </div>
+      <button onClick={onDismiss}
+        className="w-full px-6 py-2 border border-current/40 text-sm tracking-[0.2em] hover:bg-current/10 transition-colors opacity-80">
+        天亮了
+      </button>
+      <div className="text-xs opacity-40 italic mt-3 text-center">+5 精力 · -3 归属</div>
+    </BottomSheet>
   );
 }
 
 export function NostalgiaModal({ moment, onDismiss }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'rgba(20, 10, 6, 0.94)' }}>
-      <div className="bg-[#1c1410] border border-red-300/20 max-w-md w-full p-6">
-        <div className="text-xs tracking-[0.4em] mb-2" style={{ fontFamily: 'monospace', color: '#c89090' }}>
-          🏮 想家
-        </div>
-        <h2 className="text-xl mb-4 font-light italic" style={{ color: '#e8c8c0' }}>{moment.title}</h2>
-        <div className="text-sm leading-relaxed mb-6 opacity-90 whitespace-pre-line" style={{ lineHeight: '2', color: '#e0d0c8' }}>
-          {moment.body}
-        </div>
-        <button onClick={onDismiss}
-          className="w-full px-6 py-2 border border-red-300/30 text-sm tracking-[0.2em] hover:bg-red-300/5 transition-colors"
-          style={{ color: '#e8c8c0' }}>
-          继续
-        </button>
-        <div className="text-xs opacity-40 italic mt-3 text-center">-8 归属 · 但下次给妈妈打电话会更有意义</div>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.4em] mb-2" style={{ fontFamily: 'monospace', color: '#c89090' }}>
+        🏮 想家
       </div>
-    </div>
+      <h2 className="text-xl mb-4 font-light italic" style={{ color: '#e8c8c0' }}>{moment.title}</h2>
+      <div className="text-sm leading-relaxed mb-6 opacity-90 whitespace-pre-line" style={{ lineHeight: '2', color: '#e0d0c8' }}>
+        {moment.body}
+      </div>
+      <button onClick={onDismiss}
+        className="w-full px-6 py-2 border border-red-300/30 text-sm tracking-[0.2em] hover:bg-red-300/5 transition-colors"
+        style={{ color: '#e8c8c0' }}>
+        继续
+      </button>
+      <div className="text-xs opacity-40 italic mt-3 text-center">-8 归属 · 但下次给妈妈打电话会更有意义</div>
+    </BottomSheet>
   );
 }
 
 export function ParentsChapterModal({ chapter, feedback, onChoose, onDismiss }) {
   const totalChapters = 5;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'radial-gradient(ellipse at top, rgba(60, 30, 20, 0.95), rgba(10, 5, 4, 0.99))' }}>
-      <div className="bg-[#1c1410] border max-w-md w-full max-h-[92vh] overflow-y-auto p-6"
-        style={{ borderColor: 'rgba(212, 176, 112, 0.4)', boxShadow: '0 0 80px rgba(212, 176, 112, 0.1)' }}>
-        <div className="flex justify-between items-baseline mb-2">
-          <div className="text-xs tracking-[0.4em]" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
-            🇨🇳 父母 · 第 {chapter.chapter} 章 / 共 {totalChapters} 章
-          </div>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="flex justify-between items-baseline mb-2">
+        <div className="text-xs tracking-[0.4em]" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
+          🇨🇳 父母 · 第 {chapter.chapter} 章 / 共 {totalChapters} 章
         </div>
-        <h2 className="text-2xl mb-1 font-light" style={{ color: '#f0d8b0' }}>{chapter.title}</h2>
-        <div className="flex gap-1 mb-5">
-          {[...Array(totalChapters)].map((_, i) => (
-            <div key={i} className={`flex-1 h-0.5 ${i < chapter.chapter ? 'bg-amber-300/70' : 'bg-current/20'}`} />
+      </div>
+      <h2 className="text-2xl mb-1 font-light" style={{ color: '#f0d8b0' }}>{chapter.title}</h2>
+      <div className="flex gap-1 mb-5">
+        {[...Array(totalChapters)].map((_, i) => (
+          <div key={i} className={`flex-1 h-0.5 ${i < chapter.chapter ? 'bg-amber-300/70' : 'bg-current/20'}`} />
+        ))}
+      </div>
+
+      <div className="text-sm leading-relaxed mb-6 opacity-95 whitespace-pre-line" style={{ lineHeight: '2.05', color: '#e0d4c0' }}>
+        {chapter.body}
+      </div>
+
+      {!feedback ? (
+        <div className="space-y-2">
+          {chapter.choices.map((c, i) => (
+            <button key={i} onClick={() => onChoose(c)}
+              className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm"
+              style={{ lineHeight: '1.6' }}>
+              {c.label}
+            </button>
           ))}
         </div>
-
-        <div className="text-sm leading-relaxed mb-6 opacity-95 whitespace-pre-line" style={{ lineHeight: '2.05', color: '#e0d4c0' }}>
-          {chapter.body}
-        </div>
-
-        {!feedback ? (
-          <div className="space-y-2">
-            {chapter.choices.map((c, i) => (
-              <button key={i} onClick={() => onChoose(c)}
-                className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm"
-                style={{ lineHeight: '1.6' }}>
-                {c.label}
-              </button>
-            ))}
+      ) : (
+        <>
+          <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-95 text-sm whitespace-pre-line"
+            style={{ lineHeight: '2.05', color: '#e8d4b8' }}>
+            {feedback}
           </div>
-        ) : (
-          <>
-            <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-95 text-sm whitespace-pre-line"
-              style={{ lineHeight: '2.05', color: '#e8d4b8' }}>
-              {feedback}
-            </div>
-            <button onClick={onDismiss}
-              className="w-full px-6 py-2.5 border border-amber-300/60 text-sm tracking-[0.2em] hover:bg-amber-300/10 transition-colors"
-              style={{ color: '#f0d8b0' }}>
-              {chapter.chapter === 5 ? '走出 Heathrow' : 'CONTINUE'}
-            </button>
-          </>
-        )}
-      </div>
-    </div>
+          <button onClick={onDismiss}
+            className="w-full px-6 py-2.5 border border-amber-300/60 text-sm tracking-[0.2em] hover:bg-amber-300/10 transition-colors"
+            style={{ color: '#f0d8b0' }}>
+            {chapter.chapter === 5 ? '走出 Heathrow' : 'CONTINUE'}
+          </button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 export function StrangerEventModal({ event, strangers, feedback, onChoose, onDismiss }) {
   const stranger = strangers.find(s => s.id === event.strangerId);
   const strangerImg = stranger ? getNpcImage(stranger.id) : null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.92)' }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5">
-        <div className="text-xs tracking-[0.3em] mb-1 opacity-60" style={{ fontFamily: 'monospace' }}>📱 群里的朋友</div>
-        <h2 className="text-xl mb-3 font-light">{event.title}</h2>
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.3em] mb-1 opacity-60" style={{ fontFamily: 'monospace' }}>📱 群里的朋友</div>
+      <h2 className="text-xl mb-3 font-light">{event.title}</h2>
 
-        {stranger && (
-          <div className="flex items-center gap-2 mb-3 px-3 py-2 border border-current/20 bg-current/5">
-            {strangerImg ? (
-              <img src={strangerImg} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-            ) : (
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-                style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
-            )}
-            <div className="text-xs">
-              <div>{stranger.name}</div>
-              <div className="opacity-60 italic" style={{ fontFamily: 'monospace' }}>{stranger.role}</div>
-            </div>
+      {stranger && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 border border-current/20 bg-current/5">
+          {strangerImg ? (
+            <img src={strangerImg} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+              style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
+          )}
+          <div className="text-xs">
+            <div>{stranger.name}</div>
+            <div className="opacity-60 italic" style={{ fontFamily: 'monospace' }}>{stranger.role}</div>
           </div>
-        )}
-
-        <div className="text-sm leading-relaxed mb-5 opacity-90 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
-          {event.body}
         </div>
+      )}
 
-        {!feedback ? (
-          <div className="space-y-2">
-            {event.choices.map((c, i) => (
-              <button key={i} onClick={() => onChoose(c)}
-                className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
-                <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
-                {c.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <>
-            <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>
-              {feedback}
-            </div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
-              CONTINUE
-            </button>
-          </>
-        )}
+      <div className="text-sm leading-relaxed mb-5 opacity-90 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
+        {event.body}
       </div>
-    </div>
+
+      {!feedback ? (
+        <div className="space-y-2">
+          {event.choices.map((c, i) => (
+            <button key={i} onClick={() => onChoose(c)}
+              className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
+              <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
+              {c.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>
+            {feedback}
+          </div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+            CONTINUE
+          </button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
 export function CrisisModal({ crisis, feedback, onChoose, onDismiss }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'radial-gradient(ellipse at center, rgba(60, 20, 30, 0.96) 0%, rgba(10, 5, 8, 0.99) 100%)' }}>
-      <div className="bg-[#1a0e10] border border-red-400/30 max-w-md w-full p-6"
-        style={{ boxShadow: '0 0 80px rgba(180, 60, 80, 0.15)' }}>
-        <div className="text-xs tracking-[0.4em] mb-2" style={{ fontFamily: 'monospace', color: '#d49090' }}>
-          ⚠️ 4:38 AM
-        </div>
-        <h2 className="text-xl mb-4 font-light italic" style={{ color: '#e8b8b8' }}>{crisis.title}</h2>
-        <div className="text-sm leading-relaxed mb-6 opacity-90 whitespace-pre-line italic" style={{ lineHeight: '2', color: '#e0c8c8' }}>
-          {crisis.body}
-        </div>
-
-        {!feedback ? (
-          <div className="space-y-2">
-            <button onClick={() => onChoose({ id: 'quit' })}
-              className="w-full text-left p-3 border border-red-400/40 hover:border-red-400 hover:bg-red-400/5 transition-all text-sm"
-              style={{ color: '#e8b8b8' }}>
-              <div>现在就订机票回国</div>
-              <div className="text-xs opacity-60 italic mt-0.5">这是终结这一年的方式</div>
-            </button>
-            <button onClick={() => onChoose({ id: 'persist' })}
-              className="w-full text-left p-3 border border-current/40 hover:border-current/70 transition-all text-sm">
-              <div>"再坚持一周看看"</div>
-              <div className="text-xs opacity-60 italic mt-0.5">放下手机，睡觉</div>
-            </button>
-            <button onClick={() => onChoose({ id: 'call_mom' })}
-              className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm">
-              <div>给妈妈打个电话</div>
-              <div className="text-xs opacity-60 italic mt-0.5">中国是中午 12:38</div>
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="border-l-2 border-red-400/40 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '2' }}>
-              {feedback}
-            </div>
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
-              天亮了
-            </button>
-          </>
-        )}
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.4em] mb-2" style={{ fontFamily: 'monospace', color: '#d49090' }}>
+        ⚠️ 4:38 AM
       </div>
-    </div>
+      <h2 className="text-xl mb-4 font-light italic" style={{ color: '#e8b8b8' }}>{crisis.title}</h2>
+      <div className="text-sm leading-relaxed mb-6 opacity-90 whitespace-pre-line italic" style={{ lineHeight: '2', color: '#e0c8c8' }}>
+        {crisis.body}
+      </div>
+
+      {!feedback ? (
+        <div className="space-y-2">
+          <button onClick={() => onChoose({ id: 'quit' })}
+            className="w-full text-left p-3 border border-red-400/40 hover:border-red-400 hover:bg-red-400/5 transition-all text-sm"
+            style={{ color: '#e8b8b8' }}>
+            <div>现在就订机票回国</div>
+            <div className="text-xs opacity-60 italic mt-0.5">这是终结这一年的方式</div>
+          </button>
+          <button onClick={() => onChoose({ id: 'persist' })}
+            className="w-full text-left p-3 border border-current/40 hover:border-current/70 transition-all text-sm">
+            <div>"再坚持一周看看"</div>
+            <div className="text-xs opacity-60 italic mt-0.5">放下手机，睡觉</div>
+          </button>
+          <button onClick={() => onChoose({ id: 'call_mom' })}
+            className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm">
+            <div>给妈妈打个电话</div>
+            <div className="text-xs opacity-60 italic mt-0.5">中国是中午 12:38</div>
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="border-l-2 border-red-400/40 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '2' }}>
+            {feedback}
+          </div>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+            天亮了
+          </button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 export function TravelEventModal({ event, feedback, onChoose, onDismiss }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.92)' }}>
-      <div className="bg-[#1a1612] border border-amber-300/50 max-w-md w-full max-h-[90vh] overflow-y-auto p-5">
-        <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
-          ✈️ TRAVEL EVENT
-        </div>
-        <h2 className="text-xl mb-3 font-light">{event.title}</h2>
-        <div className="text-sm leading-relaxed mb-5 opacity-90 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
-          {event.body}
-        </div>
-
-        {!feedback ? (
-          <>
-            {(event.choices || [{
-              label: event.title.length > 12 ? '继续' : `去${event.title}`,
-              effect: event.effect || {},
-              feedback: event.feedback || '...'
-            }]).map((c, i) => (
-              <button key={i} onClick={() => onChoose(c)}
-                className="w-full text-left p-3 mb-2 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
-                <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
-                {c.label}
-              </button>
-            ))}
-          </>
-        ) : (
-          <>
-            <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>{feedback}</div>
-            {event.postcard && (
-              <div className="mb-4 px-3 py-2 border border-amber-300/40 bg-amber-300/5 text-center">
-                <div className="text-xs opacity-60 mb-1" style={{ fontFamily: 'monospace' }}>✉️ NEW POSTCARD</div>
-                <div className="text-sm italic" style={{ color: '#d4b070' }}>"{event.postcard}"</div>
-              </div>
-            )}
-            <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
-              CONTINUE
-            </button>
-          </>
-        )}
+    <BottomSheet open={true} onClose={onDismiss}>
+      <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
+        ✈️ TRAVEL EVENT
       </div>
-    </div>
+      <h2 className="text-xl mb-3 font-light">{event.title}</h2>
+      <div className="text-sm leading-relaxed mb-5 opacity-90 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
+        {event.body}
+      </div>
+
+      {!feedback ? (
+        <>
+          {(event.choices || [{
+            label: event.title.length > 12 ? '继续' : `去${event.title}`,
+            effect: event.effect || {},
+            feedback: event.feedback || '...'
+          }]).map((c, i) => (
+            <button key={i} onClick={() => onChoose(c)}
+              className="w-full text-left p-3 mb-2 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
+              <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
+              {c.label}
+            </button>
+          ))}
+        </>
+      ) : (
+        <>
+          <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>{feedback}</div>
+          {event.postcard && (
+            <div className="mb-4 px-3 py-2 border border-amber-300/40 bg-amber-300/5 text-center">
+              <div className="text-xs opacity-60 mb-1" style={{ fontFamily: 'monospace' }}>✉️ NEW POSTCARD</div>
+              <div className="text-sm italic" style={{ color: '#d4b070' }}>"{event.postcard}"</div>
+            </div>
+          )}
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+            CONTINUE
+          </button>
+        </>
+      )}
+    </BottomSheet>
   );
 }
