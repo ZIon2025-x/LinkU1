@@ -28,5 +28,6 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     include: ['tests/**/*.test.{js,jsx}'],
+    setupFiles: ['./tests/setup.js'],
   },
 });
