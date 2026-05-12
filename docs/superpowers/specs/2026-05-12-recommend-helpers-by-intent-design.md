@@ -144,18 +144,36 @@
 **A) 服务发布者池（opt-in 信号，base=0.6）：**
 
 ```sql
-SELECT u.id, u.name, u.avatar_url, upref.city,
+-- 实际 schema:
+--   TaskExpertService.skills 是 JSONB（不是 PG text[]），用 jsonb_array_elements_text + EXISTS
+--   TaskExpertService.location_type ∈ {'online','in_person','both'}（注意 'in_person' 而非 'offline'）
+--   TaskExpertService 表上无 avg_rating / completed_count —— 评分用 User.avg_rating（全局）
+SELECT u.id, u.name, u.avatar_url, u.avg_rating, upref.city,
        'service' as source,
-       s.service_name, s.avg_rating, s.completed_count,
-       s.skills
+       s.service_name, s.location_type
 FROM users u
-JOIN task_expert_services s ON s.user_id = u.id
+JOIN task_expert_services s
+     ON s.owner_type = 'user' AND s.owner_id = u.id
 LEFT JOIN user_profile_preferences upref ON upref.user_id = u.id
 WHERE s.service_type = 'personal'
   AND s.status = 'active'
   AND u.id != :current_user_id
-  AND (s.category = :task_type
-       OR (cardinality(:skills::text[]) > 0 AND s.skills && :skills::text[]))
+  AND (
+        s.category = :task_type
+     OR (
+          cardinality(:skills::text[]) > 0
+          AND EXISTS (
+                SELECT 1 FROM jsonb_array_elements_text(s.skills) v
+                WHERE v = ANY(:skills::text[])
+          )
+        )
+  )
+  -- mode 联动 service.location_type 过滤
+  AND (
+        :mode IS NULL OR :mode = 'both'
+     OR (:mode = 'offline' AND s.location_type IN ('in_person', 'both'))
+     OR (:mode = 'online'  AND s.location_type IN ('online',    'both'))
+  )
 LIMIT 100
 ```
 
@@ -182,17 +200,19 @@ LIMIT 100
 
 ### 6.2 评分公式（per candidate, 0-1）
 
-| 加分项 | 加分 |
-|---|---|
-| Base: source='service' | `0.6` |
-| Base: source='task_history' | `0.3` |
-| `avg_rating >= 4.5` | `+0.15` |
-| `4.0 <= avg_rating < 4.5` | `+0.10` |
-| `completed_count >= 10` | `+0.10` |
-| `3 <= completed_count < 10` | `+0.05` |
-| 技能交集（与 input.skills） | `min(3, len(set(candidate.skills) ∩ set(input.skills))) × 0.05`（max +0.15） |
+| 加分项 | 数据来源 | 加分 |
+|---|---|---|
+| Base: source='service' | — | `0.6` |
+| Base: source='task_history' | — | `0.3` |
+| `avg_rating >= 4.5` | service 池: `User.avg_rating`；task_history 池: `AVG(reviews.rating)` 同类任务 | `+0.15` |
+| `4.0 <= avg_rating < 4.5` | 同上 | `+0.10` |
+| `completed_count >= 10`（仅 task_history 池） | `COUNT(tasks)` 同类完成数 | `+0.10` |
+| `3 <= completed_count < 10`（仅 task_history 池） | 同上 | `+0.05` |
+| 技能交集（与 input.skills） | service 池: `s.skills` JSONB；task_history 池: 不算 | `min(3, len(set(candidate.skills) ∩ set(input.skills))) × 0.05`（max +0.15） |
 
 `avg_rating IS NULL` 或 `< 3.0` 时不加 rating boost（也不淘汰）。
+
+**注意**：service 池**没有** completed_count boost（`TaskExpertService` 表上无该字段，单量数据需 JOIN `user_service_packages` 或 `service_orders`，本期不引入这层 JOIN——保持 service 池打分简单）。
 
 ### 6.3 地点加权乘子
 
@@ -219,10 +239,13 @@ LIMIT 100
 
 ### 6.6 `match_reason` 生成
 
-- service 源：
-  - 同城：`"发布了{service_name}服务，评分 {avg_rating:.1f}（{city}）"`
-  - 跨城：`"发布了{service_name}服务，评分 {avg_rating:.1f}（{city}，可线上协调）"`
-  - 未知城市：`"发布了{service_name}服务，评分 {avg_rating:.1f}"`
+- service 源（`avg_rating` 来自 User.avg_rating，可能为 NULL）：
+  - 同城 + 有评分：`"发布了{service_name}服务，评分 {avg_rating:.1f}（{city}）"`
+  - 同城 + 无评分：`"发布了{service_name}服务（{city}）"`
+  - 跨城 + 有评分：`"发布了{service_name}服务，评分 {avg_rating:.1f}（{city}，可线上协调）"`
+  - 跨城 + 无评分：`"发布了{service_name}服务（{city}，可线上协调）"`
+  - 未知城市 + 有评分：`"发布了{service_name}服务，评分 {avg_rating:.1f}"`
+  - 未知城市 + 无评分：`"发布了{service_name}服务"`
 - task_history 源：
   - 类似格式：`"完成过 {n} 个{task_type_label}任务，评分 {avg_rating:.1f}{city_suffix}"`
 
