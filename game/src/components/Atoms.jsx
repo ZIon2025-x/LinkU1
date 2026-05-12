@@ -68,3 +68,61 @@ export function PhaseIndicator({ phase, daysUntilShift }) {
     </div>
   );
 }
+
+export function TeamMemberRow({ member, onMessage }) {
+  const energyPct = Math.min(100, member.energy);
+  const energyBar = (
+    <div className="w-12 h-1.5 bg-gray-200 rounded">
+      <div className="h-1.5 bg-green-500 rounded" style={{ width: `${energyPct}%` }} />
+    </div>
+  );
+  return (
+    <div className="flex items-center gap-3 py-2 border-b last:border-0">
+      <span className="text-2xl">{member.avatar}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate">{member.name}</div>
+        <div className="text-xs text-gray-500 truncate">{member.specialtyDisplay}</div>
+      </div>
+      <span className="text-xs text-gray-600">⭐ {member.rating}</span>
+      {energyBar}
+      <button onClick={() => onMessage?.(member.id)} className="text-xs text-blue-600 hover:underline">聊</button>
+    </div>
+  );
+}
+
+export function ClashWarningModal({ taskA, taskB, hasTeam, onResolve, onClose }) {
+  if (!taskA || !taskB) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg max-w-md w-full p-6 m-4">
+        <h3 className="text-lg font-bold mb-2">⚠️ 时间撞档了</h3>
+        <p className="text-sm text-gray-700 mb-3">两个指定任务的时间窗口重叠了。你只能选一种处理方式。</p>
+        <div className="space-y-2 mb-4 text-xs">
+          <div className="bg-orange-50 px-3 py-2 rounded">
+            <span className="font-medium">A.</span> {taskA.title} · £{taskA.reward}
+          </div>
+          <div className="bg-orange-50 px-3 py-2 rounded">
+            <span className="font-medium">B.</span> {taskB.title} · £{taskB.reward}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <button onClick={() => onResolve('self')} className="block w-full bg-red-100 text-red-800 py-2 rounded text-sm hover:bg-red-200">
+            硬扛两个 (-30 energy, -3 学业, -0.02 评分)
+          </button>
+          <button onClick={() => onResolve('decline_a')} className="block w-full bg-gray-100 text-gray-800 py-2 rounded text-sm hover:bg-gray-200">
+            拒掉 A 保 B
+          </button>
+          <button onClick={() => onResolve('decline_b')} className="block w-full bg-gray-100 text-gray-800 py-2 rounded text-sm hover:bg-gray-200">
+            拒掉 B 保 A
+          </button>
+          {hasTeam && (
+            <button onClick={() => onResolve('team')} className="block w-full bg-purple-100 text-purple-800 py-2 rounded text-sm hover:bg-purple-200">
+              转 A 给团员处理 (-15% cut)
+            </button>
+          )}
+        </div>
+        <button onClick={onClose} className="mt-3 text-xs text-gray-500 underline">稍后再说</button>
+      </div>
+    </div>
+  );
+}
