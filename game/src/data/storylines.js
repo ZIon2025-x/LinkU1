@@ -1,3 +1,5 @@
+import { LINK2UR_CHAPTERS } from './link2urMainline.js';
+
 export const STORYLINES = {
   sarah: {
     id: 'sarah', name: 'Sarah · 友情线', npc: 'sarah',
@@ -373,6 +375,16 @@ export const STORYLINES = {
         ],
       },
     ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Y 姐 · Link2Ur AI 创业线 (第 7 主线)
+  // ─────────────────────────────────────────────────────────────
+  yjie: {
+    id: 'yjie_mainline',
+    name: 'Y 姐 · Link2Ur AI 广告创业线',
+    npc: 'yjie',
+    chapters: LINK2UR_CHAPTERS,
   },
 
   // ─────────────────────────────────────────────────────────────
