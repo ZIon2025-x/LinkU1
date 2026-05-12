@@ -341,7 +341,7 @@ const ExpertManagement: React.FC = () => {
     if (subTab !== 'list') return;
     expertsTable.setCurrentPage(1);
     expertsTable.refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [minWarningLevel, sortBy]);
 
   // ==================== 申请列表 ====================
