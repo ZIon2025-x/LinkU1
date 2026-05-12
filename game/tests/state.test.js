@@ -196,6 +196,31 @@ describe('Link2Ur 创业线 state 字段 (v2 spec)', () => {
   });
 });
 
+describe('applyEffect · phasePivot', () => {
+  test('effect.phasePivot=2 pivots phase', () => {
+    const s = initialState();
+    expect(s.link2urPhase).toBe(1);
+    const next = reducer(s, {
+      type: 'APPLY_EFFECT',
+      effect: { phasePivot: 2, flag: 'l2u_y_invited', belonging: 5 },
+    });
+    expect(next.link2urPhase).toBe(2);
+    expect(next.link2urPhaseShiftDay).toBe(s.day);
+    expect(next.flags.l2u_y_invited).toBe(true);
+    expect(next.stats.belonging).toBe(s.stats.belonging + 5);
+  });
+
+  test('已 phase 2 时 phasePivot 幂等', () => {
+    const s = { ...initialState(), link2urPhase: 2, link2urPhaseShiftDay: 100 };
+    const next = reducer(s, {
+      type: 'APPLY_EFFECT',
+      effect: { phasePivot: 2 },
+    });
+    expect(next.link2urPhase).toBe(2);
+    expect(next.link2urPhaseShiftDay).toBe(100);  // 不动
+  });
+});
+
 describe('Link2Ur 创业线 reducer actions', () => {
   test('L2U_INBOX_RECEIVED push task', () => {
     const s = initialState();

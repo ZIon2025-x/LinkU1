@@ -195,6 +195,10 @@ export function applyEffect(state, effect, npcRelTarget) {
     out.stress = clamp((state.stress ?? 25) + effect.stress, 0, 100);
   }
   if (effect.flag) out.flags = { ...state.flags, [effect.flag]: true };
+  if (effect.phasePivot === 2 && (state.link2urPhase || 1) < 2) {
+    out.link2urPhase = 2;
+    out.link2urPhaseShiftDay = state.day;
+  }
   if (effect.rel && npcRelTarget) {
     out.npcRel = { ...state.npcRel, [npcRelTarget]: (state.npcRel[npcRelTarget] || 0) + effect.rel };
   }
