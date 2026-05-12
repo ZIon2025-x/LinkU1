@@ -799,7 +799,7 @@ export default function App() {
     // Special: when Link2Ur is first discovered, populate the initial board
     // so the player can use the new tab right away.
     if (choice.effect?.flag === 'link2ur_discovered') {
-      dispatch({ type: 'L2U_REFRESH_BOARD', tasks: generateBoard(week, { state }), week });
+      dispatch({ type: 'L2U_REFRESH_BOARD', tasks: generateBoard(week, { state, phase: state.link2urPhase }), week });
     }
   }
 
@@ -1406,7 +1406,7 @@ export default function App() {
 
       // Link2Ur board refresh — only after platform discovered
       if (state.flags.link2ur_discovered) {
-        dispatch({ type: 'L2U_REFRESH_BOARD', tasks: generateBoard(newWeek, { state }), week: newWeek });
+        dispatch({ type: 'L2U_REFRESH_BOARD', tasks: generateBoard(newWeek, { state, phase: state.link2urPhase }), week: newWeek });
       }
 
       // Monthly stipend — fires on entering a new "month" (every 4 weeks).

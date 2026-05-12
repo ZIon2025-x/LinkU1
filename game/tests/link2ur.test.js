@@ -180,4 +180,41 @@ describe('AI 广告任务模板 (v2 spec)', () => {
     });
     expect(hasPhase2Only).toBe(false);
   });
+
+  describe('Phase board filter regression', () => {
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    test('phase=2 board can include Phase 2 only templates', () => {
+      // run generateBoard many times with phase 2, verify at least one P2-only template appears
+      const seenIds = new Set();
+      const rng = mulberry32(42); // deterministic
+      for (let i = 0; i < 50; i++) {
+        const board = generateBoard(30, { phase: 2, rng });
+        for (const t of board) seenIds.add(t.templateId);
+      }
+      // 至少有一个 Phase 2 only template 出现
+      const p2OnlyTemplates = LINK2UR_ACCEPT_TEMPLATES.filter(t => t.phase === 2);
+      const anyP2Found = p2OnlyTemplates.some(t => seenIds.has(t.id));
+      expect(anyP2Found).toBe(true);
+    });
+
+    test('phase=1 board never includes Phase 2 only templates', () => {
+      const seenIds = new Set();
+      const rng = mulberry32(42);
+      for (let i = 0; i < 50; i++) {
+        const board = generateBoard(30, { phase: 1, rng });
+        for (const t of board) seenIds.add(t.templateId);
+      }
+      const p2OnlyTemplates = LINK2UR_ACCEPT_TEMPLATES.filter(t => t.phase === 2);
+      const anyP2Found = p2OnlyTemplates.some(t => seenIds.has(t.id));
+      expect(anyP2Found).toBe(false);
+    });
+  });
 });
