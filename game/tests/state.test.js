@@ -158,3 +158,40 @@ describe('Y 姐 NPC ID', () => {
     expect(INTERACTIVE_NPC_IDS).not.toContain('priya');
   });
 });
+
+describe('Link2Ur 创业线 state 字段 (v2 spec)', () => {
+  const s = initialState();
+
+  test('回头客追踪字段存在', () => {
+    expect(s.link2urRepeatCustomers).toEqual({});
+  });
+
+  test('指定任务 inbox 初始为空数组', () => {
+    expect(s.link2urInbox).toEqual([]);
+  });
+
+  test('时效冲突计数 + 历史初始化', () => {
+    expect(s.link2urClashCount).toBe(0);
+    expect(s.link2urClashEvents).toEqual([]);
+  });
+
+  test('路径选择字段初始为 null', () => {
+    expect(s.link2urPath).toBe(null);
+    expect(s.link2urPathDecidedDay).toBe(null);
+  });
+
+  test('Phase 字段初始为 1', () => {
+    expect(s.link2urPhase).toBe(1);
+    expect(s.link2urPhaseShiftDay).toBe(null);
+  });
+
+  test('Team 状态字段', () => {
+    expect(s.link2urTeamMembers).toEqual([]);
+    expect(s.link2urTeamRevenue).toBe(0);
+  });
+
+  test('Y 姐关系字段', () => {
+    expect(s.yjieRelationship).toBe(0);
+    expect(s.yjieChapter).toBe(0);
+  });
+});

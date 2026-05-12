@@ -107,6 +107,27 @@ export function initialState() {
     // 历史拒绝记录用于 "我的申请" 历史 tab
     link2urRejected: [],
 
+    // ── Link2Ur 创业线 (第 7 主线, v2 AI 广告方向) ──
+    // 回头客追踪 (key=customerId, value={count, lastTaskDay, avgRating, relationship})
+    link2urRepeatCustomers: {},
+    // 指定任务 inbox (绕过 board, customer 主动发)
+    link2urInbox: [],
+    // 时效冲突累积 + 历史
+    link2urClashCount: 0,
+    link2urClashEvents: [],
+    // 路径选择 (Ch 4 W22 Sketch 邀请后定): null / 'solo' / 'team' / 'undecided'
+    link2urPath: null,
+    link2urPathDecidedDay: null,
+    // 双阶段 (Ch 4 W22 Phase 1→2 不可逆 pivot)
+    link2urPhase: 1,
+    link2urPhaseShiftDay: null,
+    // Team 路径状态
+    link2urTeamMembers: [],  // runtime: [{ memberId, joinedDay, specialty, energy, completed, cutPercent, status }]
+    link2urTeamRevenue: 0,
+    // Y 姐 (陈思敏) 关系 + 章节进度
+    yjieRelationship: 0,
+    yjieChapter: 0,
+
     // Parents storyline
     parentsChapter: 0,
 
