@@ -611,7 +611,10 @@ def _stuck_payout_recovery_enabled() -> bool:
 
 # 单笔恢复金额硬上限 (GBP)。超过此值需走人工 SQL/工程师介入,防止
 # admin 账号被攻陷一键转走大额资金。
-STUCK_PAYOUT_MAX_AMOUNT_GBP = 5000
+# 现实里 stuck task 的 escrow 一般都是几英镑到几十英镑量级,£200 足够覆盖
+# 绝大多数正常场景;超过这个数说明任务金额异常大,值得人工 review 一下
+# 再决定怎么补 (可能是数据有问题,也可能是真的大额订单)。
+STUCK_PAYOUT_MAX_AMOUNT_GBP = 200
 
 
 @router.get("/admin/internal/stuck-task-payouts")
