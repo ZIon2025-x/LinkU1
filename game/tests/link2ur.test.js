@@ -158,3 +158,26 @@ describe('Link2Ur · reducer actions', () => {
 // Discovery event 已删除 — Link2Ur 改成 day-1 essential tool (state.js:32-34)。
 // 旧 LINK2UR_DISCOVERY_EVENTS 是死代码（initialState 已 set link2ur_discovered:true
 // 让条件永不通过）。整个 discovery 事件链已从 link2ur.js 移除。
+
+describe('AI 广告任务模板 (v2 spec)', () => {
+  test('LINK2UR_ACCEPT_TEMPLATES 含 ≥ 71 个 (56 原有 + 15 新)', () => {
+    expect(LINK2UR_ACCEPT_TEMPLATES.length).toBeGreaterThanOrEqual(71);
+  });
+
+  test('所有 AI 广告模板带 phase 字段 (1/2/both)', () => {
+    const aiTemplates = LINK2UR_ACCEPT_TEMPLATES.filter((t) => t.id.startsWith('l2u_ai_'));
+    expect(aiTemplates.length).toBe(15);
+    for (const t of aiTemplates) {
+      expect([1, 2, 'both']).toContain(t.phase);
+    }
+  });
+
+  test('generateBoard with phase=1 过滤掉 Phase 2 only 模板', () => {
+    const board = generateBoard(10, { rng: () => 0.5, phase: 1 });
+    const hasPhase2Only = board.some((t) => {
+      const tmpl = LINK2UR_ACCEPT_TEMPLATES.find((x) => x.id === t.templateId);
+      return tmpl?.phase === 2;
+    });
+    expect(hasPhase2Only).toBe(false);
+  });
+});
