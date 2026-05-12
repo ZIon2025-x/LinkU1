@@ -832,6 +832,15 @@ export function reducer(state, action) {
         ),
       };
 
+    // ── Link2Ur 创业线 mainline event 已触发记录 ──
+    // 与 STORY_ADVANCE 的 seenChapters (lineId/chapterId) 共用同一数组,
+    // Link2Ur event id 命名以 'ch' + 数字开头 (如 'ch1_first_simple_task'), 不会冲突。
+    case 'MARK_CHAPTER_EVENT_SEEN': {
+      const evId = action.eventId;
+      if (!evId || state.seenChapters.includes(evId)) return state;
+      return { ...state, seenChapters: [...state.seenChapters, evId] };
+    }
+
     default:
       return state;
   }

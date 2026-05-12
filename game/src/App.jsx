@@ -35,6 +35,10 @@ import {
 } from './data/index.js';
 
 import { scanProactiveChats } from './data/proactiveChats.js';
+import { getActiveChapter } from './data/link2urMainline.js';
+import { getEligibleCrossovers } from './data/link2urCrossover.js';
+import { shouldTriggerYInvitation } from './engine/link2urSchedule.js';
+import { YJIE_SCENES } from './data/npcYjie.js';
 
 // Link2Ur 申请审核：根据 task.requirement 跟玩家状态对比，返回
 // { approved: bool, reason: string }。reason 是给玩家看的具体拒绝理由。
@@ -1129,6 +1133,66 @@ export default function App() {
   }
 
   // ============================================================
+  // Link2Ur 创业线 tick — called at end of every day advance.
+  // Runs after END_DAY dispatch so newDay/newWeek reflect tomorrow.
+  // ============================================================
+  function link2urMainlineTick(newDay, newWeek) {
+    // 1. 章节 events: flag_set + phase_pivot (其余类型 Task 7 wire)
+    const activeChapter = getActiveChapter(newDay);
+    if (activeChapter) {
+      for (const event of (activeChapter.events || [])) {
+        if (event.week !== newWeek) continue;
+        if (state.seenChapters.includes(event.id)) continue;
+
+        // Mark as seen first (idempotent guard)
+        dispatch({ type: 'MARK_CHAPTER_EVENT_SEEN', eventId: event.id });
+
+        if (event.type === 'flag_set') {
+          if (event.flagOnSet) {
+            dispatch({ type: 'SET_FLAG', flag: event.flagOnSet, value: true });
+          }
+          if (event.statePatch?.link2urPhase === 2) {
+            dispatch({ type: 'L2U_PHASE_PIVOT' });
+          }
+        }
+        // npc_scene / inbox_task / customer_unlock / clash_trigger / mini_arc / choice
+        // → deferred to Task 7 integration tests; recognised here but not yet wired
+      }
+    }
+
+    // 2. Crossovers: mark flag占位 (narrative wiring deferred to Task 7)
+    const crossovers = getEligibleCrossovers({ ...state, day: newDay });
+    for (const c of crossovers) {
+      const flagKey = `crossover_seen_${c.id}`;
+      if (!state.flags?.[flagKey]) {
+        dispatch({ type: 'SET_FLAG', flag: flagKey, value: true });
+      }
+    }
+
+    // 3. Y 姐邀请 — 检测条件，满足则设 flag 并弹 Sketch 场景
+    const stateForYCheck = { ...state, day: newDay };
+    if (shouldTriggerYInvitation(stateForYCheck)) {
+      dispatch({ type: 'SET_FLAG', flag: 'l2u_y_invited', value: true });
+      const sketchScene = YJIE_SCENES.find(s => s.id === 'yjie_sketch_invitation');
+      if (sketchScene) {
+        // 延迟 2s 错峰，不和跨周 banner 撞
+        setTimeout(() => {
+          setActiveEvent({
+            id: sketchScene.id,
+            title: sketchScene.title,
+            body: sketchScene.body,
+            choices: (sketchScene.choices || []).map(c => ({
+              ...c,
+              effect: c.effect || {},
+            })),
+          });
+          audio.ding();
+        }, 2000);
+      }
+    }
+  }
+
+  // ============================================================
   // End of day — heaviest handler
   // ============================================================
   function endDay() {
@@ -1454,6 +1518,9 @@ export default function App() {
       }
     }
 
+    // ── Link2Ur 创业线 tick ──
+    link2urMainlineTick(newDay, newWeek);
+
     triggerNightState(newDay);
     setCurrentLocation(null);
   }
@@ -1694,6 +1761,35 @@ export default function App() {
                     body: '',
                     choices: [],
                   });
+                }
+              },
+              // ── Inbox task callbacks (Task 5.3 Phase 5 wiring) ──
+              onInboxAccept: (taskId) => {
+                audio.click();
+                dispatch({ type: 'L2U_INBOX_ACCEPTED', taskId });
+                const task = state.link2urInbox.find(t => t.id === taskId);
+                if (task) {
+                  addMessage('l2u', '⚡ Link2Ur',
+                    `✅ 已接受指定任务："${task.title}"。+£${task.reward || 0}`);
+                }
+              },
+              onInboxDecline: (taskId) => {
+                audio.click();
+                dispatch({ type: 'L2U_INBOX_DECLINED', taskId });
+                const task = state.link2urInbox.find(t => t.id === taskId);
+                if (task) {
+                  addMessage('l2u', '⚡ Link2Ur',
+                    `❌ 已婉拒指定任务："${task.title}"。`);
+                }
+              },
+              onInboxAssign: (taskId, memberId) => {
+                audio.click();
+                // 转派：接单拿钱（团员分成），复用 L2U_INBOX_ACCEPTED
+                dispatch({ type: 'L2U_INBOX_ACCEPTED', taskId });
+                const task = state.link2urInbox.find(t => t.id === taskId);
+                if (task) {
+                  addMessage('l2u', '⚡ Link2Ur',
+                    `📤 指定任务"${task.title}"已转派给团员。收入分成后到账。`);
                 }
               },
             }}
