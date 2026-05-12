@@ -8,7 +8,7 @@
 // Triggers:
 //   Sarah Cotswolds family secret  — needs cotswolds_visited (W18+)
 //   Aditi dad worsens              — needs aditi rel >= 5 (W30+)
-//   Aditi quits program            — needs visit_india OR aditi rel >= 8 (W42+)
+//   Aditi quits program            — needs visited_india OR aditi rel >= 8 (W42+)
 //   Whitmore retiring announcement — needs whitmore rel >= 7 (W42+)
 //   Whitmore last office hour      — needs `whitmore_retiring` flag (W50+)
 
@@ -28,9 +28,12 @@ export const NPC_DEEPENING_EVENTS = {
     },
     {
       id: 'aditi_dad_worsening', minWeek: 30, maxWeek: 42,
-      title: 'Aditi · 父亲不太好',
+      // aditi_3 (rel:5) 已经引入 dad-in-hospital——这里 deepening 推进到 weeks-not-months 的
+      // critical 阶段。两个 beat 相隔几周，递进逻辑成立；Link2Ur Wall echo (Screens:922
+      // `aditi_supported`) 接住 option 1 路径。
+      title: 'Aditi · "Weeks not months"',
       condition: ({ npcRel }) => (npcRel.aditi || 0) >= 5,
-      body: 'Aditi 在 group chat 里突然安静了一周。你给她私聊："Hey, you OK?"\n\n她回："my dad. liver failure. doctors say weeks not months."\n\n3 秒后第二条："i don\'t know what to do. dissertation due in 8 weeks."',
+      body: 'Aditi 在 group chat 里突然安静了一周。你给她私聊："Hey, you OK?"\n\n她回："dad\'s deteriorating. doctors said weeks not months now. liver giving out."\n\n3 秒后第二条："i don\'t know what to do. dissertation due in 8 weeks."',
       choices: [
         { label: '建议她回印度 + 你帮她 cover 课', effect: { energy: -10, academic: -3, belonging: 18, flag: 'aditi_supported' },
           feedback: '你说"go. seriously. i\'ll forward you my notes for everything you miss."\n\nAditi 哭着发 voice msg："you don\'t understand what this means."\n\n她飞了。两周后她爸去世。她在印度坐了 7 天 shiva-equivalent。回来时她憔悴但 stable。\n\n她递给你一个小金属盒——印度铜。"My dad\'s. He wanted you to have it. He remembered you from the photo."\n\n你哭了。这一刻不是你 cover 的笔记的事，是别的。' },
@@ -41,7 +44,7 @@ export const NPC_DEEPENING_EVENTS = {
     {
       id: 'aditi_quits_program', minWeek: 42, maxWeek: 50,
       title: 'Aditi · "我要回印度照顾妈"',
-      condition: ({ flags, npcRel }) => !!flags.visit_india || (npcRel.aditi || 0) >= 8,
+      condition: ({ flags, npcRel }) => !!flags.visited_india || (npcRel.aditi || 0) >= 8,
       body: 'Aditi 来你 ensuite——眼睛红的。\n\n"I\'m withdrawing from the program. My mum can\'t live alone. I need to go home."\n\n她已经 8 个月。还差 dissertation 一个 step 就完成 MSc。\n\n"I know it\'s stupid. £24,000 学费 wasted. But I can\'t care about that anymore."',
       choices: [
         { label: '"Don\'t quit. Suspend instead—come back when ready"', effect: { energy: -5, academic: 0, belonging: 12, flag: 'aditi_suspended' },
@@ -70,8 +73,16 @@ export const NPC_DEEPENING_EVENTS = {
       title: 'Whitmore · 最后一次 Office Hour',
       condition: ({ flags }) => !!flags.whitmore_retiring,
       body: '7 月某天。学校放假前。\n\nWhitmore 的办公室已经空了一半——书装在纸箱里，墙上的画拿下来了。他给你倒了杯红茶。\n\n"Right. So. Final supervision. Anything you want to ask me before I become a private citizen?"',
-      effect: { energy: 5, belonging: 18, flag: 'whitmore_last_meeting' },
-      feedback: '你想了 30 秒。然后说："Thirty-eight years. What\'s the one thing you\'d want a student to know?"\n\n他笑了——这次是真笑。他说：\n\n"Be wrong publicly. The students who succeed in this discipline are not the ones who avoid being wrong—they\'re the ones who say the wrong thing in tutorial loud enough that someone has to correct them. That\'s how you learn."\n\n你点头。他递给你一个小信封："Open this on graduation day. Not before."\n\n你回家路上一直摸那个信封。\n\n（毕业那天你打开——里面是他妻子 1985 年发表的论文 offprint，标题 *"What we owe to be wrong about"*。）',
+      // 注：之前这个事件直接在顶层挂 effect/feedback、缺 choices 数组，是整个 pool 里
+      // 唯一不标准的 schema。改成标准 choices 形式，靠 EventModal 正常渲染。
+      choices: [
+        { label: '"三十八年。你最想让一个学生知道的一件事是什么？"',
+          effect: { energy: 5, belonging: 18, flag: 'whitmore_last_meeting' },
+          feedback: '他笑了——这次是真笑。他说：\n\n"Be wrong publicly. The students who succeed in this discipline are not the ones who avoid being wrong—they\'re the ones who say the wrong thing in tutorial loud enough that someone has to correct them. That\'s how you learn."\n\n你点头。他递给你一个小信封："Open this on graduation day. Not before."\n\n你回家路上一直摸那个信封。\n\n（毕业那天你打开——里面是他妻子 1985 年发表的论文 offprint，标题 *"What we owe to be wrong about"*。）' },
+        { label: '"Sir，谢谢你。" 然后没问别的',
+          effect: { energy: 2, belonging: 12, flag: 'whitmore_last_meeting' },
+          feedback: '他点头："You\'re welcome." 然后把红茶喝完。\n\n临走时他递给你一个小信封："Open this on graduation day. Not before."\n\n你出门那一刻意识到——你刚才其实有 30 个问题想问。但你也明白，不问比问更像告别。\n\n（毕业那天你打开——里面是他妻子 1985 年发表的论文 offprint，标题 *"What we owe to be wrong about"*。）' },
+      ],
     },
   ],
 };

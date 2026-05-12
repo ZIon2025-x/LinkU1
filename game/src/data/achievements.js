@@ -309,13 +309,13 @@ export const ACHIEVEMENTS = [
     id: 'cssa_dimsum', tier: 'rare', icon: '🥟',
     title: 'Chinatown 早茶',
     desc: '6 个人挤一桌肠粉。买单一起抢。',
-    check: ({ flags = {} }) =>!!flags.cssa,  // approximated — relies on player having CSSA
+    check: ({ flags = {} }) => !!flags.cssa_dimsum,
   },
   {
     id: 'bonfire_night_park', tier: 'rare', icon: '🎆',
     title: 'Hyde Park 烟花',
     desc: '英国老夫妇递的那杯热可可。',
-    check: ({ flags = {} }) =>false,  // placeholder — hook into bonfire choice flag if added
+    check: ({ flags = {} }) => !!flags.bonfire_night_park,
   },
 
   // ─────────────────────────── EPIC ───────────────────────────
@@ -335,7 +335,7 @@ export const ACHIEVEMENTS = [
     id: 'crisis_survived', tier: 'epic', icon: '🌅',
     title: '4:38 AM 撑过来了',
     desc: '凌晨想订机票回去——但你没。',
-    check: ({ flags = {} }) =>!!flags.recent_nostalgia,  // proxy; can refine later
+    check: ({ flags = {} }) => !!flags.crisis_survived,
   },
   {
     id: 'visited_india', tier: 'epic', icon: '🪔',
@@ -403,7 +403,7 @@ export const ACHIEVEMENTS = [
     id: 'mei_double', tier: 'legendary', icon: '⭐',
     title: 'Lucky Star 少东家',
     desc: 'Mei 家 + 4 周经理。"30% 干股。叫姨我给 35%。"',
-    check: ({ flags = {} }) =>!!(flags.mei_family && flags.mei_manager),
+    check: ({ flags = {} }) =>!!(flags.mei_family && (flags.mei_manager || flags.mei_manager_path)),
   },
   {
     id: 'whitmore_double', tier: 'legendary', icon: '📰',
@@ -446,6 +446,45 @@ export const ACHIEVEMENTS = [
     title: '留下来的人',
     desc: 'PSW + 第一份英国 offer。这是你的伦敦。',
     check: ({ flags = {} }) =>!!flags.stayed_uk_grad,
+  },
+  // ─────────────── Hidden / "harder-path" 成就 ───────────────
+  // 几个原本是死 flag 的 narrative beat — 这些 achievement 接住它们，让玩家
+  // 那一次"沉默的正确选择"被看见。Hidden 是因为揭示条件本身就是 spoiler。
+  {
+    id: 'early_skeptic', tier: 'rare', icon: '🕵️',
+    title: '"太完美了"',
+    desc: 'Hinge 上第一眼就察觉不对——你 unmatch 得很快。',
+    check: ({ flags = {} }) => !!(flags.romance_daniel_skipped || flags.romance_diana_skipped),
+  },
+  {
+    id: 'pressed_for_truth', tier: 'rare', icon: '🔍',
+    title: '"我要见你一面"',
+    desc: '你坚持要见 ta 一面——而 ta 找不出来。',
+    check: ({ flags = {} }) => !!(flags.romance_daniel_doubted || flags.romance_diana_doubted),
+  },
+  {
+    id: 'lyn_doubt_kept', tier: 'rare', icon: '⚠️',
+    title: '中途撤回',
+    desc: 'Lyn 那场局你走到一半——直觉救了你一笔钱。',
+    check: ({ flags = {} }) => !!flags.lyn_doubted,
+  },
+  {
+    id: 'sarah_trusted_keeper', tier: 'epic', icon: '🤫',
+    title: '一个守住的秘密',
+    desc: 'Sarah 凌晨 1 点告诉你她家族的事。你接住了——也守住了。',
+    check: ({ flags = {} }) => !!flags.sarah_secret_kept,
+  },
+  {
+    id: 'freelance_grey_zone', tier: 'rare', icon: '🪙',
+    title: '灰色地带也是地带',
+    desc: '你没注册 sole trader——但你也活下来了。',
+    check: ({ flags = {} }) => !!flags.freelance_informal,
+  },
+  {
+    id: 'linnan_silent_lie', tier: 'epic', icon: '💔',
+    title: '那一句"dissertation 焦虑"',
+    desc: '你对 ta 撒了一个 4 个月没解开的谎。',
+    check: ({ flags = {} }) => !!flags.linnan_betrayed,
   },
 ];
 

@@ -12,6 +12,9 @@ export const END_GAME_EVENTS = {
     {
       id: 'housing_search_2nd_year', minWeek: 30, maxWeek: 36,
       title: '找下学年的房子',
+      // 如果玩家已经在 flatHunt arc 里 (flat_shortlist 被设过)，这个 quick-pick 事件就别再触发——
+      // 让 flatHunt 那 5-event 的慢节奏走完。否则两条路径同时给 private_flat 会让叙事跳。
+      condition: ({ flags }) => !flags.flat_shortlist,
       body: '4 月。CSSA 群里："家人们 大家暑假后还住吗？我学院说 9 月不再保留 ensuite。"\n\n你查了一下你的合同——8 月 31 日到期。9 月之后你需要：\n· 续签 ensuite（如果 PSW 留下且学校还有位）\n· 搬到 private flat（自己找）\n· 回国\n\nCSSA 室友群在凑合租。',
       choices: [
         { label: '续签 ensuite 一年', effect: { wallet: -500, energy: 3, belonging: 4, flag: 'renewed_ensuite' },

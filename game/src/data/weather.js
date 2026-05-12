@@ -69,7 +69,9 @@ export const WEATHER_EVENTS = [
         feedback: 'Hyde Park 全是人。每个人脸上都带着"终于"的表情。你不戴墨镜也眯着眼睛——你的眼睛已经习惯了灰色的天。' },
     ] },
   { id: 'tube_flooded', weather: 'rain', title: '地铁因雨停运',
-    body: '大雨。Bakerloo 线宣布停运，原因是"漏水"。你看了看时间，离 tutorial 还有 40 分钟。',
+    // Bakerloo 是深线 + 几乎全地下，rarely 漏水。真实 TfL "漏水关线"主要是 Central
+    // / Northern / 浅层段。Central 是经典 rain-day 受害线。
+    body: '大雨。Central 线宣布停运，原因是"漏水 + 信号故障"。你看了看时间，离 tutorial 还有 40 分钟。',
     minWeek: 4,
     choices: [
       { label: '咬牙打 Uber (£25)', effect: { wallet: -25, academic: 3 },

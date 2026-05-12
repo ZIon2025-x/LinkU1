@@ -57,7 +57,10 @@ export const POST_GRAD_EVENTS = {
       ],
     },
     {
-      id: 'mom_call_come_home', minWeek: 47, maxWeek: 51,
+      id: 'mom_call_come_home',
+      // 原 W47-51 跟 psw_decision_eve (W51) 太密——两次关键家庭通话相隔 4 周内。拉开到
+      // W42-46，让玩家的"妈劝回去"先到，过几周再到 PSW 自己的决定。
+      minWeek: 42, maxWeek: 46,
       title: '妈妈电话 · "还是回来吧"',
       body: '周六上午 10 点（北京 6 点）。妈妈打来视频。\n\n她支吾了 5 分钟，最后说：\n\n"你王阿姨女儿今年回来选调上岸了，事业编、房补、户口。你爸刚跟她爸喝了茶，回来跟我说\'我们家的孩子留那边折腾什么\'。\n\n咱家不缺你那点工资。你回来 妈托人帮你看看体制内的位置。"',
       choices: [

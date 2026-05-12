@@ -28,7 +28,7 @@ export const LOCATION_EVENTS = {
       feedback: '一个中年女士走过来站在你旁边。她说 "It makes me cry every time." 你点头。她离开了。你又站了 10 分钟。', minWeek: 3 },
   ],
   library: [
-    { id: 'lib_late', title: '凌晨的图书馆', body: '凌晨 2 点。整个 4 楼只有你和一个戴耳机的女生（Aditi）。',
+    { id: 'lib_late', title: '凌晨的图书馆', body: '凌晨 2 点。整个 4 楼只有你和一个戴耳机的同学。',
       effect: { academic: 6, energy: -8, belonging: 2 },
       feedback: '你们一直没说话。但你们都知道彼此在这里。这就够了。', minWeek: 4, repeatable: true },
   ],
@@ -66,6 +66,7 @@ export const LOCATION_EVENTS = {
     },
     { id: 'popup_ucu_picket', title: 'UCU 罢工 picket line', body: '校门口教师工会 picket line。Whitmore 也在——他披一条 UCU 围巾，举一个手写牌子「Pensions ≠ Optional」。他看到你愣了 0.5 秒，对你点点头。',
       minWeek: 14, maxWeek: 22,
+      condition: ({ npcRel }) => (npcRel.whitmore || 0) >= 1,
       choices: [
         { label: '站到他旁边 30 分钟', effect: { energy: -3, academic: -2, belonging: 8, flag: 'ucu_solidarity', npc: { whitmore: 3 } },
           feedback: '你只是站着没说话。Whitmore 也没说话。但你帮他举了一会儿牌子让他活动手腕。\n\n下周 tutorial 他没提这件事——但他在结束时多给了你 5 分钟讨论。\n\n你想：英国的师生关系不是吃饭喝酒——是站在同一条 picket line 上。' },

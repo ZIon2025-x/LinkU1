@@ -109,7 +109,8 @@ export const DAILY_LIFE_EVENTS = {
       id: 'package_at_reception', minWeek: 3, repeatable: true,
       title: 'Reception 一个包裹',
       body: '回楼时前台叫住你："Got a parcel for you, mate."\n\n是你妈寄的。EMS 国际快递。盒子上贴着 "FOOD" 申报 — 真实内容：6 包老干妈、2 件保暖内衣、1 包毛衣、1 张手写字条。',
-      effect: { energy: 3, belonging: 12 },
+      // belonging +4 (不是 +12)——一个包裹是温情但不是 milestone (那些需要 Sarah Cotswolds 级别的累积)。
+      effect: { energy: 3, belonging: 4 },
       feedback: '字条："冷了多穿。少喝凉水。妈想你。"\n\n你坐在房间里看了 2 分钟。然后给妈打 video call——她在做晚饭，背景是你家厨房的味道。',
     },
     {
@@ -258,14 +259,14 @@ export const DAILY_LIFE_EVENTS = {
       choices: [
         { label: '上车 戴耳塞坐上层', effect: { wallet: -2, energy: -8, belonging: 4 },
           feedback: '£1.75。45 分钟到家。\n\n你旁边坐下一个 19 岁金发女生——她哭着对她朋友说 "He\'s an arsehole, I\'m never seeing him again"。她朋友说 "We say that every Saturday, babe"。\n\n你装作没听见。但这是你这一年偷听到的最 british 的对话。' },
-        { label: '打 Uber 回家 (£22)', effect: { wallet: -22, energy: -2 },
-          feedback: '司机是巴基斯坦大哥。一路放着 Bollywood 老歌。15 分钟到家。\n\n你想：£22。明天午饭得吃 Tesco £3.40。' },
+        { label: '打 Uber 回家 (£18)', effect: { wallet: -18, energy: -2 },
+          feedback: '司机是巴基斯坦大哥。一路放着 Bollywood 老歌。15 分钟到家。\n\n你想：£18。明天午饭得吃 Tesco £3.40。' },
       ],
     },
     {
       id: 'royal_mail_missed', minWeek: 4,
       title: '"Sorry we missed you" 红卡',
-      body: '早上你出门——门口塞着一张红色卡片：\n\n"Sorry we missed you. Royal Mail tried to deliver your parcel but no one was in. Collect from Mount Pleasant Sorting Office, Mon-Sat 8am-1pm. Bring this card + photo ID."\n\nMount Pleasant 在 Farringdon。你查了下：要 30 分钟地铁。而且只能上午去——这就是 Royal Mail 的恶意。',
+      body: '早上你出门——门口塞着一张红色卡片：\n\n"Sorry we missed you. Royal Mail tried to deliver your parcel but no one was in. Collect from Mount Pleasant Sorting Office, Mon-Fri 8am-8pm, Sat 8am-2pm. Bring this card + photo ID."\n\nMount Pleasant 在 Farringdon。你查了下：要 30 分钟地铁。理论上下班后还能去——但是周一下班 8pm 整点关门，掐着秒到就是另一种恶意。',
       choices: [
         { label: '明早 8 点起床去取', effect: { energy: -10, flag: 'royal_mail_collected' },
           feedback: '你 7:30 起。8:30 到 sorting office。门口排了 30 个人——快递、亚马逊退货、医保信、外国留学生证件全在这。\n\n40 分钟后你拿到一个不起眼的小盒子——是国内寄来的茶叶。\n\n你站在 Mount Pleasant 门口想：这一上午的代价就为了一袋茶。但你也知道——Royal Mail 的"漏投"就是收件人没在，没办法。' },
@@ -447,7 +448,7 @@ export const DAILY_LIFE_EVENTS = {
       title: 'Bonfire Night · 11 月 5 日',
       body: '英国人纪念 1605 年 Guy Fawkes 火药阴谋未遂的那一晚——把那个 cosplay 假人烧掉，然后看烟花。\n\nHyde Park 今晚 8 点 grand fireworks display。门票 £15 或免费站外面看。CSSA 群里有人组队。',
       choices: [
-        { label: '买 Hyde Park 门票去 (£15)', effect: { wallet: -15, energy: 8, belonging: 8 },
+        { label: '买 Hyde Park 门票去 (£15)', effect: { wallet: -15, energy: 8, belonging: 8, flag: 'bonfire_night_park' },
           feedback: '入场 7:30。冷得手都僵。8 点准时——音乐响起，烟花从泰晤士河一线打上去。20 分钟。\n\n你旁边一对英国老夫妇看你冻得发抖，给你递了一杯热可可。"First time at Bonfire?" 你点头。"Welcome to England, dear."' },
         { label: '不进园 站桥上免费看', effect: { energy: -3, belonging: 5 },
           feedback: '你在 Vauxhall Bridge 上和 200 个其他没买票的人一起看。视野好得不要钱。\n\n手指冻僵但你也笑了。' },
@@ -487,7 +488,7 @@ DAILY_LIFE_EVENTS.flat.push(
     body: '你刚收到 course leader 的邮件：\n\n"Dear all, due to ongoing UCU industrial action over pay and working conditions, all lectures and tutorials this week and next week are cancelled. Essay deadlines are not affected. We apologise for the disruption."\n\nUCU 是英国大学教师工会。每年都罢工——议题：pay erosion、casualisation、pension cuts。\n\n你这一年 £24,000 学费的一部分，正在被替换成"自学"。',
     choices: [
       { label: '在 r/UniUK 看大家吐槽 + 自学', effect: { energy: -3, academic: 2, flag: 'ucu_strike_solo' },
-        feedback: 'Reddit 一片骂声："I\'m paying £30k for online lectures and now strikes." 但教师那边帖子是："I make £35k after a PhD, I deserve more."\n\n你看了 1 小时。你心情很复杂——你支持 underpaid 的教师，但你的学费被吃掉了。\n\n你回头自学。你也开始读 union 的诉求 PDF——这是你这一年第一次认真理解什么叫 "industrial action"。' },
+        feedback: 'Reddit 一片骂声："I\'m paying £30k for online lectures and now strikes." 但教师那边帖子是："Starting lecturer pay is £42k after a 4-year PhD + 3 postdocs. London weighting doesn\'t cover Zone 3 rent. We deserve more."\n\n你看了 1 小时。你心情很复杂——你支持 underpaid 的教师，但你的学费被吃掉了。\n\n你回头自学。你也开始读 union 的诉求 PDF——这是你这一年第一次认真理解什么叫 "industrial action"。' },
       { label: '签 student union 联名要求 partial refund', effect: { energy: -2, belonging: 4 },
         feedback: 'Student union 推一个 petition："Demand fair compensation for lost teaching time." 已签 8,000 人。\n\n你也签了。一年后学校发了一封 "we acknowledge the disruption" 的官方邮件——但没退钱。\n\n这是英国大学的标准结局。你学到的不是课内的，是这件事本身。' },
       { label: '"反正不影响 deadline" 不管', effect: { energy: 1 },

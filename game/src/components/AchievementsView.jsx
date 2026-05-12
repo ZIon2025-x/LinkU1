@@ -104,9 +104,33 @@ export function AchievementsView({ unlockedAchievements, gender, gameState }) {
   );
 }
 
-function WrappedPosterModal({ gameState, onClose }) {
+// Web Share API helper —— 浏览器支持 navigator.canShare({ files }) 时直接拉起系统分享；
+// 否则尝试 clipboard 把 PNG 复制（部分浏览器支持），最后兜底成下载。
+async function sharePngBlob(blob, filename, title = '异乡') {
+  if (!blob) return { ok: false, reason: 'no-blob' };
+  try {
+    const file = new File([blob], filename, { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title });
+      return { ok: true, mode: 'native' };
+    }
+  } catch (e) { /* user cancelled or unsupported */ }
+  // Clipboard 兜底
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      return { ok: true, mode: 'clipboard' };
+    }
+  } catch (e) { /* fall through */ }
+  // 最终兜底：触发下载
+  download(blob, filename);
+  return { ok: true, mode: 'download' };
+}
+
+export function WrappedPosterModal({ gameState, onClose }) {
   const canvasRef = useRef(null);
-  const [downloading, setDownloading] = useState(false);
+  const [busy, setBusy] = useState(null);   // null | 'download' | 'share'
+  const [hint, setHint] = useState('1080×1920 · 朋友圈竖版分享物');
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -114,14 +138,26 @@ function WrappedPosterModal({ gameState, onClose }) {
     }
   }, [gameState]);
 
+  const filename = `异乡-Wrapped-W${Math.ceil((gameState?.day || 1) / 7)}.png`;
+
   async function handleDownload() {
-    setDownloading(true);
+    setBusy('download');
     try {
       const blob = await renderWrappedToBlob(gameState);
-      const week = Math.ceil((gameState.day || 1) / 7);
-      download(blob, `异乡-Wrapped-W${week}.png`);
+      download(blob, filename);
     } finally {
-      setDownloading(false);
+      setBusy(null);
+    }
+  }
+  async function handleShare() {
+    setBusy('share');
+    try {
+      const blob = await renderWrappedToBlob(gameState);
+      const r = await sharePngBlob(blob, filename, '异乡 · Year-End Wrapped');
+      if (r.mode === 'clipboard') setHint('✓ 已复制到剪贴板，去聊天里粘贴');
+      else if (r.mode === 'download') setHint('✓ 已下载，去相册转发');
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -136,28 +172,34 @@ function WrappedPosterModal({ gameState, onClose }) {
         <canvas ref={canvasRef} width={1080} height={1920}
           className="w-full mb-4 shadow-2xl"
           style={{ aspectRatio: '1080 / 1920' }} />
-        <div className="flex gap-2">
-          <button onClick={handleDownload} disabled={downloading}
-            className="flex-1 py-2.5 border text-sm tracking-[0.3em] transition-colors"
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={handleDownload} disabled={!!busy}
+            className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
             style={{ borderColor: '#d4b070a0', color: '#d4b070', background: '#d4b07012' }}>
-            {downloading ? '生成中...' : '↓ 下载 PNG'}
+            {busy === 'download' ? '生成中…' : '↓ 下载'}
+          </button>
+          <button onClick={handleShare} disabled={!!busy}
+            className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
+            style={{ borderColor: '#a0c890a0', color: '#a0c890', background: '#a0c89012' }}>
+            {busy === 'share' ? '生成中…' : '↗ 分享'}
           </button>
           <button onClick={onClose}
-            className="flex-1 py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.3em]">
-            关闭
+            className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
+            取消
           </button>
         </div>
         <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
-          1080×1920 · 朋友圈竖版分享物
+          {hint}
         </div>
       </div>
     </div>
   );
 }
 
-function AchievementCardModal({ achievement, gender, onClose }) {
+export function AchievementCardModal({ achievement, gender, onClose }) {
   const canvasRef = useRef(null);
-  const [downloading, setDownloading] = useState(false);
+  const [busy, setBusy] = useState(null);
+  const [hint, setHint] = useState('下载到本地 → 长按转发到微信 / 朋友圈');
 
   const localized = {
     ...achievement,
@@ -166,22 +208,32 @@ function AchievementCardModal({ achievement, gender, onClose }) {
   };
 
   useEffect(() => {
-    let cancelled = false;
     if (canvasRef.current) {
-      // Fire-and-forget; paints when the achievement illustration finishes loading.
       renderAchievementCard(canvasRef.current, localized, { week: achievement.week })
-        .catch(() => { /* graceful degrade — paintCard handled the null-img path */ });
+        .catch(() => {});
     }
-    return () => { cancelled = true; };
   }, [achievement]);
 
+  const filename = `异乡-成就-${achievement.id}.png`;
+
   async function handleDownload() {
-    setDownloading(true);
+    setBusy('download');
     try {
       const blob = await renderToBlob(localized, { week: achievement.week });
-      download(blob, `异乡-成就-${achievement.id}.png`);
+      download(blob, filename);
     } finally {
-      setDownloading(false);
+      setBusy(null);
+    }
+  }
+  async function handleShare() {
+    setBusy('share');
+    try {
+      const blob = await renderToBlob(localized, { week: achievement.week });
+      const r = await sharePngBlob(blob, filename, `异乡 · ${localized.title}`);
+      if (r.mode === 'clipboard') setHint('✓ 已复制到剪贴板，去聊天里粘贴');
+      else if (r.mode === 'download') setHint('✓ 已下载，去相册转发');
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -196,19 +248,24 @@ function AchievementCardModal({ achievement, gender, onClose }) {
         <canvas ref={canvasRef} width={600} height={720}
           className="w-full mb-4 shadow-2xl"
           style={{ aspectRatio: '600 / 720' }} />
-        <div className="flex gap-2">
-          <button onClick={handleDownload} disabled={downloading}
-            className="flex-1 py-2.5 border border-amber-300/60 hover:bg-amber-300/10 transition-colors text-sm tracking-[0.3em]"
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={handleDownload} disabled={!!busy}
+            className="py-2.5 border border-amber-300/60 hover:bg-amber-300/10 transition-colors text-sm tracking-[0.2em] disabled:opacity-50"
             style={{ color: '#d4b070' }}>
-            {downloading ? '生成中...' : '↓ 下载 PNG'}
+            {busy === 'download' ? '生成中…' : '↓ 下载'}
+          </button>
+          <button onClick={handleShare} disabled={!!busy}
+            className="py-2.5 border text-sm tracking-[0.2em] transition-colors disabled:opacity-50"
+            style={{ borderColor: '#a0c890a0', color: '#a0c890', background: '#a0c89012' }}>
+            {busy === 'share' ? '生成中…' : '↗ 分享'}
           </button>
           <button onClick={onClose}
-            className="flex-1 py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.3em]">
-            关闭
+            className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
+            取消
           </button>
         </div>
         <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
-          下载到本地 → 长按转发到微信 / 朋友圈
+          {hint}
         </div>
       </div>
     </div>

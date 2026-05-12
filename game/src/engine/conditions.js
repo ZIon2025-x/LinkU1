@@ -9,9 +9,10 @@
 /**
  * Evaluate a declarative trigger object against the current game state.
  * Supported keys:
- *   rel:    minimum NPC relationship (resolved via `npcId` arg or item.npc)
+ *   rel:     minimum NPC relationship (resolved via `npcId` arg or item.npc)
  *   location: required current location id
- *   flag:   flag name that must be truthy
+ *   flag:    flag name that must be truthy
+ *   flagAny: array of flag names — at least one must be truthy
  *   minWeek: earliest week
  */
 export function matchTrigger(trigger, state, npcId) {
@@ -21,6 +22,9 @@ export function matchTrigger(trigger, state, npcId) {
   }
   if (trigger.location && trigger.location !== state.currentLocationId) return false;
   if (trigger.flag && !state.flags?.[trigger.flag]) return false;
+  if (trigger.flagAny && Array.isArray(trigger.flagAny)) {
+    if (!trigger.flagAny.some(f => state.flags?.[f])) return false;
+  }
   if (trigger.minWeek && state.week < trigger.minWeek) return false;
   return true;
 }

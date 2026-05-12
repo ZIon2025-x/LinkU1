@@ -34,12 +34,14 @@ export const LINK2UR_BRAND = {
 export const LINK2UR_ACCEPT_TEMPLATES = [
   // ─── shopping (代购) — high reward, long duration ───
   {
-    id: 'l2u_bicester_burberry', type: 'shopping', emoji: '🛍️',
-    titles: ['代购 Burberry 围巾 ×2', '代购 Burberry 风衣 ×1', 'Bicester 代购整套'],
-    desc: '坐 Marylebone → Bicester Village 来回 5h。需要排 Burberry 1h。',
+    // 之前是 Burberry — 跟 welcomeWeek `bicester_trip` 玩家自己跑那趟撞素材。改成 Coach +
+    // Tory Burch 让 Link2Ur 接单是"二次访问 / 不同品牌"。
+    id: 'l2u_bicester_coach', type: 'shopping', emoji: '🛍️',
+    titles: ['代购 Coach Tabby ×2', '代购 Tory Burch + Polo 整套', 'Bicester 二刷 · 5 个客户'],
+    desc: 'Marylebone → Bicester 来回 5h。Coach + Tory Burch outlet 同区。Burberry 还是排 1h，但这次不为自己。',
     rewardMin: 80, rewardMax: 120,
     energyCost: 22, actionCost: 1,
-    minWeek: 4, maxWeek: 50,
+    minWeek: 6, maxWeek: 50,
     rating: 5,
   },
   {
@@ -233,6 +235,382 @@ export const LINK2UR_ACCEPT_TEMPLATES = [
     minWeek: 30, maxWeek: 40,
     rating: 5,
   },
+
+  // ──────────────────────────────────────────────────────
+  // 私厨 (cooking) — 在家做饭送到客户公寓 / 包饺子
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_chef_dinner_4ppl', type: 'cooking', emoji: '🍳',
+    titles: ['上门做 4 人晚餐', '中式四菜一汤'],
+    desc: '客户家请人。买菜 + 做 + 收拾。3 小时。',
+    rewardMin: 50, rewardMax: 80,
+    energyCost: 18, actionCost: 1,
+    minWeek: 4, maxWeek: 50,
+    rating: 4,
+    requirement: { count: 3 },  // 需要至少 3 单经验
+  },
+  {
+    id: 'l2u_chef_dumplings', type: 'cooking', emoji: '🥟',
+    titles: ['代包饺子 100 个', '春节包饺子 + 送上门'],
+    desc: '客户想吃没时间包。猪肉白菜馅 100 个。',
+    rewardMin: 25, rewardMax: 40,
+    energyCost: 10, actionCost: 1,
+    minWeek: 16, maxWeek: 22,  // 春节附近
+    rating: 4,
+  },
+  {
+    id: 'l2u_chef_meal_prep', type: 'cooking', emoji: '🍱',
+    titles: ['周日 meal prep 5 天份', '健身餐打包 5 盒'],
+    desc: '客户健身想吃干净碳水蛋白。鸡胸肉 + brown rice + 蔬菜。',
+    rewardMin: 35, rewardMax: 55,
+    energyCost: 12, actionCost: 1,
+    minWeek: 8, maxWeek: 50,
+    rating: 5,
+  },
+  {
+    id: 'l2u_chef_birthday_cake', type: 'cooking', emoji: '🎂',
+    titles: ['手作生日蛋糕', '帮做生日宴 5 道菜'],
+    desc: '客户给伴侣过生日。蛋糕 + 4 道家常菜。',
+    rewardMin: 45, rewardMax: 70,
+    energyCost: 15, actionCost: 1,
+    minWeek: 8, maxWeek: 50,
+    rating: 4,
+  },
+  {
+    id: 'l2u_chef_homesick_takeout', type: 'cooking', emoji: '🍲',
+    titles: ['做家乡菜外卖给一个新生'],
+    desc: '一个刚到伦敦 2 周的新生想家了。求一份家乡饭。',
+    rewardMin: 20, rewardMax: 30,
+    energyCost: 8, actionCost: 1,
+    minWeek: 2, maxWeek: 12,
+    rating: 5,
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 清洁 (cleaning) — 公寓深度清洁 / 退房清洁
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_cleaning_studio', type: 'cleaning', emoji: '🧹',
+    titles: ['Studio 公寓深度清洁'],
+    desc: '客户退房前要 deep clean 否则扣 deposit。2 小时。',
+    rewardMin: 30, rewardMax: 50,
+    energyCost: 15, actionCost: 1,
+    minWeek: 2, maxWeek: 50,
+    rating: 4,
+  },
+  {
+    id: 'l2u_cleaning_endlease', type: 'cleaning', emoji: '🧽',
+    titles: ['End-of-lease 全屋清洁 + 拍验收照'],
+    desc: '退房 final inspection 前一晚。客户在外出差不能回来。',
+    rewardMin: 60, rewardMax: 90,
+    energyCost: 22, actionCost: 1,
+    minWeek: 30, maxWeek: 50,
+    rating: 5,
+    requirement: { count: 5, rating: 4.5 },
+  },
+  {
+    id: 'l2u_cleaning_postparty', type: 'cleaning', emoji: '🍻',
+    titles: ['Party 后第二天打扫'],
+    desc: '宿醉的客户没力气收拾。脏盘子 + 啤酒瓶 + 地毯酒渍。',
+    rewardMin: 25, rewardMax: 40,
+    energyCost: 12, actionCost: 1,
+    minWeek: 4, maxWeek: 50,
+    rating: 4,
+  },
+  {
+    id: 'l2u_cleaning_oven', type: 'cleaning', emoji: '🔥',
+    titles: ['烤箱 + 油烟机深度清洁'],
+    desc: '油烟厚 3mm。要用 Astonish + 钢丝球。客户怕脏不愿动手。',
+    rewardMin: 20, rewardMax: 35,
+    energyCost: 10, actionCost: 1,
+    minWeek: 2, maxWeek: 50,
+    rating: 4,
+  },
+  {
+    id: 'l2u_cleaning_window', type: 'cleaning', emoji: '🪟',
+    titles: ['公寓全部窗户外擦'],
+    desc: '客户住 3 楼怕高。借梯子 + 玻璃水。',
+    rewardMin: 18, rewardMax: 28,
+    energyCost: 8, actionCost: 1,
+    minWeek: 4, maxWeek: 45,
+    rating: 4,
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 地陪 (tour guide) — 接父母 / 陪游客
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_tour_parents_arrival', type: 'tour', emoji: '👨‍👩‍👧',
+    titles: ['Heathrow 接客户父母 + 送酒店'],
+    desc: '父母英文不好。T3 接机 + Heathrow Express + 送 Bloomsbury 酒店。',
+    rewardMin: 50, rewardMax: 80,
+    energyCost: 18, actionCost: 1,
+    minWeek: 8, maxWeek: 50,
+    rating: 5,
+  },
+  {
+    id: 'l2u_tour_oneday_london', type: 'tour', emoji: '🗺️',
+    titles: ['Big Ben + Tower Bridge 一日游', 'London 经典 8 景点带逛'],
+    desc: '客户朋友来玩 3 天。你 1 天带逛 + 拍照 + 讲解。',
+    rewardMin: 80, rewardMax: 120,
+    energyCost: 25, actionCost: 1,
+    minWeek: 6, maxWeek: 50,
+    rating: 5,
+    requirement: { count: 5 },
+  },
+  {
+    id: 'l2u_tour_oxford_daytrip', type: 'tour', emoji: '🎓',
+    titles: ['Oxford 一日游带逛'],
+    desc: 'Marylebone 出发 → Oxford → Bodleian → Christ Church → Pub → 回程。',
+    rewardMin: 100, rewardMax: 150,
+    energyCost: 30, actionCost: 1,
+    minWeek: 14, maxWeek: 48,
+    rating: 5,
+    requirement: { count: 8, rating: 4.6 },
+  },
+  {
+    id: 'l2u_tour_museum_guide', type: 'tour', emoji: '🖼️',
+    titles: ['Tate Modern 中文导览', 'V&A 一下午导览'],
+    desc: '客户不太懂当代艺术。陪 3 小时 + 中文讲 highlights。',
+    rewardMin: 30, rewardMax: 50,
+    energyCost: 12, actionCost: 1,
+    minWeek: 10, maxWeek: 50,
+    rating: 4,
+  },
+  {
+    id: 'l2u_tour_shopping_assist', type: 'tour', emoji: '🛍️',
+    titles: ['Selfridges 陪逛 + 砍价 + 退税', 'Bond Street 陪逛 + 翻译'],
+    desc: '客户语言不通 + 需要 VAT 退税指导。3 小时。',
+    rewardMin: 40, rewardMax: 60,
+    energyCost: 12, actionCost: 1,
+    minWeek: 6, maxWeek: 50,
+    rating: 4,
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 搬家 (moving) — 重活但报酬高
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_moving_studio', type: 'moving', emoji: '📦',
+    titles: ['Zone 1 → Zone 2 帮搬 studio'],
+    desc: '客户 1 个箱子 + 2 个 IKEA 袋。要搭 Tube 转 1 次。',
+    rewardMin: 35, rewardMax: 55,
+    energyCost: 22, actionCost: 1,
+    minWeek: 30, maxWeek: 42,
+    rating: 4,
+  },
+  {
+    id: 'l2u_moving_ensuite', type: 'moving', emoji: '🛏️',
+    titles: ['Ensuite 退房打包 + IKEA 帮拆床'],
+    desc: '客户回国时间紧。1 张床 + 1 张桌 + 30+ 件杂物。',
+    rewardMin: 50, rewardMax: 80,
+    energyCost: 25, actionCost: 1,
+    minWeek: 48, maxWeek: 52,
+    rating: 4,
+  },
+  {
+    id: 'l2u_moving_storage', type: 'moving', emoji: '🏚️',
+    titles: ['打包 + 送到 self-storage 仓库'],
+    desc: '客户要 storage 1 个月。Pickup 后送到 Big Yellow self storage。',
+    rewardMin: 60, rewardMax: 90,
+    energyCost: 28, actionCost: 1,
+    minWeek: 30, maxWeek: 50,
+    rating: 5,
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 摄影 (photography) — 内容创作 (人像 + 街拍)
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_photo_graduation', type: 'photography', emoji: '📷',
+    titles: ['毕业典礼跟拍 1 小时', 'King\'s College 学袍跟拍'],
+    desc: '客户家长不在 UK，请人帮拍 50+ 张。RAW 文件传。',
+    rewardMin: 60, rewardMax: 100,
+    energyCost: 15, actionCost: 1,
+    minWeek: 50, maxWeek: 52,
+    rating: 5,
+    requirement: { rating: 4.7 },
+  },
+  {
+    id: 'l2u_photo_engagement', type: 'photography', emoji: '💍',
+    titles: ['Hyde Park 求婚跟拍', 'Tower Bridge 情侣写真'],
+    desc: '客户求婚现场拍 30 张 + 后期 5 张精修。',
+    rewardMin: 80, rewardMax: 120,
+    energyCost: 18, actionCost: 1,
+    minWeek: 14, maxWeek: 48,
+    rating: 5,
+    requirement: { count: 5 },
+  },
+  {
+    id: 'l2u_photo_linkedin', type: 'photography', emoji: '💼',
+    titles: ['LinkedIn 头像 1 小时人像'],
+    desc: '客户求职需要 professional 头像。室内自然光 + 5 张精修。',
+    rewardMin: 35, rewardMax: 55,
+    energyCost: 8, actionCost: 1,
+    minWeek: 36, maxWeek: 52,
+    rating: 5,
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 设计 (design) — PPT / 海报 / 品牌
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_design_ppt_pitch', type: 'design', emoji: '📊',
+    titles: ['Startup pitch deck 15 张'],
+    desc: '客户 founder 投资 demo day 用。Figma + 美化。3 天 turnaround。',
+    rewardMin: 80, rewardMax: 150,
+    energyCost: 16, actionCost: 1,
+    minWeek: 16, maxWeek: 52,
+    rating: 5,
+    requirement: { count: 5, rating: 4.6 },
+  },
+  {
+    id: 'l2u_design_thesis_ppt', type: 'design', emoji: '📑',
+    titles: ['硕士答辩 PPT 美化 20 页', 'Viva 答辩 slides 整理'],
+    desc: '客户答辩在即。Word 大纲 → 精美 slides。',
+    rewardMin: 40, rewardMax: 70,
+    energyCost: 10, actionCost: 1,
+    minWeek: 30, maxWeek: 50,
+    rating: 5,
+  },
+  {
+    id: 'l2u_design_logo_smallbiz', type: 'design', emoji: '🎨',
+    titles: ['Small biz logo 设计 3 稿'],
+    desc: '客户开 boba 店。3 个 logo concept + 选 1 个 refine。',
+    rewardMin: 60, rewardMax: 100,
+    energyCost: 14, actionCost: 1,
+    minWeek: 14, maxWeek: 50,
+    rating: 5,
+    requirement: { count: 3 },
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 教学 (tutoring) — 学术辅导 + 语言交换
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_tutor_essay_writing', type: 'tutoring', emoji: '✍️',
+    titles: ['教 essay structure 1 小时'],
+    desc: '高三申英国客户。Personal statement + 学术写作入门。',
+    rewardMin: 25, rewardMax: 40,
+    energyCost: 6, actionCost: 1,
+    minWeek: 6, maxWeek: 50,
+    rating: 5,
+  },
+  {
+    id: 'l2u_tutor_ielts_speaking', type: 'tutoring', emoji: '🗣️',
+    titles: ['雅思口语 1v1 60 min'],
+    desc: '客户 IELTS 重考。需要 7.0 口语。Part 2 模拟。',
+    rewardMin: 30, rewardMax: 50,
+    energyCost: 8, actionCost: 1,
+    minWeek: 8, maxWeek: 50,
+    rating: 4,
+    requirement: { count: 3 },
+  },
+  {
+    id: 'l2u_tutor_gcse_chinese', type: 'tutoring', emoji: '🀄',
+    titles: ['ABC 小孩 GCSE 中文辅导'],
+    desc: '客户家 ABC 儿子要考 GCSE Chinese。每周 1 小时 × 4 次。',
+    rewardMin: 80, rewardMax: 120,
+    energyCost: 16, actionCost: 1,
+    minWeek: 10, maxWeek: 48,
+    rating: 4,
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 宠物 (pet sitting) — 撸狗 / 喂猫
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_pet_dog_walking', type: 'pet', emoji: '🐕',
+    titles: ['Hyde Park 遛金毛 1 小时', '遛 Border Collie + 拍照打卡'],
+    desc: '客户上班没时间。下午 4-5 点遛 + 喂晚饭。',
+    rewardMin: 15, rewardMax: 25,
+    energyCost: 5, actionCost: 1,
+    minWeek: 4, maxWeek: 50,
+    rating: 5,
+  },
+  {
+    id: 'l2u_pet_cat_sitting', type: 'pet', emoji: '🐈',
+    titles: ['周末喂猫 + 换砂盆', '客户出差 3 天上门喂猫'],
+    desc: '钥匙留在邻居。每天 1 次 30 分钟。',
+    rewardMin: 18, rewardMax: 30,
+    energyCost: 4, actionCost: 1,
+    minWeek: 4, maxWeek: 50,
+    rating: 5,
+  },
+  {
+    id: 'l2u_pet_vet_companion', type: 'pet', emoji: '🩺',
+    titles: ['陪客户带猫去 vet'],
+    desc: '客户没车也怕一个人 deal。陪去 + 翻译。',
+    rewardMin: 22, rewardMax: 35,
+    energyCost: 7, actionCost: 1,
+    minWeek: 6, maxWeek: 50,
+    rating: 4,
+  },
+
+  // ──────────────────────────────────────────────────────
+  // IT (tech help) — 装电脑 / wifi / 软件
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_it_macbook_setup', type: 'tech', emoji: '💻',
+    titles: ['新生 MacBook 初装 + 翻墙 + Office 配置'],
+    desc: '客户 PC 用户换 Mac 第一次。全套配置 + 教使用。',
+    rewardMin: 35, rewardMax: 55,
+    energyCost: 9, actionCost: 1,
+    minWeek: 2, maxWeek: 12,
+    rating: 5,
+  },
+  {
+    id: 'l2u_it_wifi_setup', type: 'tech', emoji: '📶',
+    titles: ['上门装 BT/Virgin wifi router'],
+    desc: '客户租新公寓 router 寄到但不会装。30 分钟。',
+    rewardMin: 18, rewardMax: 28,
+    energyCost: 5, actionCost: 1,
+    minWeek: 2, maxWeek: 50,
+    rating: 4,
+  },
+  {
+    id: 'l2u_it_data_migration', type: 'tech', emoji: '💾',
+    titles: ['旧电脑数据迁到新 MacBook'],
+    desc: '客户旧电脑要退还公司。需要全 backup → 新机器恢复。',
+    rewardMin: 40, rewardMax: 60,
+    energyCost: 8, actionCost: 1,
+    minWeek: 4, maxWeek: 50,
+    rating: 5,
+    requirement: { count: 3 },
+  },
+
+  // ──────────────────────────────────────────────────────
+  // 翻译 (translation) — 升级版高门槛
+  // ──────────────────────────────────────────────────────
+  {
+    id: 'l2u_trans_legal_contract', type: 'translation', emoji: '⚖️',
+    titles: ['Tenancy 合同中英翻译'],
+    desc: '客户租房合同要给国内父母看。15 页法律语言。',
+    rewardMin: 40, rewardMax: 65,
+    energyCost: 9, actionCost: 1,
+    minWeek: 6, maxWeek: 50,
+    rating: 5,
+    requirement: { rating: 4.5 },
+  },
+  {
+    id: 'l2u_trans_medical', type: 'translation', emoji: '🏥',
+    titles: ['NHS 病历翻译给国内医生'],
+    desc: '客户家人病情。NHS 诊断报告 5 页中英翻译。',
+    rewardMin: 50, rewardMax: 80,
+    energyCost: 12, actionCost: 1,
+    minWeek: 10, maxWeek: 50,
+    rating: 5,
+    requirement: { rating: 4.7 },
+  },
+  {
+    id: 'l2u_trans_university_email', type: 'translation', emoji: '✉️',
+    titles: ['学校重要邮件翻译 + 回信'],
+    desc: '客户家长收到学校 disciplinary letter。需要翻译 + draft 回复。',
+    rewardMin: 25, rewardMax: 40,
+    energyCost: 6, actionCost: 1,
+    minWeek: 8, maxWeek: 50,
+    rating: 5,
+  },
 ];
 
 // ──────────────────────────────────────────────────────
@@ -277,6 +655,148 @@ export const LINK2UR_POST_TEMPLATES = [
     desc: 'council 寄了一封 4 页英文信你看不懂。',
     cost: 12, energyGain: 2,
     feedback: '15 分钟接单。一小时后回复你完整翻译 + "这是常规账单 不用回复"。\n\n你松了口气——以为是 council tax 没 exempt。' },
+
+  // ────────────────────────────────────────────────────────
+  // Emergency posts · 突发情况触发（状态/flags 驱动）
+  // urgencyTrigger 函数返回 true 时高亮显示 + 推送 Link2Ur 提醒
+  // ────────────────────────────────────────────────────────
+
+  // 钱紧
+  {
+    id: 'post_hardship_companion', emoji: '🆘',
+    title: '陪我去 Job Centre 申请 hardship fund',
+    desc: '钱包透支了。需要陪同填表格 + 翻译。',
+    cost: 15, energyGain: 5,
+    urgencyTrigger: (s) => (s.stats?.wallet ?? 999) < -30,
+    feedback: '一个 PhD Y3 学姐陪你去 Job Centre。她填过这个表 3 次知道哪些 box 不能勾。3 周后你拿到 £400 hardship fund。她说"这是 UK 国家给学生的钱 别愧疚"。',
+  },
+
+  // 病了 / 低 energy
+  {
+    id: 'post_pharmacy_pickup', emoji: '💊',
+    title: '请人 Boots 代取处方药',
+    desc: '感冒发烧不想出门。',
+    cost: 10, energyGain: 12,
+    urgencyTrigger: (s) => (s.stats?.energy ?? 100) <= 25,
+    feedback: '20 分钟接单。客户拿处方 + Boots 取药 + 送到你 ensuite 门口（敲门没进来）。门口还放了一袋热柠檬水 + 一张便条 "感冒快好"。',
+  },
+  {
+    id: 'post_grocery_emergency', emoji: '🛒',
+    title: '请人帮买急用食物 + 药',
+    desc: '没力气出门。需要泡面 + Lemsip + 鸡汤 + 卷纸。',
+    cost: 18, energyGain: 10,
+    urgencyTrigger: (s) => (s.stats?.energy ?? 100) <= 20,
+    feedback: 'Tesco Express 接单 30 分钟到。一袋东西 + receipt + 找零留 £2。你给 5 星 + tip £3。',
+  },
+
+  // 论文期
+  {
+    id: 'post_essay_proof_emergency', emoji: '📝',
+    title: '紧急 essay proofread（24h 加急）',
+    desc: 'deadline 24h 内。Native 校对 + 句法重写。',
+    cost: 65, academicGain: 10,
+    urgencyTrigger: (s) => (s.dissertationProgress ?? 0) > 0 && (s.dissertationProgress ?? 0) < 30,
+    feedback: '一个 PhD Y3 native 接单。她 3 小时 turnaround 红笔批注 32 处。你 deadline 前 2 小时交。grade +8 分。她说 "Send next chapter when ready."',
+  },
+  {
+    id: 'post_dissertation_print_bind', emoji: '📚',
+    title: '请人 Ryman 打印 + 精装 dissertation 2 本',
+    desc: '提交前一晚 ensuite 没墨。',
+    cost: 35, energyGain: 5, actionGain: 1,
+    urgencyTrigger: (s) => Math.ceil((s.day || 0) / 7) >= 51 && (s.dissertationProgress ?? 0) > 60,
+    feedback: 'CSSA 一个学姐接单。她 Bloomsbury Ryman 排队 + 精装 + 第二天早送你公寓。你交 dissertation 那天不用慌。',
+  },
+  {
+    id: 'post_dissertation_data_help', emoji: '📊',
+    title: '请人帮我清 SPSS 数据 / 跑 R script',
+    desc: 'data 4000 行 stuck 在 cleaning step。',
+    cost: 55, academicGain: 8,
+    urgencyTrigger: (s) => Math.ceil((s.day || 0) / 7) >= 41 && Math.ceil((s.day || 0) / 7) <= 50,
+    feedback: '一个 econ MSc 学姐 4 小时 turnaround：R script + cleaned dataset + readme。你 dissertation 量化部分顺利推进。',
+  },
+
+  // 反诈后续
+  {
+    id: 'post_scam_paperwork', emoji: '🛡️',
+    title: '请人帮整理 Action Fraud 报案材料',
+    desc: '需要按时间顺序整理 5 周聊天截图 + 转账记录。',
+    cost: 30, energyGain: 12,
+    urgencyTrigger: (s) => !!(s.flags?.scammed_pig_full || s.flags?.scammed_trading_full ||
+                              s.flags?.scammed_sponsor_full),
+    feedback: '一个 law student 接单。她帮你按时间排序 + 标注关键证据 + 写一份 1 页 statement。一周后 Action Fraud 给了 case reference。',
+  },
+  {
+    id: 'post_bank_chargeback_help', emoji: '🏦',
+    title: '请人陪我去银行 dispute 扣款',
+    desc: '骗子刷了我信用卡 £200。Barclays branch 排长队。',
+    cost: 20, energyGain: 8,
+    urgencyTrigger: (s) => !!(s.flags?.scammed_courier || s.flags?.scammed_pig_partial),
+    feedback: '一个 finance MSc 接单。她做过 chargeback 流程教过 4 个人了。陪你 1 小时 + 翻译 + 帮你 phrase 申诉。3 周后 £180 退回。',
+  },
+
+  // 父母访问
+  {
+    id: 'post_parents_airport_pickup', emoji: '✈️',
+    title: '请人 Heathrow 接我父母 + 送酒店',
+    desc: '父母英文不好。我课上不能去。',
+    cost: 60, energyGain: 15,
+    urgencyTrigger: (s) => !!s.flags?.parents_invited && !s.flags?.parents_visited,
+    feedback: 'CSSA 一个本科男生接单。他 T3 接机举牌 + Heathrow Express + 送到 Bloomsbury 酒店。父母事后跟你说 "那个孩子挺会照顾人的"。',
+  },
+  {
+    id: 'post_parents_oneday_tour', emoji: '🗼',
+    title: '请人陪父母 London 一日游',
+    desc: '我那天 essay deadline。请人带父母 Big Ben + Tower Bridge + 中午中餐。',
+    cost: 90, energyGain: 18, actionGain: 1,
+    urgencyTrigger: (s) => !!s.flags?.parents_visited,
+    feedback: '一个 MA history 接单 £90 给你父母讲了 5 小时 London 历史。父母回 hotel 第一句话："那孩子比我儿子 / 女儿懂得多"。你假装生气其实开心。',
+  },
+
+  // 节日
+  {
+    id: 'post_xmas_alone_company', emoji: '🎄',
+    title: '请人圣诞节陪我做顿饭 + 视频家',
+    desc: '一个人过圣诞太冷清。请人来包饺子 + 一起视频家里。',
+    cost: 25, energyGain: 20, actionGain: 0,
+    urgencyTrigger: (s) => Math.ceil((s.day || 0) / 7) === 14 && !s.flags?.cssa_xmas_dinner,
+    feedback: 'CSSA 一个广州女生接单。她带了腊肠和油盐。两个人 4 小时做了 6 道菜 + 视频两边家长 + 拍合照。她临走说"明年圣诞还可以约"。',
+  },
+  {
+    id: 'post_birthday_cake_delivery', emoji: '🎂',
+    title: '请人给我做生日蛋糕送上门',
+    desc: '一个人在伦敦过生日。想要一个写中文名字的蛋糕。',
+    cost: 35, energyGain: 8, actionGain: 0,
+    urgencyTrigger: (s) => !!s.flags?.player_birthday_today,
+    feedback: '一个 Soho 私厨接单。8 inch 巧克力蛋糕 + 用奶油写你中文名 + 配了 1 支蜡烛 + 一张纸条 "在伦敦也要好好过生日"。',
+  },
+
+  // 找工作期
+  {
+    id: 'post_linkedin_review', emoji: '👔',
+    title: '请人 review 我 LinkedIn + 简历',
+    desc: '求职季前。需要 native 视角 + UK convention。',
+    cost: 30, academicGain: 5,
+    urgencyTrigger: (s) => Math.ceil((s.day || 0) / 7) >= 38 && Math.ceil((s.day || 0) / 7) <= 50,
+    feedback: 'BCG 一个 consultant 接单（她在 Link2Ur 副业）。1 小时改 LinkedIn headline + summary + experience bullets。改完她说："你 worth higher。别 undersell。"',
+  },
+  {
+    id: 'post_interview_mock', emoji: '🎤',
+    title: '请人帮我 mock 面试 1 小时',
+    desc: '后天 Goldman 一面。需要练 case + behavioral。',
+    cost: 50, academicGain: 8,
+    urgencyTrigger: (s) => Math.ceil((s.day || 0) / 7) >= 40 && Math.ceil((s.day || 0) / 7) <= 50,
+    feedback: 'McKinsey ex-consultant 接单。45 min case + 15 min feedback。她说你最大问题是 "structure 答案前 5 秒不停下来"。改了之后面试通过。',
+  },
+
+  // 通用 sanity
+  {
+    id: 'post_companion_lonely', emoji: '☕',
+    title: '请人陪我喝下午茶聊聊天',
+    desc: '没具体事。就是想跟人坐一下。',
+    cost: 15, energyGain: 8,
+    urgencyTrigger: (s) => (s.stats?.belonging ?? 50) <= 18,
+    feedback: 'Pret Bedford Square 一个 PhD Y2 接单 £15 来陪你 1 小时。你们没聊深的话。她临走说 "If you need this again just ping me, it doesn\'t have to be on the app." 你那一刻才意识到——Link2Ur 给了你 break 孤独最 dignified 的方式。',
+  },
 ];
 
 // ──────────────────────────────────────────────────────
@@ -329,16 +849,26 @@ function spawnTask(template, week, rng, idx) {
 }
 
 /**
- * Filter post templates to those available now (week + flag conditions).
+ * Filter post templates to those available now (week + flag + urgency).
+ * 返回 [{ ...post, urgent: boolean }]，urgent=true 的需要 UI 高亮 + 推送提醒。
  */
 export function availablePosts(state) {
   const week = Math.ceil(state.day / 7);
-  return LINK2UR_POST_TEMPLATES.filter((p) => {
-    if (p.minWeek && week < p.minWeek) return false;
-    if (p.maxWeek && week > p.maxWeek) return false;
-    if (p.requiresFlag && !state.flags?.[p.requiresFlag]) return false;
-    return true;
-  });
+  return LINK2UR_POST_TEMPLATES
+    .filter((p) => {
+      if (p.minWeek && week < p.minWeek) return false;
+      if (p.maxWeek && week > p.maxWeek) return false;
+      if (p.requiresFlag && !state.flags?.[p.requiresFlag]) return false;
+      // 有 urgencyTrigger 的 post 只在 trigger 满足时才显示
+      if (typeof p.urgencyTrigger === 'function') {
+        try { return !!p.urgencyTrigger(state); } catch (e) { return false; }
+      }
+      return true;
+    })
+    .map(p => ({
+      ...p,
+      urgent: typeof p.urgencyTrigger === 'function',
+    }));
 }
 
 // ──────────────────────────────────────────────────────
@@ -355,20 +885,6 @@ export function updateRating(currentRating, taskRating, completedCount) {
   return Math.round((currentRating * (1 - weight) + taskRating * weight) * 10) / 10;
 }
 
-// ──────────────────────────────────────────────────────
-// Discovery event — first time the player hears about Link2Ur
-// (placed in dailyLife / welcomeWeek-style — exported here for index.js)
-// ──────────────────────────────────────────────────────
-
-export const LINK2UR_DISCOVERY_EVENTS = {
-  flat: [
-    {
-      id: 'link2ur_discovery', minWeek: 3, maxWeek: 5,
-      title: 'CSSA 群里推 Link2Ur',
-      condition: ({ flags }) => !flags.link2ur_discovered,
-      body: 'CSSA 群里有人发了一个链接 + 推介："家人们 Link2Ur app 真心好用——留学生互相接单 / 发单。我上周代购挣了 £80，前天发个翻译 council 信的单 £15 一小时搞定。"\n\n群里 5 个人秒回 "+1 已经在用了"。\n\n你 Google 了一下：Link2Ur 是 2024 年起的留学生互助平台，伦敦活跃用户 8000+。',
-      effect: { energy: 1, belonging: 4, flag: 'link2ur_discovered' },
-      feedback: '你下载了 Link2Ur app。注册 + 上传 BRP 自拍审核——5 分钟通过。\n\n首页两个 tab：「接单」（赚钱）+「发单」（找人帮你）。\n\n你看着任务板。这是这一年第一次有人用一个 app 帮你解决"留学生具体问题"——不是 Tesco、Pret、Boots，是真正同辈互助。',
-    },
-  ],
-};
+// Discovery event removed — Link2Ur 改成 day-1 essential tool（见 state.js:32-34），
+// 不再走"W3-5 玩家偶然发现"的剧情。LINK2UR_DISCOVERY_EVENTS 之前是死代码（条件
+// !flags.link2ur_discovered 在 initialState 已为 true 就永不通过）。

@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import {
   LINK2UR_BRAND, LINK2UR_ACCEPT_TEMPLATES, LINK2UR_POST_TEMPLATES,
-  LINK2UR_DISCOVERY_EVENTS, generateBoard, availablePosts, updateRating,
+  generateBoard, availablePosts, updateRating,
 } from '../src/data/link2ur.js';
 import { reducer, initialState } from '../src/engine/state.js';
 
@@ -61,7 +61,7 @@ describe('Link2Ur · board generation', () => {
     // At W2, Bicester (minWeek 4) and personal_statement (minWeek 36) should not appear
     const earlyBoard = generateBoard(2, { rng: () => 0.5 });
     const ids = earlyBoard.map(t => t.templateId);
-    expect(ids).not.toContain('l2u_bicester_burberry');
+    expect(ids).not.toContain('l2u_bicester_coach');
     expect(ids).not.toContain('l2u_personal_statement');
 
     // At W40, both should be eligible (PS yes, Bicester yes)
@@ -155,12 +155,6 @@ describe('Link2Ur · reducer actions', () => {
   });
 });
 
-describe('Link2Ur · discovery event', () => {
-  test('discovery event in flat with link2ur_discovered flag', () => {
-    const ev = LINK2UR_DISCOVERY_EVENTS.flat.find(e => e.id === 'link2ur_discovery');
-    expect(ev).toBeDefined();
-    expect(ev.effect.flag).toBe('link2ur_discovered');
-    expect(ev.condition({ flags: {} })).toBeTruthy();
-    expect(ev.condition({ flags: { link2ur_discovered: true } })).toBeFalsy();
-  });
-});
+// Discovery event 已删除 — Link2Ur 改成 day-1 essential tool (state.js:32-34)。
+// 旧 LINK2UR_DISCOVERY_EVENTS 是死代码（initialState 已 set link2ur_discovered:true
+// 让条件永不通过）。整个 discovery 事件链已从 link2ur.js 移除。

@@ -19,7 +19,7 @@ function Stars({ rating }) {
 
 export function Link2UrView({
   board, completed, posted, rating, earnings, walletNow, actionsLeft, postsAvailable,
-  flags, gameState, onAccept, onPost, week,
+  flags, gameState, onComplete, onPost, week, onApply,
 }) {
   const [tab, setTab] = useState('accept');
   const [wallOpen, setWallOpen] = useState(false);
@@ -29,6 +29,12 @@ export function Link2UrView({
   const unlockedReviews = LINK2UR_REVIEWS.filter(r => {
     try { return !!r.condition(reviewState); } catch (_) { return false; }
   });
+
+  // Pending applications + rejected history (Phase 4 UI)
+  const pending = gameState?.link2urPending || [];
+  const rejected = gameState?.link2urRejected || [];
+  // 是否有 emergency post（urgent 标记的）—— 用于在 post tab 上加 red dot
+  const urgentPostCount = postsAvailable.filter(p => p.urgent).length;
 
   return (
     <div className="animate-fadein">
@@ -60,17 +66,26 @@ export function Link2UrView({
         <span>导出我的成就墙 · 朋友圈分享卡</span>
       </button>
 
-      {/* sub-tab switcher */}
-      <div className="grid grid-cols-3 gap-1 mb-3 text-xs">
+      {/* sub-tab switcher · 4 tabs */}
+      <div className="grid grid-cols-4 gap-1 mb-3 text-xs">
         <button onClick={() => setTab('accept')}
           className={`py-2 border ${tab === 'accept' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
           style={tab === 'accept' ? { borderColor: PRIMARY, color: PRIMARY } : {}}>
           📥 接单 · {board.length}
         </button>
         <button onClick={() => setTab('post')}
-          className={`py-2 border ${tab === 'post' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
+          className={`py-2 border relative ${tab === 'post' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
           style={tab === 'post' ? { borderColor: ACCENT, color: ACCENT } : {}}>
           📤 发单 · {postsAvailable.length}
+          {urgentPostCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full"
+              style={{ background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} />
+          )}
+        </button>
+        <button onClick={() => setTab('applications')}
+          className={`py-2 border ${tab === 'applications' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
+          style={tab === 'applications' ? { borderColor: '#eab308', color: '#eab308' } : {}}>
+          📋 申请 · {pending.length}
         </button>
         <button onClick={() => setTab('reviews')}
           className={`py-2 border ${tab === 'reviews' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
@@ -80,10 +95,15 @@ export function Link2UrView({
       </div>
 
       {tab === 'accept' && (
-        <AcceptList board={board} actionsLeft={actionsLeft} onAccept={onAccept} week={week} />
+        <AcceptList board={board} actionsLeft={actionsLeft}
+          onApply={onApply} rating={rating} completedCount={completedCount} week={week} />
       )}
       {tab === 'post' && (
         <PostList postsAvailable={postsAvailable} posted={posted} walletNow={walletNow} onPost={onPost} />
+      )}
+      {tab === 'applications' && (
+        <ApplicationsList pending={pending} rejected={rejected} day={gameState?.day}
+          actionsLeft={actionsLeft} onComplete={onComplete} />
       )}
       {tab === 'reviews' && (
         <ReviewList reviews={unlockedReviews} totalReviews={LINK2UR_REVIEWS.length} />
@@ -152,7 +172,106 @@ function Link2UrWallModal({ gameState, onClose }) {
   );
 }
 
-function AcceptList({ board, actionsLeft, onAccept, week }) {
+function ApplicationsList({ pending, rejected, day, actionsLeft, onComplete }) {
+  // 把 pending 拆成 等待中 / 已批准（可点完成）两组
+  const waiting = pending.filter(p => p.status !== 'approved');
+  const approved = pending.filter(p => p.status === 'approved');
+
+  if (pending.length === 0 && rejected.length === 0) {
+    return (
+      <div className="p-6 border border-current/20 text-center text-xs opacity-60 italic" style={{ lineHeight: '1.9' }}>
+        没有申请中的任务。<br/>
+        申请提交后客户通常 12-36h 内回复，批准的任务出现在这里 → 点"完成"开工。
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {approved.length > 0 && (
+        <div>
+          <div className="text-[10px] tracking-[0.2em] mb-1.5" style={{ fontFamily: 'monospace', color: '#22c55e' }}>
+            ✅ 客户已确认 · 点完成即开工 ({approved.length})
+          </div>
+          <div className="space-y-1.5">
+            {approved.map(p => (
+              <div key={p.taskId} className="p-2.5 border rounded text-xs"
+                style={{ borderColor: '#22c55e60', background: '#22c55e10' }}>
+                <div className="flex justify-between items-baseline gap-2 mb-1">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span>{p.emoji || '✅'}</span>
+                    <span className="font-medium truncate">{p.title}</span>
+                  </div>
+                  <span className="text-[10px] flex-shrink-0" style={{ fontFamily: 'monospace', color: '#22c55e' }}>£{p.reward}</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] opacity-70 mb-2" style={{ fontFamily: 'monospace' }}>
+                  <span>-{p.energyCost || 0} 精力 · 1 行动</span>
+                  <span>客户 D{p.approvedDay} 已确认</span>
+                </div>
+                <button
+                  onClick={() => onComplete && onComplete(p)}
+                  disabled={actionsLeft <= 0}
+                  className="w-full py-1.5 border text-xs tracking-[0.2em] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ borderColor: '#22c55e', color: '#22c55e', background: '#22c55e08' }}>
+                  {actionsLeft > 0 ? '完成 · 开工' : '行动已用完 · 明天再来'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {waiting.length > 0 && (
+        <div>
+          <div className="text-[10px] tracking-[0.2em] opacity-60 mb-1.5" style={{ fontFamily: 'monospace' }}>
+            ⏳ 等待客户回复 ({waiting.length})
+          </div>
+          <div className="space-y-1.5">
+            {waiting.map(p => (
+              <div key={p.taskId} className="p-2.5 border rounded text-xs"
+                style={{ borderColor: '#eab30850', background: '#eab30810' }}>
+                <div className="flex justify-between items-baseline gap-2 mb-1">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span>{p.emoji || '⏳'}</span>
+                    <span className="font-medium truncate">{p.title}</span>
+                  </div>
+                  <span className="text-[10px] flex-shrink-0" style={{ fontFamily: 'monospace', color: '#eab308' }}>£{p.reward}</span>
+                </div>
+                <div className="opacity-60 italic text-[10px]" style={{ lineHeight: '1.5' }}>
+                  申请已 {(day || 0) - p.appliedDay} 天 · 预计 12-36h 内回复
+                  {p.requirement && (
+                    <span className="ml-1">
+                      （门槛：{p.requirement.rating ? `评分≥${p.requirement.rating}` : ''}
+                      {p.requirement.count ? ` · 完成≥${p.requirement.count}` : ''}）
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {rejected.length > 0 && (
+        <div>
+          <div className="text-[10px] tracking-[0.2em] opacity-60 mb-1.5" style={{ fontFamily: 'monospace' }}>
+            ❌ 历史拒绝 ({rejected.length})
+          </div>
+          <div className="space-y-1.5">
+            {rejected.slice(0, 8).map(r => (
+              <div key={r.id} className="p-2 border border-current/20 rounded text-[11px] opacity-75">
+                <div className="flex justify-between items-baseline gap-2 mb-0.5">
+                  <span className="font-medium truncate">{r.title}</span>
+                  <span className="opacity-50 flex-shrink-0" style={{ fontFamily: 'monospace' }}>D{r.day}</span>
+                </div>
+                <div className="opacity-70 italic" style={{ lineHeight: '1.4' }}>{r.reason}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AcceptList({ board, actionsLeft, onApply, rating, completedCount, week }) {
   if (board.length === 0) {
     return (
       <div className="p-6 border border-current/20 text-center text-xs opacity-60 italic" style={{ lineHeight: '1.9' }}>
@@ -163,37 +282,70 @@ function AcceptList({ board, actionsLeft, onAccept, week }) {
   }
   return (
     <div className="space-y-2">
-      {board.map(t => (
-        <div key={t.id} className="p-3 border" style={{ borderColor: PRIMARY + '40' }}>
-          <div className="flex items-start gap-3">
-            <div className="text-2xl flex-shrink-0">{t.emoji}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-baseline gap-2">
-                <div className="text-sm font-medium">{t.title}</div>
-                <div className="text-base font-medium flex-shrink-0" style={{ color: PRIMARY, fontFamily: 'monospace' }}>£{t.reward}</div>
+      {board.map(t => {
+        // 所有任务都走"申请"流程 —— 不立即完成，等客户 12-36h 后回复 approve/reject。
+        // 有 requirement 的额外检查门槛是否满足，不满足直接 disable。
+        const hasReq = !!t.requirement;
+        const meetsBaseline = !hasReq || (
+          (!t.requirement.rating || rating >= t.requirement.rating) &&
+          (!t.requirement.count || completedCount >= t.requirement.count)
+        );
+        const borderColor = hasReq ? '#eab308' : PRIMARY;
+        return (
+          <div key={t.id} className="p-3 border" style={{ borderColor: borderColor + '60' }}>
+            <div className="flex items-start gap-3">
+              <div className="text-2xl flex-shrink-0">{t.emoji}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-baseline gap-2">
+                  <div className="text-sm font-medium">{t.title}</div>
+                  <div className="text-base font-medium flex-shrink-0" style={{ color: PRIMARY, fontFamily: 'monospace' }}>£{t.reward}</div>
+                </div>
+                <div className="text-xs opacity-70 italic mt-1" style={{ lineHeight: '1.6' }}>{t.desc}</div>
+                {hasReq && (
+                  <div className="mt-1.5 text-[10px] flex flex-wrap gap-1.5"
+                    style={{ fontFamily: 'monospace' }}>
+                    {t.requirement.rating && (
+                      <span className="px-1.5 py-0.5 rounded"
+                        style={{
+                          background: rating >= t.requirement.rating ? '#22c55e25' : '#ef444425',
+                          color: rating >= t.requirement.rating ? '#22c55e' : '#ef4444',
+                        }}>
+                        评分 ≥ {t.requirement.rating}（你 {rating.toFixed(1)}）
+                      </span>
+                    )}
+                    {t.requirement.count && (
+                      <span className="px-1.5 py-0.5 rounded"
+                        style={{
+                          background: completedCount >= t.requirement.count ? '#22c55e25' : '#ef444425',
+                          color: completedCount >= t.requirement.count ? '#22c55e' : '#ef4444',
+                        }}>
+                        完成 ≥ {t.requirement.count}（你 {completedCount}）
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="flex justify-between items-center mt-2 text-xs opacity-60" style={{ fontFamily: 'monospace' }}>
+                  <span>-{t.energyCost} 精力 · 接到后扣行动</span>
+                  <span><Stars rating={t.rating} /></span>
+                </div>
+                <button
+                  onClick={() => onApply(t)}
+                  disabled={!meetsBaseline}
+                  className="w-full mt-2 py-1.5 border text-xs tracking-[0.2em] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{
+                    borderColor,
+                    color: borderColor,
+                    background: 'transparent',
+                  }}>
+                  {meetsBaseline
+                    ? (hasReq ? '申请（高门槛 · 客户审核 ~24h）' : '申请（等客户确认 ~24h）')
+                    : '门槛不够 · 点亮才能申请'}
+                </button>
               </div>
-              <div className="text-xs opacity-70 italic mt-1" style={{ lineHeight: '1.6' }}>{t.desc}</div>
-              <div className="flex justify-between items-center mt-2 text-xs opacity-60" style={{ fontFamily: 'monospace' }}>
-                <span>-{t.energyCost} 精力 · 1 行动</span>
-                <span><Stars rating={t.rating} /></span>
-              </div>
-              <button
-                onClick={() => onAccept(t)}
-                disabled={actionsLeft < (t.actionCost || 1)}
-                className="w-full mt-2 py-1.5 border text-xs tracking-[0.2em] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{
-                  borderColor: PRIMARY,
-                  color: PRIMARY,
-                  background: 'transparent',
-                }}
-                onMouseEnter={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.background = PRIMARY; e.currentTarget.style.color = 'white'; } }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = PRIMARY; }}>
-                接单
-              </button>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -255,16 +407,29 @@ function PostList({ postsAvailable, posted, walletNow, onPost }) {
       <div className="text-xs opacity-60 italic mb-1" style={{ lineHeight: '1.7' }}>
         付钱让别人替你跑——花钱省时间。每个任务只能发一次。
       </div>
-      {remaining.map(p => {
+      {/* 紧迫 posts 先排前面 */}
+      {remaining.sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0)).map(p => {
         const cantAfford = walletNow < p.cost;
+        const borderColor = p.urgent ? '#ef4444' : ACCENT;
         return (
-          <div key={p.id} className="p-3 border" style={{ borderColor: ACCENT + '40' }}>
+          <div key={p.id} className="p-3 border relative"
+            style={{
+              borderColor: borderColor + (p.urgent ? '90' : '40'),
+              background: p.urgent ? '#ef444408' : undefined,
+            }}>
+            {p.urgent && (
+              <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded text-[9px] font-bold"
+                style={{ background: '#ef4444', color: 'white', letterSpacing: '0.1em' }}>
+                ⚠ 急
+              </div>
+            )}
             <div className="flex items-start gap-3">
               <div className="text-2xl flex-shrink-0">{p.emoji}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline gap-2">
                   <div className="text-sm font-medium">{p.title}</div>
-                  <div className="text-base font-medium flex-shrink-0" style={{ color: ACCENT, fontFamily: 'monospace' }}>-£{p.cost}</div>
+                  <div className="text-base font-medium flex-shrink-0"
+                    style={{ color: borderColor, fontFamily: 'monospace' }}>-£{p.cost}</div>
                 </div>
                 <div className="text-xs opacity-70 italic mt-1" style={{ lineHeight: '1.6' }}>{p.desc}</div>
                 <div className="text-xs opacity-60 mt-2" style={{ fontFamily: 'monospace' }}>

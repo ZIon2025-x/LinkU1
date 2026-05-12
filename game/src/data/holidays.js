@@ -1,34 +1,5 @@
-export const HOLIDAY_EVENTS = {
-  xmas: [
-    {
-      id: 'xmas_first_morning',
-      title: '12月23号清晨',
-      body: '宿舍楼空了。隔壁 Tom 凌晨 5 点就出门了，家在 Manchester。Mei 姐的店关门 4 天。Tesco 缩短营业时间。\n\n你坐在床上，看着窗外灰白的天。',
-      isAuto: true,
-    },
-    {
-      id: 'xmas_alone',
-      title: '一个人的圣诞',
-      body: '12月25日。整个伦敦像被按了静音键。地铁停运。街上没有人。',
-      choices: [
-        { label: '看一整天的剧', effect: { energy: 5, belonging: -8, academic: -2 },
-          feedback: '你看完了一整季 The Crown。最后一集结束的时候，外面已经天黑了。你不知道现在是几点。' },
-        { label: '出门走一走', effect: { energy: -5, belonging: 4 },
-          feedback: '你沿着泰晤士河走了 2 小时。一个人都没有。但路灯下的雪粒在飞。这一刻很安静，很安静。' },
-        { label: '给爸妈打三小时电话', effect: { energy: -3, belonging: 18 },
-          feedback: '妈妈给你看年夜饭。爸爸难得地开了视频。你哥的孩子叫了一声"小姨/小姨夫"。你哭了，他们以为是网卡。' },
-      ],
-    },
-  ],
-  easter: [
-    {
-      id: 'easter_spring',
-      title: '伦敦的春天',
-      body: '4月初。海德公园的水仙开了。Pret 的橱窗里出现了"Hot Cross Buns"。你换下了冬天的大衣。\n\n这是你第一次看到伦敦的另一面。',
-      isAuto: true,
-    },
-  ],
-};
+// 旧版 HOLIDAY_EVENTS 已删 —— 完全被 HOLIDAY_CHOICES + HOLIDAY_SECRETS 替代。
+// 假期屏直接呈现 4-5 个主要选择 + 高分支 secret 解锁，不需要再独立的 auto day-event。
 
 export const HOLIDAY_CHOICES_XMAS = [
   { id: 'stay_alone', label: '🏠 留在伦敦，一个人过', desc: '安静、省钱、可能很孤独',

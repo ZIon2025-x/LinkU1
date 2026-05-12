@@ -71,7 +71,7 @@ export const STRANGER_EVENTS = [
     body: '阿强突然在群里发了一张照片——他和一个戴眼镜的女生站在一起，桌上有戒指。\n\n"订婚了。你那次跟我说的话我记着的。"',
     choices: [
       { label: '"恭喜 婚礼记得叫我"', effect: { belonging: 8, flag: 'aq_wedding_invite' },
-        feedback: '阿强回："必须的。"\n\n半年后他真的把婚礼请柬发到了群里。三亚。机票他报销。你想这就是中国留学生圈——一切都荒诞，但情谊都是真的。' },
+        feedback: '阿强回："必须的。"\n\n半年后他真的把婚礼请柬发到了群里。山东老家，端午。"你要是回国能赶上 我接你机场。"\n\n你看到那条消息坐了 1 分钟没回。你想这就是中国留学生圈——一切都荒诞，但情谊都是真的。' },
       { label: '"恭喜兄弟 / 姐妹"', effect: { belonging: 4 },
         feedback: '阿强回了一个鞠躬的表情。' },
     ],
@@ -94,8 +94,8 @@ export const STRANGER_EVENTS = [
     title: '婷婷拿到 offer',
     body: '婷婷发消息："我拿到了 Goldman Sachs 的 offer。我想请你吃饭——你那次愿意来，对我意义很大。"',
     choices: [
-      { label: '去', effect: { energy: -3, wallet: 0, belonging: 15, flag: 'tt_offer_dinner' },
-        feedback: '她带你去了 Aqua Shard 31 楼。窗外伦敦的灯像撒了一地。\n\n她说："我面试的时候紧张到哭。后来我想起你那次跟我朋友们说话的样子——你不会装。我学了你那一点。"\n\n你愣了。原来你也教过别人东西。' },
+      { label: '去', effect: { energy: -3, wallet: -15, belonging: 15, flag: 'tt_offer_dinner' },
+        feedback: '她带你去 Borough Market 一家不算贵的西西里小馆——AA 制，人均 £35。窗外是 Southwark 的雨。\n\n她说："我面试的时候紧张到哭。后来我想起你那次跟我朋友们说话的样子——你不会装。我学了你那一点。"\n\n你愣了。原来你也教过别人东西。' },
       { label: '"恭喜 改天再聚"', effect: { belonging: 3 },
         feedback: '婷婷说"好"。下次没真的约。' },
     ],
@@ -119,7 +119,7 @@ export const STRANGER_EVENTS = [
     body: '老周："我老婆来看我 待 5 天。她想见见你 她说 \'那个帮老周改 essay 的小同学\'。我们家请你吃饭 周日。"',
     choices: [
       { label: '去', effect: { energy: -5, wallet: -10, belonging: 18, flag: 'lz_wife_dinner' },
-        feedback: '老周老婆 38 岁，温柔得过分。她做了一桌东北菜。她不停地夹菜给你："你比我们家儿子还瘦。"\n\n她小声说："谢谢你。他在这边一个人 没朋友。我每天担心他 但你来了之后他朋友圈又开始更新了。"\n\n你说不出话来。你只是低头吃了她做的酸菜炖排骨。' },
+        feedback: '老周妻子 38 岁，话不多。她在老周临时租的 Airbnb 厨房里做了两道菜——一锅酸菜炖排骨 + 一盘凉拌豆腐皮。\n\n吃饭中段她抬头看了你一眼："谢谢你帮他改论文。" 然后又低头吃饭。\n\n你说不出话来。你想：原来很多关心是从一个不善表达的人手里递过来的。' },
       { label: '"我那天有事"', effect: { belonging: -3 },
         feedback: '老周说"没事 下次"。但他妻子飞回去之后，他在群里安静了很久。' },
     ],

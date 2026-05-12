@@ -21,31 +21,98 @@ export const ENDINGS = [
   },
 
   // ============================================================
-  // 隐藏专属结局 — Link2Ur 内部员工
-  // 条件极高：评分 ≥ 4.8 + 接单 ≥ 30。比 sarah_double 优先级更高。
+  // 隐藏专属结局 — Link2Ur 合伙人 #03
+  // 触发条件：Priya 的 ops_partner storyline 走完 + 接单 ≥ 30。
   // ============================================================
   {
-    id: 'link2ur_employee',
-    condition: ({ link2urRating = 0, link2urCompletedCount = 0 }) =>
-      link2urRating >= 4.8 && link2urCompletedCount >= 30,
+    id: 'link2ur_partner',
+    // `l2u_partner_accepted` 本身就意味着玩家走完了 50 单 chat → ambassador → partner storyline。
+    // 30 这个旧阈值跟 50 阈值的 chat 触发条件矛盾（永远被 50 覆盖），删掉。
+    condition: ({ flags, link2urRating = 0 }) =>
+      !!flags?.l2u_partner_accepted && link2urRating >= 4.8,
     ending: {
-      title: '内部员工 · 03 号', subtitle: 'Employee #003',
+      title: '合伙人 · #03', subtitle: 'Co-founder, Link2Ur',
       text:
-        '毕业三年后。你在 Link2Ur 伦敦总部上班——员工编号 003。\n\n' +
-        '当年面试你的运营总监原话："我们后台数据看了你那一年。30+ 单 4.9 评分。'
-        + '更稀奇的是——你接的 18% 是亏本单（路费比报酬高）。系统标过你 7 次"经济不理性"。'
-        + '我们就想见见这个人。"\n\n你笑了。你没解释——但你心里知道。\n\n'
-        + '那不是不理性。那是当时的你 22 岁，刚从 Heathrow 走出来 8 个月，被一个 Aisha / 一个 CSSA 学姐 / 一个 Mark 接住过——'
-        + '你只是想替系统记住"被接住"是什么感觉。\n\n'
-        + '现在你在 Link2Ur 主管"新生互助"模块的产品设计。你写过的一个 spec 标题叫'
+        '毕业两年后。Old Street 一间小办公室——Link2Ur 创始团队 7 个人。你是 #03 合伙人。\n\n'
+        + 'Priya 当年面试你的原话不像 HR："你那一年我们看过后台数据。30+ 单 4.9 评分。'
+        + '更稀奇的是——你接的 18% 是亏本单（路费比报酬高）。系统标过你 7 次\'经济不理性\'。'
+        + '我们想找的人就是这种——你不是 calculated optimizer，你是把别人接住的人。"\n\n'
+        + '你没解释——但你心里知道。\n\n'
+        + '那不是不理性。那是当时的你 22 岁，刚从 Heathrow 走出来 8 个月，'
+        + '被一个 Sarah / 一个 CSSA 学姐 / 一个 Mei 姐接住过——你只是想替系统记住"被接住"是什么感觉。\n\n'
+        + '现在你跟 Priya 在 Old Street 那个不到 80 平米的 office 里——你拿 4% equity + £40k 工资 + 决策权。'
+        + '你 own "新生互助" 模块整条产品线。你写过的一个 spec 标题：'
         + '《如何让一个刚下飞机的孩子在 8 个月内觉得 "我没有掉下去"》。\n\n'
-        + '没人在公司内部 push 这个项目，但 CEO 看完 spec 当天给你升了 senior。'
-        + '她说："我们没法保证每个新生都有一个 Mei 姐。但我们至少可以保证有一个 app。"\n\n'
+        + 'Priya 看完 spec 那天，她在白板上写：'
+        + '"我们没法保证每个新生都有一个 Mei 姐。但我们至少可以保证有一个 app。"\n\n'
+        + '她把白板拍了照，发给你 + 其它 5 个合伙人。配一句话："这就是 Link2Ur 的 mission statement。"\n\n'
         + '你下班走出 Old Street 站。伦敦的 5 月，天还亮着。\n\n'
         + '你想起一年前那个在 Bloomsbury Surgery 排队取药的下午——\n\n'
-        + '那时候你不知道，原来你后来会站在桌子的另一头。',
+        + '那时候你不知道，原来你后来会跟当年帮你做这个 app 的人一起 own 这个 app。',
     },
-    allowLink2UrEcho: false,  // 这个 ending 本身就是 Link2Ur 主线，不再加 echo
+    allowLink2UrEcho: false,
+  },
+
+  // ============================================================
+  // 隐藏结局 — 通过 Link2Ur 试错发现 passion → 入职正规公司
+  // 条件：完成 ≥ 10 种不同 task type + l2u_passion arc 走完
+  // ============================================================
+  {
+    id: 'link2ur_passion_found',
+    condition: ({ flags, link2urCompleted = [] }) => {
+      if (!flags?.l2u_passion_chosen) return false;
+      // t.type 是任务类别 (shopping/digital/cooking/...)，~12 个；要求接触过 ≥ 8 类才走"试错发现"叙事。
+      // 兼容老存档：type 缺失时回退到 templateId，至少不会全部归并成 1。
+      const uniqueTypes = new Set(link2urCompleted.map(t => t.type || t.templateId).filter(Boolean));
+      return uniqueTypes.size >= 8;
+    },
+    allowLink2UrEcho: false,
+    ending: {
+      title: '我喜欢的事', subtitle: 'I Found What I Like',
+      text:
+        '毕业后第 14 个月。你坐在 Soho 一家 design studio 的角落工位——你 own 一条 packaging design 产品线。\n\n'
+        + '你怎么走到这里的——这套故事你跟 5 个人讲过：\n\n'
+        + '本来你想做 finance（家里说的）。但你在 Link2Ur 上接过 32 单 12 种不同的活。'
+        + '其中 8 单是 PPT 美化 / logo 设计 / 婚礼跟拍 / 餐厅菜单排版——你发现你**接这些活的时候不累**。'
+        + '其它 24 单（代购 / 跑腿 / 翻译）做完你只想躺。\n\n'
+        + '第 28 单完成那天你给妈打电话："妈我可能不进咨询公司了 我想试 design 方向。"\n'
+        + '她沉默 8 秒。然后说："你自己想清楚的话 妈支持。但是要交得起房租。"\n\n'
+        + '你去面试这家 studio 时 portfolio 里有 11 个 Link2Ur 作品 + 5 个学校项目。creative director 看完说：\n'
+        + '"我没见过 portfolio 里有这么多 paid work 的 graduate fresh out。"\n\n'
+        + '你 entry-level 工资 £29k——比咨询 BCG £55k 少一半。'
+        + '但你早上 8 点醒来不需要 caffeine 就能坐到桌前。\n\n'
+        + '你后来告诉妈："我现在的工资是 BCG 一半 但是我能做 30 年。"\n\n'
+        + '——这句话她在妈妈群里转发过。',
+    },
+  },
+
+  // ============================================================
+  // 隐藏结局 — 达人 → 自己创业（Link2Ur Ambassador 路径）
+  // ============================================================
+  {
+    id: 'link2ur_daren_creator',
+    condition: ({ flags, link2urRating = 0, link2urCompletedCount = 0 }) =>
+      !!flags?.l2u_daren_business_launched && link2urRating >= 4.9 && link2urCompletedCount >= 30,
+    allowLink2UrEcho: false,
+    ending: {
+      title: '我自己的店', subtitle: 'Founder',
+      text:
+        '毕业后第 18 个月。Soho 一家小工作室——你的 client list 12 个固定客户 + 月稳定 £5,200。\n\n'
+        + 'Link2Ur 平台后台给你打了红色 "TOP 0.3% Ambassador" 标。每个月有 60+ 新 client request 你 inbox——'
+        + '你只接 8 个。剩下的转给你 onboarding 进来的 4 个 Linker 学妹（每单你抽 15%）。\n\n'
+        + '你现在不接代购了。也不接 brp 陪同了。你专门做 startup brand identity + PPT。\n'
+        + '40-60 小时 / 周 / 月入 £5k+。你雇了一个 part-time 学弟做账。\n\n'
+        + '上个月你给 Companies House 注册了 limited company：「[你的名字] Studio Ltd」。'
+        + 'PSW 那 2 年攒的客户 + Link2Ur 30 单 4.9 评分 + 妈给你的 £8k 启动资金——\n'
+        + '你成了那种"在 Link2Ur 起家的"案例。Priya 在某次 Ambassador summit 上提了你一句。\n\n'
+        + '你毕业前那 30 单接得不算计 ROI——'
+        + '你接过一单 Hyde Park 遛狗 £15 / 1 小时，比你 Mei 姐打工还低；'
+        + '但你也接过一单 Bicester 代购 4 个 Burberry £180 / 一天。\n'
+        + '混搭着接了一年 12 种活，你发现自己**比别人会的事多 5 倍**——'
+        + '这就是创业 founder 的 baseline。\n\n'
+        + '你给妈视频："妈 我开公司了 你跟爸说一声。"\n'
+        + '她："好。你爸明天给亲戚群发。"',
+    },
   },
 
   // ============================================================
@@ -91,7 +158,8 @@ export const ENDINGS = [
   },
   {
     id: 'mei_double',
-    condition: ({ flags }) => flags.mei_family && flags.mei_manager,
+    // mei_manager 来自 holidays.js (Easter 4 周代班), mei_manager_path 来自 meiWork.js (W24+ promotion)
+    condition: ({ flags }) => flags.mei_family && (flags.mei_manager || flags.mei_manager_path),
     ending: {
       title: 'Lucky Star 的少东家', subtitle: "Auntie's Heir",
       text: '毕业那天 Mei 姐没去你的毕业典礼。"姨忙着开第二家店呢。"\n\n第二家店开在 Camden。你帮她设计了菜单，做了 logo，谈下了房租。开业那天 Mei 姐让你站在她旁边剪彩。\n\n她说："我儿子不学这行，他们要做 software engineer。" 然后她把一份合同推到你面前。"30% 干股。你管伦敦扩张。我管福建货源。"\n\n你看着她。她说："傻孩子哭什么。"\n\n你说："姨..."\n\n她说："叫姨我就给你 35%。"\n\n5 年后 Lucky Star 在伦敦有 7 家店。Mei 姐成了你婚礼上的证婚人。她在台上说："这孩子第一次走进我店里的时候，瘦得跟根筷子似的..." 你笑着哭了。',
@@ -208,6 +276,16 @@ export const ENDINGS = [
       text: '毕业后 4 年。你在杭州。你听说林可儿 / 林楠还在伦敦——拿了 ILR，做着她 / 他喜欢的工作，跟一个 American 在一起。\n\n你不嫉妒，也不后悔。\n\n你只是偶尔在 LinkedIn 上看到 ta 的更新——5 年工作纪念、升职、买房——心里有一种"那条路我没走"的轻微空缺。\n\n你想：感情不是数学，没有正确答案。我们都对自己诚实过。这是最好的版本了。',
     },
   },
+  {
+    // friend-zone 玩家之前没有专属 ending —— linnan_4-5 章节被 linnan_dating 锁，导致
+    // 这条路径的玩家全部 fall through 到主结局。补一个温情的 friend ending。
+    id: 'linnan_friends_for_life',
+    condition: ({ flags }) => !!flags.linnan_friend_zoned,
+    ending: {
+      title: '一段没发生的爱情', subtitle: 'The One That Stayed Friends',
+      text: '毕业后 2 年。你和林可儿 / 林楠还偶尔互发消息——但已经不像那年 Nando\'s 第一次坐对面那样了。\n\nta 找到了一个真正合适的 partner——你也是。你们去 ta 婚礼那天你坐在 row 3。司仪问 "anyone object"——你心里有 0.5 秒的空白。然后笑出来。\n\n散场 ta 走过来抱了你一下："谢谢你那年没勉强。" 你说："谢谢你那年说出来。"\n\n回程 tube 上你想——南岸那一晚的"我们做朋友更好"——是你这一年说过最艰难也最诚实的一句话。\n\n友谊不是 fallback。是另一种完成。',
+    },
+  },
 
   // ============================================================
   // Tier 3 — 原稀有结局
@@ -275,9 +353,45 @@ export const ENDINGS = [
       text: '你毕业的时候存款比来的时候还多。你在中餐馆、奶茶店、代购、家教之间来回切换。\n\n你的英语进步很慢，因为你说得最多的是"哥要不要加波霸"。\n\n但你不后悔。你证明了自己可以靠自己活下来。',
     },
   },
+  // postGrad 路径分流（在 catch-all 之前，保证选了对应路径的玩家拿到对应叙事）
+  {
+    id: 'returned_civil_service',
+    condition: ({ flags }) => !!flags.returned_civil_service,
+    ending: {
+      title: '回国选调那一年', subtitle: 'Returned',
+      text: '你毕业典礼一周后就飞回去了。简历上"MSc, [University]" 那一行，在体制里既没人多看一眼，也没人少看一眼。\n\n你被分到一个三四线市的副科岗——通勤 20 分钟、午饭食堂、下午 5:30 下班。第一年你 cousin 问你"伦敦那种生活不想念吗"——你想了 3 秒，没回答。\n\n但每个周末你妈让你吃饭，邻居姨第一句话是"你这么帅 / 漂亮怎么还不结婚"，你想——某种 belonging 比任何 Cotswolds 周末更稳。\n\n你那一年终于学会把伦敦放在一个抽屉里——偶尔打开看一眼，然后关上。',
+    },
+  },
+  {
+    id: 'applied_phd',
+    condition: ({ flags }) => !!flags.applied_phd && !flags.stayed_uk_grad,
+    ending: {
+      title: 'DPhil 的第一年', subtitle: 'PhD',
+      text: '你 11 月提交 PhD 申请，2 月拿到一个 MPhil offer + scholarship（不是 DPhil，但有 funding）。\n\nWhitmore 退休前给你写了那封 reference——他后来邮件里说"That letter was the most over-qualified you\'ve ever been described."\n\nMSc 毕业后你直接进入了 PhD 的 reading list 和 supervisor meeting。3 年后你坐在 viva 那间小屋。10 年后你回头看，那个 22 岁刚下飞机的你做了一个改变后面 12 年的决定。',
+    },
+  },
+  {
+    id: 'psw_part_time_grind',
+    condition: ({ flags }) => !!flags.psw_part_time_grind && !flags.stayed_uk_grad,
+    ending: {
+      title: 'PSW · 一个 Costa shift 接一个', subtitle: 'Grinding',
+      text: '你拿了 PSW。但 sponsor 工签的 offer 一直没等到。\n\n你在 Costa 早班 5am-11am + 一家咨询公司 part-time research assistant 9 小时 / 周——加起来勉强够 Hackney studio £900/月 + bills + Tesco basic。\n\n你给妈视频时说"还在找"。她说"不行就回来"。你笑着说"再 1 年"——这一句话你说了 2 年。\n\n第 18 个月你拿到一个 mid-size firm 的 Skilled Worker offer——比目标晚了 18 个月，但是你自己拿下的。\n\n你回头看 Costa 那几百杯 latte——你没浪费它们。每一杯都是 commitment。',
+    },
+  },
+  {
+    id: 'returned_home_default',
+    // 没拿 PSW 又没走选调/PhD 的玩家，默认是回国（不要假设"留下了"）
+    condition: ({ flags }) =>
+      !flags.stayed_uk_grad && !flags.applied_phd && !flags.psw_part_time_grind &&
+      !flags.returned_civil_service && !!flags.no_psw,
+    ending: {
+      title: '回去吧', subtitle: 'Going Home',
+      text: '你没申请 PSW。\n\n7 月最后一周你打包 4 个箱子——两箱书 + 一箱旧衣服 + 一箱伦敦不舍得扔的杂物（一张 Pret loyalty 卡、半盒 Yorkshire Tea、Whitmore 那张 reference letter 复印件）。\n\n国内的接机是你爸——他比你来英国前老了一点。从机场到家的车上他没说话太多，只问了一句"瘦了吗"。\n\n你回家睡了 14 小时。醒来下楼，妈在厨房——番茄炒蛋——那一刻你知道这一年的某种重量放下来了。\n\n伦敦没消失。它只是回到了一个抽屉里。',
+    },
+  },
   {
     id: 'staying',
-    condition: () => true,  // catch-all
+    condition: () => true,  // catch-all — 默认假设玩家走了 PSW 留下
     ending: {
       title: '留下来', subtitle: 'Staying',
       text: '你申请了毕业生工签，签证批了。你找了一份不算理想但能糊口的工作，搬到了 zone 4 一个更便宜的房子。\n\n你成了那种"已经在英国五年了"的人——朋友圈里偶尔出现，过年的时候微信群里说"今年又不回了"。\n\n你已经是一个永久的异乡人。这不是失败，也不是胜利。这只是，你的人生现在的样子。',
@@ -297,6 +411,15 @@ export const SPECIAL_ENDINGS = {
   broke: () => ({
     title: '回去', subtitle: 'Going Home',
     text: '你撑不下去了。机票订在两周后。\n\n你给爸妈打电话，没敢说真话。',
+  }),
+  stress_breakdown: () => ({
+    title: '压垮了', subtitle: 'Burnout',
+    text:
+      '你在 ensuite 床上躺了 3 天。dissertation 没动。GP 给你开了 7 天 sick note，但学校 Wellbeing 说"建议 medical interruption 一年"。\n\n'
+      + '你打电话给妈。她没问为什么。她只说"妈给你订机票"。\n\n'
+      + '一年后你回伦敦完成剩下的事——那次的你和现在的你不一样了。你以前不知道一个人能"积"出 burnout，'
+      + '以前以为努力就能撑过去。\n\n'
+      + '伦敦教你的：求救不丢人。Link2Ur 也好、Sarah 也好、Mei 姐也好——他们都在那里。是你没去找。',
   }),
 };
 

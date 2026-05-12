@@ -1,6 +1,6 @@
 # 异乡 · AI 手绘图生成指南
 
-**总数**：59 张图
+**总数**：80 张图（含 1.A 节后期补充 21 张成就）
 **目标尺寸 / 文件名**：见每节
 **保存位置**：`game/src/assets/illustrations/{achievements,locations,npcs,scenes,misc}/`
 
@@ -21,7 +21,7 @@
 
 ---
 
-# 第 1 阶段：成就卡插画（20 张）
+# 第 1 阶段：成就卡插画（20 张主线 + 21 张 1.A 后期 = 41 张）
 
 **规格**：1080 × 1080 px 正方形，主体居中留 5% 边距，深色背景 + 浅色主体反差。
 **文件名**：保存为 `achievement-{id}.png`，放进 `assets/illustrations/achievements/`
@@ -84,7 +84,7 @@
 > 一只亚洲面孔的手在手机屏上点 "确认转账"。屏幕显示 "¥2,000" 金额（数字模糊化但能感知）。手背有点累的痕迹。背景是 ensuite 单人间窗外英国阴天。
 
 ### 16. `achievement-mei_family.png` — Mei 姐家圣诞夜
-> 圆形中式餐桌，桌上 17 道菜（红烧肉、白切鸡、蒸鱼、青菜等），4 个人围坐——Mei 姐 + 她沉默老公 + 两个 ABC 儿子（10 岁 + 8 岁）+ 一个亚洲留学生（背影）。福州小红砖房客厅暖光。
+> 圆形中式餐桌，桌上 17 道菜（红烧肉、白切鸡、蒸鱼、青菜等），5 个人围坐——Mei 姐 + 她沉默老公 + 两个 ABC 儿子（12 岁 + 8 岁）+ 一个亚洲留学生（背影）。Croydon 小红砖房客厅暖光。
 
 ### 17. `achievement-oxford_ref.png` — 牛津录取信
 > 一封打开的牛津大学 Oxford DPhil offer letter（不写完整文字，只示意校徽），叠在 Whitmore 写的推荐信草稿上。一滴泪痕在纸上。背景模糊有 Christ Church 学院尖塔剪影。
@@ -97,10 +97,79 @@
 > Cotswolds 教堂前 Sarah 的婚礼场景，远景。新娘转头眨眼那一瞬。主角作为伴娘 / 伴郎站在旁边远景。秋天树叶。
 
 ### 19. `achievement-aditi_double.png` — 孟买信封
-> 一封蓝色 airmail 信封从印度寄来，盖了 5 个国际邮戳。一只手在拆封。背景是多伦多公寓窗外飘雪 + 一杯咖啡。
+> 一封蓝色 airmail 信封从印度寄来，盖了 5 个国际邮戳。一只手在拆封。背景是伦敦公寓窗外阴天 + 一杯 chai（Aditi 教过的配方）。
 
 ### 20. `achievement-linnan_forever.png` — Hackney 二居二人组
 > Hackney 公寓阳台地上，两双不同尺码的拖鞋整齐摆着（一双偏大、一双偏小），远景看到伦敦天际线 + 朝霞。
+
+---
+
+## 1.A 后期补充成就卡（21 张 · 反诈 / 节日 / freelance / 政治参与扩展线）
+
+**规格 / 风格**：跟前 20 张一致 —— 1080 × 1080 px，主体居中，深色背景 + 浅色主体，水彩 + 钢笔。
+
+### 21. `achievement-mooncake_received.png` — 中秋节收到月饼
+> 一块切开的莲蓉双黄月饼放在白瓷小碟上，旁边一杯桂花茶冒着热气。背景模糊一扇 ensuite 窗外伦敦阴天月亮。月饼包装纸 "Loon Fung" 字样模糊化。
+
+### 22. `achievement-pdf_resisted.png` — 拒绝代写论文
+> 一台 MacBook 屏幕一半显示微信代写中介对话框（"包过 distinction £600"），右边一只亚洲面孔的手按下黑色 BLOCK 按钮。屏幕外是 SOAS 图书馆 4 楼一角 + 一杯凉了的 Pret latte。
+
+### 23. `achievement-pride_ally.png` — Pride London ally
+> Soho Old Compton Street 街景剪影，前景一只手举着小彩虹旗，旗子边缘有水彩晕染。地面湿润反光（刚下完雨）。背景人潮 silhouette。彩虹只在旗子上，其余画面保持暖色水彩怀旧调。
+
+### 24. `achievement-mei_soho_witnessed.png` — Mei 姐 1995 故事
+> 中餐馆打烊后的小桌，两杯热茶摆着（已凉），一只 1995 年款的旧 Nokia 手机放在桌角。墙上挂日历是 1996 年。窗外是 Gerrard Street 老照片质感（70% 怀旧 30% 现实）。Mei 姐人不在画面中，只有她的围裙搭在椅背上。
+
+### 25. `achievement-scam_consul_resisted.png` — 抗住假大使馆电话
+> 一只亚洲面孔的手挂断 iPhone 电话的瞬间，屏幕显示 "+44 020 79..." 红色 END。手指悬在 BLOCK 按钮上方。背景模糊 ensuite 桌面，桌上散落写着"假冒大使馆话术"的便签纸。
+
+### 26. `achievement-scam_courier_resisted.png` — 抗住假快递骗局
+> 一台 iPhone 屏幕显示 SMS："Royal Mail 包裹滞留..."，后面带 ".cn/verify" 假域名（链接画红圈圈出）。一只手按删除按钮。桌上 Royal Mail 真红色信件作为参照对比。
+
+### 27. `achievement-scam_recruiter_resisted.png` — 抗住假 Goldman recruiter
+> LinkedIn 界面截图风格 — Olivia Chen 假头像（Goldman Sachs Asset Management 标签），右边浮一个 Action Fraud report number reference。一只手在屏幕上按 Report / Block 按钮。整体 desaturated 灰蓝调。
+
+### 28. `achievement-scam_pig_resisted.png` — 抗住杀猪盘
+> Hinge app 界面 unmatch 那一秒，屏幕显示 "Daniel" / "Diana" 头像缩成一个红色叉。前景一杯没动过的 oat latte（凉了起膜）+ 一本摊开在桌上的 Murakami 签名版书（5 周前对方寄来装情侣的"礼物"）。墙上挂年历显示过去 5 周被划掉。
+
+### 29. `achievement-scam_pig_therapy.png` — NHS Talking Therapies CBT
+> 一张 NHS 蓝色 talking therapies 引导卡片摆在咨询室桌上，旁边有一杯咨询师递过来的玻璃杯水（杯边有水珠），桌角放一盒 Kleenex。柔黄落日光从百叶窗缝隙穿过。
+
+### 30. `achievement-scam_cosmetic_resisted.png` — 抗住美妆 MLM
+> Notting Hill 公寓门外街景，一只穿着米色大衣的背影正离开门口（脚步剪影），手里握着一支没拆封的 Charlotte Tilbury 唇膏 — 似乎要扔进路边垃圾桶。门口残留的"Wellness Partner"招牌虚化在背景里。
+
+### 31. `achievement-scam_mlm_resisted.png` — 抗住 networking MLM
+> Mayfair Charles Street 一栋公寓门，画面前景是一只手推开（不接受）一份装订漂亮的 starter kit 文件夹。文件夹封面"Women in Business London"字样模糊处理。背景 Cartier-style 金链摆在 marble 桌面对比讽刺感。
+
+### 32. `achievement-scam_trading_helper.png` — 帮新生抗 Forex 骗
+> 一台 MacBook 屏幕显示视频通话画面 — 远端是另一个亚洲男生留学生剪影，共享屏幕展示 Action Fraud 报案 step-by-step。前景 sticky note 写"FCA register 30 秒查 broker 真伪"。台灯暖光，凌晨感。
+
+### 33. `achievement-scam_educator.png` — CSSA 群反诈帖置顶 156 赞
+> 微信群聊截图风格 — 一条置顶帖（绿色 PINNED 标记），下方 "156 ❤" 数字 + 几条群成员回复气泡（"建议群主置顶"、"宝宝太勇 ✨"）。整张画在水彩纸感的"截图"上面，边缘有手撕纸效果。
+
+### 34. `achievement-freelance_curious.png` — 第一次想"我能不能靠这个活"
+> Bloomsbury 街角 Pret 长椅上，一台 MacBook 屏幕显示 Notion 文档"毕业后 freelance 路线"。旁边一份吃了一半的 Pret meal deal 三明治 + Quavers。落日斜光打在屏幕上反光。
+
+### 35. `achievement-freelance_sole_trader.png` — 注册 GOV.UK sole trader
+> GOV.UK Personal Tax Account 界面截图风格，绿色 "✓ Self-Assessment registered" 字样模糊化。旁边一份装订好的小本子 "Freelance accounting · 2024" + 一支钢笔。桌角一杯姜茶。
+
+### 36. `achievement-freelance_premium.png` — 第一次 quote £600/day
+> Zoom video call 界面 — 远端 founder 头像模糊，下方 chat panel 显示一行字 "Fair. Let's do £2,400 retainer × 6 months"。前景画面外一只亚洲手放在嘴前（震惊静止），桌上 mug 里的茶静止不动。整体屋内黄光。
+
+### 37. `achievement-freelance_career.png` — ILR via self-employed 路线
+> 一张深紫色 BRP 卡 "Indefinite Leave to Remain" 醒目，卡上 "Remarks" 字段写 "No public funds · Work permitted"（暗示 self-employed 路线拿到，而非通过 sponsor）。背景虚化伦敦 Old Street 屋顶。光线日落金色。
+
+### 38. `achievement-climate_strike.png` — 气候罢工出席
+> Trafalgar Square 角落 Extinction Rebellion 集会的远景剪影 — 几面 "Tell the Truth" 黑底白字旗帜飘动，人群剪影拥挤但不细致。前景一双 Doc Martens 鞋 + 沥青地反光。整体灰蓝湿润。
+
+### 39. `achievement-ucu_solidarity.png` — UCU 罢工声援
+> SOAS 主楼门外 picket line 木牌：UCU 紫色横幅 + 一个写"Education not for Profit"的手写纸板（钢笔字）。前景一杯热咖啡放在地上一封 Solidarity 信旁。冬日早晨白雾感。
+
+### 40. `achievement-daixie_refused.png` — 拒绝代写报酬
+> 微信对话框 — 代写中介报价"distinction package £600"，右下方 BLOCK 按钮高亮（手指悬空）。背景虚化 SOAS 图书馆 4 楼夜景 + 一份正在写的 essay 草稿（手写痕迹）。
+
+### 41. `achievement-daixie_reported.png` — 举报代写中介
+> 一封打印出来的学校 academic integrity 举报回执 + 上面 Whitmore 教授的红笔批注 "Right thing to do — RW"。回执旁放着一支用旧的 Pilot 钢笔（笔身有划痕、墨水痕迹）。木桌质感。
 
 ---
 
@@ -250,7 +319,14 @@ src/assets/illustrations/
     ├── loading-rain.png
     └── loading-pret.png
 
-合计 59 张
+合计 99 张已画（49 ach + 10 loc + 11 npc + 17 scene + 12 misc）
+还差 21 张：1.A 节后期补充成就（见上）—— 画完总数 100 张
 ```
+
+**当前缺图清单（21 张 · 1.A 节）**：
+- 节日 / 学术 / 文化 4 张：mooncake_received / pdf_resisted / pride_ally / mei_soho_witnessed
+- 反诈系列 9 张：consul / courier / recruiter / pig / pig_therapy / cosmetic / mlm / trading_helper / educator
+- Freelance 系列 4 张：curious / sole_trader / premium / career
+- 政治 + 学术诚信 4 张：climate_strike / ucu_solidarity / daixie_refused / daixie_reported
 
 文件名用我列的那个 ID 严格对应（我代码会按这套 ID 引用）。生成完一批扔进对应文件夹，告诉我"成就 20 张做完了"，我接一批。

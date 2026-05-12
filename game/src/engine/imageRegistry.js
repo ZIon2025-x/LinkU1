@@ -15,7 +15,7 @@
 const stripPath = (rec, prefix) => {
   const out = {};
   for (const [path, url] of Object.entries(rec)) {
-    const name = path.split('/').pop().replace(/\.png$/, '');
+    const name = path.split('/').pop().replace(/\.(webp|png)$/, '');
     const id = name.startsWith(prefix) ? name.slice(prefix.length) : name;
     out[id] = url;
   }
@@ -23,23 +23,23 @@ const stripPath = (rec, prefix) => {
 };
 
 const achievementsRaw = import.meta.glob(
-  '../assets/illustrations/achievements/*.png',
+  '../assets/illustrations/achievements/*.{webp,png}',
   { eager: true, query: '?url', import: 'default' },
 );
 const locationsRaw = import.meta.glob(
-  '../assets/illustrations/locations/*.png',
+  '../assets/illustrations/locations/*.{webp,png}',
   { eager: true, query: '?url', import: 'default' },
 );
 const npcsRaw = import.meta.glob(
-  '../assets/illustrations/npcs/*.png',
+  '../assets/illustrations/npcs/*.{webp,png}',
   { eager: true, query: '?url', import: 'default' },
 );
 const scenesRaw = import.meta.glob(
-  '../assets/illustrations/scenes/*.png',
+  '../assets/illustrations/scenes/*.{webp,png}',
   { eager: true, query: '?url', import: 'default' },
 );
 const miscRaw = import.meta.glob(
-  '../assets/illustrations/misc/*.png',
+  '../assets/illustrations/misc/*.{webp,png}',
   { eager: true, query: '?url', import: 'default' },
 );
 
@@ -85,22 +85,49 @@ const EVENT_TO_SCENE = {
   fire_alarm_aftermath: 'fire_alarm',
   bonfire_night: 'bonfire_night',
   boxing_day_selfridges: 'boxing_day',
-  // tom Sunday roast (label varies by file — extend here when located)
   tom_sunday_roast: 'sunday_roast',
   // mei family christmas
   mei_christmas_dinner: 'mei_christmas',
   mei_family_christmas: 'mei_christmas',
-  // parents arrival
+  xmas_mei_family: 'mei_christmas',
+  // parents arrival (welcomeWeek + storyline)
   parents_arrival: 'parents_arrival',
   parents_5_arrival: 'parents_arrival',
   // 4:38 AM crisis
   crisis_438am: 'crisis_4am',
   homesick_crisis: 'crisis_4am',
+  diss_existential_crisis_3am: 'crisis_4am',
   // linnan confession
   linnan_5_confession: 'linnan_confession',
   linnan_confession_eve: 'linnan_confession',
+  linnan_3: 'linnan_confession',
   // graduation
   graduation_ceremony: 'graduation',
+  // ── 之前画了但没接进 event 的 scene ──
+  // 公寓 / 搬家钥匙
+  moving_day: 'apartment_keys',
+  housing_search_2nd_year: 'apartment_keys',
+  first_viewing_chaos: 'apartment_keys',
+  // Bicester 一日游 (王凯创业线 ch2 + dailyLife)
+  wangkai_2: 'bicester_outlets',
+  bicester_trip: 'bicester_outlets',
+  // Sarah 邀去 Cotswolds (storyline ch3)
+  sarah_3: 'cotswolds_visit',
+  xmas_sarah_cotswolds: 'cotswolds_visit',
+  // Whitmore 高桌晚宴 (storyline ch4 + holiday secret)
+  whitmore_4: 'high_table',
+  xmas_whitmore_dinner: 'high_table',
+  whitmore_common_room_invite: 'high_table',
+  // Aditi 印度孟买 (storyline ch3 hospital + holiday secret)
+  aditi_3: 'mumbai_visit',
+  aditi_4: 'mumbai_visit',
+  xmas_aditi_india: 'mumbai_visit',
+  // Link2Ur 合伙人 ending banner + Old Street office tour 章节
+  link2ur_partner: 'link2ur_office',
+  l2u_partner_1: 'link2ur_office',
+  // 飞机 / Heathrow 落地 — onboarding 流程
+  plane_takeoff: 'plane',
+  arrival_heathrow: 'heathrow_arrival',
 };
 
 /** Returns scene image url for a given event/chapter id, or null. */

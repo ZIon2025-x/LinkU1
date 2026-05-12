@@ -14,7 +14,7 @@ import { getMiscImage } from '../engine/imageRegistry.js';
  * Picks the icon by `context` so different transitions feel different
  * (rain / pret / plane / night / etc).
  */
-export function LoadingOverlay({ context, duration = 280, onDone }) {
+export function LoadingOverlay({ context, duration = 1800, onDone }) {
   useEffect(() => {
     const t = setTimeout(() => onDone && onDone(), duration);
     return () => clearTimeout(t);
@@ -65,10 +65,30 @@ function pickLoadingIcon(ctx = {}) {
       if (ctx.locationId === 'station') return getMiscImage('loading-plane');
       if (ctx.weather === 'rainy' || ctx.weather === 'storm') return getMiscImage('loading-rain');
       return getMiscImage('loading-tube') || getMiscImage('loading-rain');
+    case 'activity':
+      // 在地点里做事 → 按地点选个合适的过场图
+      if (ctx.locationId === 'pub' || ctx.locationId === 'mei' ||
+          ctx.locationId === 'soho') return getMiscImage('loading-night') || getMiscImage('loading-rain');
+      if (ctx.locationId === 'park') return getMiscImage('loading-tube') || getMiscImage('loading-rain');
+      if (ctx.locationId === 'library' || ctx.locationId === 'uni') return getMiscImage('loading-essay');
+      return getMiscImage('loading-tube') || getMiscImage('loading-rain');
     default:
       return getMiscImage('loading-rain');
   }
 }
+
+const ACTIVITY_CAPTIONS = {
+  flat: '在公寓里 · At the Flat',
+  uni: '在校园里 · On Campus',
+  library: '图书馆里 · At the Library',
+  tesco: 'Tesco · Picking up groceries',
+  mei: "Mei's · Lucky Star",
+  pub: 'The Crown · 酒馆',
+  park: 'Hyde Park · 公园',
+  tate: 'Tate Modern · 美术馆',
+  soho: 'Soho · West End',
+  station: "King's Cross · 火车站",
+};
 
 function pickLoadingCaption(ctx = {}) {
   switch (ctx.type) {
@@ -79,6 +99,7 @@ function pickLoadingCaption(ctx = {}) {
     case 'holiday':    return ctx.holidayType === 'easter' ? 'Easter Break' : 'Christmas Holiday';
     case 'travel':     return ctx.label || 'Travelling…';
     case 'location':   return ctx.label || 'Loading…';
+    case 'activity':   return ACTIVITY_CAPTIONS[ctx.locationId] || 'Loading…';
     default:           return 'Loading…';
   }
 }

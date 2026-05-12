@@ -11,6 +11,8 @@
 //   mei_difficult_customer (W12+, requires mei_serving)
 //   mei_late_night_chat (W18+, sets mei_intimate)
 //   mei_promotion       (W24+, requires mei_intimate, sets mei_manager_path)
+//                       —— 注：mei_manager (来自 holidays.js Easter 代班) 和 mei_manager_path 是两条路径，
+//                       endings.js mei_double 双结局接受任意一个即可。
 //   mei_first_paycheck_home (W12+, requires mei_serving) — emotional callback
 
 export const MEI_WORK_EVENTS = {

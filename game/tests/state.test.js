@@ -60,14 +60,38 @@ describe('reducer actions', () => {
     expect(s.actionsLeft).toBe(0);
   });
 
-  test('END_DAY advances day, restores actions, +15 energy', () => {
+  test('END_DAY advances day, restores actions, +15 energy when well-fed and low-stress', () => {
     let s = initialState();
     s = reducer(s, { type: 'PATCH_STATS', stats: { energy: 50 } });
+    // 吃满 2 顿避免漏餐惩罚 (mealsPenaltyEnergy=0, deliveryCost=0)
+    s = reducer(s, { type: 'INCREMENT_MEAL' });
+    s = reducer(s, { type: 'INCREMENT_MEAL' });
     s = reducer(s, { type: 'SPEND_ACTION' });
     s = reducer(s, { type: 'END_DAY' });
     expect(s.day).toBe(2);
     expect(s.actionsLeft).toBe(3);
+    // 初始 stress=25, 满餐 → energyRecover=15, penalty=0 → 50+15=65
     expect(s.stats.energy).toBe(65);
+  });
+
+  test('END_DAY applies missed-meal penalty: stress↑, energy↓, wallet -£30', () => {
+    let s = initialState();
+    s = reducer(s, { type: 'PATCH_STATS', stats: { energy: 50, wallet: 2000 } });
+    // mealsToday=0 → mealsPenaltyStress=+8, mealsPenaltyEnergy=-10, deliveryCost=2×£15
+    s = reducer(s, { type: 'END_DAY' });
+    expect(s.stress).toBe(33);          // 25 + 8
+    expect(s.stats.energy).toBe(55);    // 50 + 15 - 10
+    expect(s.stats.wallet).toBe(1970);  // 2000 - 30
+  });
+
+  test('END_DAY stress tiers cap actionsLeft', () => {
+    let s = initialState();
+    // 拉到高压区，吃满餐以隔离 stress 影响
+    s = reducer(s, { type: 'INCREMENT_MEAL' });
+    s = reducer(s, { type: 'INCREMENT_MEAL' });
+    s = reducer(s, { type: 'APPLY_EFFECT', effect: { stress: 75 - 25 } });  // 25→75
+    s = reducer(s, { type: 'END_DAY' });
+    expect(s.actionsLeft).toBe(2);  // 75-84 → 2 actions
   });
 
   test('STORY_ADVANCE bumps progress and marks chapter seen', () => {
@@ -108,7 +132,8 @@ describe('reducer actions', () => {
     s = reducer(s, { type: 'SET_FLAG', flag: 'foo' });
     s = reducer(s, { type: 'RESET' });
     expect(s.stats.academic).toBe(0);
-    expect(s.flags).toEqual({});
+    expect(s.flags.foo).toBeUndefined();              // 玩家临时 flag 清掉
+    expect(s.flags).toEqual(initialState().flags);    // baseline flag 仍在 (e.g. link2ur_discovered)
   });
 });
 

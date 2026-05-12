@@ -10,6 +10,33 @@
     font-family: 'EB Garamond', 'Songti SC', 'Source Han Serif', serif;
     -webkit-font-smoothing: antialiased;
   }
+
+  /* ── 全局极简滚动条 ──
+     · WebKit (Chrome/Safari/Edge): 4px 细条，hover 才显形
+     · Firefox: thin + 半透明色
+     · 任何 scrollable 容器都生效，包括 overflow-y-auto 的 chat 气泡区 / 手账列表 / etc */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232, 224, 208, 0.15) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(232, 224, 208, 0.12);
+    border-radius: 2px;
+    transition: background 0.2s;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(232, 224, 208, 0.32);
+  }
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @keyframes fadein {
@@ -24,6 +51,16 @@
   from { opacity: 0; transform: translateX(-10px); }
   to { opacity: 1; transform: translateX(0); }
 }
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+.animate-typing-dot { animation: typing-dot 1.2s ease-in-out infinite; }
 .animate-fadein { animation: fadein 0.5s ease-out; }
 .animate-fadein-slow { animation: fadein-slow 0.8s ease-out; }
 .animate-slidein { animation: slidein 0.4s ease-out; }
+.animate-slide-up-sheet { animation: slide-up-sheet 0.3s cubic-bezier(0.16, 1, 0.3, 1); }

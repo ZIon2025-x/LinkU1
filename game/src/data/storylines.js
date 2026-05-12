@@ -163,11 +163,11 @@ export const STORYLINES = {
     chapters: [
       {
         id: 'aditi_1', title: '图书馆四楼',
-        trigger: { rel: 0, location: 'library' },
+        trigger: { rel: 0, location: 'library', minWeek: 2 },
         title_full: '凌晨一点的笔记本',
-        body: '凌晨 1 点。整层只有你和她。她抬头看了你一眼，露出疲惫但友善的微笑，把她那杯还没喝完的咖啡推过来一点："Want some? I think we both need it."',
+        body: '凌晨 1 点。整层只有你和她——你认得这张脸，她周二 tutorial 坐你斜后方。她抬头露出疲惫但友善的微笑，把刚拆封的 Pret 小饼干往你这边推："Want one? I think we both need a sugar hit."',
         choices: [
-          { label: '接过咖啡，小聲说谢谢', effect: { rel: 2, energy: 5, belonging: 6 },
+          { label: '"Thanks 🙏" 接过一块', effect: { rel: 2, energy: 5, belonging: 6 },
             feedback: '"I\'m Aditi." "I\'m..." 你们小声地交换了名字。她回去看书，你回去看书。但你写论文的速度突然快了起来。' },
           { label: '客气地说不用', effect: { rel: 0, energy: -2 },
             feedback: '她笑了笑，说 "Suit yourself"，回去看书。你后悔了一整晚。但下次再见，你不知道怎么开口。' },
@@ -231,7 +231,7 @@ export const STORYLINES = {
     chapters: [
       {
         id: 'whitmore_1', title: '第一次 office hours',
-        trigger: { rel: 0, location: 'uni' },
+        trigger: { rel: 0, location: 'uni', minWeek: 2 },
         title_full: '"Come in, do come in"',
         body: '你敲了 Prof. Whitmore 办公室的门。他抬头看你三秒，才反应过来："Ah, yes. You\'re in my Tuesday seminar. Sit, sit. What\'s on your mind?"',
         choices: [
@@ -283,7 +283,10 @@ export const STORYLINES = {
       },
       {
         id: 'whitmore_5', title: '一封推荐信',
-        trigger: { rel: 10, flag: 'whitmore_coffee' },
+        // 之前要求 `flag: whitmore_coffee`（只在 ch4 option 1 set），ch4 选了
+        // "我有点紧张" 的玩家即使 rel 后续涨到 10 也永远进不来 → oxford_ref
+        // ending 不可达。改成 rel-only：narrative 仍连续（"推荐信"不强依赖咖啡店那场对话）。
+        trigger: { rel: 10 },
         title_full: '"You should apply"',
         body: 'Whitmore 把一张纸放到你面前——牛津 DPhil 项目的招生信息。"I\'ve written a draft of your reference. Read it. Tell me if I got anything wrong."',
         choices: [
@@ -307,7 +310,7 @@ export const STORYLINES = {
     chapters: [
       {
         id: 'linnan_1', title: '图书馆借的笔记',
-        trigger: { rel: 0, location: 'library' },
+        trigger: { rel: 0, location: 'library', minWeek: 3 },
         title_full: '"你的 Foucault 笔记好详细"',
         body: '图书馆 4 楼。你旁边坐着一个戴口罩的中国女生 / 男生——你认得脸，是 same cohort 的林可儿 / 林楠。每节 tutorial 都坐第一排但不太说话。\n\n她 / 他小声说："你那个 Foucault 笔记能借我抄一下吗？我做笔记跟不上。"',
         choices: [
@@ -492,9 +495,11 @@ export const STORYLINES = {
       },
       {
         id: 'romance_4', title: '他消失之后',
-        trigger: { flag: 'scam_pig_resisted' },
+        // 三种 ch3 outcome 都进入 — 之前只接受 resisted 路径，被骗最重的玩家拿不到任何康复 chapter。
+        // 哪怕 partial/full 也需要这个 reflective beat (尤其是 NHS therapy 选项)。
+        trigger: { flagAny: ['scam_pig_resisted', 'scammed_pig_partial', 'scammed_pig_full'] },
         title_full: '空空的 Hinge 列表',
-        body: '一周后。"Daniel" 的 profile 在 Hinge 上消失。\n\n你打开微信对话框看到的最后一条还是他 5 周前发的 voice message："宝今天想你。" 你听了 3 秒就关了。\n\nCSSA 群里你刚发的反诈帖 156 个赞。\n\n上岸了的姐：写得好 我组里有人去年被同样剧本骗 £18k\n@Lily：宝宝太勇敢了 ✨ 我下次 swipe 也警觉一点\n狗哥：靠 这种我也接过 1 次 但我直接 unmatch 没 5 周这么深\n潜水的人：（出现）记得：他们是 24/7 工厂化操作 不是个例。\n\nAditi 私聊你："Glad you caught it in time."',
+        body: '一周后。"Daniel" 的 profile 在 Hinge 上消失。\n\n你打开微信对话框看到的最后一条还是他 5 周前发的 voice message："宝今天想你。" 你听了 3 秒就关了。\n\nCSSA 群里有人发了一条反诈贴——剧本和你的几乎一字不差：5 周慢热、Murakami 同款书、Goldman 大楼前的照片、最后那句"宝今天想你"。\n\n上岸了的姐：写得好 我组里有人去年被同样剧本骗 £18k\n@Lily：宝宝太勇敢了 ✨ 我下次 swipe 也警觉一点\n狗哥：靠 这种我也接过 1 次 但我直接 unmatch 没 5 周这么深\n潜水的人：（出现）记得：他们是 24/7 工厂化操作 不是个例。\n\nAditi 私聊你："You OK?"',
         choices: [
           { label: '预约 NHS 心理咨询', effect: { energy: 5, belonging: 8, flag: 'scam_pig_therapy' },
             feedback: '你给 GP 写 referral。3 周后约到 NHS 6-session CBT。\n\n第一次你 talk 了 40 分钟。咨询师没说什么，让你哭完。临走时她递给你一杯水："Same time next week."\n\n6 周后你重新打开 Hinge——这次 swipe 得很慢。' },
@@ -558,9 +563,11 @@ export const STORYLINES = {
       },
       {
         id: 'romance_m_4', title: 'Diana 消失之后',
-        trigger: { flag: 'scam_pig_resisted' },
+        // 三种 ch3 outcome 都进入 (resisted / partial / full)。被骗的玩家也需要这个 reflective beat
+        // (NHS therapy / Marcus 啤酒 / 自己消化)，而不是直接被叙事抛弃。
+        trigger: { flagAny: ['scam_pig_resisted', 'scammed_pig_partial', 'scammed_pig_full'] },
         title_full: '空空的 Hinge 列表',
-        body: '一周后。Diana 的 profile 在 Hinge 上消失。\n\n你打开微信看到她最后一条 voice note："Babe 今天想你。" 你听了 3 秒就关了。\n\nCSSA 群里你刚发的反诈帖 174 个赞——其中 60% 是男生。群里：\n\n狗哥：兄弟 我也被加过一个 hk 律所女 当时差点 当时差点\n凯泽：我去 这个 prop firm 我表哥也踩过 £8k\n上岸了的姐：男生很少发反诈贴 这条很重要。\n新生小王：哥们 你这个让我学到了 我准备发给我爸妈\n@Lily：男生宝宝注意安全 太可怕了 ✨\n\nMarcus 私聊你："Mate. My cousin lost £15k to one of these. Glad you posted."',
+        body: '一周后。Diana 的 profile 在 Hinge 上消失。\n\n你打开微信看到她最后一条 voice note："Babe 今天想你。" 你听了 3 秒就关了。\n\nCSSA 群里有人发了一条反诈帖——剧本和你的几乎一字不差：HK 律所背景、Sally Rooney 同款书、prop firm 的"导师"角色、最后那句"宝今天想你"。174 个赞——其中 60% 是男生。\n\n狗哥：兄弟 我也被加过一个 hk 律所女 当时差点 当时差点\n凯泽：我去 这个 prop firm 我表哥也踩过 £8k\n上岸了的姐：男生很少发反诈贴 这条很重要。\n新生小王：哥们 你这个让我学到了 我准备发给我爸妈\n@Lily：男生宝宝注意安全 太可怕了 ✨\n\nMarcus 私聊你："You alright, mate?"',
         choices: [
           { label: '预约 NHS 心理咨询', effect: { energy: 5, belonging: 8, flag: 'scam_pig_therapy' },
             feedback: '你给 GP 写 referral。3 周后约到 NHS 6-session CBT。\n\n第一次你 talk 了 40 分钟。咨询师没说什么，让你哭完。临走时她递给你一杯水："Same time next week."\n\n6 周后你重新打开 Hinge——这次 swipe 得很慢。' },
@@ -765,7 +772,10 @@ export const STORYLINES = {
       },
       {
         id: 'fl_3', title: '第一张 invoice + 第一次报税',
-        trigger: { flag: 'freelance_pitched', minWeek: 22 },
+        // 之前要 flag: freelance_pitched (只在 fl_2 option 1 set)，玩家选 option 2/3
+        // 后 freelance_career ending 路径被锁死。改成 l2u_8_done + minWeek:22 —— 任何
+        // 走过 fl_2 (条件相同) 的玩家都能进入。BACS £350 叙事不强依赖客户 referral。
+        trigger: { flag: 'l2u_8_done', minWeek: 22 },
         title_full: 'BACS 转账 £350',
         body: '你给一个 startup 做了 deck。客户 BACS 转账 £350 到你 Monzo。\n\n这是你来英国第一次靠"脑子"挣这么多钱，不是端盘子、不是代购。但你也开始焦虑：\n· 这笔钱要不要交税？\n· 学生签证 self-employed 算不算违规？\n· HMRC self-assessment 截止日是哪天？\n\n你 Google "student visa freelance UK" 翻了 30 个 reddit 帖。',
         choices: [
@@ -800,7 +810,184 @@ export const STORYLINES = {
           { label: '转 corporate · 找 sponsor 工作', effect: { wallet: 0, academic: 3, flag: 'freelance_to_corporate' },
             feedback: '你应聘了 BCG / McKinsey / Bain — 拿到 BCG offer。年薪 £55,000。\n\nfreelance 5 个客户全部交接走。\n\n你 25 岁就开始穿西装。但你 28 岁那年某个雨夜在 Old Street 加完班走出 office，会想起那个 Pret 长椅 —— 你 22 岁第一次算"£28/小时"那个下午。' },
           { label: '回国 freelance · 把客户做远程', effect: { wallet: 0, belonging: 8, flag: 'freelance_remote_china' },
-            feedback: '你飞回北京 / 上海。继续给伦敦那 5 个客户做项目，全程 remote。\n\n国内房租 1/3，你妈做的红烧肉每周 1 次。月收入还是 £3,000+ 但花销减半。\n\n你成了那种"在伦敦读书 + 现在在国内 freelance + 客户全是英国"的稀有物种。\n\n你妈见人就说："我儿子 / 女儿是 freelancer。" 她不太知道这是什么。但听起来很自由。' },
+            feedback: '你飞回北京 / 上海。继续给伦敦那 5 个客户做项目，全程 remote。\n\n国内房租 1/3，你妈做的红烧肉每周 1 次。月收入还是 £3,000+ 但花销减半。\n\n你成了那种"在伦敦读书 + 现在在国内 Linker + 客户全是英国"的稀有物种。\n\n你妈见人就说："我儿子 / 女儿在伦敦那个 app 上做 Linker。" 她不太知道这是什么。但听起来很自由。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // ⚠ TODO · 用户后续要 review/adjust 的 Link2Ur 内容（标记于 2026-05-10）
+  // 需要跟用户对齐的点：
+  //   1. Priya 人设：Cambridge MBA + ex-PwC + HK 背景 —— 是否换名字/背景
+  //   2. Equity 谈判数字：4% vesting 4 年 / cliff 9 月 / £40k base —— 是否真实
+  //   3. cap table: CEO 28% / Priya 18% / CTO 14% / COO 12% / etc.
+  //   4. Ambassador 机制: 15% commission on onboarded Linker
+  //   5. Link2Ur HQ 在 Old Street + 7 人创始团队 —— 是否合理
+  //   6. £5,000 first big client / £29k entry-level designer 等具体数字
+  //   7. 三条 arc 之间的 mutual-exclusion vs parallel 关系
+  // ─────────────────────────────────────────────────────────────
+  // Link2Ur · Passion Discovered (4 章)
+  // ─────────────────────────────────────────────────────────────
+  // 玩家接 10+ 种不同类型 task → 觉醒"哪个我真的喜欢" → niche → 找到正式工作
+  link2ur_passion: {
+    id: 'link2ur_passion', name: 'Link2Ur · 发现你喜欢的事', npc: null,
+    chapters: [
+      {
+        id: 'l2u_passion_1', title: '接了 10 种不同活之后',
+        trigger: { flag: 'l2u_10_done', minWeek: 14 },
+        title_full: 'ensuite 床上的 list',
+        body: '凌晨 1 点。你打开 Link2Ur 后台 "我完成的"——10 种类别 摆在一起：\n\n· 代购 ×3\n· 跑腿 ×4\n· 翻译 ×1\n· PPT 美化 ×2\n· 摄影 ×1\n\n你看到那 2 单 PPT 美化——做的时候**没累**。其他做完想瘫。\n\n你心里冒出一句："靠 是不是其实我喜欢 design？"',
+        choices: [
+          { label: '正经分析 spreadsheet ROI + 心力对比', effect: { energy: -3, academic: 4, flag: 'l2u_passion_analyzed' },
+            feedback: '你做 Excel 表：12 单 × 报酬 / 时长 / 心力消耗。结果：PPT + 摄影 + design 类心力 1.5x，但你之后**精力反而 +5**（不像跑腿做完 -10）。\n\n你存下这张表。' },
+          { label: '"巧合吧" 关掉', effect: { energy: 1 },
+            feedback: '你关 app 睡觉。\n\n3 周后你接第 14 单 PPT 又是 net energy positive。你这才开始相信。' },
+        ],
+      },
+      {
+        id: 'l2u_passion_2', title: '专注接 design 类 5 单',
+        trigger: { flag: 'l2u_passion_analyzed', minWeek: 18 },
+        title_full: '故意挑活',
+        body: '你接下来 1 个月**只接 design/PPT/photo 类**。\n\n第 14 单 logo · 拒了。\n第 15 单 LinkedIn 头像 · 接。\n第 16 单 startup pitch deck · 接。\n第 17 单 婚礼跟拍 · 接。\n第 18 单 brand identity · 接。\n第 19 单 menu redesign · 接。\n\n5 单做完——你看到自己 portfolio 6 张作品挂在那里。',
+        choices: [
+          { label: '把 portfolio 整理成 .pdf', effect: { academic: 8, energy: -5, flag: 'l2u_passion_portfolio' },
+            feedback: '你 Figma 排了 12 页 portfolio。最后一页写 "Selected work · 2024-25"。\n\n你截图发妈："妈我做了一个 portfolio。"\n\n她："发爸看。" 你爸说"看不懂 但是排版漂亮"。\n\n这是你这一年第一次让爸觉得你做的事"看得见"。' },
+        ],
+      },
+      {
+        id: 'l2u_passion_3', title: '给 Whitmore 看 portfolio',
+        trigger: { flag: 'l2u_passion_portfolio', minWeek: 26 },
+        title_full: 'Office hour 一个不一样的对话',
+        body: 'Whitmore 周三 office hour。你带 portfolio 不是 dissertation outline。\n\n你说："Sir 我可能要转 design 不读 PhD 了。"\n\n他翻完 12 页 portfolio。沉默 15 秒。然后他说："Why?"\n\n你解释 10 单 Link2Ur 心力分析。他听完，递给你一张纸条："Pentagram 一个 partner 是我以前学生。她周三在 SOAS 客座 lecture。我引荐你。"',
+        choices: [
+          { label: '"Sir 谢谢"（接 referral）', effect: { academic: 6, belonging: 8, flag: 'l2u_passion_intro', npc: { whitmore: 2 } },
+            feedback: 'Whitmore 给 Pentagram partner 发邮件 cc 你。她 3 天回："Coffee Friday at our Notting Hill studio?"\n\n你穿了你 best shirt 去。她翻 portfolio 5 分钟，问你 3 个问题，没说太多。\n\n临走："I\'ll connect you to Charlotte — she\'s hiring junior designer at Studio Output."' },
+          { label: '"我自己 cold apply 吧"', effect: { academic: 3, energy: -3 },
+            feedback: 'Whitmore 没说什么，把纸条收起来。\n\n3 个月后你 cold apply 12 家 design studio 没下文。你才意识到 — 在英国 design 圈 referral > portfolio。' },
+        ],
+      },
+      {
+        id: 'l2u_passion_4', title: 'Studio Output 面试',
+        trigger: { flag: 'l2u_passion_intro', minWeek: 44 },
+        title_full: '面试当天',
+        body: 'Studio Output · East London 一个 industrial 改造的 design studio。'
+          + '\n\nCharlotte (creative director · 38 岁英国人) 看 portfolio。她问你 portfolio 里那 6 张作品 — 每张做多久 / 客户多少 / 你做了几稿 / 改了几次。\n\n她抬头："Most graduate portfolios are student projects. Yours are 95% paid client work. That\'s extremely unusual."',
+        choices: [
+          { label: '诚实讲 Link2Ur 的故事', effect: { academic: 10, belonging: 8, flag: 'l2u_passion_chosen', wallet: 0 },
+            feedback: '你 15 分钟讲清楚：Link2Ur 接 32 单 12 种活 → 心力分析 → 锁定 design → 5 单专攻 portfolio → Whitmore 引荐。\n\nCharlotte 听完："That\'s actually one of the smartest paths I\'ve heard from a grad in 5 years. You\'re hired. £29k entry-level. Junior designer. Start September."\n\n你出了 studio 在 Old Street 站台站了 5 分钟。然后给妈视频："妈我面上了。比 BCG 少一半 但是我能做 30 年。"\n\n妈："你说能做 30 年就够了。" 然后她哭了 5 秒。' },
+          { label: '简化版 "我学到了 design"', effect: { academic: 5 },
+            feedback: 'Charlotte 让你回家等。3 周没回。\n\n你 follow up 邮件被 polite reject。\n\n你那一刻知道 — 你给的 narrative 不够 strong。诚实讲完整故事更打动人。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Link2Ur · Daren Creator (4 章)
+  // ─────────────────────────────────────────────────────────────
+  // Rating 4.9+ + 30 单 → Ambassador → 高级客户 → 月入 £5k → 创业
+  link2ur_daren: {
+    id: 'link2ur_daren', name: 'Link2Ur · 达人创业', npc: null,
+    chapters: [
+      {
+        id: 'l2u_daren_1', title: 'Ambassador 邀请',
+        trigger: { flag: 'l2u_ambassador_accepted', minWeek: 26 },
+        title_full: 'Old Street Allpress 咖啡',
+        body: '周二 4pm Old Street Allpress Espresso。\n\nPriya 已经到了。她比你想象中 normal — 米色大衣 + 黑色短发 + 一台 MacBook。点了一杯 oat latte。\n\n她递给你一份印好的 Ambassador onboarding 文件——3 页 + 一份 NDA。\n\n"看完签字 — 但不急。我们先聊 1 小时再决定。"',
+        choices: [
+          { label: '认真问 equity 细节', effect: { energy: -3, academic: 4, flag: 'l2u_daren_negotiated' },
+            feedback: 'Priya 解释：Ambassador 不是 employee 也不是 vendor。15% commission on onboarded Linker + 优先 inbox + £2k signing bonus + 一年后 evaluate 是否升级到 equity partner。\n\n你问："你们之前 invite 过几个 Ambassador？" 她："14 个。8 个走 design / consulting / 自己创业。3 个继续做 ambassador。3 个升 partner。"' },
+          { label: '"我先看文件"', effect: { energy: 1 },
+            feedback: '你接过文件回 ensuite 看一晚上。第二天签字回。\n\nPriya 没说什么 — 但她记住你的 pattern。' },
+        ],
+      },
+      {
+        id: 'l2u_daren_2', title: '第一个高级客户',
+        trigger: { flag: 'l2u_daren_negotiated', minWeek: 30 },
+        title_full: 'inbox 里一封不一样的 DM',
+        body: 'Ambassador onboarding 后第 2 周。\n\n你 Link2Ur inbox：\n\n"Hi — I\'m Hannah, CEO of [一家伦敦 mental health startup]。'
+          + 'Found your profile through Link2Ur Top Ambassador list。Need a full brand identity package — logo + 30-page brand guidelines + investor deck。'
+          + 'Budget £5,000。Timeline 6 weeks。Can we Zoom?"\n\n你倒抽一口气。\n\n这是你 portfolio 里**最大的一单**。',
+        choices: [
+          { label: '认真接 + 一周内交第一稿', effect: { wallet: 5000, academic: 10, energy: -25, flag: 'l2u_daren_big_client' },
+            feedback: '6 周 280 小时。你做了 12 张 logo concept、80 页 brand guidelines、investor deck 25 页。'
+              + '\n\nHannah 验收时哭了 5 秒："This is exactly what we needed. I\'m going to refer you to 3 other founders in my YC cohort."\n\n£5,000 转账。一周后另外 2 个 founder DM 你。你 LinkedIn headline 改成 "Brand Identity for Mental Health Startups"。\n\n你开始有 niche 了。' },
+          { label: '"我不够 senior 转给别人"', effect: { wallet: 0, energy: 3 },
+            feedback: '你 polite decline。Hannah："no worries — let me know if you change your mind."\n\n2 周后你后悔。\n\n但下一单 high-tier client 已经在路上 — Ambassador list 不停推。' },
+        ],
+      },
+      {
+        id: 'l2u_daren_3', title: '雇第一个学妹',
+        trigger: { flag: 'l2u_daren_big_client', minWeek: 38 },
+        title_full: '你的 inbox 装不下了',
+        body: '现在你 inbox 每周 12+ inquiry。你一个人做不完。\n\nPriya 上次提过："Ambassador 第二阶段 — onboard 你自己的 Linker team。"\n\n你 Link2Ur 后台看 → 8 个 "rising" rating ≥ 4.6 + 5+ 单 design 的新人。\n\n你挑了 Lin Wang — 22 岁 RCA design master Y2，rating 4.8，做过 4 单 menu redesign。',
+        choices: [
+          { label: '面试 Lin + 让她接 3 个 small client', effect: { wallet: 600, energy: -8, flag: 'l2u_daren_team', belonging: 8 },
+            feedback: '你 Zoom Lin 30 分钟。她跟你一样——刚发现自己喜欢 design 但不敢 commit。\n\n你给她 3 个 menu redesign single £200 ($60 你抽 + £140 她拿)。\n\n第 1 单她跟你 review 5 次。第 3 单她直接 ship 客户给 5 星。\n\n你成了她 mentor。Priya 后台留言："这就是我们要的 — 你不是单个 Linker 你是 mini agency。"' },
+          { label: '"我自己撑住 不雇"', effect: { wallet: 0, energy: -20 },
+            feedback: '你硬扛。3 个月后 burnout。client list 砍掉一半。\n\n你那时候才意识到 — 创业不是"自己 grind 更狠"——是"知道什么时候让别人帮你 grind"。' },
+        ],
+      },
+      {
+        id: 'l2u_daren_4', title: '注册 limited company',
+        trigger: { flag: 'l2u_daren_team', minWeek: 48 },
+        title_full: 'Companies House',
+        body: '你 monthly recurring £5,200 + 4 个 Linker 你抽 commission ≈ £800 / 月。\n\n会计学姐说："你应该开 limited company。税务上更 efficient。"\n\n你 Companies House 网站 reg 公司名 "[你的名字] Studio Ltd"。\n\n£12 registration fee。3 分钟。',
+        choices: [
+          { label: '点 Submit', effect: { wallet: -12, academic: 8, belonging: 15, flag: 'l2u_daren_business_launched' },
+            feedback: '24 小时后邮件来："Your company [你的名字] Studio Ltd has been incorporated. Company number 14XXXXXX."\n\n你转发给妈。她："给我看看。" 你截图。她："好 妈打印出来贴墙上。"\n\n这是你 22 年人生第一个 legal entity。\n\nPriya 私聊："Congrats — 你是我 4 年看到的第 7 个 Ambassador 注册 ltd。我们投资了前 6 个 4 个 — 你要 angel investment 吗？"\n\n你笑：先稳住 再说。' },
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Link2Ur · Ops Partner (3 章) · Priya 邀请你成为合伙人
+  // ─────────────────────────────────────────────────────────────
+  link2ur_partner: {
+    id: 'link2ur_partner', name: 'Link2Ur · 合伙人 offer', npc: null,
+    chapters: [
+      {
+        id: 'l2u_partner_1', title: 'Old Street office tour',
+        trigger: { flag: 'l2u_partner_offered', minWeek: 44 },
+        title_full: '一个 7 人创始团队',
+        body: 'Old Street 后街一栋 industrial 改造楼，3 楼。Link2Ur HQ。\n\nPriya 在门口接你。穿牛仔裤 + 白衬衫 — 不是 corporate 那套。\n\n她带你 tour office：7 张桌 + 1 个 meeting room + 1 个小厨房（有人在煮泡面）。'
+          + '\n\n"我们 7 个人。3 个 founder + 4 个 senior。CTO 在台北。COO 在 Hong Kong。你见到的这 5 个都在 London。"\n\n白板上写："Q4 OKR: 100,000 active users. Currently 67,000."',
+        choices: [
+          { label: '问她为什么找你', effect: { academic: 5, flag: 'l2u_partner_inquired' },
+            feedback: 'Priya 直接："我们缺 1 个 face for 留学生 community — 因为创始团队都不是 first-gen international student。'
+              + '你不是 — 你是。你 50 单后台数据 + Sarah/Mei/Mark 三 NPC 三国关系 + scammed 抗住 — 这是我们 product team 几个月开会都说不清楚的 user perspective。"\n\n你愣了 3 秒。她："你 22 岁 我们花 4 年才搞清楚 你直接 walks-in。"' },
+        ],
+      },
+      {
+        id: 'l2u_partner_2', title: 'Equity 谈话',
+        trigger: { flag: 'l2u_partner_inquired' },
+        title_full: 'Meeting room · CFO Vivian',
+        body: '小 meeting room。Priya + Vivian（CFO · 35 yo 美国 CMU 校友）+ 你。\n\nVivian 摊开 cap table 给你看：'
+          + '\n\nCEO Marcus 28% · Priya 18% · CTO 14% · COO 12% · 其它 senior 16% (4×4%) · ESOP pool 12%\n\n"我们 offer 你 4% from ESOP pool. vesting 4 years cliff 1 year. + £40k base salary + bonus 视 Q3 KPI。"\n\n你 google一下 4% 的 dilution 价值 — 假设 next round £30M valuation = £1.2M paper worth.\n\n但 startup 8 成失败。',
+        choices: [
+          { label: '"4% 太少 + 给我 6%"（谈判）', effect: { energy: -5, academic: 5, flag: 'l2u_partner_negotiated_up' },
+            feedback: 'Vivian 看 Priya。Priya 点头。\n\nVivian："Marcus 同意的话 5% 是 cap。你能接吗？"\n\n你说："5% 可以。但 cliff 6 个月不是 1 年。"\n\nVivian："Counter — 9 个月。" 你说 "Deal." 握手。\n\n你在伦敦第一次 negotiate equity。' },
+          { label: '"4% OK 我签"', effect: { energy: -2, academic: 3 },
+            feedback: '你直接接。Vivian 推 NDA + IOI 给你签。\n\n她临走："你 negotiate 你这一年最值钱的一次 conversation 没 negotiate。下次 review 你工资我会主动加。"' },
+          { label: '"我回去想 3 天"', effect: { energy: 1 },
+            feedback: 'Priya："take your time. offer holds 2 weeks."\n\n你回 ensuite 跟妈视频 1 小时 + 跟 Sarah 视频 1 小时 + 自己想 3 天。然后回 yes。' },
+        ],
+      },
+      {
+        id: 'l2u_partner_3', title: '签字那天',
+        trigger: { flag: 'l2u_partner_inquired', minWeek: 50 },
+        title_full: 'Old Street · Day 1',
+        body: '你 Old Street HQ。CEO Marcus 在小厨房煮咖啡 — 牛仔裤 + sneakers，没 CEO 派头。\n\n他递给你一杯 flat white："Welcome partner #03。" 然后把一份印好的 paper file 推过来。'
+          + '\n\n10 页 partnership agreement + NDA + IP assignment + equity vesting schedule。\n\n你翻每一页都签字。最后一页是手写体 "Welcome to the team — Marcus, Priya, Vivian, Aki, Lin"（5 个签名）。\n\n签完 Marcus："Office 你的桌在那边 — Lin 跟你 sit together。她 product。你 community ops。"',
+        choices: [
+          { label: '签 + Marcus 握手 + 拍照', effect: { belonging: 25, wallet: 0, flag: 'l2u_partner_accepted', academic: 8 },
+            feedback: '你签字时手有点抖。Marcus 注意到了 — 他没说话只是把咖啡放你手边。\n\n签完你站起来。Marcus 主动伸手握："你不会后悔的。如果后悔了 — 这屋的人都还在。"\n\n你给妈视频："妈我入职了一家 startup。"\n\n她："工资多少。" 你："£40k + 4%。" 她："4% 是啥 是奖金吗。"\n\n你笑 5 秒。然后说："是的妈 是奖金。"\n\n（这是你跟妈最长的隐瞒 — 4% 不是奖金。是 paper worth £1.2M 的股份。你想 2 年 vesting 完才告诉她。）' },
+          { label: '"我考虑一下"（最后撤回）', effect: { energy: 3, flag: 'l2u_partner_accepted', belonging: 18 },
+            // 之前 option 2 feedback 说"第二天给他邮件 I'll take it"——叙事接了 offer 但
+            // 没 set l2u_partner_accepted flag，导致 ending 拿不到。补 flag 让叙事和 ending 对齐。
+            feedback: '你说："Marcus 让我再想 1 天。"\n\n他点头："Sure. Door is open. But if you walk out now — be honest with yourself why."\n\n你回 ensuite。睡一晚上。第二天给他邮件："I\'ll take it." 你少了一晚踏实但其他没变。\n\n（Marcus 回："Cool. Onboarding 下周一。Lin 会带你。"）' },
         ],
       },
     ],

@@ -73,5 +73,19 @@ export const FLAT_HUNT_EVENTS = {
           feedback: 'Janek 没说话。你们 90 分钟搬完。\n\n你站在新公寓客厅。空的。冷的。\n\n你从背包里掏出一桶白象方便面 + 你妈寄的老干妈。这就是开始。' },
       ],
     },
+    // ───── 被 Gumtree deposit 骗子骗过的玩家专属回声 (lateScams 的 scammed_deposit) ─────
+    // 跟 moving_day 同一时间窗，独立事件让叙事承接那 £400 的损失。
+    {
+      id: 'moving_day_scam_echo', minWeek: 34, maxWeek: 36,
+      title: '搬家那天 · 想起 Gumtree 那 £400',
+      condition: ({ flags }) => !!flags.private_flat && !!flags.scammed_deposit && !flags.scam_echo_moving_seen,
+      body: 'Saturday 早上。Man with a Van 已经在楼下了。\n\n你站在新公寓门口——Hackney 二楼，朝南，£780/月 含 council tax。这一刻你想起 4 周前那个 Gumtree "Earl\'s Court £680" 骗局——£400 那时候那么真。\n\n你看着钥匙 1 秒。然后打开了门。',
+      choices: [
+        { label: '把这件事记进 diary · 不让自己忘', effect: { energy: 1, academic: 2, belonging: 6, flag: 'scam_echo_moving_seen' },
+          feedback: '你 Notion 建了一条 "2024 W30 · Gumtree £400 lesson learned"。\n\n3 条 takeaway:\n· 没 in-person viewing 不打款\n· 反查 listing 图片用 Google Image\n· "急转 / 国外 / 不能 viewing" = 三连红旗\n\n你想：£400 是这一年最贵也最便宜的一课。' },
+        { label: '"算了 都过去了"——直接搬', effect: { energy: 1, belonging: 2, flag: 'scam_echo_moving_seen' },
+          feedback: '你没纠结。直接开门搬东西。\n\nJanek 一边搬一边和你讲他 30 年前来伦敦也踩过一次 housing 骗子——£200，1994 年。"Mate, every immigrant in this city loses something to this city first. You\'re paid up now."\n\n你听完没说话。继续搬箱子。' },
+      ],
+    },
   ],
 };

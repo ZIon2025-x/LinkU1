@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NpcAvatar } from './NpcAvatar.jsx';
-import { getSceneForEvent } from '../engine/imageRegistry.js';
+import { getSceneForEvent, getNpcImage } from '../engine/imageRegistry.js';
+import { pronounize } from '../engine/pronouns.js';
 // Modals are mostly self-contained — they receive everything they need via props.
 
 /**
@@ -125,21 +126,24 @@ export function StoryModal({ chapter, lineName, feedback, onChoose, onDismiss })
 }
 
 export function NpcDialogModal({ npc, rel, feedback, onChoose, onDismiss, gender }) {
+  // 按性别决定显示的 NPC 名字（linnan 的 "林可儿 / 林楠" → 单名）
+  const npcName = pronounize(npc.cn, gender);
+
   // 动态生成对话选项
   const topics = [
     { label: '寒暄一下', effect: { rel: 1, energy: -1 },
-      feedback: `你和${npc.cn}聊了天气、聊了课。一切如常。` },
+      feedback: `你和${npcName}聊了天气、聊了课。一切如常。` },
     { label: '问问最近怎么样', effect: { rel: 2, energy: -2, belonging: 2 },
-      feedback: `${npc.cn}讲了一些最近的事。你认真听了。这种小小的连接，正是你来这里需要的。` },
+      feedback: `${npcName}讲了一些最近的事。你认真听了。这种小小的连接，正是你来这里需要的。` },
   ];
 
   if (rel >= 3) {
     topics.push({ label: '约 ta 一起做点什么', effect: { rel: 3, energy: -3, belonging: 4 },
-      feedback: `${npc.cn}爽快地答应了。"Sure, let me know when!" 你心里一暖。` });
+      feedback: `${npcName}爽快地答应了。"Sure, let me know when!" 你心里一暖。` });
   }
   if (rel >= 6) {
     topics.push({ label: '聊一些深一点的话题', effect: { rel: 4, energy: -5, belonging: 8 },
-      feedback: `你们聊了很久。${npc.cn}讲了一些以前没讲过的事。你也讲了。这就是友情吧。` });
+      feedback: `你们聊了很久。${npcName}讲了一些以前没讲过的事。你也讲了。这就是友情吧。` });
   }
 
   return (
@@ -148,7 +152,7 @@ export function NpcDialogModal({ npc, rel, feedback, onChoose, onDismiss, gender
         <div className="flex items-center gap-3 mb-4">
           <NpcAvatar npc={npc} gender={gender} size={48} />
           <div>
-            <div className="text-lg">{npc.cn}</div>
+            <div className="text-lg">{npcName}</div>
             <div className="text-xs opacity-60 italic">{npc.role} · 关系 {rel}</div>
           </div>
         </div>
@@ -178,6 +182,7 @@ export function NpcDialogModal({ npc, rel, feedback, onChoose, onDismiss, gender
 }
 
 export function StrangerEncounterModal({ stranger, onAdd, onReject }) {
+  const strangerImg = getNpcImage(stranger.id);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.92)' }}>
       <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-5">
@@ -188,8 +193,12 @@ export function StrangerEncounterModal({ stranger, onAdd, onReject }) {
         </div>
 
         <div className="flex items-center gap-3 px-3 py-2 mb-4 border border-current/20 bg-current/5">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
-            style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
+          {strangerImg ? (
+            <img src={strangerImg} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+              style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="text-sm">{stranger.name}</div>
             <div className="text-xs opacity-60 italic" style={{ fontFamily: 'monospace' }}>{stranger.role}</div>
@@ -378,6 +387,7 @@ export function ParentsChapterModal({ chapter, feedback, onChoose, onDismiss }) 
 }
 export function StrangerEventModal({ event, strangers, feedback, onChoose, onDismiss }) {
   const stranger = strangers.find(s => s.id === event.strangerId);
+  const strangerImg = stranger ? getNpcImage(stranger.id) : null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.92)' }}>
       <div className="bg-[#1a1612] border border-current/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5">
@@ -386,8 +396,12 @@ export function StrangerEventModal({ event, strangers, feedback, onChoose, onDis
 
         {stranger && (
           <div className="flex items-center gap-2 mb-3 px-3 py-2 border border-current/20 bg-current/5">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-              style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
+            {strangerImg ? (
+              <img src={strangerImg} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                style={{ background: stranger.color, color: '#1a1612' }}>{stranger.avatar}</div>
+            )}
             <div className="text-xs">
               <div>{stranger.name}</div>
               <div className="opacity-60 italic" style={{ fontFamily: 'monospace' }}>{stranger.role}</div>

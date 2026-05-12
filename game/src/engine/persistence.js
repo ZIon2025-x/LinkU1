@@ -3,7 +3,7 @@
 // instead of crashing.
 
 const KEY = 'yixiang.save';
-const SCHEMA = 2;  // bump when shape changes
+const SCHEMA = 4;  // bump (V4: Link2Ur day-1 unlock + backlogStress)
 
 export function save(state) {
   if (typeof window === 'undefined') return;

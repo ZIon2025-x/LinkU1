@@ -152,7 +152,7 @@ export const WELCOME_WEEK_EVENTS = {
       choices: [
         { label: '一个人去吃一顿', effect: { wallet: -22, energy: 8, belonging: 8 },
           feedback: '你点了 4 笼。一个人吃完所有的。\n\n阿姨看你 looking lonely 多送了一份蛋挞："Eat more, dear." 你想哭。' },
-        { label: '约 CSSA 群里的同学一起', effect: { wallet: -25, energy: 3, belonging: 18 },
+        { label: '约 CSSA 群里的同学一起', effect: { wallet: -25, energy: 3, belonging: 18, flag: 'cssa_dimsum' },
           condition: ({ flags }) => flags.cssa,
           feedback: '6 个人挤一桌。你认识了 4 个新人。其中一个住你楼下。\n\n买单时大家一起抢——这是国内出来的人才有的本能。' },
       ],
