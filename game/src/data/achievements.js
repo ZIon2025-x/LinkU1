@@ -486,6 +486,44 @@ export const ACHIEVEMENTS = [
     desc: '你对 ta 撒了一个 4 个月没解开的谎。',
     check: ({ flags = {} }) => !!flags.linnan_betrayed,
   },
+
+  // ─────────────────────────── LINK2UR ENTREPRENEURSHIP ───────────────────────────
+  {
+    id: 'l2u_first_repeat', tier: 'common', icon: '🤝',
+    title: '记得你 ⭐',
+    desc: '第一个老客户记住了你',
+    check: ({ flags = {} }) => !!flags.l2u_first_repeat_unlocked,
+  },
+  {
+    id: 'l2u_clash_survived', tier: 'rare', icon: '⚔️',
+    title: '撞档大王',
+    desc: '在一周内同时完成 3 个指定任务',
+    check: ({ flags = {} }) => !!flags.l2u_clash_survived_unlocked,
+  },
+  {
+    id: 'l2u_y_audience', tier: 'rare', icon: '🍰',
+    title: 'Sketch Pink Room',
+    desc: '收到 Y 姐的邀请',
+    check: ({ flags = {} }) => !!flags.l2u_y_audience_unlocked,
+  },
+  {
+    id: 'l2u_first_hire', tier: 'epic', icon: '🤲',
+    title: '我招到了第一个人',
+    desc: '招到第一个团员',
+    check: ({ flags = {} }) => !!flags.l2u_first_hire_unlocked,
+  },
+  {
+    id: 'l2u_team_5', tier: 'legendary', icon: '👑',
+    title: '小小帝国',
+    desc: '团队达到 5 人 + 团队周流水 £600+',
+    check: ({ flags = {} }) => !!flags.l2u_team_5_unlocked,
+  },
+  {
+    id: 'l2u_ai_anxiety_resolved', tier: 'epic', icon: '🧠',
+    title: '我是匠人 不是工具人',
+    desc: '完成 Paul BBC 采访 + 通过 Whitmore office hour 的 AI 警句',
+    check: ({ flags = {} }) => !!flags.l2u_ai_anxiety_resolved_unlocked,
+  },
 ];
 
 /**

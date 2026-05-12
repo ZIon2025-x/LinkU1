@@ -103,6 +103,69 @@ describe('achievements · computeUnlocked', () => {
   });
 });
 
+describe('achievements · Link2Ur milestones (6 new)', () => {
+  test('6 Link2Ur entrepreneurship achievements exist with correct ids', () => {
+    const expectedIds = [
+      'l2u_first_repeat',
+      'l2u_clash_survived',
+      'l2u_y_audience',
+      'l2u_first_hire',
+      'l2u_team_5',
+      'l2u_ai_anxiety_resolved',
+    ];
+    for (const id of expectedIds) {
+      expect(ACHIEVEMENT_BY_ID[id]).toBeDefined();
+    }
+  });
+
+  test('Link2Ur achievements have required fields', () => {
+    const expectedIds = [
+      'l2u_first_repeat',
+      'l2u_clash_survived',
+      'l2u_y_audience',
+      'l2u_first_hire',
+      'l2u_team_5',
+      'l2u_ai_anxiety_resolved',
+    ];
+    for (const id of expectedIds) {
+      const a = ACHIEVEMENT_BY_ID[id];
+      expect(a.title).toBeTruthy();
+      expect(a.desc).toBeTruthy();
+      expect(a.icon).toBeTruthy();
+      expect(a.tier).toBeTruthy();
+      expect(typeof a.check).toBe('function');
+    }
+  });
+
+  test('Link2Ur tier distribution: 1 common, 2 rare, 2 epic, 1 legendary', () => {
+    const ids = [
+      'l2u_first_repeat',
+      'l2u_clash_survived',
+      'l2u_y_audience',
+      'l2u_first_hire',
+      'l2u_team_5',
+      'l2u_ai_anxiety_resolved',
+    ];
+    const tiers = ids.map(id => ACHIEVEMENT_BY_ID[id].tier);
+    const buckets = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    for (const tier of tiers) buckets[tier]++;
+
+    expect(buckets.common).toBe(1);
+    expect(buckets.rare).toBe(2);
+    expect(buckets.epic).toBe(2);
+    expect(buckets.legendary).toBe(1);
+  });
+
+  test('Link2Ur check predicates respond to flags', () => {
+    expect(ACHIEVEMENT_BY_ID.l2u_first_repeat.check({ flags: { l2u_first_repeat_unlocked: true } })).toBe(true);
+    expect(ACHIEVEMENT_BY_ID.l2u_clash_survived.check({ flags: { l2u_clash_survived_unlocked: true } })).toBe(true);
+    expect(ACHIEVEMENT_BY_ID.l2u_y_audience.check({ flags: { l2u_y_audience_unlocked: true } })).toBe(true);
+    expect(ACHIEVEMENT_BY_ID.l2u_first_hire.check({ flags: { l2u_first_hire_unlocked: true } })).toBe(true);
+    expect(ACHIEVEMENT_BY_ID.l2u_team_5.check({ flags: { l2u_team_5_unlocked: true } })).toBe(true);
+    expect(ACHIEVEMENT_BY_ID.l2u_ai_anxiety_resolved.check({ flags: { l2u_ai_anxiety_resolved_unlocked: true } })).toBe(true);
+  });
+});
+
 describe('achievements · reducer integration', () => {
   test('UNLOCK_ACHIEVEMENTS appends with week stamp', () => {
     let s = initialState();
