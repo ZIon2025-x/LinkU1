@@ -313,3 +313,151 @@ async def _fetch_task_history_pool(
             "source": "task_history",
         })
     return out
+
+
+_USER_CITY_SQL = text("""
+SELECT upref.city
+FROM user_profile_preferences upref
+WHERE upref.user_id = :user_id
+LIMIT 1
+""")
+
+
+async def _get_user_city(db: AsyncSession, user_id: str) -> Optional[str]:
+    """Fetch caller's city from preferences. None if not set."""
+    try:
+        result = await db.execute(_USER_CITY_SQL, {"user_id": user_id})
+        row = result.first()
+        return row.city if row else None
+    except Exception as e:
+        logger.warning("_get_user_city failed: %s", e)
+        return None
+
+
+def _city_state(
+    user_city_norm: Optional[str],
+    candidate_city_norm: Optional[str],
+) -> str:
+    """Classify city alignment: 'same' | 'cross' | 'unknown'.
+
+    'unknown' 用于 candidate 城市未填(数据缺失)。
+    user 城市未填时(也走 unknown) 候选所有人对 user 都是"未知城市"档。
+    """
+    if candidate_city_norm is None:
+        return "unknown"
+    if user_city_norm is None:
+        return "unknown"
+    return "same" if candidate_city_norm == user_city_norm else "cross"
+
+
+async def recommend_helpers(
+    *,
+    db: AsyncSession,
+    current_user_id: str,
+    task_type: str,
+    skills: list[str],
+    location: Optional[str],
+    mode: Optional[str],
+    limit: int = 5,
+) -> dict:
+    """Main entry: 两池查询 → 合并去重 → 评分 → 排序 → top N.
+
+    Spec §4-§6。
+
+    Returns dict matching the tool output schema (helpers/total/fallback_suggestion)。
+    """
+    limit = max(1, min(10, limit))
+
+    # 1. 确定 user_city: location 优先, fallback 到 user_profile_preferences.city
+    raw_user_city = location or await _get_user_city(db, current_user_id)
+    user_city_norm = normalize_city(raw_user_city)
+
+    # 2. 两池查询
+    service_pool = await _fetch_service_pool(
+        db=db, current_user_id=current_user_id,
+        task_type=task_type, skills=skills or [], mode=mode,
+    )
+    history_pool = await _fetch_task_history_pool(
+        db=db, current_user_id=current_user_id, task_type=task_type,
+    )
+
+    # 3. 评分 + 合并去重
+    scored: dict[str, dict] = {}
+
+    for cand in service_pool:
+        cand_city_norm = normalize_city(cand["city"])
+        state = _city_state(user_city_norm, cand_city_norm)
+        geo_mult = _geo_multiplier(mode, user_city_norm, cand_city_norm)
+        skills_overlap = len(set(cand.get("skills") or []) & set(skills or []))
+        score = _score_candidate(
+            source="service", avg_rating=cand.get("avg_rating"),
+            completed_count=0, skills_overlap=skills_overlap, geo_multiplier=geo_mult,
+        )
+        scored[cand["user_id"]] = {
+            **cand, "score": score, "city_state": state,
+            "city_display": cand.get("city"),
+        }
+
+    for cand in history_pool:
+        cand_city_norm = normalize_city(cand["city"])
+        state = _city_state(user_city_norm, cand_city_norm)
+        geo_mult = _geo_multiplier(mode, user_city_norm, cand_city_norm)
+        score = _score_candidate(
+            source="task_history", avg_rating=cand.get("avg_rating"),
+            completed_count=cand.get("completed_count", 0),
+            skills_overlap=0, geo_multiplier=geo_mult,
+        )
+        uid = cand["user_id"]
+        if uid in scored:
+            if score > scored[uid]["score"]:
+                scored[uid]["score"] = score
+            # service source 保留, 不覆盖
+        else:
+            scored[uid] = {
+                **cand, "score": score, "city_state": state,
+                "city_display": cand.get("city"),
+            }
+
+    # 4. 排序 + top N
+    ranked = sorted(scored.values(), key=lambda c: c["score"], reverse=True)[:limit]
+
+    # 5. output
+    helpers = []
+    for c in ranked:
+        helpers.append({
+            "user_id": c["user_id"],
+            "name": c["name"],
+            "avatar_url": c.get("avatar_url"),
+            "source": c["source"],
+            "match_score": round(c["score"], 3),
+            "match_reason": _build_match_reason(
+                source=c["source"],
+                service_name=c.get("service_name"),
+                avg_rating=c.get("avg_rating"),
+                completed_count=c.get("completed_count", 0),
+                task_type=c.get("task_type"),
+                city_state=c["city_state"],
+                city_display=c["city_display"],
+            ),
+            "profile_url": f"/profile/{c['user_id']}",
+        })
+
+    # 6. fallback_suggestion
+    fallback = None
+    if not helpers:
+        loc_str = raw_user_city or location
+        if loc_str:
+            fallback = f"{loc_str} 暂时还没有合适的人选,建议你发个任务让大家看到"
+        else:
+            fallback = "还没有匹配的人选,建议你发个任务让大家看到"
+
+    logger.info(
+        "recommend_helpers: user=%s task_type=%s mode=%s loc=%s n_results=%d",
+        current_user_id, task_type, mode, raw_user_city, len(helpers),
+    )
+
+    return {
+        "helpers": helpers,
+        "total": len(helpers),
+        "fallback_suggestion": fallback,
+    }

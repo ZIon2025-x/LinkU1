@@ -263,3 +263,110 @@ def test_fetch_task_history_pool_returns_mapped_rows():
     assert result[0]["completed_count"] == 8
     assert result[0]["avg_rating"] == 4.2
     assert result[0]["task_type"] == "moving"
+
+
+def test_recommend_helpers_merges_and_sorts():
+    """两池都返回数据,合并去重,按 score desc 排序,服务源加权高。"""
+    from app.services import helper_recommendation as hr
+
+    mock_db = AsyncMock()
+    user_pref_row = _fake_row(city="London")
+    user_pref_result = MagicMock()
+    user_pref_result.first.return_value = user_pref_row
+
+    service_row = _fake_row(
+        id="u_001", name="Alice", avatar_url=None, avg_rating=4.8,
+        city="London", service_name="陪逛", location_type="in_person",
+        skills=["陪同"],
+    )
+    service_result = MagicMock()
+    service_result.all.return_value = [service_row]
+
+    history_row = _fake_row(
+        id="u_002", name="Bob", avatar_url=None, avg_rating=4.2,
+        city="Manchester", completed_count=4,
+    )
+    history_result = MagicMock()
+    history_result.all.return_value = [history_row]
+
+    mock_db.execute = AsyncMock(side_effect=[
+        user_pref_result, service_result, history_result,
+    ])
+
+    out = asyncio.get_event_loop().run_until_complete(
+        hr.recommend_helpers(
+            db=mock_db, current_user_id="u_caller",
+            task_type="accompany", skills=["陪同"],
+            location=None, mode="offline", limit=5,
+        )
+    )
+
+    assert len(out["helpers"]) == 2
+    assert out["helpers"][0]["user_id"] == "u_001"  # Alice 同城,排第一
+    assert out["helpers"][0]["match_score"] > out["helpers"][1]["match_score"]
+    assert out["helpers"][0]["source"] == "service"
+    assert out["helpers"][0]["profile_url"] == "/profile/u_001"
+    assert "陪逛" in out["helpers"][0]["match_reason"]
+    assert out["total"] == 2
+    assert out["fallback_suggestion"] is None
+
+
+def test_recommend_helpers_empty_returns_fallback():
+    """两池都空,返回 fallback_suggestion 提示发任务。"""
+    from app.services import helper_recommendation as hr
+
+    mock_db = AsyncMock()
+    user_pref_result = MagicMock()
+    user_pref_result.first.return_value = _fake_row(city="London")
+    empty_result = MagicMock()
+    empty_result.all.return_value = []
+    mock_db.execute = AsyncMock(side_effect=[
+        user_pref_result, empty_result, empty_result,
+    ])
+
+    out = asyncio.get_event_loop().run_until_complete(
+        hr.recommend_helpers(
+            db=mock_db, current_user_id="u_caller",
+            task_type="moving", skills=[], location="London",
+            mode="offline", limit=5,
+        )
+    )
+    assert out["helpers"] == []
+    assert out["total"] == 0
+    assert out["fallback_suggestion"] is not None
+    assert "London" in out["fallback_suggestion"] or "伦敦" in out["fallback_suggestion"]
+
+
+def test_recommend_helpers_dedupes_same_user_keeps_service():
+    """同一 user_id 出现在两池,合并后 source 标 service。"""
+    from app.services import helper_recommendation as hr
+
+    mock_db = AsyncMock()
+    user_pref_result = MagicMock()
+    user_pref_result.first.return_value = _fake_row(city=None)
+    service_row = _fake_row(
+        id="u_001", name="Alice", avatar_url=None, avg_rating=4.8,
+        city="London", service_name="陪逛", location_type="in_person", skills=[],
+    )
+    service_result = MagicMock()
+    service_result.all.return_value = [service_row]
+    history_row = _fake_row(
+        id="u_001", name="Alice", avatar_url=None, avg_rating=4.5,
+        city="London", completed_count=5,
+    )
+    history_result = MagicMock()
+    history_result.all.return_value = [history_row]
+    mock_db.execute = AsyncMock(side_effect=[
+        user_pref_result, service_result, history_result,
+    ])
+
+    out = asyncio.get_event_loop().run_until_complete(
+        hr.recommend_helpers(
+            db=mock_db, current_user_id="u_caller",
+            task_type="accompany", skills=[], location=None,
+            mode="online", limit=5,
+        )
+    )
+    assert len(out["helpers"]) == 1
+    assert out["helpers"][0]["user_id"] == "u_001"
+    assert out["helpers"][0]["source"] == "service"  # 高源胜出
