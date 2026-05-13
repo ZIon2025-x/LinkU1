@@ -438,3 +438,144 @@ assets/illustrations/
 新增可选:11 张 (客户/团员 avatar)
 画完总数:99 + 11 = 110 张 (基础) / 110 + 11 = 121 张 (含可选 polish)
 ```
+
+---
+
+# 🆕🆕 第 7 主线 v3 · 锦上添花补充图 — 8 张
+
+> 2026-05-13 第二轮补充。当前 22 张已发版可玩, 这 8 张是"如果有更好"的视觉锚点。
+> 分 3 个 Tier, 按需画即可。**全部都画也只 ~10 MB 增量**。
+> 画风沿用 Style Brief。
+
+## Tier S · 关键叙事缺图 (3 张, 强烈推荐)
+
+### 122. `scene-rfh_farewell.webp` — Ch 9 W51 · Y 姐毕业前告别 ⭐⭐⭐⭐⭐
+> 1920 × 1080 px / scenes/
+> **问题**: 当前 Ch 9 W51 yjie_farewell 场景**完全没图**, 但这是 Y 姐线最后一面, 情感重量最大。
+>
+> 构图: 黄昏时分, **Royal Festival Hall** 旁泰晤士河 South Bank 一家不出名的精品咖啡店户外桌。Y 姐 (28 岁, 短直发) 今天**穿深绿色丝绒外套** (和 ending_y_double 那身一致, 但是侧脸/斜面构图)。桌上一只小巧的礼物盒 (LinkU brand color 米色包装 + 麻绳系蝴蝶结) + 两杯 flat white + 玩家一只手撑着。背景: 泰晤士河水面映 RFH 立面灯光, 远处 London Eye 亮起来。**焦点**: 礼物盒 + Y 姐手指轻碰盒子的瞬间。
+>
+> 调性: 不是 sad ending — 是 "see you later" 的 dignity。两人都在笑但眼神有重量。
+
+### 123. `scene-paul_bbc_studio.webp` — Ch 7 W38 · BBC 演播室采访 ⭐⭐⭐⭐⭐
+> 1920 × 1080 px / scenes/
+> **问题**: 当前 `achievement-l2u_ai_anxiety_resolved.png` 是 backstage 化妆镜 (反思后),  缺**采访进行时**这张。
+>
+> 构图: BBC News 风格小演播室, 圆桌坐两人 — Paul (35 岁短胡须 NHS 黑框眼镜, 工党左倾知识分子 vibe) + 玩家 (亚洲面孔留学生, 微紧张但眼神聚焦)。桌上一支 BBC logo 的 microphone, 玩家手边一杯水。两侧 studio lights 把脸打亮但有阴影。**背景投影屏**模糊显示 "AI Times: Immigrant Labor in the Age of Algorithms" + 一张算法网格示意图。Paul 身体微前倾问问题 + 玩家手势在解释。
+>
+> 调性: 严肃但温暖。"我没有 prepared 答案 — 但我想清楚一些事了" 的 in-progress 时刻。
+
+### 124. `scene-cotswolds_omar.webp` — Ch 6 W28 · Omar £1500 第一次品牌单 ⭐⭐⭐⭐
+> 1920 × 1080 px / scenes/
+> **问题**: 当前 Phase 2 第一次"我做的不是 service 而是 narrative" 的高端瞬间没有视觉表达。
+>
+> 构图: Cotswolds 私人庄园周末。**蜜色 limestone 乡村大别墅** + 修剪整齐的英式花园, 阳光透树叶斑驳。前景: 玩家蹲半地正在用手机 + DSLR 拍摄 — Omar 家族成员们 (3-4 个穿白色 thobe + 黑 abaya) 在草坪上 picnic, 一只 Saluki 猎犬奔跑。Omar 自己站后景看玩家拍, 嘴角有满意。空中浮一句"Phase 2 第一单"的 vibe — 但**画面里没文字**。
+>
+> 调性: Phase 1 "帮同道" → Phase 2 "做高净值客户" 的视觉跳变。
+
+---
+
+## Tier A · 跨圈联动 banner (3 张, 中等推荐)
+
+### 125. `scene-soho_pub_wangkai_yjie.webp` — cross_yjie_wangkai_pub · 王凯 pub 偶遇 Y 姐 ⭐⭐⭐
+> 1920 × 1080 px / scenes/
+> 当前 crossover modal 弹出时背景无图, 仅文字。
+>
+> 构图: **Soho 一家昏暗 pub 角落**, Guinness 和 stout 在吧台, 木质护墙板, 周末喧闹模糊。前景: 王凯 (北方男, 25 岁 PhD Y2, 油滑兄长气) 端杯刚转身, 视线扫到对面桌 — Y 姐 (深色 trench, Mulberry tote, 正和一个中产英国客户 dinner)。Y 姐侧脸礼貌微笑, 没看见王凯。**王凯眼神**: 一种"哥们闻到对家"的探查 + 半 amused。光线: 暖黄灯 + 红色霓虹反光。
+
+### 126. `scene-meis_yjie_dinner.webp` — cross_yjie_mei_dinner · Y 姐带客户来 Mei's ⭐⭐⭐
+> 1920 × 1080 px / scenes/
+>
+> 构图: Mei's Lucky Star 中餐馆里间圆桌, **Y 姐和一对中国高净值夫妇** (40 岁+ 现代 smart casual, 妻子戴翡翠手镯)在用粤语聊天 + 点菜。桌上麻婆豆腐 + 烤鸭 + 一壶老北京花茶。前景虚化: Mei 姐 (50 多岁, 系红围裙) 端着汤站门口看, **眼神是评判性的关怀** (后面跟玩家说 "她跟你王凯不一样—王凯亲, 她精")。装饰: 红灯笼 + 福字。
+
+### 127. `scene-eric_skewer_loyalty_clash.webp` — cross_wangkai_eric_steal · Eric 烤串店忠诚冲突 ⭐⭐⭐
+> 1920 × 1080 px / scenes/
+>
+> 构图: Soho 一家中式烤串店, 油烟 + 红辣椒油 + 啤酒杯。圆桌坐三人: 玩家 + 王凯 (兄长姿态) + Eric (22 岁中国二代, 戴眼镜, 围裙挂脖, 局促)。王凯刚把一支烤串递给 Eric 同时跟玩家说话 "你怎么不让他选?"。Eric 夹在中间, 眼神在两个 employer 之间游移。桌中央: **半空的青岛啤酒 + Eric 的 sketchbook**。
+
+---
+
+## Tier B · 补完整客户 avatar (2 张, 可选)
+
+### 128. `npc-grandma_zhang.webp` — 张奶奶 (cust_grandma) ⭐⭐
+> 512 × 512 px / npcs/
+> 当前 emoji 👵 兜底, 但她是 Y 姐线最温暖的"陪伴型"客户 — 跨阶段服务玩家整年。
+>
+> 构图: 67 岁老北京华侨女性, 头发花白整齐扎髻, 穿酱色棉袄外套 (传统但 dignified, 不是廉价"奶奶味")。背景: **伦敦 Hampstead Heath 公园**长椅角, 一只老金毛 (灰色嘴巴) 趴在脚边。她**举手机自拍**(准备发朋友圈给国内孙女), 嘴角细微的笑。眼神里有点孤独 (老伴去年走了), 但被那只狗治愈。光: 阴天柔光, 秋日落叶飘。
+
+### 129. `npc-chen_yifan.webp` — 陈一帆 (cust_chen) ⭐⭐
+> 512 × 512 px / npcs/
+> 当前 emoji 📚 兜底, 她是 Whitmore 跨圈介绍的关键钩子 (Ch 7 W33)。
+>
+> 构图: 26 岁亚洲女学者, UCL 历史系 PhD Y3。长发简单扎起, **wireframe 圆眼镜**, 嘴角微抿。背景: **Senate House 7 楼图书馆**深夜, 桌上 4 杯空 Pret 杯 + 一摞 Foucault 的书 + 翻开的 MacBook (屏幕上是 Word 论文)。表情: 长期 thesis 写作的"麻木中带韧" — 不是崩溃, 是 grinding through。穿米色毛衣 + 灰色厚围巾 (图书馆冷)。
+
+---
+
+## 已 wired 的事件 ID (画完直接接入, 我已经预映射)
+
+我会在你画完后用一次 commit 把下面 5 个映射加进 `imageRegistry.js`:
+
+```javascript
+// 当前 (已 mapped):
+y_double / link2ur_team_founded / link2ur_solo_apex          → ending banner
+yjie_sketch_invitation / yjie_merger_offer                    → sketch_pink_room
+
+// 你画完这 8 张后我加 (event id → scene key):
+yjie_farewell                  → rfh_farewell
+ch7_paul_bbc_interview         → paul_bbc_studio
+cross_yjie_paul_bbc            → paul_bbc_studio
+ch6_omar_first                 → cotswolds_omar
+cross_yjie_wangkai_pub         → soho_pub_wangkai_yjie
+cross_yjie_mei_dinner          → meis_yjie_dinner
+cross_wangkai_eric_steal       → eric_skewer_loyalty_clash
+
+// 客户 avatar:
+cust_grandma.avatarImage = 'grandma_zhang'
+cust_chen.avatarImage    = 'chen_yifan'
+```
+
+总增量: **8 张图 + 5 行 imageRegistry 映射 + 2 行 customer avatarImage**。
+
+---
+
+## Tier C · UI 背景 / 道具图 (3 张, 可选 polish)
+
+### 130. `bg-phase1_indicator.webp` — Phase 1 留学生 vibe 背景 ⭐⭐
+> 800 × 200 px (横长条) / misc/
+> 当前 PhaseIndicator 用 CSS 绿色渐变, 换成插画会有"个人 brand"感。
+>
+> 构图: 横长条插画。从左到右拼贴4 个微缩元素 — Pret 杯 / 翻开的笔记本 + AirPods / 手机屏 IG / Westminster 远景 — 半透明叠加在淡绿色水彩底上, 米色背景。整体不要太抢眼, 是 indicator 条的底图, 让 emoji 🌱 + "Phase 1 · 留学生 AI 服务" 文字浮在上面仍清晰可读。
+
+### 131. `bg-phase2_indicator.webp` — Phase 2 跨境 AI Studio 背景 ⭐⭐
+> 800 × 200 px (横长条) / misc/
+>
+> 构图: 横长条插画。从左到右 — MacBook + Meta ads dashboard / 小红书 app UI / 中英双语 brand book / The Shard 摩天大楼远景 — 半透明叠加在淡蓝色水彩底上, 米色背景。同上, 让 emoji 🚀 + "Phase 2 · 跨境 AI Studio" 浮在上面清晰。**和 Phase 1 形成 "成长" 视觉对照** (元素从校园 → 商业)。
+
+### 132. `prop-yjie_napkin.webp` — Y 姐 W47 餐巾纸 cross-sell 模型 ⭐⭐⭐
+> 800 × 600 px (略横) / misc/
+> 当前 W47 merger modal 里 Y 姐 "推一张 napkin 过来" 的文字描述, 加图能让那一刻有冲击力。
+>
+> 构图: **皱巴巴 Sketch 餐厅米白色亚麻 napkin 摊在大理石桌上**, 上面是 Y 姐**钢笔手写**的简陋数字模型:
+>
+> ```
+> LinkU Bespoke 客户 = 220 个/年 · 客单 £4500 平均
+> + Player AI Studio = 全部客户 +£1500 行后 IG/小红书内容包
+> = ARR 增量 £33万
+> ```
+>
+> 字迹: 粤式商人风的快速笔画 (不工整, 实际 dealmaker 的 napkin 草稿感)。napkin 边缘有 cappuccino 杯底圆形咖啡渍。一个圆珠笔放旁边。**整张图自带"deal 现场"的紧张感**。
+
+---
+
+## 7.8 · 完整清单总结
+
+| Tier | 数量 | 状态 |
+|---|---|---|
+| 原 11 必画 (Y 姐 + 6 成就 + 3 结局 + Sketch room) | 11 | ✅ 已画 |
+| 原 11 可选 avatar (6 客户 + 5 团员) | 11 | ✅ 已画 |
+| **Tier S · 关键叙事缺图 (RFH / BBC / Cotswolds)** | **3** | ⏳ 待画 |
+| **Tier A · 跨圈联动 banner (3 crossover)** | **3** | ⏳ 待画 |
+| **Tier B · 补完 8/8 客户 avatar (奶奶 + 陈)** | **2** | ⏳ 待画 |
+| **Tier C · UI 背景 / 道具 (Phase 1/2 + napkin)** | **3** | ⏳ 待画 |
+| **新增可画总数** | **11** | |
+| **总图量 (画完后)** | **33** | |
