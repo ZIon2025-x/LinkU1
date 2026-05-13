@@ -233,12 +233,8 @@ export function PlayingScreen(props) {
     <div className="animate-fadein flex flex-col h-[100dvh] -mx-3 -my-6">
       {/* === A: HEADER === */}
       <div className="flex-shrink-0 px-3 pt-[env(safe-area-inset-top)]">
-      <button
-        type="button"
-        onClick={() => { audio.click(); onOpenBag(); }}
-        className="w-full text-left pt-2 pb-1.5 border-b border-current/20
-                   active:bg-current/5 transition-colors"
-      >
+      {/* 纯展示 header（不可点击，避免和拇指误触；查看完整状态走底部 🎒） */}
+      <div className="pt-2 pb-1.5 border-b border-current/20">
         {/* row 1: pill + ACTIONS dots */}
         <div className="flex justify-between items-center">
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-wider"
@@ -262,7 +258,7 @@ export function PlayingScreen(props) {
         </div>
 
         {/* row 2: 4 stats inline */}
-        <div className="mt-1.5 flex justify-between text-[11px]" style={{ fontFamily: 'monospace' }}>
+        <div className="mt-1.5 pb-1 flex justify-between text-[11px]" style={{ fontFamily: 'monospace' }}>
           {(() => {
             const a = stats.academic;
             const aColor = a >= 70 ? '#22c55e' : a >= 50 ? undefined : a >= 35 ? '#f97316' : '#ef4444';
@@ -284,12 +280,7 @@ export function PlayingScreen(props) {
             );
           })()}
         </div>
-
-        {/* row 3: tap hint */}
-        <div className="text-center text-[9px] opacity-40 mt-1" style={{ fontFamily: 'monospace' }}>
-          ▼ 点击查看完整状态
-        </div>
-      </button>
+      </div>
       </div>{/* === /A: HEADER === */}
 
       {/* === B: CONTENT === */}
