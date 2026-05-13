@@ -111,6 +111,7 @@ FAQ 答案**从数据库读取**（`faq_sections` + `faq_items`），与 Web/iOS
 | search_flea_market | 搜索跳蚤市场商品 |
 | get_leaderboard_summary | 排行榜概览或单榜详情 |
 | list_task_experts | 活跃任务达人列表 |
+| recommend_helpers_by_intent | 基于用户聊天意图主动推荐合适的人选（候选池=服务发布者 ∪ 同类任务完成者），只返回候选卡片跳 profile，不直接发任务 |
 
 工具返回给模型的数据按 request_lang 使用双语字段，见 [双语与 AI 回复约定](bilingual-and-ai-response.md)。
 
