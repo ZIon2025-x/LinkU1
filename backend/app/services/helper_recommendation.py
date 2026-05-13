@@ -66,6 +66,10 @@ def normalize_city(city: Optional[str]) -> Optional[str]:
     return None
 
 
+# 技能交集评分参数:每个匹配的 skill 加 0.05 分,最多算 3 个 (max contribution 0.15)
+_MAX_SKILLS_OVERLAP = 3
+_SKILLS_OVERLAP_WEIGHT = 0.05
+
 _GEO_TABLE = {
     # (mode, city_state) -> multiplier
     # city_state: 'same' | 'cross' | 'unknown'
@@ -124,6 +128,6 @@ def _score_candidate(
     elif completed_count >= 3:
         boost += 0.05
     # skills overlap
-    boost += min(3, max(0, skills_overlap)) * 0.05
+    boost += min(_MAX_SKILLS_OVERLAP, max(0, skills_overlap)) * _SKILLS_OVERLAP_WEIGHT
 
     return min(1.0, (base + boost) * geo_multiplier)

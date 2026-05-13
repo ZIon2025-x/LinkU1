@@ -67,6 +67,13 @@ def test_geo_multiplier_online_ignores_city():
     assert _geo_multiplier("online", "london", None) == 1.0
 
 
+def test_geo_multiplier_user_city_none_with_known_candidate():
+    """Caller has no city set; candidate has known city → 'cross' (penalized like cross-city mismatch)."""
+    from app.services.helper_recommendation import _geo_multiplier
+    assert _geo_multiplier("offline", None, "london") == 0.4
+    assert _geo_multiplier("both", None, "manchester") == 0.7
+
+
 def test_score_candidate_service_base():
     """service base 0.6, 无 boost, 无 geo 调整 (online)。"""
     from app.services.helper_recommendation import _score_candidate
