@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//mnt/f/python_work/LinkU/**)",
+      "Bash(npm test *)"
+    ]
+  }
+}

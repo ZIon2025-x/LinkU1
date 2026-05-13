@@ -63,7 +63,8 @@
       "Read(//f/python_work/LinkU/**)",
       "Bash(ls -la backend/migrations/15*.sql backend/migrations/16*.sql backend/migrations/17*.sql)",
       "Bash(wc -l frontend/src/api*.ts)",
-      "Bash(wc -l admin/src/api*.ts)"
+      "Bash(wc -l admin/src/api*.ts)",
+      "Read(//f/f/python_work/LinkU/link2ur/lib/l10n/**)"
     ]
   }
 }
