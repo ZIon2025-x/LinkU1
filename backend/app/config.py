@@ -358,8 +358,8 @@ class Config:
     AI_LLM_SMALL_TIMEOUT = float(os.getenv("AI_LLM_SMALL_TIMEOUT", "60"))
     AI_LLM_LARGE_TIMEOUT = float(os.getenv("AI_LLM_LARGE_TIMEOUT", "90"))
     # Token 限制
-    AI_MAX_OUTPUT_TOKENS = int(os.getenv("AI_MAX_OUTPUT_TOKENS", "1024"))  # 单次回复上限
-    AI_MAX_HISTORY_TURNS = int(os.getenv("AI_MAX_HISTORY_TURNS", "10"))   # 保留最近 N 轮
+    AI_MAX_OUTPUT_TOKENS = int(os.getenv("AI_MAX_OUTPUT_TOKENS", "2048"))  # 单次回复上限
+    AI_MAX_HISTORY_TURNS = int(os.getenv("AI_MAX_HISTORY_TURNS", "20"))   # 保留最近 N 轮
     AI_MAX_LOOP_INPUT_TOKENS = int(os.getenv("AI_MAX_LOOP_INPUT_TOKENS", "20000"))  # 工具循环 input token 上限
     AI_MAX_TOOL_ROUNDS = int(os.getenv("AI_MAX_TOOL_ROUNDS", "3"))  # 最大工具调用轮数
     # 速率与预算

@@ -49,6 +49,9 @@ class LLMUsage:
     """Token 用量"""
     input_tokens: int
     output_tokens: int
+    # 缓存命中的 input token (Anthropic 的 cache_read_input_tokens / OpenAI 兼容协议的 prompt_tokens_details.cached_tokens)
+    # 未命中或 provider 不上报时为 0
+    cached_input_tokens: int = 0
 
 
 @dataclass
@@ -101,6 +104,7 @@ class AnthropicProvider:
             usage=LLMUsage(
                 input_tokens=resp.usage.input_tokens,
                 output_tokens=resp.usage.output_tokens,
+                cached_input_tokens=getattr(resp.usage, "cache_read_input_tokens", 0) or 0,
             ),
             stop_reason=resp.stop_reason,
         )
@@ -144,6 +148,7 @@ class AnthropicProvider:
                 usage=LLMUsage(
                     input_tokens=final.usage.input_tokens,
                     output_tokens=final.usage.output_tokens,
+                    cached_input_tokens=getattr(final.usage, "cache_read_input_tokens", 0) or 0,
                 ),
                 stop_reason=final.stop_reason,
             ))
@@ -301,12 +306,15 @@ class OpenAICompatibleProvider:
                 ))
 
         usage_data = data.get("usage", {})
+        # 智谱 GLM 等 OpenAI 兼容 provider 把缓存命中放在 prompt_tokens_details.cached_tokens (隐式自动缓存)
+        prompt_details = usage_data.get("prompt_tokens_details") or {}
         return LLMResponse(
             content=content,
             model=data.get("model", model),
             usage=LLMUsage(
                 input_tokens=usage_data.get("prompt_tokens", 0),
                 output_tokens=usage_data.get("completion_tokens", 0),
+                cached_input_tokens=prompt_details.get("cached_tokens", 0) or 0,
             ),
             stop_reason=choice.get("finish_reason"),
         )

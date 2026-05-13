@@ -55,8 +55,8 @@ Link2Ur 平台 AI 客服助手 — 用户通过自然语言查询任务、了解
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `AI_MAX_OUTPUT_TOKENS` | `1024` | 单次回复 token 上限 |
-| `AI_MAX_HISTORY_TURNS` | `10` | 对话历史保留轮数 |
+| `AI_MAX_OUTPUT_TOKENS` | `2048` | 单次回复 token 上限 |
+| `AI_MAX_HISTORY_TURNS` | `20` | 对话历史保留轮数 |
 | `AI_RATE_LIMIT_RPM` | `10` | 每用户每分钟请求数 |
 | `AI_DAILY_REQUEST_LIMIT` | `100` | 每用户每天请求数 |
 | `AI_DAILY_TOKEN_BUDGET` | `50000` | 每用户每天 token 上限 |
@@ -164,12 +164,12 @@ ANTHROPIC_API_KEY=sk-ant-api03-xxxxx
 
 ### 2. 回复长度控制
 
-- `AI_MAX_OUTPUT_TOKENS=1024`（硬限制）
+- `AI_MAX_OUTPUT_TOKENS=2048`（硬限制）
 - System prompt 指令："每次回复控制在 3-5 句话以内"
 
 ### 3. 历史裁剪
 
-- 只保留最近 10 轮对话（`AI_MAX_HISTORY_TURNS=10`）
+- 只保留最近 20 轮对话（`AI_MAX_HISTORY_TURNS=20`）
 - 超出的历史不加载，节省 input token
 
 ### 4. 每日预算
