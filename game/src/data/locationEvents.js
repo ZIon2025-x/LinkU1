@@ -6,6 +6,15 @@ export const LOCATION_EVENTS = {
       effect: { wallet: -8, energy: 4 }, minWeek: 1, repeatable: true },
   ],
   pub: [
+    { id: 'pub_first_time', title: '第一次站在吧台前', body: 'The Crown。周五晚上。吧台后面挂着 20 种 ale 牌子，你一个都念不出来。\nbartender 看了你一眼："What\'ll it be, love?"',
+      choices: [
+        { label: '装老练 "A pint of lager please"', effect: { wallet: -5, energy: -2, belonging: 3 },
+          feedback: '他点头给你倒了一杯 Carling。喝起来像水但你没说。回到 ensuite 你查了下：lager 是入门款。well played 半个。' },
+        { label: '老实问 "What do you recommend?"', effect: { wallet: -6, energy: -1, belonging: 5 },
+          feedback: '他笑了："First time? Try the cider. It\'s sweet — easier on you." 你点了 cider。是甜的。bartender 经过又给你眨了一下眼。你想：原来"承认不懂"也能换来温度。' },
+        { label: '溜了 "Actually, never mind"', effect: { energy: -3, belonging: -3 },
+          feedback: '你走出 pub。雨开始下了。你想：下次要先 google "how to order in a UK pub"。这种小事都让你觉得自己像个 14 岁。' },
+      ], minWeek: 1, maxWeek: 3 },
     { id: 'pub_overheard', title: '吧台听到的话', body: '你听到旁边几个人在说"those Chinese students always..."。你听不全后面的话。',
       choices: [
         { label: '凑近听清楚', effect: { energy: -10, belonging: -8 },
@@ -21,6 +30,9 @@ export const LOCATION_EVENTS = {
     { id: 'park_jog', title: '晨跑的人', body: '你在 Hyde Park 散步。一个跑步的中年男人对你说 "Lovely morning!" 然后跑走了。',
       effect: { energy: 5, belonging: 3 },
       feedback: '你愣了一下。然后笑了。Lovely morning. 是的，今天确实是。', minWeek: 2, repeatable: true },
+    { id: 'park_squirrel_first', title: '第一次见到 UK 松鼠', body: '你坐在 Hyde Park 长椅上。一只灰色松鼠跑到 30cm 远，看着你的三明治，纹丝不动。',
+      effect: { energy: 6, belonging: 4 },
+      feedback: '你掰了一小块面包扔过去。它叼起来跑了。\n你想：北京没有这种东西。这是英国的第一份"native experience"。', minWeek: 1, maxWeek: 4 },
   ],
   tate: [
     { id: 'tate_painting', title: '一幅画前', body: 'Rothko 的红色色块。你在它前面站了 20 分钟。',
@@ -28,6 +40,15 @@ export const LOCATION_EVENTS = {
       feedback: '一个中年女士走过来站在你旁边。她说 "It makes me cry every time." 你点头。她离开了。你又站了 10 分钟。', minWeek: 3 },
   ],
   library: [
+    { id: 'lib_first_visit', title: '第一次进 Senate House', body: 'Senate House 4 楼。开学第一周。座位密密麻麻坐了 200 人，全在低头打字。\n你站在门口环顾。每张桌子上：一杯 Pret、一台 MacBook、一摞读物。一种"我也得装出会读"的氛围。',
+      choices: [
+        { label: '找个窗边位置静静坐', effect: { energy: -3, academic: 4, belonging: 2 },
+          feedback: '你坐窗边。看半小时阳光斜过书架。你打开一份 reading list。读了 3 页 Foucault — 没懂但写了三行笔记。这就是开始。' },
+        { label: '冲咖啡机区，先观察 vibe', effect: { energy: -2, belonging: 3 },
+          feedback: '咖啡机旁边一个戴眼镜的亚洲男生跟你点头。你点回去。没说话但你想：原来这里有同类。' },
+        { label: '太满了，转身离开', effect: { energy: -1, belonging: -2 },
+          feedback: '你出 Senate House 走 Russell Square。坐长椅 30 分钟看路过的人。你想：明天再来。' },
+      ], minWeek: 1, maxWeek: 3 },
     { id: 'lib_late', title: '凌晨的图书馆', body: '凌晨 2 点。整个 4 楼只有你和一个戴耳机的同学。',
       effect: { academic: 6, energy: -8, belonging: 2 },
       feedback: '你们一直没说话。但你们都知道彼此在这里。这就够了。', minWeek: 4, repeatable: true },
