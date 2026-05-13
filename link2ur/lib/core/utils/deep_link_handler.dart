@@ -8,6 +8,7 @@ import '../config/app_config.dart';
 import '../router/app_router.dart';
 
 import '../widgets/external_web_view.dart';
+import '../widgets/game_web_view.dart';
 import 'logger.dart';
 
 /// 深度链接处理器
@@ -146,6 +147,9 @@ class DeepLinkHandler {
           // 首页或根路径，导航到首页
           context.go('/');
           break;
+        case _DeepLinkRoute.game:
+          GameWebView.open(context, url: AppConfig.instance.gameUrl);
+          break;
         case _DeepLinkRoute.unknown:
           // App 内没有的页面，用 WebView 打开网页版
           final webUrl = 'https://link2ur.com$rawPath';
@@ -201,6 +205,8 @@ class DeepLinkHandler {
     } else if (path.startsWith('/task-expert/') ||
         path.startsWith('/task-experts/')) {
       return _DeepLinkRoute.taskExpert;
+    } else if (path == '/game' || path.startsWith('/game/')) {
+      return _DeepLinkRoute.game;
     }
     return _DeepLinkRoute.unknown;
   }
@@ -285,6 +291,7 @@ class DeepLinkHandler {
 
 enum _DeepLinkRoute {
   home,
+  game,
   task,
   forumPost,
   fleaMarketItem,
