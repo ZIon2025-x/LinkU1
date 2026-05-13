@@ -2495,6 +2495,73 @@ async def _recommend_takers(executor: ToolExecutor, input: dict) -> dict:
 
 
 @tool_registry.register(
+    name="recommend_helpers_by_intent",
+    description=(
+        "基于用户聊天里表达的需求,直接推荐合适的人选(不需要用户先发布任务)。"
+        "Recommend helpers based on user's expressed intent in chat, without requiring a posted task."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "task_type": {
+                "type": "string",
+                "description": "任务类型,来自 TASK_TYPES 枚举(必填)",
+            },
+            "skills": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "1-3 个关键技能词(可空)",
+            },
+            "location": {
+                "type": "string",
+                "description": "城市/区域名(可空,会从用户画像兜底)",
+            },
+            "mode": {
+                "type": "string",
+                "enum": ["online", "offline", "both"],
+                "description": "需求模式(可空,默认 both)",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "返回数量,默认 5,最大 10",
+                "default": 5,
+            },
+        },
+        "required": ["task_type"],
+    },
+    categories=[ToolCategory.TASK],
+)
+async def _recommend_helpers_by_intent(executor: ToolExecutor, input: dict) -> dict:
+    task_type = input.get("task_type")
+    if not task_type or task_type not in _VALID_TASK_TYPES:
+        return {"error": "invalid_task_type"}
+
+    skills = input.get("skills") or []
+    if not isinstance(skills, list):
+        skills = []
+    location = input.get("location")
+    mode = input.get("mode")
+    if mode not in (None, "online", "offline", "both"):
+        mode = None
+    limit = input.get("limit", 5)
+
+    try:
+        from app.services.helper_recommendation import recommend_helpers
+        return await recommend_helpers(
+            db=executor.db,
+            current_user_id=executor.user.id,
+            task_type=task_type,
+            skills=skills[:3],
+            location=location,
+            mode=mode,
+            limit=limit,
+        )
+    except Exception as e:
+        logger.warning("recommend_helpers_by_intent failed: %s", e)
+        return {"error": "internal_error"}
+
+
+@tool_registry.register(
     name="get_next_action",
     description="根据任务当前状态，告诉用户下一步该做什么。Get the next recommended action for a task based on its current status.",
     input_schema={
