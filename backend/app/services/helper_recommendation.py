@@ -101,7 +101,9 @@ def _geo_multiplier(
     if m == "online":
         return 1.0
     if candidate_city is None or user_city is None:
-        state = "unknown" if candidate_city is None else "cross"
+        # user 或 candidate 任一没城市 → 无法判断对齐 → 走 unknown 档
+        # (与 _city_state 语义保持一致)
+        state = "unknown"
     elif candidate_city == user_city:
         state = "same"
     else:
@@ -445,7 +447,7 @@ async def recommend_helpers(
     # 6. fallback_suggestion
     fallback = None
     if not helpers:
-        loc_str = raw_user_city or location
+        loc_str = raw_user_city
         if loc_str:
             fallback = f"{loc_str} 暂时还没有合适的人选,建议你发个任务让大家看到"
         else:
