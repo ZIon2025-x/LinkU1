@@ -22,6 +22,7 @@ function migrateLinkU(state) {
     link2urTeamRevenue: state.link2urTeamRevenue || 0,
     yjieRelationship: state.yjieRelationship || 0,
     yjieChapter: state.yjieChapter || 0,
+    npcSpokenToday: state.npcSpokenToday || [],
   };
 }
 

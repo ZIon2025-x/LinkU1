@@ -903,11 +903,24 @@ export default function App() {
     setEventFeedback(null);
   }
 
-  function talkToNPC(npc) { audio.click(); setActiveNpcDialog(npc); }
+  function talkToNPC(npc) {
+    // 每个 NPC 一天只能对话一次 (防刷 rel)
+    if ((state.npcSpokenToday || []).includes(npc.id)) {
+      audio.click();
+      setShowStoryNotification(`今天和 ${pronounize(npc.cn, state.gender)} 聊过了, 明天再来。`);
+      setTimeout(() => setShowStoryNotification(null), 2500);
+      return;
+    }
+    audio.click();
+    setActiveNpcDialog(npc);
+  }
   function chooseNpcTopic(topic) {
     audio.click();
     applyChoice(topic.effect, activeNpcDialog?.id);
     setEventFeedback(topic.feedback);
+    if (activeNpcDialog?.id) {
+      dispatch({ type: 'MARK_NPC_SPOKEN_TODAY', npcId: activeNpcDialog.id });
+    }
   }
   function dismissNpcDialog() {
     audio.click();

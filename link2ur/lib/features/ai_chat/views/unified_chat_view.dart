@@ -683,7 +683,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                 case _ChatItemType.ai:
                   final msg = item.aiMessage!;
                   final rd = msg.toolResultData;
-                  final hasTaskCards = rd != null && const ['tasks', 'services', 'experts', 'items', 'posts']
+                  final hasTaskCards = rd != null && const ['tasks', 'services', 'experts', 'items', 'posts', 'helpers']
                       .any((k) => rd[k] is List && (rd[k] as List).isNotEmpty);
                   if (hasTaskCards) {
                     return Column(

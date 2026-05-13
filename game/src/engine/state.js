@@ -51,6 +51,9 @@ export function initialState() {
     // 已用过的 chatTopic option ids（防止同一选项重复出现）
     seenChatOptions: [],
     seenChatOptionsToday: [],   // 一日内问过的选项 id，END_DAY 时重置
+    // 今日已聊过的 NPC id 列表 — 每个 NPC 一天只能对话一次 (防刷分)
+    // END_DAY 重置, 跨天才能再聊
+    npcSpokenToday: [],
     // NPC 主动发来的 hook ids（防止同一主动消息重复发）
     seenProactiveHooks: [],
 
@@ -746,8 +749,17 @@ export function reducer(state, action) {
           wallet: state.stats.wallet - deliveryCost,
         },
         seenChatOptionsToday: [],   // 跨天重置：smalltalk 和普通 ask 重新可问
+        npcSpokenToday: [],         // 跨天重置：每个 NPC 又能聊一次
       };
     }
+
+    case 'MARK_NPC_SPOKEN_TODAY':
+      // 玩家选完 NPC 对话选项后,这个 NPC 当天不能再聊 (防刷 rel)
+      if ((state.npcSpokenToday || []).includes(action.npcId)) return state;
+      return {
+        ...state,
+        npcSpokenToday: [...(state.npcSpokenToday || []), action.npcId],
+      };
 
     case 'SET_ENDING':
       return { ...state, ending: action.ending, screen: 'ending' };

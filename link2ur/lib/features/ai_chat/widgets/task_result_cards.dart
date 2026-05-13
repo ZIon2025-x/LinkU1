@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -18,6 +19,12 @@ class TaskResultCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // helpers 走竖向列表布局
+    if (toolResult['helpers'] is List &&
+        (toolResult['helpers'] as List).isNotEmpty) {
+      return _buildHelperList(toolResult['helpers'] as List, context);
+    }
+
     // 尝试从不同字段提取列表数据
     final List<dynamic>? items = _extractItems();
     if (items == null || items.isEmpty) return const SizedBox.shrink();
@@ -316,5 +323,104 @@ class _ResultCard extends StatelessWidget {
         final userId = data['user_id'] as String?;
         if (userId != null) context.goToUserProfile(userId);
     }
+  }
+}
+
+// ─── Helpers vertical list ────────────────────────────────────────────────────
+
+Widget _buildHelperList(List helpers, BuildContext context) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: helpers.map<Widget>((h) {
+        if (h is! Map) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: _HelperCard(data: h.cast<String, dynamic>()),
+        );
+      }).toList(),
+    ),
+  );
+}
+
+class _HelperCard extends StatelessWidget {
+  const _HelperCard({required this.data});
+
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final name = (data['name'] as String?) ?? '';
+    final avatarUrl = data['avatar_url'] as String?;
+    final matchReason = (data['match_reason'] as String?) ?? '';
+    final profileUrl = (data['profile_url'] as String?) ?? '';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        onTap: profileUrl.isEmpty
+            ? null
+            : () => context.push(profileUrl),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: BorderRadius.circular(AppRadius.medium),
+            border: Border.all(
+              color: isDark ? Colors.white12 : const Color(0xFFE5E5EA),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty)
+                    ? Text(
+                        name.isNotEmpty ? name.characters.first : '?',
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w600),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      matchReason,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
