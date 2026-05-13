@@ -1,5 +1,5 @@
 import React from 'react';
-import { NPC_IMAGES } from '../engine/imageRegistry.js';
+import { NPC_IMAGES, MISC_IMAGES } from '../engine/imageRegistry.js';
 
 export const TabBtn = React.memo(function TabBtn({ active, onClick, children }) {
   return (
@@ -55,17 +55,23 @@ export function InboxCard({ task, onAccept, onDecline, onAssign, hasTeam }) {
 }
 
 export function PhaseIndicator({ phase, daysUntilShift }) {
-  if (phase === 1) {
-    return (
-      <div className="bg-green-50 text-green-800 text-sm rounded px-3 py-2 flex items-center gap-2">
-        🌱 <span className="font-medium">Phase 1 · 留学生 AI 服务</span>
-        {daysUntilShift && <span className="text-xs ml-auto opacity-75">距离转型 {daysUntilShift} 天</span>}
-      </div>
-    );
-  }
+  const isP1 = phase === 1;
+  const bg = isP1 ? MISC_IMAGES['bg-phase1_indicator'] : MISC_IMAGES['bg-phase2_indicator'];
+  const fallbackBg = isP1 ? 'bg-green-50' : 'bg-blue-50';
+  const text = isP1 ? 'text-green-800' : 'text-blue-800';
+  const style = bg
+    ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : undefined;
   return (
-    <div className="bg-blue-50 text-blue-800 text-sm rounded px-3 py-2 flex items-center gap-2">
-      🚀 <span className="font-medium">Phase 2 · 跨境 AI Studio</span>
+    <div
+      className={`${bg ? '' : fallbackBg} ${text} text-sm rounded px-3 py-2 flex items-center gap-2 relative overflow-hidden`}
+      style={style}
+    >
+      {bg && <div className="absolute inset-0 bg-white/55" aria-hidden="true" />}
+      <span className="relative z-10 flex items-center gap-2 w-full">
+        {isP1 ? '🌱' : '🚀'} <span className="font-medium">{isP1 ? 'Phase 1 · 留学生 AI 服务' : 'Phase 2 · 跨境 AI Studio'}</span>
+        {isP1 && daysUntilShift && <span className="text-xs ml-auto opacity-75">距离转型 {daysUntilShift} 天</span>}
+      </span>
     </div>
   );
 }

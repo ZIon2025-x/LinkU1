@@ -1,6 +1,6 @@
 import React from 'react';
 import { NpcAvatar } from './NpcAvatar.jsx';
-import { getSceneForEvent, getNpcImage } from '../engine/imageRegistry.js';
+import { getSceneForEvent, getNpcImage, MISC_IMAGES } from '../engine/imageRegistry.js';
 import { pronounize } from '../engine/pronouns.js';
 import { BottomSheet } from './BottomSheet.jsx';
 // Modals are mostly self-contained — they receive everything they need via props.
@@ -21,6 +21,13 @@ export function EventModal({ event, feedback, onChoose, onDismiss }) {
       <div className="text-sm leading-relaxed mb-4 opacity-90" style={{ lineHeight: '1.8' }}>
         {event.body}
       </div>
+      {event?.id === 'yjie_merger_offer' && MISC_IMAGES['prop-yjie_napkin'] && (
+        <div className="mb-4 -mx-2">
+          <img src={MISC_IMAGES['prop-yjie_napkin']} alt="Y 姐推过来的那张 napkin"
+               className="w-full rounded shadow-md" />
+          <div className="text-xs opacity-60 text-center mt-1 italic">— 她推过来的 napkin —</div>
+        </div>
+      )}
       {!feedback ? (
         (event.choices || [{ label: '继续', effect: event.effect || {}, feedback: event.feedback || '...' }]).map((c, i) => (
           <button key={i} onClick={() => onChoose(c)}

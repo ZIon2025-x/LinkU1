@@ -136,6 +136,17 @@ const EVENT_TO_SCENE = {
   // Y 姐 Sketch 邀请 + 合并提议都用 pink room 背景
   yjie_sketch_invitation: 'sketch_pink_room',
   yjie_merger_offer: 'sketch_pink_room',
+  // Y 姐 W51 RFH 旁咖啡告别 (Ch 9 终曲)
+  yjie_farewell: 'rfh_farewell',
+  // Paul BBC AI 时代 immigrant labor 专题 (Ch 7 W38 母题反思)
+  ch7_paul_bbc_interview: 'paul_bbc_studio',
+  cross_yjie_paul_bbc: 'paul_bbc_studio',
+  // Omar £1500 第一次 Phase 2 高端单 (Ch 6 W28)
+  ch6_omar_first: 'cotswolds_omar',
+  // 3 跨圈联动场景
+  cross_yjie_wangkai_pub: 'soho_pub_wangkai_yjie',
+  cross_yjie_mei_dinner: 'meis_yjie_dinner',
+  cross_wangkai_eric_steal: 'eric_skewer_loyalty_clash',
 };
 
 /** Returns scene image url for a given event/chapter id, or null. */
