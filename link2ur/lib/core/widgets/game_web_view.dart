@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../router/page_transitions.dart';
-import '../utils/l10n_extension.dart';
 
 /// 异乡游戏全屏沉浸式 WebView。
 ///
@@ -182,6 +181,10 @@ class _OfflineFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 用 locale.languageCode 判断中英，比 l10n 字符串嗅探鲁棒
+    // （webviewLoading 在 zh_Hant 里是"加載中..."，不含"载入"）
+    final isChinese =
+        Localizations.localeOf(context).languageCode == 'zh';
     return ColoredBox(
       color: Colors.black,
       child: Center(
@@ -195,9 +198,7 @@ class _OfflineFallback extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              context.l10n.webviewLoading.contains('载入')
-                  ? '需要联网才能玩'
-                  : 'Network required',
+              isChinese ? '需要联网才能玩' : 'Network required',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -214,9 +215,7 @@ class _OfflineFallback extends StatelessWidget {
                   vertical: 12,
                 ),
               ),
-              child: Text(
-                context.l10n.webviewLoading.contains('载入') ? '重试' : 'Retry',
-              ),
+              child: Text(isChinese ? '重试' : 'Retry'),
             ),
           ],
         ),
