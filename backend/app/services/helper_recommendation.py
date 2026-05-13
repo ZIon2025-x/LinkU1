@@ -131,3 +131,61 @@ def _score_candidate(
     boost += min(_MAX_SKILLS_OVERLAP, max(0, skills_overlap)) * _SKILLS_OVERLAP_WEIGHT
 
     return min(1.0, (base + boost) * geo_multiplier)
+
+
+# task_type → 中文 label,展示给用户用
+# 与 ai_tools.py _VALID_TASK_TYPES 对齐
+_TASK_TYPE_LABEL_ZH = {
+    "shopping":       "代购",
+    "tutoring":       "辅导",
+    "translation":    "翻译",
+    "design":         "设计",
+    "programming":    "编程",
+    "writing":        "写作",
+    "photography":    "摄影",
+    "moving":         "搬家",
+    "cleaning":       "清洁",
+    "repair":         "维修",
+    "pickup_dropoff": "接送",
+    "cooking":        "厨艺",
+    "language_help":  "语言陪练",
+    "government":     "政务办理",
+    "pet_care":       "宠物照护",
+    "errand":         "跑腿",
+    "accompany":      "陪同",
+    "digital":        "数码协助",
+    "rental_housing": "租房协助",
+    "campus_life":    "校园生活",
+    "second_hand":    "二手交易",
+    "other":          "其他",
+}
+
+
+def _build_match_reason(
+    *,
+    source: str,
+    service_name: Optional[str],
+    avg_rating: Optional[float],
+    completed_count: int,
+    task_type: Optional[str],
+    city_state: str,    # 'same' | 'cross' | 'unknown'
+    city_display: Optional[str],  # 显示给用户的城市名(原始字符串,不归一化)
+) -> str:
+    """Build human-readable match reason for a candidate.
+
+    Spec §6.6。
+    """
+    rating_seg = f",评分 {avg_rating:.1f}" if avg_rating is not None else ""
+    if city_state == "same":
+        city_seg = f"({city_display})" if city_display else ""
+    elif city_state == "cross":
+        city_seg = f"({city_display},可线上协调)" if city_display else "(可线上协调)"
+    else:
+        city_seg = ""
+
+    if source == "service":
+        name = service_name or "个人"
+        return f"发布了{name}服务{rating_seg}{city_seg}"
+    # task_history
+    label = _TASK_TYPE_LABEL_ZH.get(task_type or "", task_type or "")
+    return f"完成过 {completed_count} 个{label}任务{rating_seg}{city_seg}"

@@ -137,3 +137,56 @@ def test_score_candidate_skills_overlap_capped_at_3():
         geo_multiplier=1.0,
     )
     assert s == pytest.approx(0.6 + 0.15)
+
+
+def test_match_reason_service_same_city_with_rating():
+    from app.services.helper_recommendation import _build_match_reason
+    r = _build_match_reason(
+        source="service", service_name="陪逛", avg_rating=4.8,
+        completed_count=0, task_type=None,
+        city_state="same", city_display="伦敦",
+    )
+    assert r == "发布了陪逛服务,评分 4.8(伦敦)"
+
+
+def test_match_reason_service_cross_city_with_rating():
+    from app.services.helper_recommendation import _build_match_reason
+    r = _build_match_reason(
+        source="service", service_name="陪逛", avg_rating=4.5,
+        completed_count=0, task_type=None,
+        city_state="cross", city_display="曼城",
+    )
+    assert r == "发布了陪逛服务,评分 4.5(曼城,可线上协调)"
+
+
+def test_match_reason_service_unknown_city_no_rating():
+    from app.services.helper_recommendation import _build_match_reason
+    r = _build_match_reason(
+        source="service", service_name="陪逛", avg_rating=None,
+        completed_count=0, task_type=None,
+        city_state="unknown", city_display=None,
+    )
+    assert r == "发布了陪逛服务"
+
+
+def test_match_reason_task_history_same_city():
+    from app.services.helper_recommendation import _build_match_reason
+    r = _build_match_reason(
+        source="task_history", service_name=None, avg_rating=4.6,
+        completed_count=8, task_type="accompany",
+        city_state="same", city_display="伦敦",
+    )
+    assert "完成过 8 个" in r
+    assert "评分 4.6" in r
+    assert "(伦敦)" in r
+
+
+def test_match_reason_task_history_no_rating():
+    from app.services.helper_recommendation import _build_match_reason
+    r = _build_match_reason(
+        source="task_history", service_name=None, avg_rating=None,
+        completed_count=3, task_type="moving",
+        city_state="unknown", city_display=None,
+    )
+    assert "完成过 3 个" in r
+    assert "评分" not in r
