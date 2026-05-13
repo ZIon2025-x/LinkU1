@@ -801,6 +801,13 @@ export default function App() {
     if (choice.effect?.flag === 'link2ur_discovered') {
       dispatch({ type: 'L2U_REFRESH_BOARD', tasks: generateBoard(week, { state, phase: state.link2urPhase }), week });
     }
+    // Crossover events may carry flag2 / flag3 extras not handled by applyEffect.
+    if (choice.effect?.flag2) dispatch({ type: 'SET_FLAG', flag: choice.effect.flag2, value: true });
+    if (choice.effect?.flag3) dispatch({ type: 'SET_FLAG', flag: choice.effect.flag3, value: true });
+    // Mark crossover as seen after the player interacts (sourceFlag set by crossover wiring).
+    if (activeEvent?.sourceFlag) {
+      dispatch({ type: 'SET_FLAG', flag: activeEvent.sourceFlag, value: true });
+    }
   }
 
   function dismissEvent() {
@@ -1160,13 +1167,24 @@ export default function App() {
       }
     }
 
-    // 2. Crossovers: mark flag占位 (narrative wiring deferred to Task 7)
+    // 2. Crossovers: show ONE per tick via EventModal (queue rest for next eligible day).
+    // Flag is marked ONLY after player interacts (via chooseEventOption sourceFlag).
     const crossovers = getEligibleCrossovers({ ...state, day: newDay });
-    for (const c of crossovers) {
-      const flagKey = `crossover_seen_${c.id}`;
-      if (!state.flags?.[flagKey]) {
-        dispatch({ type: 'SET_FLAG', flag: flagKey, value: true });
-      }
+    if (crossovers.length > 0 && !activeEvent) {
+      const c = crossovers[0]; // one at a time — avoids stacking modals
+      setTimeout(() => {
+        setActiveEvent({
+          id: c.id,
+          title: c.title || '收到一条消息',
+          body: c.narrative || '',
+          choices: (c.choices || [{ label: '我知道了', effect: {} }]).map(ch => ({
+            ...ch,
+            effect: ch.effect || {},
+          })),
+          sourceFlag: `crossover_seen_${c.id}`,
+        });
+        audio.ding();
+      }, 1500);
     }
 
     // 3. Y 姐邀请 — 检测条件，满足则设 flag 并弹 Sketch 场景

@@ -327,13 +327,11 @@ export const LINK2UR_CHAPTERS = [
       {
         id: 'ch8_omar_upgrade',
         week: 45,
-        type: 'inbox_task',
-        customerId: 'cust_omar',
-        title: 'Omar · 家族基金年度 retainer £30k',
-        reward: 30000,
-        recurring: 'yearly',
-        narrative: 'Omar: "We want you on retainer for the family\'s sustainability portfolio. £30k/year. 12 deliverables. Sponsor visa is on the table if you want."',
-        flagOnAccept: 'l2u_omar_retainer_signed',
+        type: 'flag_set',
+        flagOnSet: 'l2u_omar_retainer_signed',
+        // reward: 30000 intentionally removed — £30k/年 is narrative only, not real wallet credit.
+        // Actual payout would break mid-game economy. Visa + retainer context delivered via narrative modal.
+        narrative: 'Omar 发来消息: "We want you on retainer for the family\'s sustainability portfolio. £30k/year. 12 deliverables. Sponsor visa is on the table if you want."\n\nY 姐听说后主动联系你, 提议 Sketch 二访合并讨论。',
       },
       {
         id: 'ch8_y_merger',
