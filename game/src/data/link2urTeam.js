@@ -21,6 +21,7 @@ export const LINK2UR_TEAM_MEMBERS = [
     baseEnergy: 80,
     cutPercent: 18,
     avatar: '🌸',
+    avatarImage: 'xiaoyu',
     miniArc: [
       {
         phase: 'recruited',
@@ -88,6 +89,7 @@ export const LINK2UR_TEAM_MEMBERS = [
     baseEnergy: 75,
     cutPercent: 22,
     avatar: '🎌',
+    avatarImage: 'kenji',
     miniArc: [
       {
         phase: 'recruited',
@@ -150,6 +152,7 @@ B. 留下, 跟随合并 (如 Path B + 合并)
     baseEnergy: 90,
     cutPercent: 12,  // 最便宜
     avatar: '🇮🇳',
+    avatarImage: 'aman_singh',
     miniArc: [
       {
         phase: 'recruited',
@@ -211,6 +214,7 @@ C 不涨 → Aman 离开。3 个月后他在 LinkedIn 写: "Founder integrity ma
     baseEnergy: 70,
     cutPercent: 20,
     avatar: '🎤',
+    avatarImage: 'chloe',
     miniArc: [
       {
         phase: 'recruited',
@@ -272,6 +276,7 @@ Path A: 她说 "I'll work part-time for you whenever you need." 兼职到她毕�
     baseEnergy: 85,
     cutPercent: 16,
     avatar: '🥡',
+    avatarImage: 'eric',
     miniArc: [
       {
         phase: 'recruited',

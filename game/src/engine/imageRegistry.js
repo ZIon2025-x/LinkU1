@@ -128,6 +128,14 @@ const EVENT_TO_SCENE = {
   // 飞机 / Heathrow 落地 — onboarding 流程
   plane_takeoff: 'plane',
   arrival_heathrow: 'heathrow_arrival',
+  // ── Link2Ur 创业线 (第 7 主线) ──
+  // 3 新结局 banner
+  y_double: 'ending_y_double',
+  link2ur_team_founded: 'ending_team_founded',
+  link2ur_solo_apex: 'ending_solo_apex',
+  // Y 姐 Sketch 邀请 + 合并提议都用 pink room 背景
+  yjie_sketch_invitation: 'sketch_pink_room',
+  yjie_merger_offer: 'sketch_pink_room',
 };
 
 /** Returns scene image url for a given event/chapter id, or null. */

@@ -19,6 +19,7 @@ export const YJIE_PROFILE = {
   pricePoint: '£400-600/day',
   avatar: '💼',
   avatarColor: '#a855f7',
+  avatarImage: 'yjie',
   toneSamples: [
     '呢单嘢值唔值得做?算你 LTV, 三个月入 12 单。OK 嘅。',
     'Don\'t say sorry. Say thank you. Sorry 系 client side 嘅嘢, 你而家 vendor side。',

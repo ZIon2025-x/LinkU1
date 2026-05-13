@@ -7,7 +7,7 @@ import {
 import { MapView, PhoneView, JournalView } from './Views.jsx';
 import { Link2UrView } from './Link2UrView.jsx';
 import { NpcAvatar } from './NpcAvatar.jsx';
-import { getLocationImage, getSceneImage, getMiscImage } from '../engine/imageRegistry.js';
+import { getLocationImage, getSceneImage, getMiscImage, getSceneForEvent } from '../engine/imageRegistry.js';
 import { BottomSheet } from './BottomSheet.jsx';
 
 export function PlaneScreen({ onContinue }) {
@@ -876,6 +876,14 @@ export function EndingScreen({ ending, stats, npcRel, attendanceRate, storyProgr
 
   return (
     <div className="animate-fadein-slow max-w-2xl mx-auto pt-12 pb-8">
+      {(() => {
+        const banner = getSceneForEvent(ending.id);
+        return banner ? (
+          <div className="mb-10 -mx-4 sm:mx-0">
+            <img src={banner} alt="" className="w-full max-h-[420px] object-cover rounded-lg shadow-lg" />
+          </div>
+        ) : null;
+      })()}
       <div className="text-xs tracking-[0.4em] opacity-50 mb-3" style={{ fontFamily: 'monospace' }}>ENDING · {ending.subtitle.toUpperCase()}</div>
       <h2 className="text-5xl mb-2 font-light">{ending.title}</h2>
       <div className="text-sm opacity-60 italic mb-10">{ending.subtitle}</div>
