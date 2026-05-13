@@ -1648,7 +1648,7 @@ export default function App() {
       <BagSheet
         open={bagOpen}
         onClose={() => setBagOpen(false)}
-        stats={state.stats}
+        stats={{ ...state.stats, stress: state.stress ?? 25 }}
         mealsToday={state.mealsToday ?? 0}
         weekInfo={weekInfo}
         attendanceRate={attendanceRate}
