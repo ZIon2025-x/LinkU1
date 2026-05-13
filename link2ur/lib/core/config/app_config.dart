@@ -88,6 +88,29 @@ class AppConfig {
     }
   }
 
+  /// 游戏 WebView URL（异乡 RPG，部署在 Vercel）
+  /// 由 GameWebView 全屏沉浸式加载；详见
+  /// docs/superpowers/specs/2026-05-13-game-webview-embed-design.md
+  String get gameUrl {
+    switch (_environment) {
+      case AppEnvironment.development:
+        return const String.fromEnvironment(
+          'GAME_URL_DEV',
+          defaultValue: 'https://yixiang-staging.vercel.app',
+        );
+      case AppEnvironment.staging:
+        return const String.fromEnvironment(
+          'GAME_URL_STAGING',
+          defaultValue: 'https://yixiang-staging.vercel.app',
+        );
+      case AppEnvironment.production:
+        return const String.fromEnvironment(
+          'GAME_URL_PROD',
+          defaultValue: 'https://yixiang.vercel.app',
+        );
+    }
+  }
+
   /// 请求超时时间
   Duration get requestTimeout => const Duration(seconds: 30);
 
