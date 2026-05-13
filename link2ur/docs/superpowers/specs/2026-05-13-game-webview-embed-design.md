@@ -22,19 +22,16 @@
 4. **Banner 系统加 `link_type: 'game'`** —— admin banner 编辑面板新增"游戏类型"单选项；选中时不需要填 link_url，`BannerCarousel` 自动调起 `GameWebView`。运营加 banner 时不必记 deeplink URL，未来加新游戏 banner 也是同一类型。
 5. **Game 端轻调** —— `index.html` 加 `apple-mobile-web-app-capable` meta（无害补丁），其他不动
 
-## Out of Scope · 纯 V1 不做（是否做后续看需求）
+## Out of Scope (V1) · Tracked for later · 6 项后续要做
 
-- Native ↔ Web 任何方向通信桥（用户/会员/成就都不传）
-- 跨设备存档同步（游戏存档继续走 webview localStorage，per-domain 隔离）
-- 横屏支持（游戏本身是竖屏设计，强锁竖屏）
-- 游戏内成就回报 → app native badge / 自动分享到论坛
-- Service Worker / 离线 bundle / app 内打包游戏 assets
+> V1 都不做，但**全部明确跟踪**，按优先级排：
 
-## Tracked V2 · 已锁定的下一期工作
-
-> 不在 V1 范围，但**明确要做**，跟踪在这里别忘：
-
-- **发帖工具栏「🎮 链接游戏」按钮** —— V1 用户得手输 `https://link2ur.com/game`；V2 在论坛发帖工具栏加一个按钮一键插入。可能进一步把帖子里的游戏链接渲染成富卡片（缩略图 + "玩这个游戏" 按钮）。预计 1-2 天工时。
+1. **发帖工具栏「🎮 链接游戏」按钮** —— V1 用户得手输 `https://link2ur.com/game`；V2 在论坛发帖工具栏加一个按钮一键插入。可能进一步把帖子里的游戏链接渲染成富卡片（缩略图 + "玩这个游戏" 按钮）。预计 1-2 天工时。
+2. **跨设备存档同步** —— V1 存档走 webview localStorage 仅本机；后续加 backend `game_saves` 表 + game 端 sync API，玩家换设备能续上。预计 3-5 天（backend + game 端）。
+3. **游戏内成就回报 → app** —— 游戏通关 / 解锁里程碑 → `window.postMessage` 给 Flutter → 自动 prompt "分享到论坛" sheet 或解锁 app 内 badge。需要 V2 同时落地双向桥（见下条）。预计 2-3 天。
+4. **Native ↔ Web 通信桥** —— webview JS bridge：app → web (传当前用户基本信息让游戏个性化欢迎)；web → app (上面成就回报)。一旦做了 #3 这个就是前置依赖。预计 1-2 天 infra + 各 use case 自加。
+5. **横屏支持** —— 现在强锁竖屏。要做需要游戏端重新设计 landscape 布局（小说式 RPG 横屏意义不大，低优先）。预计 5+ 天。
+6. **Service Worker / 离线缓存** —— Vercel 热站第一次访问要下 ~1-2 MB；service worker 缓存 assets 后再访问秒开 + 离线可玩。预计 1-2 天。
 
 ---
 
@@ -270,9 +267,8 @@ Banner 表已有 `link_type` 字段（自由字符串）。需要在 admin banne
 - 游戏 `index.html` 改动单独 commit（在 game repo / 子目录）
 - Vercel 部署：你自己有 dashboard，CI 自动跟 push 走
 
-## V2+（本次不做但记录 — 比 "Tracked V2" 更靠后 / 是否做未定）
+## V3+（投机性，不做也不跟踪）
 
-- 游戏内通关 → postMessage 给 Flutter → 自动弹"分享到论坛"sheet
-- 跨设备存档同步（backend 加 `game_saves` 表 + game 端打通 sync）
-- Service Worker / app 内 bundle 游戏 assets 离线可玩
-- Banner 上方显示"已通关"勋章（基于 backend 同步的存档元数据）
+> 真要做需要重新评估必要性：
+
+- Banner 上方显示"已通关"勋章（基于 backend 同步的存档元数据，依赖 #2 跨设备存档）
