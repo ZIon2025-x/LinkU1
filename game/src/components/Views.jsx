@@ -100,7 +100,7 @@ function LocationSheet({ loc, actionsLeft, wallet, onClose, onGoBus, onGoTaxi })
           <div className="grid grid-cols-2 gap-2 mb-2">
             <button onClick={onGoBus} disabled={busDisabled}
               className="p-3 border border-stone-500 text-stone-100 text-left transition-all
-                hover:border-amber-300 hover:bg-amber-300/10 disabled:opacity-30 disabled:cursor-not-allowed">
+                hover:border-amber-300 hover:bg-amber-300/10 active:bg-amber-300/15 disabled:opacity-30 disabled:cursor-not-allowed">
               <div className="text-lg leading-none mb-1">{bus.emoji}</div>
               <div className="text-sm font-medium">{bus.label}</div>
               <div className="text-[10px] opacity-60 mt-1" style={{ fontFamily: 'monospace' }}>
@@ -109,7 +109,7 @@ function LocationSheet({ loc, actionsLeft, wallet, onClose, onGoBus, onGoTaxi })
             </button>
             <button onClick={onGoTaxi} disabled={taxiDisabled}
               className="p-3 border border-stone-500 text-stone-100 text-left transition-all
-                hover:border-amber-300 hover:bg-amber-300/10 disabled:opacity-30 disabled:cursor-not-allowed">
+                hover:border-amber-300 hover:bg-amber-300/10 active:bg-amber-300/15 disabled:opacity-30 disabled:cursor-not-allowed">
               <div className="text-lg leading-none mb-1">{taxi.emoji}</div>
               <div className="text-sm font-medium">{taxi.label}</div>
               <div className="text-[10px] opacity-60 mt-1" style={{ fontFamily: 'monospace' }}>
@@ -119,7 +119,7 @@ function LocationSheet({ loc, actionsLeft, wallet, onClose, onGoBus, onGoTaxi })
           </div>
           <button onClick={onClose}
             className="w-full py-2 border border-stone-700 text-stone-400 text-xs tracking-widest
-              hover:border-stone-500 hover:text-stone-200 transition-colors">
+              hover:border-stone-500 hover:text-stone-200 active:bg-stone-500/10 transition-colors">
             返回
           </button>
         </div>
@@ -327,7 +327,7 @@ export function LocationView({ location, onLeave, onAttendClass, onWorkShift, on
 
   return (
     <div className="animate-fadein">
-      <button onClick={onLeave} className="text-xs opacity-60 hover:opacity-100 mb-3">← 返回地图</button>
+      <button onClick={onLeave} className="text-xs opacity-60 hover:opacity-100 active:opacity-90 mb-3">← 返回地图</button>
       <div className="border border-current/30 mb-3 overflow-hidden">
         {bannerUrl && (
           <div className="relative w-full" style={{ aspectRatio: '8 / 3' }}>
@@ -353,7 +353,7 @@ export function LocationView({ location, onLeave, onAttendClass, onWorkShift, on
               const rel = npcRel[npc.id] || 0;
               return (
                 <button key={npc.id} onClick={() => onTalkNPC(npc)}
-                  className="w-full flex items-center gap-3 p-3 border border-current/30 hover:border-current/70 hover:bg-current/5 transition-all text-left">
+                  className="w-full flex items-center gap-3 p-3 border border-current/30 hover:border-current/70 hover:bg-current/5 active:bg-current/10 transition-all text-left">
                   <NpcAvatar npc={npc} gender={gender} size={40} />
                   <div className="flex-1">
                     <div className="text-sm">{npc.cn}</div>
@@ -375,7 +375,7 @@ export function LocationView({ location, onLeave, onAttendClass, onWorkShift, on
           <div className="space-y-2">
             {actions.map((act, i) => (
               <button key={i} onClick={act.onClick} disabled={act.disabled || actionsLeft < 1}
-                className="w-full p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-left disabled:opacity-30 disabled:cursor-not-allowed">
+                className="w-full p-3 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all text-left disabled:opacity-30 disabled:cursor-not-allowed">
                 <div className="text-sm">{act.label}</div>
                 <div className="text-xs opacity-60 italic">{act.desc}</div>
               </button>
@@ -398,7 +398,7 @@ export function LocationView({ location, onLeave, onAttendClass, onWorkShift, on
 const ChatListItem = React.memo(function ChatListItem({ avatar, color, name, time, last, badge, onClick, imageUrl }) {
   return (
     <button onClick={onClick}
-      className="w-full flex gap-3 px-3 py-2.5 border-b border-current/10 hover:bg-current/5
+      className="w-full flex gap-3 px-3 py-2.5 border-b border-current/10 hover:bg-current/5 active:bg-current/10
         transition-colors text-left">
       {imageUrl ? (
         <img src={imageUrl} alt="" className="w-11 h-11 rounded object-cover flex-shrink-0" />
@@ -469,7 +469,7 @@ function ChatDetailView({
     <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
       {/* 顶栏 · back + name */}
       <div className="flex items-center gap-2 pb-3 border-b border-current/20">
-        <button onClick={onBack} className="text-base hover:opacity-100 opacity-60 px-1">←</button>
+        <button onClick={onBack} className="text-base hover:opacity-100 active:opacity-90 opacity-60 px-1">←</button>
         {avatarUrl ? (
           <img src={avatarUrl} alt="" className="w-8 h-8 rounded object-cover" />
         ) : (
@@ -510,7 +510,7 @@ function ChatDetailView({
             {options.filter(o => o.kind !== 'smalltalk').map(opt => (
               <button key={opt.id} onClick={() => onPickOption(opt)} disabled={isTyping}
                 className={`w-full text-left text-sm px-3 py-2 border border-current/30 transition-colors
-                  ${isTyping ? 'opacity-40 cursor-not-allowed' : 'hover:border-current hover:bg-current/5'}`}>
+                  ${isTyping ? 'opacity-40 cursor-not-allowed' : 'hover:border-current hover:bg-current/5 active:bg-current/10'}`}>
                 <span className="text-[10px] opacity-50 mr-2 tracking-widest">
                   {opt.kind === 'ask' ? '问 ·' : opt.kind === 'post' ? '发 ·' : '回复 ·'}
                 </span>
@@ -527,7 +527,7 @@ function ChatDetailView({
                   {options.filter(o => o.kind === 'smalltalk').map(opt => (
                     <button key={opt.id} onClick={() => onPickOption(opt)} disabled={isTyping}
                       className={`text-left text-xs px-2 py-1.5 border border-current/20 transition-colors leading-snug
-                        ${isTyping ? 'opacity-40 cursor-not-allowed' : 'hover:border-current/50 hover:bg-current/5'}`}>
+                        ${isTyping ? 'opacity-40 cursor-not-allowed' : 'hover:border-current/50 hover:bg-current/5 active:bg-current/10'}`}>
                       {pronounize(opt.label, gender)}
                     </button>
                   ))}
@@ -553,7 +553,7 @@ function GroupChatDetailView({
   return (
     <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
       <div className="flex items-center gap-2 pb-3 border-b border-current/20">
-        <button onClick={onBack} className="text-base hover:opacity-100 opacity-60 px-1">←</button>
+        <button onClick={onBack} className="text-base hover:opacity-100 active:opacity-90 opacity-60 px-1">←</button>
         <div className="w-8 h-8 rounded flex items-center justify-center text-sm font-bold text-white"
           style={{ background: '#9080b8' }}>群</div>
         <div className="flex-1 min-w-0">
@@ -604,7 +604,7 @@ function GroupChatDetailView({
           options.map(opt => (
             <button key={opt.id} onClick={() => onPickOption(opt)}
               className="w-full text-left text-sm px-3 py-2 border border-current/30
-                hover:border-current hover:bg-current/5 transition-colors">
+                hover:border-current hover:bg-current/5 active:bg-current/10 transition-colors">
               <span className="text-[10px] opacity-50 mr-2 tracking-widest">发 ·</span>
               {opt.label}
             </button>
@@ -703,7 +703,7 @@ export function PhoneView({
     return (
       <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
         <div className="flex items-center gap-2 pb-3 border-b border-current/20">
-          <button onClick={() => setOpenId(null)} className="text-base hover:opacity-100 opacity-60 px-1">←</button>
+          <button onClick={() => setOpenId(null)} className="text-base hover:opacity-100 active:opacity-90 opacity-60 px-1">←</button>
           <div className="w-8 h-8 rounded flex items-center justify-center text-sm font-bold text-white"
             style={{ background: '#5a6068' }}>系</div>
           <div className="flex-1">
@@ -847,7 +847,7 @@ function AchievementCard({ a, onClick }) {
   const isLegendary = meta.tier === 'legendary';
   return (
     <button onClick={onClick} type="button"
-      className="block w-full text-left border p-3 rounded-sm transition-all hover:border-current/70 hover:-translate-y-px focus:outline-none focus:ring-2 focus:ring-current/30"
+      className="block w-full text-left border p-3 rounded-sm transition-all hover:border-current/70 hover:-translate-y-px active:bg-current/5 focus:outline-none focus:ring-2 focus:ring-current/30"
       style={{ borderColor: tier.borderColor, background: tier.photoBg + '14' }}>
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 w-14 h-14 rounded-sm overflow-hidden flex items-center justify-center text-3xl"
@@ -1170,7 +1170,7 @@ export function JournalView({
         {tabs.map(t => (
           <button key={t.id} onClick={() => setFilter(t.id)}
             className={`py-2.5 mr-4 text-sm whitespace-nowrap flex-shrink-0 transition-colors
-              ${filter === t.id ? 'opacity-100 border-b-2 border-current -mb-px font-medium' : 'opacity-50 hover:opacity-80'}`}>
+              ${filter === t.id ? 'opacity-100 border-b-2 border-current -mb-px font-medium' : 'opacity-50 hover:opacity-80 active:opacity-70'}`}>
             {t.label}<span className="ml-1 opacity-70" style={_journalTagStyle}>{t.count}</span>
           </button>
         ))}

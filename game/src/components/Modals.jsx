@@ -100,18 +100,18 @@ export function NpcDialogModal({ npc, rel, feedback, onChoose, onDismiss, gender
           <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>选个话题</div>
           {topics.map((t, i) => (
             <button key={i} onClick={() => onChoose(t)}
-              className="w-full text-left p-2.5 mb-2 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
+              className="w-full text-left p-2.5 mb-2 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all text-sm">
               {t.label}
             </button>
           ))}
-          <button onClick={onDismiss} className="w-full mt-2 p-2 text-xs opacity-60 hover:opacity-100">
+          <button onClick={onDismiss} className="w-full mt-2 p-2 text-xs opacity-60 hover:opacity-100 active:opacity-90">
             先这样吧 →
           </button>
         </>
       ) : (
         <>
           <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">CONTINUE</button>
         </>
       )}
     </BottomSheet>
@@ -143,12 +143,12 @@ export function StrangerEncounterModal({ stranger, onAdd, onReject }) {
 
       <div className="space-y-2">
         <button onClick={() => onAdd(stranger)}
-          className="w-full text-left p-3 border border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
+          className="w-full text-left p-3 border border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5 active:bg-amber-300/10 transition-all">
           <div className="text-sm">扫码加好友 · 拉进群</div>
           <div className="text-xs opacity-60 italic mt-0.5">+1 群成员 · +少量归属感</div>
         </button>
         <button onClick={onReject}
-          className="w-full text-left p-3 border border-current/30 hover:border-current/60 transition-all">
+          className="w-full text-left p-3 border border-current/30 hover:border-current/60 active:bg-current/5 transition-all">
           <div className="text-sm">"今天有点忙 改天" 客气拒绝</div>
           <div className="text-xs opacity-60 italic mt-0.5">下次可能就遇不到了</div>
         </button>
@@ -183,7 +183,7 @@ export function AtYouModal({ event, members, strangers, feedback, onChoose, onDi
           <div className="space-y-2">
             {event.choices.map((c, i) => (
               <button key={i} onClick={() => onChoose(c)}
-                className="w-full text-left p-3 border border-current/40 hover:border-orange-300 hover:bg-orange-300/5 transition-all">
+                className="w-full text-left p-3 border border-current/40 hover:border-orange-300 hover:bg-orange-300/5 active:bg-orange-300/10 transition-all">
                 <div className="text-sm">{c.label}</div>
               </button>
             ))}
@@ -194,7 +194,7 @@ export function AtYouModal({ event, members, strangers, feedback, onChoose, onDi
           <div className="border-l-2 border-orange-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>
             {feedback}
           </div>
-          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">
             CONTINUE
           </button>
         </>
@@ -213,7 +213,7 @@ export function DreamModal({ dream, onDismiss }) {
         {dream.body}
       </div>
       <button onClick={onDismiss}
-        className="w-full px-6 py-2 border border-purple-300/40 text-sm tracking-[0.2em] hover:bg-purple-300/10 transition-colors"
+        className="w-full px-6 py-2 border border-purple-300/40 text-sm tracking-[0.2em] hover:bg-purple-300/10 active:bg-purple-300/15 transition-colors"
         style={{ color: '#c8b8e0' }}>
         醒来
       </button>
@@ -230,7 +230,7 @@ export function InsomniaModal({ thought, onDismiss }) {
         {thought.body}
       </div>
       <button onClick={onDismiss}
-        className="w-full px-6 py-2 border border-current/40 text-sm tracking-[0.2em] hover:bg-current/10 transition-colors opacity-80">
+        className="w-full px-6 py-2 border border-current/40 text-sm tracking-[0.2em] hover:bg-current/10 active:bg-current/15 transition-colors opacity-80">
         天亮了
       </button>
       <div className="text-xs opacity-40 italic mt-3 text-center">+5 精力 · -3 归属</div>
@@ -249,7 +249,7 @@ export function NostalgiaModal({ moment, onDismiss }) {
         {moment.body}
       </div>
       <button onClick={onDismiss}
-        className="w-full px-6 py-2 border border-red-300/30 text-sm tracking-[0.2em] hover:bg-red-300/5 transition-colors"
+        className="w-full px-6 py-2 border border-red-300/30 text-sm tracking-[0.2em] hover:bg-red-300/5 active:bg-red-300/10 transition-colors"
         style={{ color: '#e8c8c0' }}>
         继续
       </button>
@@ -282,7 +282,7 @@ export function ParentsChapterModal({ chapter, feedback, onChoose, onDismiss }) 
         <div className="space-y-2">
           {chapter.choices.map((c, i) => (
             <button key={i} onClick={() => onChoose(c)}
-              className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm"
+              className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 active:bg-amber-300/10 transition-all text-sm"
               style={{ lineHeight: '1.6' }}>
               {c.label}
             </button>
@@ -295,7 +295,7 @@ export function ParentsChapterModal({ chapter, feedback, onChoose, onDismiss }) 
             {feedback}
           </div>
           <button onClick={onDismiss}
-            className="w-full px-6 py-2.5 border border-amber-300/60 text-sm tracking-[0.2em] hover:bg-amber-300/10 transition-colors"
+            className="w-full px-6 py-2.5 border border-amber-300/60 text-sm tracking-[0.2em] hover:bg-amber-300/10 active:bg-amber-300/15 transition-colors"
             style={{ color: '#f0d8b0' }}>
             {chapter.chapter === 5 ? '走出 Heathrow' : 'CONTINUE'}
           </button>
@@ -335,7 +335,7 @@ export function StrangerEventModal({ event, strangers, feedback, onChoose, onDis
         <div className="space-y-2">
           {event.choices.map((c, i) => (
             <button key={i} onClick={() => onChoose(c)}
-              className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
+              className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all text-sm">
               <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
               {c.label}
             </button>
@@ -346,7 +346,7 @@ export function StrangerEventModal({ event, strangers, feedback, onChoose, onDis
           <div className="border-l-2 border-current/50 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '1.85' }}>
             {feedback}
           </div>
-          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">
             CONTINUE
           </button>
         </>
@@ -369,18 +369,18 @@ export function CrisisModal({ crisis, feedback, onChoose, onDismiss }) {
       {!feedback ? (
         <div className="space-y-2">
           <button onClick={() => onChoose({ id: 'quit' })}
-            className="w-full text-left p-3 border border-red-400/40 hover:border-red-400 hover:bg-red-400/5 transition-all text-sm"
+            className="w-full text-left p-3 border border-red-400/40 hover:border-red-400 hover:bg-red-400/5 active:bg-red-400/10 transition-all text-sm"
             style={{ color: '#e8b8b8' }}>
             <div>现在就订机票回国</div>
             <div className="text-xs opacity-60 italic mt-0.5">这是终结这一年的方式</div>
           </button>
           <button onClick={() => onChoose({ id: 'persist' })}
-            className="w-full text-left p-3 border border-current/40 hover:border-current/70 transition-all text-sm">
+            className="w-full text-left p-3 border border-current/40 hover:border-current/70 active:bg-current/5 transition-all text-sm">
             <div>"再坚持一周看看"</div>
             <div className="text-xs opacity-60 italic mt-0.5">放下手机，睡觉</div>
           </button>
           <button onClick={() => onChoose({ id: 'call_mom' })}
-            className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm">
+            className="w-full text-left p-3 border border-amber-300/40 hover:border-amber-300 hover:bg-amber-300/5 active:bg-amber-300/10 transition-all text-sm">
             <div>给妈妈打个电话</div>
             <div className="text-xs opacity-60 italic mt-0.5">中国是中午 12:38</div>
           </button>
@@ -390,7 +390,7 @@ export function CrisisModal({ crisis, feedback, onChoose, onDismiss }) {
           <div className="border-l-2 border-red-400/40 pl-4 py-1 mb-4 italic opacity-90 text-sm whitespace-pre-line" style={{ lineHeight: '2' }}>
             {feedback}
           </div>
-          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">
             天亮了
           </button>
         </>
@@ -417,7 +417,7 @@ export function TravelEventModal({ event, feedback, onChoose, onDismiss }) {
             feedback: event.feedback || '...'
           }]).map((c, i) => (
             <button key={i} onClick={() => onChoose(c)}
-              className="w-full text-left p-3 mb-2 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
+              className="w-full text-left p-3 mb-2 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 active:bg-amber-300/10 transition-all">
               <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
               {c.label}
             </button>
@@ -432,7 +432,7 @@ export function TravelEventModal({ event, feedback, onChoose, onDismiss }) {
               <div className="text-sm italic" style={{ color: '#d4b070' }}>"{event.postcard}"</div>
             </div>
           )}
-          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">
             CONTINUE
           </button>
         </>

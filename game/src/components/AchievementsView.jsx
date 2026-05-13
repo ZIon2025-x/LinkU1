@@ -182,7 +182,7 @@ export function WrappedPosterModal({ gameState, onClose }) {
           {busy === 'share' ? '生成中…' : '↗ 分享'}
         </button>
         <button onClick={onClose}
-          className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
+          className="py-2.5 border border-current/40 hover:bg-current/5 active:bg-current/10 transition-colors text-sm tracking-[0.2em]">
           取消
         </button>
       </div>
@@ -244,7 +244,7 @@ export function AchievementCardModal({ achievement, gender, onClose }) {
         style={{ aspectRatio: '600 / 720' }} />
       <div className="grid grid-cols-3 gap-2">
         <button onClick={handleDownload} disabled={!!busy}
-          className="py-2.5 border border-amber-300/60 hover:bg-amber-300/10 transition-colors text-sm tracking-[0.2em] disabled:opacity-50"
+          className="py-2.5 border border-amber-300/60 hover:bg-amber-300/10 active:bg-amber-300/15 transition-colors text-sm tracking-[0.2em] disabled:opacity-50"
           style={{ color: '#d4b070' }}>
           {busy === 'download' ? '生成中…' : '↓ 下载'}
         </button>
@@ -254,7 +254,7 @@ export function AchievementCardModal({ achievement, gender, onClose }) {
           {busy === 'share' ? '生成中…' : '↗ 分享'}
         </button>
         <button onClick={onClose}
-          className="py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.2em]">
+          className="py-2.5 border border-current/40 hover:bg-current/5 active:bg-current/10 transition-colors text-sm tracking-[0.2em]">
           取消
         </button>
       </div>

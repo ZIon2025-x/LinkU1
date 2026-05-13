@@ -29,7 +29,7 @@ export function PlaneScreen({ onContinue }) {
         {PLANE_SCENE.body.map((p, i) => <p key={i}>{p}</p>)}
       </div>
       <button onClick={onContinue}
-        className="mt-10 w-full py-3 border border-current/60 hover:bg-current hover:text-black transition-colors duration-500 tracking-[0.3em] text-sm">
+        className="mt-10 w-full py-3 border border-current/60 hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
         {PLANE_SCENE.cta} →
       </button>
     </div>
@@ -51,7 +51,7 @@ export function ArrivalScreen({ wallet, onChoose }) {
           {chosen.feedback}
         </div>
         <button onClick={() => setPhase('apartment')}
-          className="w-full py-3 border border-current/60 hover:bg-current hover:text-black transition-colors duration-500 tracking-[0.3em] text-sm">
+          className="w-full py-3 border border-current/60 hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
           走进公寓门 →
         </button>
       </div>
@@ -77,7 +77,7 @@ export function ArrivalScreen({ wallet, onChoose }) {
           {APARTMENT_ARRIVAL.body.map((p, i) => <p key={i}>{p}</p>)}
         </div>
         <button onClick={() => setPhase('credits')}
-          className="w-full py-3 border border-current/60 hover:bg-current hover:text-black transition-colors duration-500 tracking-[0.3em] text-sm">
+          className="w-full py-3 border border-current/60 hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
           {APARTMENT_ARRIVAL.cta}
         </button>
       </div>
@@ -103,7 +103,7 @@ export function ArrivalScreen({ wallet, onChoose }) {
         </div>
         <div className="text-xs opacity-30 mt-6" style={{ fontFamily: 'monospace' }}>♥</div>
         <button onClick={() => onChoose(chosen)}
-          className="mt-12 px-12 py-3 border border-current/60 hover:bg-current hover:text-black transition-colors duration-500 tracking-[0.3em] text-sm">
+          className="mt-12 px-12 py-3 border border-current/60 hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
           开始这一年 →
         </button>
       </div>
@@ -140,7 +140,7 @@ export function ArrivalScreen({ wallet, onChoose }) {
               disabled={cantAfford}
               className={`w-full text-left p-3 border transition-all ${cantAfford
                 ? 'border-current/20 opacity-30 cursor-not-allowed'
-                : 'border-current/40 hover:border-current hover:bg-current/5'}`}>
+                : 'border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10'}`}>
               <div className="flex justify-between items-baseline">
                 <span className="text-sm">
                   <span className="mr-2">{opt.emoji}</span>{opt.label}
@@ -185,7 +185,7 @@ export function IntroScreen({ onStart }) {
         <div className="border border-current/30 p-2">⚠️ 4:38 AM 危机</div>
         <div className="border border-current/30 p-2">📮 结局回响</div>
       </div>
-      <button onClick={onStart} className="mt-10 px-12 py-3 border border-current hover:bg-current hover:text-black transition-colors duration-500 tracking-[0.3em] text-sm">
+      <button onClick={onStart} className="mt-10 px-12 py-3 border border-current hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
         BEGIN
       </button>
       <div className="mt-4 text-xs opacity-40 italic">建议开启声音 🔊</div>
@@ -439,7 +439,7 @@ export function HolidayScreen({ type, choices, secrets, stats, npcRel, storyProg
                   const npc = s.npc ? NPCS[s.npc] : null;
                   return (
                     <button key={s.id} onClick={() => !cantAfford && onChoose(s)} disabled={cantAfford}
-                      className={`w-full text-left p-3 border-2 transition-all relative ${cantAfford ? 'border-amber-300/20 opacity-30 cursor-not-allowed' : 'border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5'}`}
+                      className={`w-full text-left p-3 border-2 transition-all relative ${cantAfford ? 'border-amber-300/20 opacity-30 cursor-not-allowed' : 'border-amber-300/50 hover:border-amber-300 hover:bg-amber-300/5 active:bg-amber-300/10'}`}
                       style={{ background: cantAfford ? undefined : 'linear-gradient(135deg, rgba(212,176,112,0.04), transparent)' }}>
                       <div className="flex items-start gap-2">
                         {npc && <NpcAvatar npc={npc} gender={gender} size={28} />}
@@ -469,7 +469,7 @@ export function HolidayScreen({ type, choices, secrets, stats, npcRel, storyProg
               const cantAfford = (c.effect.wallet || 0) < 0 && stats.wallet + c.effect.wallet < 0;
               return (
                 <button key={i} onClick={() => !cantAfford && onChoose(c)} disabled={cantAfford}
-                  className={`w-full text-left p-3 border ${cantAfford ? 'border-current/10 opacity-30 cursor-not-allowed' : 'border-current/40 hover:border-current hover:bg-current/5'} transition-all`}>
+                  className={`w-full text-left p-3 border ${cantAfford ? 'border-current/10 opacity-30 cursor-not-allowed' : 'border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10'} transition-all`}>
                   <div className="text-sm font-medium">{c.label}</div>
                   <div className="text-xs opacity-60 italic mt-0.5">{c.desc}{cantAfford && ' · 钱不够'}</div>
                 </button>
@@ -480,7 +480,7 @@ export function HolidayScreen({ type, choices, secrets, stats, npcRel, storyProg
       ) : (
         <>
           <div className="border-l-2 border-amber-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">回到伦敦</button>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">回到伦敦</button>
         </>
       )}
     </BottomSheet>
@@ -527,7 +527,7 @@ export function ExamScreen({ exam, academic, onFinish }) {
             形式：5 道选择题<br/>
             <span className="opacity-70 italic">最终成绩 = 60% 答题正确率 + 40% 平时学业积累。所以平时不下功夫，临场也救不了你。</span>
           </div>
-          <button onClick={start} className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm">
+          <button onClick={start} className="w-full py-3 border border-current hover:bg-current hover:text-black active:bg-current/30 transition-colors tracking-[0.2em] text-sm">
             开始考试
           </button>
         </>
@@ -540,7 +540,7 @@ export function ExamScreen({ exam, academic, onFinish }) {
           <div className="space-y-2">
             {exam.questions[currentQ].options.map((opt, i) => (
               <button key={i} onClick={() => answer(i)}
-                className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all text-sm">
+                className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all text-sm">
                 <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65 + i)}.</span>
                 {opt}
               </button>
@@ -563,7 +563,7 @@ export function ExamScreen({ exam, academic, onFinish }) {
               : score >= 50 ? '没有大获全胜，但也没翻车。这就够了。'
               : '你坐在长椅上发了 20 分钟呆。然后你回家煮了一碗面。明天还要继续。'}
           </div>
-          <button onClick={done} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">CONTINUE</button>
+          <button onClick={done} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">CONTINUE</button>
         </>
       )}
     </BottomSheet>
@@ -586,7 +586,7 @@ export function DissertationTopicScreen({ feedback, onChoose, onDismiss }) {
           <div className="space-y-2">
             {DISSERTATION_TOPICS.map((t, i) => (
               <button key={i} onClick={() => onChoose(t)}
-                className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 transition-all">
+                className="w-full text-left p-3 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all">
                 <div className="text-sm font-medium">{t.label}</div>
                 <div className="text-xs opacity-60 italic mt-0.5">{t.desc}</div>
               </button>
@@ -596,7 +596,7 @@ export function DissertationTopicScreen({ feedback, onChoose, onDismiss }) {
       ) : (
         <>
           <div className="border-l-2 border-purple-300/60 pl-4 py-1 mb-4 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
-          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black transition-colors">开始动笔</button>
+          <button onClick={onDismiss} className="w-full px-6 py-2 border border-current text-sm tracking-[0.2em] hover:bg-current hover:text-black active:bg-current/30 transition-colors">开始动笔</button>
         </>
       )}
     </BottomSheet>
@@ -621,12 +621,12 @@ export function BirthdayPromptScreen({ onSelect }) {
       <div className="grid grid-cols-2 gap-2 mb-6">
         <button onClick={() => setGender('male')}
           className={`p-3 border transition-all text-sm ${gender === 'male'
-            ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70'}`}>
+            ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70 active:bg-amber-300/5'}`}>
           ♂ 男生
         </button>
         <button onClick={() => setGender('female')}
           className={`p-3 border transition-all text-sm ${gender === 'female'
-            ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70'}`}>
+            ? 'border-amber-300 bg-amber-300/10' : 'border-current/40 hover:border-amber-300/70 active:bg-amber-300/5'}`}>
           ♀ 女生
         </button>
       </div>
@@ -639,7 +639,7 @@ export function BirthdayPromptScreen({ onSelect }) {
       <div className={`grid grid-cols-3 gap-2 ${!gender ? 'opacity-40 pointer-events-none' : ''}`}>
         {months.map(m => (
           <button key={m.num} onClick={() => gender && onSelect(m.num, gender)}
-            className="p-2.5 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all text-sm">
+            className="p-2.5 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 active:bg-amber-300/10 transition-all text-sm">
             {m.name}
           </button>
         ))}
@@ -702,7 +702,7 @@ export function TravelScreen({ destination, daysLeft, totalDays, events, allEven
         <div className="space-y-2 mb-3">
           {events.map(ev => (
             <button key={ev.id} onClick={() => onChooseEvent(ev)}
-              className="w-full text-left p-3 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 transition-all">
+              className="w-full text-left p-3 border border-current/40 hover:border-amber-300 hover:bg-amber-300/5 active:bg-amber-300/10 transition-all">
               <div className="text-sm">{ev.title}</div>
               <div className="text-xs opacity-60 italic mt-0.5 line-clamp-2">{ev.body.split('\n')[0]}</div>
             </button>
@@ -714,12 +714,12 @@ export function TravelScreen({ destination, daysLeft, totalDays, events, allEven
 
       <div className="flex gap-2 mt-4">
         <button onClick={onSkipDay}
-          className="flex-1 py-2 border border-current/40 text-sm hover:border-current transition-all">
+          className="flex-1 py-2 border border-current/40 text-sm hover:border-current active:bg-current/5 transition-all">
           跳过今天 →
         </button>
         {(daysLeft <= 1 || events.length === 0) && (
           <button onClick={onFinish}
-            className="flex-1 py-2 border border-amber-300/60 text-sm hover:bg-amber-300/10 transition-all"
+            className="flex-1 py-2 border border-amber-300/60 text-sm hover:bg-amber-300/10 active:bg-amber-300/15 transition-all"
             style={{ color: '#d4b070' }}>
             回伦敦 ✈️
           </button>
@@ -961,7 +961,7 @@ export function EndingScreen({ ending, stats, npcRel, attendanceRate, storyProgr
         )}
       </div>
 
-      <button onClick={onRestart} className="px-12 py-3 border border-current tracking-[0.3em] text-sm hover:bg-current hover:text-black transition-colors duration-500">AGAIN</button>
+      <button onClick={onRestart} className="px-12 py-3 border border-current tracking-[0.3em] text-sm hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500">AGAIN</button>
       <div className="mt-12 text-xs opacity-30 italic text-center">每一次重来都是不同的人生。</div>
 
       {/* ── 片尾 CTA / Post-credits ── 与主结局留 200px 大间隔 ── */}

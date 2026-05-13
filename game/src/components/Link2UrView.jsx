@@ -240,7 +240,7 @@ function Link2UrWallModal({ gameState, onClose }) {
           {downloading ? '生成中...' : '↓ 下载 PNG'}
         </button>
         <button onClick={onClose}
-          className="flex-1 py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.3em]">
+          className="flex-1 py-2.5 border border-current/40 hover:bg-current/5 active:bg-current/10 transition-colors text-sm tracking-[0.3em]">
           关闭
         </button>
       </div>
