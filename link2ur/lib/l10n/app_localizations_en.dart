@@ -9610,6 +9610,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportChatHumanOnline => 'Human agent is online';
 
   @override
+  String get supportChatAssistantSubtitle => 'AI Assistant';
+
+  @override
   String get supportChatConnectButton => 'Connect';
 
   @override
@@ -10372,7 +10375,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailRejectCounterOffer => 'Reject';
 
   @override
-  String get taskDetailCounterOfferAccepted => 'Counter-offer accepted. Approve and pay to start the task.';
+  String get taskDetailCounterOfferAccepted =>
+      'Counter-offer accepted. Approve and pay to start the task.';
 
   @override
   String get taskDetailCounterOfferRejected => 'Counter-offer rejected';

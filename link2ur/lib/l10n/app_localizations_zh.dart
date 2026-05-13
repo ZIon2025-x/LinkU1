@@ -9212,6 +9212,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supportChatHumanOnline => '人工客服在线';
 
   @override
+  String get supportChatAssistantSubtitle => '智能助手';
+
+  @override
   String get supportChatConnectButton => '连接人工';
 
   @override
@@ -22933,6 +22936,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get supportChatHumanOnline => '人工客服在線';
+
+  @override
+  String get supportChatAssistantSubtitle => '智能助手';
 
   @override
   String get supportChatConnectButton => '連接人工';

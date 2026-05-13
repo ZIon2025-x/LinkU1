@@ -561,39 +561,41 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  /// AI 模式下的渐变 "Linker" 标题；客服在线时下方追加脉冲点 + 在线副标题
+  /// AI 模式下的渐变 "Linker" 标题；副标题始终显示「智能助手」，客服在线时追加「· 脉冲点 人工客服在线」
   Widget _buildLinkerTitle(bool? csOnline) {
-    final showSubtitle = csOnline == true;
+    final showOnlineBadge = csOnline == true;
+    const subtitleStyle = TextStyle(
+      fontSize: 11,
+      color: Color(0xFFA1A1A6),
+      fontWeight: FontWeight.w500,
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         LinkerGradientText(
           context.l10n.supportChatTitle,
-          style: TextStyle(
-            fontSize: showSubtitle ? 16 : 17,
+          style: const TextStyle(
+            fontSize: 16,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.3,
             color: Colors.white,
           ),
         ),
-        if (showSubtitle) ...[
-          const SizedBox(height: 1),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        const SizedBox(height: 1),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(context.l10n.supportChatAssistantSubtitle, style: subtitleStyle),
+            if (showOnlineBadge) ...[
+              const SizedBox(width: 6),
+              const Text('·', style: subtitleStyle),
+              const SizedBox(width: 6),
               const _PulseDot(),
               const SizedBox(width: 5),
-              Text(
-                context.l10n.supportChatHumanOnline,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFFA1A1A6),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Text(context.l10n.supportChatHumanOnline, style: subtitleStyle),
             ],
-          ),
-        ],
+          ],
+        ),
       ],
     );
   }
@@ -1239,7 +1241,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  /// 快捷操作行：历史记录（普通） + 连接人工（渐变主推）
+  /// 快捷操作行：历史记录 / 连接人工（渐变主推） / 发任务
   Widget _buildQuickActionsRow(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -1260,6 +1262,17 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
               onTap: () => context
                   .read<UnifiedChatBloc>()
                   .add(const UnifiedChatRequestHumanCS()),
+            ),
+            const SizedBox(width: 8),
+            _UnifiedQuickActionChip(
+              label: context.l10n.aiChatPostTask,
+              icon: Icons.add_circle_outline,
+              onTap: () {
+                if (!requireAuth(context)) return;
+                context.read<UnifiedChatBloc>().add(
+                      UnifiedChatSendMessage(context.l10n.aiChatPostTask),
+                    );
+              },
             ),
           ],
         ),

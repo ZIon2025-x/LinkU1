@@ -17597,6 +17597,12 @@ abstract class AppLocalizations {
   /// **'Human agent is online'**
   String get supportChatHumanOnline;
 
+  /// No description provided for @supportChatAssistantSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get supportChatAssistantSubtitle;
+
   /// No description provided for @supportChatConnectButton.
   ///
   /// In en, this message translates to:
@@ -19010,7 +19016,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskDetailCounterOfferAccepted.
   ///
   /// In en, this message translates to:
-  /// **'Counter-offer accepted'**
+  /// **'Counter-offer accepted. Approve and pay to start the task.'**
   String get taskDetailCounterOfferAccepted;
 
   /// No description provided for @taskDetailCounterOfferRejected.

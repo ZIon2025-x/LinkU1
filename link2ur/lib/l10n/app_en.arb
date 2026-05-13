@@ -4499,6 +4499,7 @@
   "supportChatTitle": "Linker",
   "supportChatConnecting": "Connecting...",
   "supportChatHumanOnline": "Human agent is online",
+  "supportChatAssistantSubtitle": "AI Assistant",
   "supportChatConnectButton": "Connect",
   "supportChatHumanOffline": "No agents online. Email support@link2ur.com",
   "supportChatConnected": "Human Support",

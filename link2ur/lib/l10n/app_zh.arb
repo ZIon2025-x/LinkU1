@@ -4345,6 +4345,7 @@
   "supportChatTitle": "Linker",
   "supportChatConnecting": "连接中...",
   "supportChatHumanOnline": "人工客服在线",
+  "supportChatAssistantSubtitle": "智能助手",
   "supportChatConnectButton": "连接人工",
   "supportChatHumanOffline": "暂无在线客服，请发邮件至 support@link2ur.com",
   "supportChatConnected": "人工客服",
