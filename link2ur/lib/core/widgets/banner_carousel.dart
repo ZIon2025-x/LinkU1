@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../config/app_config.dart';
 import '../router/app_router.dart';
 
 import '../design/app_colors.dart';
 import '../utils/helpers.dart';
 import 'async_image_view.dart';
 import 'external_web_view.dart';
+import 'game_web_view.dart';
 
 /// 横幅轮播组件
 /// 参考iOS BannerCarouselView.swift
@@ -92,6 +94,12 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
     final linkType = banner['link_type'] as String?;
     final linkUrl = banner['link_url'] as String?;
+
+    // 游戏类型 banner：忽略 link_url（V1 只一个游戏，URL 来自 AppConfig）
+    if (linkType == 'game') {
+      GameWebView.open(context, url: AppConfig.instance.gameUrl);
+      return;
+    }
 
     if (linkUrl == null || linkUrl.isEmpty) return;
 
