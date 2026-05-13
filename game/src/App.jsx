@@ -584,14 +584,12 @@ export default function App() {
       return;
     }
 
-    const stranger = STRANGERS.find(s => s.metAt === loc.id && !state.addedStrangers.includes(s.id));
-    if (stranger && week >= 3 && Math.random() < 0.35) {
-      setTimeout(() => { setActiveStrangerEvent(stranger); audio.message(); }, 400);
-      return;
-    }
+    // ⛔ Stranger 触发 已经迁移到 activity click (tryFireLocationEvent) —
+    // 用户反馈: 进场景就触发让 activity 失去意义。陌生人现在跟其他 random
+    // event 一样, 只在玩家做活动时按概率出现。
 
     // 进入地点不再自动抽 location-event-pool —— 只保留 storyline / network /
-    // weather / stranger 这种"大事件"自动 fire。Pool 池现在由 activity 动作触发。
+    // weather 这种"大事件"自动 fire。Pool 池 + 陌生人 现在由 activity 动作触发。
     // Auto events (event.auto: true) 仍按 minWeek 自动 fire 一次。
     const autoEv = collectLocationEventPool(loc.id).find(e => {
       if (!e.auto) return false;
@@ -659,6 +657,15 @@ export default function App() {
   // 应用 effect 了）。chance 是 activity 设的触发概率。
   function tryFireLocationEvent(locId, chance) {
     if (Math.random() >= chance) return false;
+
+    // ── Stranger 优先 (W3+, 该 location 有未遇见的 stranger, 25% 内部子概率) ──
+    // 之前 stranger 是 entry-fire, 已挪到 activity 链路。
+    const stranger = STRANGERS.find(s => s.metAt === locId && !state.addedStrangers.includes(s.id));
+    if (stranger && week >= 3 && Math.random() < 0.25) {
+      setTimeout(() => { setActiveStrangerEvent(stranger); audio.message(); }, 300);
+      return true;
+    }
+
     const pool = collectLocationEventPool(locId);
     const ctxLocal = {
       npcRel: state.npcRel, stats: state.stats, flags: state.flags,
