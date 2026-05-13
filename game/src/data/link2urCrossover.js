@@ -33,7 +33,7 @@ Now — back to Foucault."`,
       return w >= 30 && (s.npcRel?.mei || 0) >= 4 && s.link2urPath === 'team';
     },
     narrative: `Mei 私下跟玩家: "这丫头是个聪明姑娘, 不过我得告诉你 — 小心被她搞累。
-她跟你王凯不一样 — 王凯亲, 她精。她吃饭的时候我看了, 给客户夹菜的手势特别熟。
+她跟王凯不一样 — 王凯亲, 她精。她吃饭的时候我看了, 给客户夹菜的手势特别熟。
 那种熟不是天生的, 是练的。
 你跟她合作可以。但别全押她。"`,
   },
@@ -45,7 +45,7 @@ Now — back to Foucault."`,
       return w >= 22 && w <= 30 && (s.npcRel?.aditi || 0) >= 5;
     },
     narrative: `Aditi 论文写完跟玩家说: "I want to do some freelance AI translation/academic proofread.
-Do you have a referral pipeline? Yvonne 那边可以接吗?"`,
+Do you have a referral pipeline? 你之前提过的那个 Y 姐那边可以接吗?"`,
     choices: [
       {
         label: '推给 Y 姐网络',

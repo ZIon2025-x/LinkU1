@@ -267,6 +267,14 @@ export const LINK2UR_CHAPTERS = [
     weekEnd: 42,
     summary: '事件密度低但 inbox 持续滴答。Y 姐论文期 cameo。陈一帆推 Whitmore。Paul BBC 采访玩家 — AI 时代身份感悟核心场景。Aman clash。王凯介绍 Eric。',
     events: [
+      // ── Ambient · 让 12 周不死寂 (W32/W35/W37/W39 4 个 low-key 触发) ──
+      {
+        id: 'ch7_chen_inbox_smalltalk',
+        week: 32,
+        type: 'flag_set',
+        flagOnSet: 'ch7_chen_smalltalk_seen',
+        narrative: '陈一帆 inbox 反向关怀: "你论文怎么样, 我帮你看个 chapter (£0, 同病相怜)"',
+      },
       {
         id: 'ch7_chen_recommends_whitmore',
         week: 33,
@@ -275,11 +283,25 @@ export const LINK2UR_CHAPTERS = [
         narrative: '陈一帆推荐玩家给 Whitmore。Whitmore office hour: "Heard you\'ve built an AI thing. Make sure it\'s still you doing the thinking."',
       },
       {
+        id: 'ch7_lily_ig_callback',
+        week: 35,
+        type: 'flag_set',
+        flagOnSet: 'ch7_lily_ig_screenshot',
+        narrative: 'Lily IG story 截图发玩家: "@LinkU 这个 reel 救了我 ✨" — 期末考试间的社交温度',
+      },
+      {
         id: 'ch7_y_thesis_checkin',
         week: 36,
         type: 'npc_scene',
         sceneId: 'yjie_thesis_checkin',
         narrative: 'Y 姐凌晨 DM "撑住吖。论文写完你就识乜嘢叫 freedom。"',
+      },
+      {
+        id: 'ch7_yjie_forwards_paul',
+        week: 37,
+        type: 'flag_set',
+        flagOnSet: 'ch7_paul_setup_received',
+        narrative: 'Y 姐 DM 转发 Paul Hartwell 邮件: "我把 Paul 推给你了, 他下周会找你做 BBC 专题, 题目你看了就知道" — 让 W38 BBC 不突兀',
       },
       {
         id: 'ch7_paul_bbc_interview',
@@ -298,6 +320,14 @@ export const LINK2UR_CHAPTERS = [
         phase: 'clash',
         requireFlag: 'l2u_team_recruited_aman',
         narrative: 'Aman: "I make you the most money. £12/h cut needs to be £22." 三选一: 涨 £22 / 折衷 £18 / 不涨',
+      },
+      {
+        id: 'ch7_xiaoyu_phd_setup',
+        week: 39,
+        type: 'flag_set',
+        requireFlag: 'l2u_team_recruited_xiaoyu',
+        flagOnSet: 'ch7_xiaoyu_phd_mentioned',
+        narrative: '小雨 DM: "学长/学姐, 我在想申 PhD, 到时候能麻烦你写推荐信吗? 不用现在答" — Ch 9 W50 推荐信场景 setup',
       },
       {
         id: 'ch7_wangkai_introduces_eric',

@@ -54,7 +54,9 @@ export function StoryModal({ chapter, lineName, feedback, onChoose, onDismiss })
       <h2 className="text-xl mb-3 font-light">{chapter.title_full}</h2>
       <div className="text-sm leading-relaxed mb-4 opacity-90" style={{ lineHeight: '1.8' }}>{chapter.body}</div>
       {!feedback ? (
-        chapter.choices.map((c, i) => (
+        (chapter.choices && chapter.choices.length > 0 ? chapter.choices : [
+          { label: '继续', effect: chapter.effect || {}, feedback: chapter.feedback || '...' },
+        ]).map((c, i) => (
           <button key={i} onClick={() => onChoose(c)}
             className="w-full text-left p-3 mb-2 border border-current/40 hover:border-current hover:bg-current/5 active:bg-current/10 transition-all min-h-[44px]">
             <span className="opacity-50 mr-2" style={{ fontFamily: 'monospace' }}>{String.fromCharCode(65+i)}.</span>

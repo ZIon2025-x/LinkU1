@@ -1,5 +1,3 @@
-import { LINK2UR_CHAPTERS } from './link2urMainline.js';
-
 export const STORYLINES = {
   sarah: {
     id: 'sarah', name: 'Sarah · 友情线', npc: 'sarah',
@@ -378,14 +376,12 @@ export const STORYLINES = {
   },
 
   // ─────────────────────────────────────────────────────────────
-  // Y 姐 · Link2Ur AI 创业线 (第 7 主线)
+  // Y 姐 · Link2Ur AI 创业线 — 不走 storyline chapter trigger 机制,
+  // 由 App.jsx link2urMainlineTick + setActiveEvent 直接驱动,故不在此注册。
+  // (之前注册导致 StoryModal 拿 LINK2UR_CHAPTERS[0] 的 chapter, 它无
+  //  trigger/choices 字段, 进 pub/library 即崩 — 已修)
+  // 元数据查询走 npcYjie.js + link2urMainline.js 自己的 API。
   // ─────────────────────────────────────────────────────────────
-  yjie: {
-    id: 'yjie_mainline',
-    name: 'Y 姐 · Link2Ur AI 广告创业线',
-    npc: 'yjie',
-    chapters: LINK2UR_CHAPTERS,
-  },
 
   // ─────────────────────────────────────────────────────────────
   // 反诈线 (scam_education) - 教玩家识别针对海外华人的常见诈骗。
