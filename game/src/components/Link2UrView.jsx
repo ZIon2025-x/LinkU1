@@ -4,6 +4,7 @@ import { LINK2UR_REVIEWS } from '../data/link2urReviews.js';
 import { renderLink2UrWall, renderWallToBlob } from '../engine/link2urWall.js';
 import { download } from '../engine/diaryExport.js';
 import { InboxCard, PhaseIndicator, TeamMemberRow, ClashWarningModal } from './Atoms.jsx';
+import { BottomSheet } from './BottomSheet.jsx';
 
 const PRIMARY = LINK2UR_BRAND.primary;   // #007AFF
 const ACCENT = LINK2UR_BRAND.accent;     // #FF8033
@@ -225,32 +226,28 @@ function Link2UrWallModal({ gameState, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein"
-      style={{ background: 'rgba(10, 8, 6, 0.92)' }}
-      onClick={onClose}>
-      <div className="max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-        <div className="text-xs tracking-[0.3em] opacity-60 mb-2 text-center" style={{ fontFamily: 'monospace', color: GOLD }}>
-          ◆ LINK2UR · MY YEAR
-        </div>
-        <canvas ref={canvasRef} width={1080} height={1350}
-          className="w-full mb-4 shadow-2xl"
-          style={{ aspectRatio: '1080 / 1350' }} />
-        <div className="flex gap-2">
-          <button onClick={handleDownload} disabled={downloading}
-            className="flex-1 py-2.5 border text-sm tracking-[0.3em] transition-colors"
-            style={{ borderColor: GOLD + 'a0', color: GOLD, background: GOLD + '12' }}>
-            {downloading ? '生成中...' : '↓ 下载 PNG'}
-          </button>
-          <button onClick={onClose}
-            className="flex-1 py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.3em]">
-            关闭
-          </button>
-        </div>
-        <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
-          长按转发到微信 / 朋友圈 / 微博
-        </div>
+    <BottomSheet open={true} onClose={onClose}>
+      <div className="text-xs tracking-[0.3em] opacity-60 mb-2 text-center" style={{ fontFamily: 'monospace', color: GOLD }}>
+        ◆ LINK2UR · MY YEAR
       </div>
-    </div>
+      <canvas ref={canvasRef} width={1080} height={1350}
+        className="w-full mb-4 shadow-2xl"
+        style={{ aspectRatio: '1080 / 1350' }} />
+      <div className="flex gap-2">
+        <button onClick={handleDownload} disabled={downloading}
+          className="flex-1 py-2.5 border text-sm tracking-[0.3em] transition-colors"
+          style={{ borderColor: GOLD + 'a0', color: GOLD, background: GOLD + '12' }}>
+          {downloading ? '生成中...' : '↓ 下载 PNG'}
+        </button>
+        <button onClick={onClose}
+          className="flex-1 py-2.5 border border-current/40 hover:bg-current/5 transition-colors text-sm tracking-[0.3em]">
+          关闭
+        </button>
+      </div>
+      <div className="text-xs opacity-50 italic text-center mt-3" style={{ lineHeight: '1.7' }}>
+        长按转发到微信 / 朋友圈 / 微博
+      </div>
+    </BottomSheet>
   );
 }
 
