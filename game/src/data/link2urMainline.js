@@ -93,7 +93,7 @@ export const LINK2UR_CHAPTERS = [
       },
       {
         id: 'ch3_grandma_repeat',
-        week: 12,
+        week: 15,
         type: 'customer_unlock',
         customerId: 'cust_grandma',
         relationship: 'first_impression',
@@ -101,7 +101,7 @@ export const LINK2UR_CHAPTERS = [
       },
       {
         id: 'ch3_chen_repeat',
-        week: 10,
+        week: 13,
         type: 'customer_unlock',
         customerId: 'cust_chen',
         relationship: 'first_impression',

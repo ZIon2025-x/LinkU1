@@ -88,7 +88,7 @@ Do you have a referral pipeline? Yvonne 那边可以接吗?"`,
     trigger: (s) => {
       const w = Math.ceil(s.day / 7);
       const paulRel = s.link2urRepeatCustomers?.cust_paul?.count || 0;
-      return w >= 37 && w <= 39 && paulRel >= 4 && (s.link2urCompleted?.length || 0) >= 25;
+      return w >= 37 && w <= 39 && paulRel >= 2 && (s.link2urCompleted?.length || 0) >= 25;
     },
     narrative: `Paul DM: "I'm doing a BBC long-form on 'AI Times: Immigrant Labor in the Age of Algorithms'.
 You're one of the 5 subjects. I want 90 min interview, on camera.

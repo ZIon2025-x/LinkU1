@@ -43,6 +43,35 @@ describe('Link2Ur 9 章主线', () => {
   });
 });
 
+describe('Ch 3 · 撞档·初体验', () => {
+  const ch3 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch3');
+
+  test('Ch 3 week 范围是 W13-17', () => {
+    expect(ch3.weekStart).toBe(13);
+    expect(ch3.weekEnd).toBe(17);
+  });
+
+  test('Ch 3 所有 events 的 week 都在 [13, 17] 范围内', () => {
+    for (const ev of ch3.events) {
+      if (!ev.week) continue;  // 跳过 no-week events
+      expect(ev.week).toBeGreaterThanOrEqual(ch3.weekStart);
+      expect(ev.week).toBeLessThanOrEqual(ch3.weekEnd);
+    }
+  });
+
+  test('Grandma repeat 在 W15', () => {
+    const grandmaEvent = ch3.events.find((e) => e.id === 'ch3_grandma_repeat');
+    expect(grandmaEvent).toBeTruthy();
+    expect(grandmaEvent.week).toBe(15);
+  });
+
+  test('Chen repeat 在 W13', () => {
+    const chenEvent = ch3.events.find((e) => e.id === 'ch3_chen_repeat');
+    expect(chenEvent).toBeTruthy();
+    expect(chenEvent.week).toBe(13);
+  });
+});
+
 describe('Ch 4 · Sketch 下午茶', () => {
   const ch4 = LINK2UR_CHAPTERS.find((c) => c.chapterId === 'link2ur_ch4');
 

@@ -22,7 +22,7 @@ export const ENDINGS = [
 
   // ============================================================
   // 隐藏专属结局 — Link2Ur 合伙人 #03
-  // 触发条件：Priya 的 ops_partner storyline 走完 + 接单 ≥ 30。
+  // 触发条件：Y 姐 的 ops_partner storyline 走完 + 接单 ≥ 30。
   // ============================================================
   {
     id: 'link2ur_partner',
@@ -34,16 +34,16 @@ export const ENDINGS = [
       title: '合伙人 · #03', subtitle: 'Co-founder, Link2Ur',
       text:
         '毕业两年后。Old Street 一间小办公室——Link2Ur 创始团队 7 个人。你是 #03 合伙人。\n\n'
-        + 'Priya 当年面试你的原话不像 HR："你那一年我们看过后台数据。30+ 单 4.9 评分。'
+        + 'Y 姐当年面试你的原话不像 HR："你那一年我们看过后台数据。30+ 单 4.9 评分。'
         + '更稀奇的是——你接的 18% 是亏本单（路费比报酬高）。系统标过你 7 次\'经济不理性\'。'
         + '我们想找的人就是这种——你不是 calculated optimizer，你是把别人接住的人。"\n\n'
         + '你没解释——但你心里知道。\n\n'
         + '那不是不理性。那是当时的你 22 岁，刚从 Heathrow 走出来 8 个月，'
         + '被一个 Sarah / 一个 CSSA 学姐 / 一个 Mei 姐接住过——你只是想替系统记住"被接住"是什么感觉。\n\n'
-        + '现在你跟 Priya 在 Old Street 那个不到 80 平米的 office 里——你拿 4% equity + £40k 工资 + 决策权。'
+        + '现在你跟 Y 姐在 Old Street 那个不到 80 平米的 office 里——你拿 4% equity + £40k 工资 + 决策权。'
         + '你 own "新生互助" 模块整条产品线。你写过的一个 spec 标题：'
         + '《如何让一个刚下飞机的孩子在 8 个月内觉得 "我没有掉下去"》。\n\n'
-        + 'Priya 看完 spec 那天，她在白板上写：'
+        + 'Y 姐看完 spec 那天，她在白板上写：'
         + '"我们没法保证每个新生都有一个 Mei 姐。但我们至少可以保证有一个 app。"\n\n'
         + '她把白板拍了照，发给你 + 其它 5 个合伙人。配一句话："这就是 Link2Ur 的 mission statement。"\n\n'
         + '你下班走出 Old Street 站。伦敦的 5 月，天还亮着。\n\n'
@@ -104,7 +104,7 @@ export const ENDINGS = [
         + '40-60 小时 / 周 / 月入 £5k+。你雇了一个 part-time 学弟做账。\n\n'
         + '上个月你给 Companies House 注册了 limited company：「[你的名字] Studio Ltd」。'
         + 'PSW 那 2 年攒的客户 + Link2Ur 30 单 4.9 评分 + 妈给你的 £8k 启动资金——\n'
-        + '你成了那种"在 Link2Ur 起家的"案例。Priya 在某次 Ambassador summit 上提了你一句。\n\n'
+        + '你成了那种"在 Link2Ur 起家的"案例。Y 姐在某次 Ambassador summit 上提了你一句。\n\n'
         + '你毕业前那 30 单接得不算计 ROI——'
         + '你接过一单 Hyde Park 遛狗 £15 / 1 小时，比你 Mei 姐打工还低；'
         + '但你也接过一单 Bicester 代购 4 个 Burberry £180 / 一天。\n'
