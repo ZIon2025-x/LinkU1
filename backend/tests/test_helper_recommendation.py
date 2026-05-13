@@ -1,6 +1,17 @@
 """Tests for helper_recommendation module."""
 
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
+
+
+def _fake_row(**kwargs):
+    """Build a MagicMock row that behaves like a SQLAlchemy Row tuple."""
+    row = MagicMock()
+    for k, v in kwargs.items():
+        setattr(row, k, v)
+    return row
 
 
 def test_normalize_city_lowercase():
@@ -190,3 +201,39 @@ def test_match_reason_task_history_no_rating():
     )
     assert "完成过 3 个" in r
     assert "评分" not in r
+
+
+def test_fetch_service_pool_returns_mapped_rows():
+    """SQL 结果被映射成 dict 列表。"""
+    from app.services.helper_recommendation import _fetch_service_pool
+
+    row1 = _fake_row(
+        id="u_001", name="Alice", avatar_url="https://a.png", avg_rating=4.8,
+        city="London", service_name="陪逛", location_type="in_person",
+        skills=["陪同", "购物"],
+    )
+    row2 = _fake_row(
+        id="u_002", name="Bob", avatar_url=None, avg_rating=None,
+        city=None, service_name="代购", location_type="both",
+        skills=None,
+    )
+    mock_db = AsyncMock()
+    exec_result = MagicMock()
+    exec_result.all.return_value = [row1, row2]
+    mock_db.execute = AsyncMock(return_value=exec_result)
+
+    result = asyncio.get_event_loop().run_until_complete(
+        _fetch_service_pool(
+            db=mock_db, current_user_id="u_caller",
+            task_type="accompany", skills=["陪同"], mode="offline",
+        )
+    )
+    assert len(result) == 2
+    assert result[0]["user_id"] == "u_001"
+    assert result[0]["name"] == "Alice"
+    assert result[0]["source"] == "service"
+    assert result[0]["service_name"] == "陪逛"
+    assert result[0]["avg_rating"] == 4.8
+    assert result[0]["skills"] == ["陪同", "购物"]
+    assert result[1]["avg_rating"] is None
+    assert result[1]["skills"] == []

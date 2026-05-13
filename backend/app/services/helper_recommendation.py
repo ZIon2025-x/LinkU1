@@ -9,6 +9,9 @@ Spec: docs/superpowers/specs/2026-05-12-recommend-helpers-by-intent-design.md
 import logging
 from typing import Optional
 
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 logger = logging.getLogger(__name__)
 
 # 中英城市映射表 — 覆盖主要英国城市 + 北京/上海等中国大城市
@@ -189,3 +192,74 @@ def _build_match_reason(
     # task_history
     label = _TASK_TYPE_LABEL_ZH.get(task_type or "", task_type or "")
     return f"完成过 {completed_count} 个{label}任务{rating_seg}{city_seg}"
+
+
+_SERVICE_POOL_SQL = text("""
+SELECT u.id, u.name, u.avatar_url, u.avg_rating,
+       upref.city as city,
+       s.service_name, s.location_type, s.skills
+FROM users u
+JOIN task_expert_services s
+     ON s.owner_type = 'user' AND s.owner_id = u.id
+LEFT JOIN user_profile_preferences upref ON upref.user_id = u.id
+WHERE s.service_type = 'personal'
+  AND s.status = 'active'
+  AND u.id != :current_user_id
+  AND (
+        s.category = :task_type
+     OR (
+          cardinality(:skills::text[]) > 0
+          AND s.skills IS NOT NULL
+          AND EXISTS (
+                SELECT 1 FROM jsonb_array_elements_text(s.skills) v
+                WHERE v = ANY(:skills::text[])
+          )
+        )
+  )
+  AND (
+        :mode IS NULL OR :mode = 'both'
+     OR (:mode = 'offline' AND s.location_type IN ('in_person', 'both'))
+     OR (:mode = 'online'  AND s.location_type IN ('online',    'both'))
+  )
+LIMIT 100
+""")
+
+
+async def _fetch_service_pool(
+    *,
+    db: AsyncSession,
+    current_user_id: str,
+    task_type: str,
+    skills: list[str],
+    mode: Optional[str],
+) -> list[dict]:
+    """Fetch service-publisher pool from DB. Returns list of dicts."""
+    try:
+        exec_result = await db.execute(
+            _SERVICE_POOL_SQL,
+            {
+                "current_user_id": current_user_id,
+                "task_type": task_type,
+                "skills": skills or [],
+                "mode": mode,
+            },
+        )
+        rows = exec_result.all()
+    except Exception as e:
+        logger.warning("_fetch_service_pool failed: %s", e)
+        return []
+
+    out = []
+    for r in rows:
+        out.append({
+            "user_id": r.id,
+            "name": r.name,
+            "avatar_url": r.avatar_url,
+            "avg_rating": float(r.avg_rating) if r.avg_rating is not None else None,
+            "city": r.city,
+            "service_name": r.service_name,
+            "location_type": r.location_type,
+            "skills": r.skills or [],
+            "source": "service",
+        })
+    return out
