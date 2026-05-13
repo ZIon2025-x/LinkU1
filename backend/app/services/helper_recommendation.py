@@ -263,3 +263,53 @@ async def _fetch_service_pool(
             "source": "service",
         })
     return out
+
+
+_TASK_HISTORY_POOL_SQL = text("""
+SELECT u.id, u.name, u.avatar_url,
+       upref.city as city,
+       COUNT(t.id) as completed_count,
+       AVG(r.rating)::float as avg_rating
+FROM users u
+JOIN tasks t ON t.taker_id = u.id
+LEFT JOIN reviews r ON r.task_id = t.id AND r.user_id != u.id
+LEFT JOIN user_profile_preferences upref ON upref.user_id = u.id
+WHERE t.status = 'completed'
+  AND t.task_type = :task_type
+  AND u.id != :current_user_id
+GROUP BY u.id, u.name, u.avatar_url, upref.city
+HAVING COUNT(t.id) >= 1
+LIMIT 100
+""")
+
+
+async def _fetch_task_history_pool(
+    *,
+    db: AsyncSession,
+    current_user_id: str,
+    task_type: str,
+) -> list[dict]:
+    """Fetch task-completion-history pool. Returns list of dicts."""
+    try:
+        exec_result = await db.execute(
+            _TASK_HISTORY_POOL_SQL,
+            {"current_user_id": current_user_id, "task_type": task_type},
+        )
+        rows = exec_result.all()
+    except Exception as e:
+        logger.warning("_fetch_task_history_pool failed: %s", e)
+        return []
+
+    out = []
+    for r in rows:
+        out.append({
+            "user_id": r.id,
+            "name": r.name,
+            "avatar_url": r.avatar_url,
+            "avg_rating": float(r.avg_rating) if r.avg_rating is not None else None,
+            "city": r.city,
+            "completed_count": int(r.completed_count or 0),
+            "task_type": task_type,
+            "source": "task_history",
+        })
+    return out

@@ -237,3 +237,29 @@ def test_fetch_service_pool_returns_mapped_rows():
     assert result[0]["skills"] == ["陪同", "购物"]
     assert result[1]["avg_rating"] is None
     assert result[1]["skills"] == []
+
+
+def test_fetch_task_history_pool_returns_mapped_rows():
+    from app.services.helper_recommendation import _fetch_task_history_pool
+
+    row1 = _fake_row(
+        id="u_003", name="Carol", avatar_url=None, avg_rating=4.2,
+        city="Manchester", completed_count=8,
+    )
+    mock_db = AsyncMock()
+    exec_result = MagicMock()
+    exec_result.all.return_value = [row1]
+    mock_db.execute = AsyncMock(return_value=exec_result)
+
+    result = asyncio.get_event_loop().run_until_complete(
+        _fetch_task_history_pool(
+            db=mock_db, current_user_id="u_caller",
+            task_type="moving",
+        )
+    )
+    assert len(result) == 1
+    assert result[0]["user_id"] == "u_003"
+    assert result[0]["source"] == "task_history"
+    assert result[0]["completed_count"] == 8
+    assert result[0]["avg_rating"] == 4.2
+    assert result[0]["task_type"] == "moving"
