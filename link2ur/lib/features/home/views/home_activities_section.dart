@@ -423,7 +423,7 @@ class _DiscoveryBannerCard extends StatelessWidget {
           ],
         ),
         child: AspectRatio(
-          aspectRatio: 16 / 9,
+          aspectRatio: 3 / 4,
           child: Stack(
             fit: StackFit.expand,
             children: [
