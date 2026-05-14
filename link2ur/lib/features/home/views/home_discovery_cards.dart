@@ -495,6 +495,13 @@ class _ServiceReviewCard extends StatelessWidget {
         ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
         : null;
     final hasActivity = item.activityInfo != null;
+    final thumbnail = item.targetItem?.thumbnail;
+    final hasThumbnail = thumbnail != null && thumbnail.isNotEmpty;
+
+    // 评价目标(服务/技能)有图 → 海报式背景版;否则保持白底引用框版作 fallback
+    if (hasThumbnail) {
+      return _buildPosterCard(context, isDark, locale, displayDesc, thumbnail);
+    }
 
     return Semantics(
       button: true,
@@ -617,6 +624,192 @@ class _ServiceReviewCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  /// 海报式背景卡 — 评价目标有 thumbnail 时使用
+  /// 视觉:3:4 比例 + 全屏背景图 + 底部渐变蒙层 + 白色文字 overlay
+  Widget _buildPosterCard(
+    BuildContext context,
+    bool isDark,
+    Locale locale,
+    String? displayDesc,
+    String thumbnail,
+  ) {
+    final rating = item.rating;
+    final targetName = item.targetItem?.name ?? '';
+    return Semantics(
+      button: true,
+      label: 'View service review',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          if (item.targetItem != null) {
+            context.push('/service/${item.targetItem!.itemId}');
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 背景图
+                AsyncImageView(
+                  imageUrl: thumbnail,
+                  memCacheWidth: 600,
+                  placeholder: Container(color: Colors.black12),
+                  errorWidget: Container(
+                    color: Colors.black26,
+                    child: const Center(
+                      child: Icon(Icons.image_outlined,
+                          size: 40, color: Colors.white54),
+                    ),
+                  ),
+                ),
+                // 双向渐变蒙层(顶部 + 底部)以保证文字可读
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [0.0, 0.25, 0.55, 1.0],
+                        colors: [
+                          Colors.black.withValues(alpha: 0.28),
+                          Colors.transparent,
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.78),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // 顶部左:类型 badge
+                const Positioned(
+                  top: 8, left: 8,
+                  child: _FeedTypeBadge(feedType: 'service_review'),
+                ),
+                // 顶部右:星级
+                if (rating != null && rating > 0)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 12, color: Color(0xFFFFB300)),
+                          const SizedBox(width: 2),
+                          Text(
+                            rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // 底部:评价文字 + 用户行(头像/名字/目标 chip)
+                Positioned(
+                  left: 10, right: 10, bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (displayDesc != null && displayDesc.isNotEmpty) ...[
+                        Text(
+                          displayDesc,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            height: 1.4,
+                            fontWeight: FontWeight.w500,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        children: [
+                          AvatarView(
+                            imageUrl: item.userAvatar,
+                            name: item.userName,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              item.userName ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  Shadow(color: Colors.black54, blurRadius: 3),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (targetName.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.95),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  targetName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFFDB2777),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>评价卡新样式 mockup — 图片背景版</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+    background: #f0f2f5;
+    padding: 24px;
+    color: #2c3e50;
+  }
+  h1 { font-size: 22px; margin-bottom: 8px; }
+  .intro {
+    color: #555;
+    margin-bottom: 24px;
+    font-size: 14px;
+    max-width: 1200px;
+    line-height: 1.7;
+  }
+  .intro code { background: #fff; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+  .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; align-items: center; max-width: 260px; }
+  .col h3 { font-size: 14px; margin-bottom: 12px; color: #111; }
+  .col .desc { font-size: 12px; color: #666; margin-top: 12px; text-align: center; line-height: 1.6; }
+  .col .desc .pros { color: #2a7a2a; }
+  .col .desc .cons { color: #b35; }
+
+  /* Masonry column emulating 1-column 172px width(2 cols 在 375 屏宽下) */
+  .col .wrap { width: 220px; }
+
+  /* —— 通用卡片基底 —— */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    position: relative;
+    margin-bottom: 8px;
+  }
+
+  /* ===================================================================
+     A. 当前样式 (white card,引用框)
+     =================================================================== */
+  .card.current { padding: 12px; }
+  .card.current .badge {
+    display: inline-block;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 999px;
+    background: #FCE7F3; color: #DB2777;
+    margin-bottom: 8px;
+  }
+  .card.current .quote {
+    border-left: 3px solid #007AFF;
+    background: linear-gradient(90deg, #F8F7FF, #FFF0F5);
+    border-radius: 0 8px 8px 0;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .card.current .quote-text {
+    font-size: 12px; color: #222; line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card.current .user-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 6px;
+  }
+  .card.current .user-row .av {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, #007AFF, #409CFF);
+    color: #fff; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card.current .user-row .name { font-size: 11px; font-weight: 600; color: #333; }
+  .card.current .user-row .stars { font-size: 11px; color: #FFB300; margin-left: auto; }
+  .card.current .target-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #FFF7ED; color: #EA580C;
+    font-size: 10px; font-weight: 600;
+    padding: 3px 8px; border-radius: 999px;
+  }
+  .card.current.skill .target-tag { background: #ECFDF5; color: #059669; }
+  .card.current.skill .badge { background: #ECFDF5; color: #059669; }
+  .card.current.skill .quote { border-left-color: #16A34A; background: linear-gradient(90deg, #ECFDF5, transparent); }
+
+  /* ===================================================================
+     B. 新样式 — 图片背景 + 底部 overlay
+     =================================================================== */
+  .card.new {
+    aspect-ratio: 3/4;
+    position: relative;
+    color: #fff;
+  }
+  .card.new .bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+  }
+  .card.new .bg.svc1 { background: linear-gradient(135deg, #FFC857, #FF6B35); }
+  .card.new .bg.svc2 { background: linear-gradient(135deg, #2E86AB, #A23B72); }
+  .card.new .bg.skill1 { background: linear-gradient(135deg, #06D6A0, #118AB2); }
+  .card.new .bg.skill2 { background: linear-gradient(135deg, #F72585, #B5179E); }
+  /* 模拟图片占位的 emoji 大字 */
+  .card.new .bg::after {
+    content: attr(data-emoji);
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 90px; opacity: 0.5;
+  }
+  /* 渐变蒙层增强文字可读性 */
+  .card.new .veil {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.25) 0%, transparent 30%, transparent 50%, rgba(0,0,0,0.7) 90%, rgba(0,0,0,0.85) 100%);
+  }
+  .card.new .top-badge {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(0,0,0,0.5); color: #fff;
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+  .card.new .stars-tr {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.5); color: #FFB300;
+    padding: 3px 7px; border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; gap: 2px;
+  }
+  .card.new .stars-tr .star-num { color: #fff; }
+  .card.new .content {
+    position: absolute; left: 10px; right: 10px; bottom: 10px;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .card.new .quote-text {
+    font-size: 13px; line-height: 1.4;
+    font-weight: 500;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .card.new .user-row {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card.new .av {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, #007AFF, #409CFF);
+    color: #fff; font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+  .card.new .name {
+    font-size: 11px; font-weight: 600;
+    flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card.new .target-name {
+    background: rgba(255,255,255,0.95);
+    color: #DB2777;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px;
+    margin-left: auto;
+  }
+
+  /* 个人技能配色调 */
+  .card.new.skill .target-name { color: #059669; }
+</style>
+</head>
+<body>
+
+<h1>评价卡新样式 mockup — 图片背景版</h1>
+<p class="intro">
+  当前 <code>_ServiceReviewCard</code> / <code>_CompetitorReviewCard</code> / 个人技能评价 都是<b>白底引用框</b>样式 — 文字为主,目标只在底部以小 tag 形式出现。
+  <br>新设计:如果 <code>TargetItemBrief.thumbnail</code> 不为空(评价目标的服务/技能有图),整张卡用图作背景,评价文字白色 overlay 在图上。视觉冲击更强,也能让用户一眼看出"评的是这个东西"。
+  <br>没图时保持原白底样式作 fallback。
+</p>
+
+<div class="row">
+
+  <!-- 列 1:当前样式(参考) -->
+  <div class="col">
+    <h3>当前样式(参考)</h3>
+    <div class="wrap">
+      <div class="card current">
+        <span class="badge">💬 服务评价</span>
+        <div class="quote"><div class="quote-text">辅导老师讲解非常细致,把 Mediation Analysis 讲清楚了,三次课就把 final 救回来了!</div></div>
+        <div class="user-row">
+          <span class="av">林</span>
+          <span class="name">林同学</span>
+          <span class="stars">★★★★★</span>
+        </div>
+        <span class="target-tag">🔧 Stats 一对一答疑</span>
+      </div>
+      <div class="card current skill">
+        <span class="badge">✋ 技能评价</span>
+        <div class="quote"><div class="quote-text">教得超耐心,第一次拍写真完全不紧张,成品很满意。</div></div>
+        <div class="user-row">
+          <span class="av" style="background:linear-gradient(135deg,#16A34A,#22C55E);">Y</span>
+          <span class="name">Yvonne</span>
+          <span class="stars">★★★★★</span>
+        </div>
+        <span class="target-tag">✋ 摄影 / 写真指导</span>
+      </div>
+    </div>
+    <div class="desc">
+      白底 + 蓝/绿色引用框<br>
+      <span class="pros">✅ 文字密度高,看得清</span><br>
+      <span class="cons">⚠️ 视觉同质,刷起来"灰白成片"</span>
+    </div>
+  </div>
+
+  <!-- 列 2:新样式(有图) -->
+  <div class="col">
+    <h3>新样式 — 服务有图</h3>
+    <div class="wrap">
+      <!-- 长评价 — 演示 3 行截断 -->
+      <div class="card new">
+        <div class="bg svc1" data-emoji="📊"></div>
+        <div class="veil"></div>
+        <span class="top-badge">💬 服务评价</span>
+        <div class="stars-tr">★ <span class="star-num">5.0</span></div>
+        <div class="content">
+          <div class="quote-text">"辅导老师讲解非常细致,从头开始捋概念到上手数据分析,Mediation Analysis 一步步拆解。还配套提供录屏材料,可以反复回看。三次课就把 final 救回来了,墙裂推荐给我所有同学!"</div>
+          <div class="user-row">
+            <span class="av">林</span>
+            <span class="name">林同学 · 2 天前</span>
+            <span class="target-name">Stats 答疑</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 短评价 — 不会触发截断 -->
+      <div class="card new">
+        <div class="bg svc2" data-emoji="🍰"></div>
+        <div class="veil"></div>
+        <span class="top-badge">💬 服务评价</span>
+        <div class="stars-tr">★ <span class="star-num">4.5</span></div>
+        <div class="content">
+          <div class="quote-text">"生日蛋糕做得超漂亮,朋友们都说想再点一次。"</div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#F72585,#B5179E);">陈</span>
+            <span class="name">陈同学</span>
+            <span class="target-name">伦敦私厨</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      3:4 海报式 · 图当背景 · 文字 overlay<br>
+      <span class="pros">✅ 视觉差异大,在 masonry 里跳出来</span><br>
+      <span class="pros">✅ 一眼看出评价对象</span><br>
+      <span class="cons">⚠️ 长评论会被截断</span>
+    </div>
+  </div>
+
+  <!-- 列 3:新样式(技能有图) -->
+  <div class="col">
+    <h3>新样式 — 技能有图</h3>
+    <div class="wrap">
+      <div class="card new skill">
+        <div class="bg skill1" data-emoji="📷"></div>
+        <div class="veil"></div>
+        <span class="top-badge">✋ 技能评价</span>
+        <div class="stars-tr">★ <span class="star-num">5.0</span></div>
+        <div class="content">
+          <div class="quote-text">"教得超耐心,第一次拍写真完全不紧张,成品很满意,约下次!"</div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#16A34A,#22C55E);">Y</span>
+            <span class="name">Yvonne · 3 天前</span>
+            <span class="target-name">摄影指导</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card new skill">
+        <div class="bg skill2" data-emoji="🎨"></div>
+        <div class="veil"></div>
+        <span class="top-badge">✋ 技能评价</span>
+        <div class="stars-tr">★ <span class="star-num">4.8</span></div>
+        <div class="content">
+          <div class="quote-text">"画风可爱,沟通顺畅,从草稿到成品的修改也都很积极。"</div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#B5179E,#F72585);">妙</span>
+            <span class="name">妙妙</span>
+            <span class="target-name">头像约稿</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      同款风格 · 绿色目标 tag (跟技能 chip 一致)<br>
+      <span class="pros">✅ 跟服务评价视觉统一</span>
+    </div>
+  </div>
+
+  <!-- 列 4:无图 fallback(保留当前样式) -->
+  <div class="col">
+    <h3>新版 — 无图 fallback</h3>
+    <div class="wrap">
+      <div class="card current">
+        <span class="badge">💬 服务评价</span>
+        <div class="quote"><div class="quote-text">沟通顺畅,服务到位,虽然没拍图但体验很好,推荐!</div></div>
+        <div class="user-row">
+          <span class="av" style="background:linear-gradient(135deg,#FF6B35,#FFB627);">王</span>
+          <span class="name">王同学</span>
+          <span class="stars">★★★★★</span>
+        </div>
+        <span class="target-tag">🔧 答疑陪练</span>
+      </div>
+      <div class="card current skill">
+        <span class="badge">✋ 技能评价</span>
+        <div class="quote"><div class="quote-text">教得很清楚,效率高。</div></div>
+        <div class="user-row">
+          <span class="av" style="background:linear-gradient(135deg,#16A34A,#22C55E);">Z</span>
+          <span class="name">Zoe</span>
+          <span class="stars">★★★★☆</span>
+        </div>
+        <span class="target-tag">✋ Excel 速成</span>
+      </div>
+    </div>
+    <div class="desc">
+      target.thumbnail == null 时<br>
+      <span class="pros">✅ 保持原版可读性</span><br>
+      <span class="pros">✅ 跟当前已有用户习惯一致</span>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 32px; padding: 18px 22px; background: #fff; border-radius: 12px; max-width: 1200px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+  <h2 style="font-size: 16px; margin-bottom: 10px;">实现思路</h2>
+  <p style="font-size: 13px; color: #555; line-height: 1.7;">
+    Flutter 改动只动 <code>_ServiceReviewCard</code> + <code>_CompetitorReviewCard</code>(+ 如果有个人技能评价卡的话也类似):
+    <br>1. 卡片 build 时先 check <code>item.targetItem?.thumbnail</code>
+    <br>2. 有图 → 渲染 3:4 AspectRatio + Stack:背景 AsyncImageView 全屏 + 底部黑色渐变 + 角标/星级/评价文字/用户行 overlay
+    <br>3. 无图 → 保留现在的白底引用框样式(零回归风险)
+    <br><br>
+    要不要这么做?如果可以,我建议:
+    <br>· 这一版只改<b>服务评价</b>(<code>_ServiceReviewCard</code>),先验证视觉效果
+    <br>· 个人技能评价(personal_skill_review):看看实际 feedType 是不是这个,如果是就用同样改动
+    <br>· 竞品评价(<code>_CompetitorReviewCard</code>):它有 UP/DOWN 投票按钮,不太适合图片背景(按钮在图片上视觉吵),建议先不改它
+  </p>
+</div>
+
+</body>
+</html>
