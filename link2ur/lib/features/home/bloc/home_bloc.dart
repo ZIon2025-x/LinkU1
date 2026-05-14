@@ -303,12 +303,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     try {
       final page = event.loadMore ? state.nearbyPage + 1 : 1;
+      // radius=0 是"同城"哨兵：不传 radius，仅靠 city 过滤
+      final isSameCity = event.radius == 0;
       final nearby = await _taskRepository.getNearbyTasks(
         latitude: event.latitude,
         longitude: event.longitude,
         page: page,
         city: event.city,
-        radius: event.radius?.toDouble(),
+        radius: isSameCity ? null : event.radius?.toDouble(),
       );
 
       // 为每个任务计算与用户的距离
@@ -556,11 +558,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (_personalServiceRepository == null) return;
     try {
       final page = event.loadMore ? state.nearbyServicesPage + 1 : 1;
+      // radius=0 是"同城"哨兵：走 city 过滤；否则按 radius 距离过滤
+      final isSameCity = event.radius == 0;
       final result = await _personalServiceRepository.browseServices(
         sort: 'nearby',
-        lat: event.latitude,
-        lng: event.longitude,
-        radius: event.radius,
+        lat: isSameCity ? null : event.latitude,
+        lng: isSameCity ? null : event.longitude,
+        radius: isSameCity ? null : event.radius,
+        city: isSameCity ? event.city : null,
         page: page,
       );
       final newItems = List<Map<String, dynamic>>.from(result['items'] ?? []);

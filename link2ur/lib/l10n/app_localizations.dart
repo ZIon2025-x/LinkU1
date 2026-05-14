@@ -21785,6 +21785,18 @@ abstract class AppLocalizations {
   /// **'Search Radius'**
   String get nearbyRadius;
 
+  /// Radius chip label for city-wide filter when no city is resolved
+  ///
+  /// In en, this message translates to:
+  /// **'Same City'**
+  String get nearbyRadiusSameCity;
+
+  /// Radius chip label for city-wide filter with resolved city name
+  ///
+  /// In en, this message translates to:
+  /// **'Same City · {city}'**
+  String nearbyRadiusSameCityWithName(String city);
+
   /// No description provided for @nearbyNoServices.
   ///
   /// In en, this message translates to:

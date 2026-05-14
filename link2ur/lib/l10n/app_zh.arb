@@ -5227,6 +5227,8 @@
   "homeStoryWriting": "文案",
   "homeExploreNow": "立即体验 →",
   "nearbyRadius": "搜索范围",
+  "nearbyRadiusSameCity": "同城",
+  "nearbyRadiusSameCityWithName": "同城・{city}",
   "nearbyNoServices": "附近暂无服务",
   "nearbyServiceDistance": "距离",
   "locationResolving": "解析中...",

@@ -65,6 +65,7 @@ class PersonalServiceRepository {
     double? lat,
     double? lng,
     int? radius,
+    String? city,
   }) async {
     final params = <String, dynamic>{
       'type': type,
@@ -76,6 +77,7 @@ class PersonalServiceRepository {
     if (lat != null) params['lat'] = lat;
     if (lng != null) params['lng'] = lng;
     if (radius != null) params['radius'] = radius;
+    if (city != null && city.isNotEmpty) params['city'] = city;
 
     final response = await _apiService.get(
       ApiEndpoints.browseServices,

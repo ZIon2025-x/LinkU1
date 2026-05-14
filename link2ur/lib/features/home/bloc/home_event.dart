@@ -133,19 +133,22 @@ class HomeLocationCityUpdated extends HomeEvent {
 }
 
 /// 加载附近个人服务
+/// radius=0 表示同城模式（按 city 过滤，不依赖 GPS）
 class HomeLoadNearbyServices extends HomeEvent {
   const HomeLoadNearbyServices({
     required this.latitude,
     required this.longitude,
-    this.radius = 5,
+    this.radius = 0,
     this.loadMore = false,
+    this.city,
   });
   final double latitude;
   final double longitude;
   final int radius;
   final bool loadMore;
+  final String? city;
   @override
-  List<Object?> get props => [latitude, longitude, radius, loadMore];
+  List<Object?> get props => [latitude, longitude, radius, loadMore, city];
 }
 
 /// 切换附近服务搜索半径

@@ -44,7 +44,8 @@ class HomeState extends Equatable {
     this.activitiesListPage = 0,
     this.locationCity,
     this.nearbyServices = const [],
-    this.nearbyRadius = 5,
+    // 0 = 同城（按城市名过滤），其他 = km 半径
+    this.nearbyRadius = 0,
     this.isLoadingNearby = false,
     this.nearbyServicesPage = 1,
     this.hasMoreNearbyServices = true,

@@ -23,7 +23,11 @@ class _NearbyTabState extends State<_NearbyTab> {
   static const _defaultLat = 51.5074;
   static const _defaultLng = -0.1278;
 
-  static const _radiusOptions = [1, 3, 5, 10, 15];
+  /// chip 选项：0 = 同城（按城市名过滤，置顶突出），其他为 km 半径
+  static const _radiusOptions = [0, 1, 3, 5, 10];
+
+  /// 默认城市，当 GPS 拿不到 / 用户拒绝时回落，让"同城"始终可用
+  static const _defaultCity = 'London';
 
   @override
   void initState() {
@@ -152,6 +156,7 @@ class _NearbyTabState extends State<_NearbyTab> {
               latitude: position.latitude,
               longitude: position.longitude,
               radius: bloc.state.nearbyRadius,
+              city: _city,
             ));
       }
     } catch (_) {
@@ -168,6 +173,10 @@ class _NearbyTabState extends State<_NearbyTab> {
       _locationLoading = false;
       _locationFailed = isDefault;
       if (!isDefault) _permissionDeniedForever = false;
+      // GPS 失败回落默认坐标时，同时回落城市名，让"同城"模式仍可用
+      if (isDefault && (_city == null || _city!.isEmpty)) {
+        _city = _defaultCity;
+      }
     });
     final bloc = context.read<HomeBloc>();
     bloc.add(HomeLoadNearby(
@@ -180,6 +189,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           latitude: lat,
           longitude: lng,
           radius: bloc.state.nearbyRadius,
+          city: _city,
         ));
   }
 
@@ -196,6 +206,7 @@ class _NearbyTabState extends State<_NearbyTab> {
       latitude: _currentLat,
       longitude: _currentLng,
       radius: radius,
+      city: _city,
     ));
   }
 
@@ -334,6 +345,7 @@ class _NearbyTabState extends State<_NearbyTab> {
               _NearbyRadiusSelector(
                 selectedRadius: state.nearbyRadius,
                 onChanged: _onRadiusChanged,
+                city: _city,
               ),
               const Spacer(),
               Icon(Icons.location_off_outlined,
@@ -381,6 +393,7 @@ class _NearbyTabState extends State<_NearbyTab> {
                     child: _NearbyRadiusSelector(
                       selectedRadius: state.nearbyRadius,
                       onChanged: _onRadiusChanged,
+                      city: _city,
                     ),
                   ),
                   // Waterfall grid
@@ -415,6 +428,7 @@ class _NearbyTabState extends State<_NearbyTab> {
                               latitude: _currentLat,
                               longitude: _currentLng,
                               radius: bloc.state.nearbyRadius,
+                              city: _city,
                               loadMore: true,
                             ));
                           }
@@ -447,18 +461,22 @@ class _NearbyTabState extends State<_NearbyTab> {
 }
 
 /// 半径选择器 — 横向 ChoiceChip 列表
+/// radius==0 的 chip 渲染为"同城・$city"（没拿到 city 时退化为"同城"）
 class _NearbyRadiusSelector extends StatelessWidget {
   const _NearbyRadiusSelector({
     required this.selectedRadius,
     required this.onChanged,
+    this.city,
   });
 
   final int selectedRadius;
   final ValueChanged<int> onChanged;
+  final String? city;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -468,7 +486,7 @@ class _NearbyRadiusSelector extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.l10n.nearbyRadius,
+            l10n.nearbyRadius,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -485,8 +503,13 @@ class _NearbyRadiusSelector extends StatelessWidget {
               itemBuilder: (context, index) {
                 final radius = _NearbyTabState._radiusOptions[index];
                 final isSelected = radius == selectedRadius;
+                final label = radius == 0
+                    ? (city != null && city!.isNotEmpty
+                        ? l10n.nearbyRadiusSameCityWithName(city!)
+                        : l10n.nearbyRadiusSameCity)
+                    : '${radius}km';
                 return ChoiceChip(
-                  label: Text('${radius}km'),
+                  label: Text(label),
                   selected: isSelected,
                   onSelected: (_) => onChanged(radius),
                   labelStyle: TextStyle(
@@ -532,7 +555,7 @@ class _NearbyLocationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
-    final displayCity = city ?? 'London';
+    final displayCity = city ?? _NearbyTabState._defaultCity;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(

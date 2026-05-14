@@ -5398,6 +5398,17 @@
   "homeStoryWriting": "Writing",
   "homeExploreNow": "Explore Now →",
   "nearbyRadius": "Search Radius",
+  "nearbyRadiusSameCity": "Same City",
+  "@nearbyRadiusSameCity": {
+    "description": "Radius chip label for city-wide filter when no city is resolved"
+  },
+  "nearbyRadiusSameCityWithName": "Same City · {city}",
+  "@nearbyRadiusSameCityWithName": {
+    "description": "Radius chip label for city-wide filter with resolved city name",
+    "placeholders": {
+      "city": { "type": "String", "example": "London" }
+    }
+  },
   "nearbyNoServices": "No nearby services",
   "nearbyServiceDistance": "away",
   "locationResolving": "Resolving...",

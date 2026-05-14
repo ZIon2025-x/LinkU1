@@ -5174,6 +5174,8 @@
   "homeStoryWriting": "文案",
   "homeExploreNow": "立即體驗 →",
   "nearbyRadius": "搜索範圍",
+  "nearbyRadiusSameCity": "同城",
+  "nearbyRadiusSameCityWithName": "同城・{city}",
   "nearbyNoServices": "附近暫無服務",
   "nearbyServiceDistance": "距離",
   "locationResolving": "解析中...",

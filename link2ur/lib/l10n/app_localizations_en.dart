@@ -11846,6 +11846,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nearbyRadius => 'Search Radius';
 
   @override
+  String get nearbyRadiusSameCity => 'Same City';
+
+  @override
+  String nearbyRadiusSameCityWithName(String city) {
+    return 'Same City · $city';
+  }
+
+  @override
   String get nearbyNoServices => 'No nearby services';
 
   @override
