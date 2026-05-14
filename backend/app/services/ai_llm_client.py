@@ -259,9 +259,24 @@ class OpenAICompatibleProvider:
         for k, v in self._extra_body.items():
             body.setdefault(k, v)
 
-        resp = await self._client.post(
-            f"{self._base_url}/chat/completions",
-            json=body,
+        # 诊断 log:每次请求记录 url/model/耗时/异常类型。配合 ai_agent.py:1430
+        # 的 repr(e) 才能区分 ReadTimeout/ConnectTimeout/HTTPStatusError 等。
+        import time as _time
+        url = f"{self._base_url}/chat/completions"
+        t0 = _time.monotonic()
+        try:
+            resp = await self._client.post(url, json=body)
+        except Exception as e:
+            elapsed = _time.monotonic() - t0
+            logger.error(
+                "OpenAI-compatible request failed: model=%s url=%s elapsed=%.2fs err=%r",
+                model, url, elapsed, e,
+            )
+            raise
+        elapsed = _time.monotonic() - t0
+        logger.info(
+            "OpenAI-compatible request: model=%s url=%s status=%d elapsed=%.2fs",
+            model, url, resp.status_code, elapsed,
         )
         resp.raise_for_status()
         data = resp.json()
