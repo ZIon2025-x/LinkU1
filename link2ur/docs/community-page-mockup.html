@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Link2Ur 社区页 Mockup（千岛风）</title>
+<title>Link2Ur 社区页 Mockup（对齐 app 真实结构）</title>
 <style>
   :root {
     --bg-page: #0f1115;
@@ -16,8 +16,7 @@
     --text-3: #9aa0aa;
 
     --accent: #ff2d55;
-    --accent-2: #ff6b8a;
-    --primary: #7359F2;
+    --primary: #007AFF;
 
     --grad-blue:   linear-gradient(135deg, #007AFF, #409CFF);
     --grad-pink:   linear-gradient(135deg, #FF2D55, #FF6B8A);
@@ -30,10 +29,10 @@
     --grad-skyblue:linear-gradient(135deg, #56CCF2, #2F80ED);
 
     /* 4 个功能宫格的浅底配色 */
-    --tile-1: linear-gradient(135deg, #fffbeb 0%, #fef0c7 100%); /* 榜单 - 金 */
-    --tile-2: linear-gradient(135deg, #fff8f3 0%, #ffe9d9 100%); /* 活动 - 橙 */
-    --tile-3: linear-gradient(135deg, #f4f8ff 0%, #e3edff 100%); /* 板块 - 蓝 */
-    --tile-4: linear-gradient(135deg, #f7f2ff 0%, #ebe1ff 100%); /* 技能 - 紫 */
+    --tile-1: linear-gradient(135deg, #fffbeb 0%, #fef0c7 100%);
+    --tile-2: linear-gradient(135deg, #fff8f3 0%, #ffe9d9 100%);
+    --tile-3: linear-gradient(135deg, #f4f8ff 0%, #e3edff 100%);
+    --tile-4: linear-gradient(135deg, #f7f2ff 0%, #ebe1ff 100%);
 
     --radius-md: 12px;
     --radius-lg: 16px;
@@ -96,64 +95,25 @@
   .status-bar .icons { display: flex; gap: 6px; align-items: center; }
   .status-bar svg { width: 16px; height: 16px; }
 
-  /* ============ 顶部 Header ============ */
+  /* ============ 顶部 Header（只有一个搜索框,对齐 app discover_view.dart 真实 UI） ============ */
   .app-header {
     flex-shrink: 0;
     padding: 8px 16px 12px;
     background: var(--bg-app);
-    display: grid;
-    grid-template-columns: auto 1fr auto;
+  }
+  .search-bar {
+    height: 40px;
+    background: var(--bg-soft);
+    border-radius: 999px;
+    padding: 0 14px;
+    display: flex;
     align-items: center;
     gap: 8px;
-  }
-  .logo {
-    font-size: 20px;
-    font-weight: 800;
-    background: var(--grad-pink);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    letter-spacing: -0.5px;
-  }
-  .center-tab {
-    text-align: center;
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--text);
-    display: inline-flex;
-    justify-content: center;
-    gap: 14px;
-  }
-  .center-tab .ct {
     color: var(--text-3);
-    font-weight: 500;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
   }
-  .center-tab .ct.active {
-    color: var(--text);
-    font-weight: 700;
-    font-size: 17px;
-    position: relative;
-  }
-  .center-tab .ct.active::after {
-    content: '';
-    position: absolute;
-    left: 50%; bottom: -6px;
-    transform: translateX(-50%);
-    width: 18px; height: 3px;
-    border-radius: 2px;
-    background: var(--accent);
-  }
-  .header-icons { display: flex; gap: 8px; }
-  .icon-btn {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: var(--bg-soft);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-  }
-  .icon-btn svg { width: 16px; height: 16px; color: var(--text); }
+  .search-bar svg { width: 20px; height: 20px; color: var(--text-2); }
 
   /* ============ 滚动主区 ============ */
   .scroll-area {
@@ -173,7 +133,7 @@
   }
   .tile {
     border-radius: var(--radius-lg);
-    padding: 10px 10px 10px;
+    padding: 10px;
     overflow: hidden;
     position: relative;
     min-height: 154px;
@@ -183,79 +143,29 @@
   .tile.t3 { background: var(--tile-3); }
   .tile.t4 { background: var(--tile-4); }
 
-  .tile-head {
-    display: flex; align-items: center; gap: 6px;
-    margin-bottom: 8px;
-  }
-  .tile-title {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--text);
-  }
+  .tile-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .tile-title { font-size: 16px; font-weight: 800; color: var(--text); }
   .tile-tag {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: white;
-    background: var(--accent);
+    font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px;
+    color: white; background: var(--accent);
   }
   .tile-tag.t-orange { background: #ff6b35; }
   .tile-tag.t-blue   { background: #2F80ED; }
-  .tile-tag.t-purple { background: var(--primary); }
+  .tile-tag.t-purple { background: #7359F2; }
   .tile-tag.t-gold   { background: linear-gradient(135deg,#f5a623,#e09000); }
 
-  /* 榜单 mini-card 内的额外元素 */
-  .ti-rank-no {
-    position: absolute;
-    top: 4px; left: 4px;
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: linear-gradient(135deg,#ffd84d,#ff9500);
-    color: white;
-    font-size: 10px;
-    font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    z-index: 2;
-  }
-  .ti-avatar-stack {
-    position: absolute;
-    bottom: 6px; right: 6px;
-    display: flex;
-    z-index: 2;
-  }
-  .ti-avatar-stack .av {
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    border: 1.5px solid white;
-    margin-left: -6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px;
-    color: white;
-    font-weight: 700;
-  }
-  .ti-avatar-stack .av:first-child { margin-left: 0; }
-
-  .tile-items {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
+  .tile-items { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .ti {
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
+    background: white; border-radius: 10px; overflow: hidden;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     position: relative;
   }
   .ti-img {
-    width: 100%;
-    height: 70px;
-    background: var(--grad-pink);
+    width: 100%; height: 70px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 30px;
-    position: relative;
+    font-size: 30px; position: relative;
+    background: var(--grad-pink);
   }
   .ti-img.b1 { background: var(--grad-pink); }
   .ti-img.b2 { background: var(--grad-mint); }
@@ -268,57 +178,9 @@
 
   .ti-foot {
     padding: 4px 6px 6px;
-    font-size: 11px;
-    color: var(--text-2);
-    line-height: 1.3;
+    font-size: 11px; color: var(--text-2); line-height: 1.3;
   }
-  .ti-foot .price {
-    color: var(--accent);
-    font-weight: 800;
-    font-size: 13px;
-  }
-  .ti-foot .countdown {
-    color: var(--accent);
-    font-weight: 700;
-    font-size: 11px;
-  }
-  .ti-foot .lack {
-    color: #ff6b35;
-    font-weight: 600;
-  }
-  .ti-bar {
-    height: 4px;
-    background: #f0f0f3;
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 4px 0 4px;
-  }
-  .ti-bar > i {
-    display: block;
-    height: 100%;
-    background: var(--grad-orange);
-  }
-
-  /* 福袋的多 emoji 拼图样式 */
-  .ti-img.collage {
-    background: white;
-    color: inherit;
-    font-size: 0;
-  }
-  .ti-img.collage .cg {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    width: 100%; height: 100%;
-    gap: 2px;
-    padding: 4px;
-  }
-  .ti-img.collage .cg span {
-    background: var(--bg-soft);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-  }
+  .ti-foot .countdown { color: var(--accent); font-weight: 700; font-size: 11px; }
 
   /* ============ 通用 section head ============ */
   .section {
@@ -328,38 +190,30 @@
   }
   .section-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px;
-    margin-bottom: 12px;
+    padding: 0 16px; margin-bottom: 12px;
   }
   .section-title {
-    font-size: 17px;
-    font-weight: 800;
+    font-size: 17px; font-weight: 800;
     display: flex; align-items: center; gap: 6px;
   }
-  .section-title .flame { font-size: 18px; }
   .section-more {
-    font-size: 12px;
-    color: var(--text-3);
+    font-size: 12px; color: var(--text-3);
     display: flex; align-items: center; gap: 2px;
   }
 
   /* ============ 热搜榜 ============ */
   .trending-list {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    padding: 0 16px;
+    display: flex; overflow-x: auto;
+    gap: 10px; padding: 0 16px;
     scroll-snap-type: x mandatory;
   }
   .trending-list::-webkit-scrollbar { display: none; }
   .hot-card {
-    flex: 0 0 200px;
-    height: 76px;
+    flex: 0 0 200px; height: 76px;
     border-radius: var(--radius-md);
     padding: 10px 12px;
     color: white;
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
     scroll-snap-align: start;
     display: flex; flex-direction: column; justify-content: space-between;
   }
@@ -369,149 +223,265 @@
   .hot-card.r4 { background: var(--grad-blue); }
   .hot-card.r5 { background: var(--grad-purple); }
   .hot-rank { font-size: 11px; font-weight: 700; opacity: 0.85; }
-  .hot-rank .num {
-    font-size: 16px; font-style: italic; margin-right: 2px;
-  }
+  .hot-rank .num { font-size: 16px; font-style: italic; margin-right: 2px; }
   .hot-text {
     font-size: 13px; font-weight: 600; line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .hot-meta { font-size: 10px; opacity: 0.85; }
 
-  /* ============ 发现板块 ============ */
-  .boards-list {
-    display: flex;
-    overflow-x: auto;
-    gap: 14px;
-    padding: 0 16px;
-  }
-  .boards-list::-webkit-scrollbar { display: none; }
-  .board {
-    flex: 0 0 90px;
-    text-align: center;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-  }
-  .board-icon {
-    width: 64px; height: 64px;
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px;
-    font-weight: 800;
-    color: white;
-  }
-  .board-name {
-    font-size: 13px; font-weight: 700;
-    color: var(--text);
-    white-space: nowrap; max-width: 90px;
-    overflow: hidden; text-overflow: ellipsis;
-  }
-  .board-members {
-    font-size: 11px; color: var(--text-3);
-  }
-  .board-join {
-    margin-top: 2px;
-    font-size: 12px;
-    color: var(--text);
-    border: 1px solid #d6d8de;
-    border-radius: 16px;
-    padding: 2px 14px;
-    background: white;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .board-join.joined {
-    color: var(--text-3);
+  /* ============ 内容流 Masonry (帖子 + 达人 + 评价 等多类型混排) ============ */
+  .feed-section {
     background: var(--bg-soft);
-    border-color: transparent;
+    padding: 4px 8px 16px;
   }
-
-  /* ============ 精选帖子（2 列大图） ============ */
-  .featured-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 4px 8px 8px;
+  .feed-section .feed-title {
+    padding: 12px 8px 8px;
+    font-size: 16px; font-weight: 800;
+    display: flex; align-items: center; gap: 6px;
   }
-  .feat-card {
-    aspect-ratio: 3 / 4;
-    border-radius: var(--radius-lg);
+  .masonry {
+    column-count: 2;
+    column-gap: 8px;
+  }
+  .card {
+    break-inside: avoid;
+    margin-bottom: 8px;
+    background: white;
+    border-radius: 12px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     position: relative;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 14px 12px;
-    cursor: pointer;
   }
-  .feat-card.f1 { background: var(--grad-purple); }
-  .feat-card.f2 { background: var(--grad-green); }
-  .feat-card.f3 { background: var(--grad-sunset); }
-  .feat-card.f4 { background: var(--grad-blue); }
-  .feat-card.f5 { background: var(--grad-orange); }
-  .feat-card.f6 { background: var(--grad-dark); }
-
-  .feat-emoji {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -55%);
-    font-size: 78px;
-    opacity: 0.55;
-  }
-  .feat-title {
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1.35;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.4);
-    z-index: 1;
-  }
-  .feat-meta {
-    font-size: 11px;
-    opacity: 0.92;
-    margin-top: 4px;
-    z-index: 1;
-  }
-  .feat-card .badges {
-    position: absolute;
-    top: 6px; left: 6px;
-    display: flex; gap: 3px;
+  .badge-tl {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(0,0,0,0.5); color: white;
+    font-size: 10px; font-weight: 600;
+    padding: 3px 8px; border-radius: 999px;
+    letter-spacing: 0.2px;
     z-index: 2;
   }
-  .feat-card .badge {
-    background: rgba(0,0,0,0.45);
-    backdrop-filter: blur(8px);
-    color: white;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 2px 5px;
-    border-radius: 3px;
+  .feed-type-chip {
+    display: inline-block;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 999px;
+    margin-bottom: 6px;
   }
-  .feat-card .badge.pinned   { background: var(--accent); }
-  .feat-card .badge.featured { background: #ff8033; }
+  .chip-post   { background: #EDE9FE; color: #7C3AED; }
+  .chip-expert { background: #F3E8FF; color: #7E22CE; }
+  .chip-compreview { background: #FCE7F3; color: #DB2777; }
+  .chip-svcreview  { background: #FCE7F3; color: #DB2777; }
+  .chip-skillreview{ background: #ECFDF5; color: #059669; }
 
-  /* ============ 悬浮"发动态" ============ */
-  .fab {
-    position: absolute;
-    right: 14px;
-    bottom: 96px;
-    background: rgba(28,28,30,0.92);
-    backdrop-filter: blur(12px);
-    color: white;
-    border-radius: 28px;
-    padding: 10px 16px;
+  /* —— 帖子卡 (forum_post) —— */
+  .card.post .img {
+    width: 100%; aspect-ratio: 4/3;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px;
+  }
+  .card.post .body { padding: 8px 10px 10px; }
+  .card.post .title {
+    font-size: 13px; font-weight: 600; line-height: 1.35;
+    color: var(--text);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card.post .meta {
+    margin-top: 6px; font-size: 11px; color: var(--text-3);
     display: flex; align-items: center; gap: 6px;
-    font-size: 13px;
-    font-weight: 700;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-    cursor: pointer;
-    z-index: 10;
   }
-  .fab svg { width: 16px; height: 16px; }
-  .fab:active { transform: scale(0.95); }
+  .card.post .avatar-sm {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; color: white; font-weight: 700;
+  }
 
-  /* ============ 底部 Tab Bar ============ */
+  /* —— 达人卡 (expert) — 对齐 _ExpertCard:629-873 视觉 —— */
+  .card.expert .cover {
+    width: 100%; aspect-ratio: 3/4;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 50px;
+  }
+  .card.expert .cover::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(0deg, rgba(0,0,0,0.65), rgba(0,0,0,0.1) 50%, transparent 65%);
+  }
+  .card.expert .cover .avatar-lg {
+    position: absolute;
+    left: 10px; bottom: 8px;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 2px solid white;
+    background: var(--grad-purple);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    z-index: 2;
+  }
+  .card.expert .verified-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    padding: 3px 7px; border-radius: 999px;
+    font-size: 10px; font-weight: 600;
+    z-index: 2;
+  }
+  .card.expert .body { padding: 8px 10px 10px; }
+  .card.expert .name {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .card.expert .skills {
+    margin-top: 4px;
+    display: flex; flex-wrap: wrap; gap: 3px;
+  }
+  .card.expert .skill-tag {
+    background: #DBEAFE; color: #2563EB;
+    font-size: 10px; font-weight: 600;
+    padding: 1px 6px; border-radius: 4px;
+  }
+  .card.expert .stats {
+    margin-top: 6px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--text-2);
+  }
+  .card.expert .stats .star { color: #FFB300; }
+  .card.expert .reason-strip {
+    margin: 6px -10px -10px;
+    padding: 6px 10px;
+    background: linear-gradient(90deg, #FEF3C7, #FED7AA);
+    font-size: 10px; color: #C2410C;
+    font-weight: 500;
+  }
+
+  /* —— 竞品评价 (competitor_review) — 对齐 _CompetitorReviewCard:349-479 视觉 —— */
+  .card.compreview { padding: 12px; }
+  .card.compreview .user-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card.compreview .av {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--grad-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: white; font-weight: 700;
+  }
+  .card.compreview .uname { font-size: 12px; font-weight: 600; color: var(--text); }
+  .card.compreview .time { font-size: 10px; color: var(--text-3); }
+  .card.compreview .review-box {
+    border-left: 3px solid #007AFF;
+    background: linear-gradient(90deg, #EFF6FF, transparent);
+    padding: 8px 10px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 8px;
+  }
+  .card.compreview .target {
+    font-size: 11px; font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .card.compreview .target .icon {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    background: var(--grad-orange);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .card.compreview .review-text {
+    font-size: 12px; color: var(--text-2);
+    line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card.compreview .vote-row {
+    display: flex; gap: 8px;
+  }
+  .card.compreview .vote {
+    flex: 1;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .card.compreview .vote.up   { background: #DCFCE7; color: #16A34A; }
+  .card.compreview .vote.down { background: #FEE2E2; color: #DC2626; }
+
+  /* —— 达人服务评价 (service_review) — 对齐 _ServiceReviewCard:486-623 —— */
+  .card.svcreview { padding: 0; overflow: hidden; }
+  .card.svcreview .top-banner {
+    background: linear-gradient(135deg, #EF4444, #F59E0B);
+    color: white;
+    padding: 6px 10px;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .card.svcreview .inner { padding: 10px; }
+  .card.svcreview .user-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .card.svcreview .av {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--grad-pink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: white; font-weight: 700;
+  }
+  .card.svcreview .uname { font-size: 12px; font-weight: 600; }
+  .card.svcreview .stars { font-size: 12px; color: #FFB300; }
+  .card.svcreview .review-box {
+    border-left: 3px solid #007AFF;
+    background: linear-gradient(90deg, #EFF6FF, transparent);
+    padding: 8px 10px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 8px;
+  }
+  .card.svcreview .review-text {
+    font-size: 12px; color: var(--text-2);
+    line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card.svcreview .service-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #FFF7ED; color: #EA580C;
+    font-size: 10px; font-weight: 600;
+    padding: 3px 8px; border-radius: 999px;
+  }
+
+  /* —— 个人技能评价 (personal_skill_review) — 类似服务评价但绿色色调 —— */
+  .card.skillreview { padding: 10px; }
+  .card.skillreview .user-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card.skillreview .av {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--grad-green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: white; font-weight: 700;
+  }
+  .card.skillreview .uname { font-size: 12px; font-weight: 600; }
+  .card.skillreview .stars { font-size: 12px; color: #FFB300; }
+  .card.skillreview .review-box {
+    border-left: 3px solid #16A34A;
+    background: linear-gradient(90deg, #ECFDF5, transparent);
+    padding: 8px 10px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 8px;
+  }
+  .card.skillreview .review-text {
+    font-size: 12px; color: var(--text-2);
+    line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card.skillreview .skill-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #ECFDF5; color: #059669;
+    font-size: 10px; font-weight: 600;
+    padding: 3px 8px; border-radius: 999px;
+  }
+
+  /* ============ 底部 Tab Bar (5 个 tab,中间 Create) ============ */
   .bottom-nav {
     flex-shrink: 0;
     height: 78px;
@@ -534,7 +504,20 @@
     padding-top: 4px;
   }
   .nav-item svg { width: 24px; height: 24px; }
-  .nav-item.active { color: var(--accent); font-weight: 700; }
+  .nav-item.active { color: var(--primary); font-weight: 700; }
+  .nav-item.create {
+    position: relative;
+  }
+  .nav-item.create .plus {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: var(--grad-blue);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,122,255,0.4);
+    margin-top: -16px;
+  }
+  .nav-item.create .plus svg { width: 24px; height: 24px; }
   .home-bar {
     position: absolute;
     bottom: 6px; left: 50%;
@@ -556,7 +539,7 @@
 </style>
 </head>
 <body>
-  <div class="label-strip">Link2Ur · 社区 Tab Mockup（千岛风：宫格 + 板块 + 大图）</div>
+  <div class="label-strip">Link2Ur · 社区 Tab Mockup (顶部=单搜索框,底部=5 tab,内容=混排 feed)</div>
 
   <div class="phone">
     <!-- 状态栏 -->
@@ -570,47 +553,34 @@
       </div>
     </div>
 
-    <!-- 顶栏 -->
+    <!-- 顶栏:只有一个搜索框 (对齐 discover_view.dart:78-117) -->
     <div class="app-header">
-      <div class="logo">Link2Ur</div>
-      <div class="center-tab">
-        <span class="ct active">推荐</span>
-        <span class="ct">关注</span>
-        <span class="ct">附近</span>
-      </div>
-      <div class="header-icons">
-        <div class="icon-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        </div>
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>搜索话题、达人、活动...</span>
       </div>
     </div>
 
     <!-- 滚动区 -->
     <div class="scroll-area">
 
-      <!-- ============ 4 功能宫格 ============ -->
+      <!-- 4 功能宫格 (保留) -->
       <div class="feature-grid">
-
-        <!-- 榜单 -->
         <div class="tile t1">
           <div class="tile-head">
             <span class="tile-title">榜单</span>
-            <span class="tile-tag t-gold">本周</span>
+            <span class="tile-tag t-gold">同城热门</span>
           </div>
           <div class="tile-items">
             <div class="ti">
-              <div class="ti-img" style="background:linear-gradient(135deg,#ffd84d,#ff9500);font-size:38px;">
-                🏆
-              </div>
+              <div class="ti-img" style="background:linear-gradient(135deg,#ffd84d,#ff9500);font-size:38px;">🏆</div>
               <div class="ti-foot">
                 <span style="font-weight:700;color:var(--text);">UCL 达人榜</span><br/>
                 <span style="color:#e09000;font-weight:600;">36 人上榜</span>
               </div>
             </div>
             <div class="ti">
-              <div class="ti-img" style="background:linear-gradient(135deg,#56CCF2,#2F80ED);font-size:38px;">
-                💎
-              </div>
+              <div class="ti-img" style="background:linear-gradient(135deg,#56CCF2,#2F80ED);font-size:38px;">💎</div>
               <div class="ti-foot">
                 <span style="font-weight:700;color:var(--text);">设计师榜</span><br/>
                 <span style="color:#2F80ED;font-weight:600;">24 人上榜</span>
@@ -619,7 +589,6 @@
           </div>
         </div>
 
-        <!-- 活动招募 -->
         <div class="tile t2">
           <div class="tile-head">
             <span class="tile-title">活动</span>
@@ -643,11 +612,10 @@
           </div>
         </div>
 
-        <!-- 板块 -->
         <div class="tile t3">
           <div class="tile-head">
             <span class="tile-title">板块</span>
-            <span class="tile-tag t-blue">今日热议</span>
+            <span class="tile-tag t-blue">一起讨论</span>
           </div>
           <div class="tile-items">
             <div class="ti">
@@ -667,37 +635,35 @@
           </div>
         </div>
 
-        <!-- 技能板块 -->
         <div class="tile t4">
           <div class="tile-head">
             <span class="tile-title">技能</span>
-            <span class="tile-tag t-purple">达人聚集</span>
+            <span class="tile-tag t-purple">发现兴趣</span>
           </div>
           <div class="tile-items">
             <div class="ti">
               <div class="ti-img b4">📊</div>
               <div class="ti-foot">
                 <span style="font-weight:700;color:var(--text);">学术辅导</span><br/>
-                <span style="color:var(--primary);font-weight:600;">328 位达人</span>
+                <span style="color:#7359F2;font-weight:600;">328 位达人</span>
               </div>
             </div>
             <div class="ti">
               <div class="ti-img b1">🎨</div>
               <div class="ti-foot">
                 <span style="font-weight:700;color:var(--text);">设计创作</span><br/>
-                <span style="color:var(--primary);font-weight:600;">142 位达人</span>
+                <span style="color:#7359F2;font-weight:600;">142 位达人</span>
               </div>
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- ============ 🔥 热搜榜（保留） ============ -->
+      <!-- 🔥 热搜榜 (保留) -->
       <section class="section">
         <div class="section-head">
           <div class="section-title">
-            <span class="flame">🔥</span>
+            <span>🔥</span>
             <span>热搜榜</span>
           </div>
           <a class="section-more">完整榜单 ›</a>
@@ -731,123 +697,205 @@
         </div>
       </section>
 
-      <!-- ============ 发现达人（横滑） ============ -->
-      <section class="section">
-        <div class="section-head">
-          <div class="section-title">
-            <span>发现达人</span>
-          </div>
-          <a class="section-more">全部达人 ›</a>
-        </div>
-        <div class="boards-list">
-          <div class="board">
-            <div class="board-icon" style="background:var(--grad-purple);border-radius:50%;">王</div>
-            <div class="board-name">王同学</div>
-            <div class="board-members">Stats · 4.9★</div>
-            <div class="board-join joined">已关注</div>
-          </div>
-          <div class="board">
-            <div class="board-icon" style="background:var(--grad-pink);border-radius:50%;">李</div>
-            <div class="board-name">李设计</div>
-            <div class="board-members">UI/PS · 4.8★</div>
-            <div class="board-join">关注</div>
-          </div>
-          <div class="board">
-            <div class="board-icon" style="background:var(--grad-blue);border-radius:50%;">M</div>
-            <div class="board-name">Mia 老师</div>
-            <div class="board-members">雅思 · 5.0★</div>
-            <div class="board-join">关注</div>
-          </div>
-          <div class="board">
-            <div class="board-icon" style="background:var(--grad-orange);border-radius:50%;">A</div>
-            <div class="board-name">Alex_Tech</div>
-            <div class="board-members">编程 · 4.9★</div>
-            <div class="board-join joined">已关注</div>
-          </div>
-          <div class="board">
-            <div class="board-icon" style="background:var(--grad-green);border-radius:50%;">雪</div>
-            <div class="board-name">小雪学姐</div>
-            <div class="board-members">留学 · 4.8★</div>
-            <div class="board-join">关注</div>
-          </div>
-          <div class="board">
-            <div class="board-icon" style="background:var(--grad-sunset);border-radius:50%;">📷</div>
-            <div class="board-name">摄影阿明</div>
-            <div class="board-members">写真 · 4.9★</div>
-            <div class="board-join">关注</div>
-          </div>
-          <div class="board">
-            <div class="board-icon" style="background:var(--grad-mint);border-radius:50%;">L</div>
-            <div class="board-name">翻译 Lily</div>
-            <div class="board-members">中英 · 5.0★</div>
-            <div class="board-join">关注</div>
-          </div>
-        </div>
-      </section>
+      <!-- 内容流: masonry 2 列, 多类型混排 -->
+      <section class="feed-section">
+        <div class="feed-title">✨ 发现更多</div>
 
-      <!-- ============ 精选帖子（2 列大图） ============ -->
-      <section class="section" style="padding: 8px 0;">
-        <div class="featured-grid">
-
-          <div class="feat-card f1">
-            <div class="badges"><span class="badge pinned">📌 置顶</span></div>
-            <span class="feat-emoji">🇬🇧</span>
-            <div class="feat-title">伦敦留学第一个月生存指南</div>
-            <div class="feat-meta">小雪 · ❤ 1.2k</div>
+        <div class="masonry">
+          <!-- 帖子 -->
+          <div class="card post">
+            <div class="img" style="background: var(--grad-purple);">🇬🇧</div>
+            <div class="body">
+              <span class="feed-type-chip chip-post">📝 帖子</span>
+              <div class="title">伦敦留学第一个月生存指南 — 从机场到 NHS 注册全流程</div>
+              <div class="meta">
+                <span class="avatar-sm" style="background: var(--grad-pink);">雪</span>
+                <span>小雪 · ❤️ 1.2k</span>
+              </div>
+            </div>
           </div>
 
-          <div class="feat-card f2">
-            <div class="badges"><span class="badge featured">⭐ 精华</span></div>
-            <span class="feat-emoji">🥾</span>
-            <div class="feat-title">湖区徒步实拍 + 行程表</div>
-            <div class="feat-meta">驴友老张 · ❤ 897</div>
+          <!-- 达人卡 -->
+          <div class="card expert">
+            <div class="cover" style="background: var(--grad-purple);">
+              📊
+              <span class="verified-badge">⭐ 认证达人</span>
+              <span class="avatar-lg">王</span>
+            </div>
+            <div class="body">
+              <div class="name">王同学 <span style="color:#3B82F6;">✓</span></div>
+              <div class="skills">
+                <span class="skill-tag">Stats</span>
+                <span class="skill-tag">R</span>
+                <span class="skill-tag">Python</span>
+              </div>
+              <div class="stats">
+                <span><span class="star">★</span> 4.9</span>
+                <span>·</span>
+                <span>已接 128 单</span>
+              </div>
+              <div class="reason-strip">💡 与你专业匹配 · 同校 UCL</div>
+            </div>
           </div>
 
-          <div class="feat-card f3">
-            <div class="badges"><span class="badge pinned">📌 置顶</span></div>
-            <span class="feat-emoji">🍜</span>
-            <div class="feat-title">Camden Town 必吃十家</div>
-            <div class="feat-meta">吃货档案 · ❤ 1.7k</div>
+          <!-- 帖子 -->
+          <div class="card post">
+            <div class="img" style="background: var(--grad-green);">🥾</div>
+            <div class="body">
+              <span class="feed-type-chip chip-post">📝 帖子</span>
+              <div class="title">湖区徒步实拍 + 行程表</div>
+              <div class="meta">
+                <span class="avatar-sm" style="background: var(--grad-blue);">驴</span>
+                <span>驴友老张 · ❤️ 897</span>
+              </div>
+            </div>
           </div>
 
-          <div class="feat-card f4">
-            <span class="feat-emoji">🏠</span>
-            <div class="feat-title">Zone 2 单间转租 £780</div>
-            <div class="feat-meta">Jamie · ❤ 41</div>
+          <!-- 竞品评价 -->
+          <div class="card compreview">
+            <span class="feed-type-chip chip-compreview">💬 竞品评价</span>
+            <div class="user-row">
+              <div class="av">陈</div>
+              <div style="flex:1;">
+                <div class="uname">陈同学</div>
+                <div class="time">2 小时前</div>
+              </div>
+            </div>
+            <div class="review-box">
+              <div class="target">
+                <span class="icon">🥡</span>
+                <span>Pho Mile End</span>
+              </div>
+              <div class="review-text">汤底很正，牛肉量足，比另一家 Banh Mi 11 性价比高，墙裂推荐！</div>
+            </div>
+            <div class="vote-row">
+              <div class="vote up">👍 UP 42</div>
+              <div class="vote down">👎 DOWN 3</div>
+            </div>
           </div>
 
-          <div class="feat-card f5">
-            <div class="badges"><span class="badge featured">⭐ 精华</span></div>
-            <span class="feat-emoji">📊</span>
-            <div class="feat-title">Stats / R 一对一答疑</div>
-            <div class="feat-meta">王同学 · ❤ 158</div>
+          <!-- 达人服务评价 -->
+          <div class="card svcreview">
+            <div class="top-banner">🔥 限时热门活动评价</div>
+            <div class="inner">
+              <span class="feed-type-chip chip-svcreview">💬 服务评价</span>
+              <div class="user-row">
+                <div class="av">林</div>
+                <div style="flex:1;">
+                  <div class="uname">林同学 <span class="stars">★★★★★</span></div>
+                  <div class="time" style="font-size:10px; color:var(--text-3);">昨天</div>
+                </div>
+              </div>
+              <div class="review-box">
+                <div class="review-text">辅导老师讲解非常细致，把 Mediation Analysis 讲清楚了，三次课就把 final 救回来了！</div>
+              </div>
+              <span class="service-tag">🔧 Stats 一对一答疑</span>
+            </div>
           </div>
 
-          <div class="feat-card f6">
-            <span class="feat-emoji">✈️</span>
-            <div class="feat-title">复活节欧洲 5 国 10 天 £600</div>
-            <div class="feat-meta">背包刘 · ❤ 523</div>
+          <!-- 帖子 -->
+          <div class="card post">
+            <div class="img" style="background: var(--grad-orange);">🍜</div>
+            <div class="body">
+              <span class="feed-type-chip chip-post">📝 帖子</span>
+              <div class="title">Camden Town 必吃十家</div>
+              <div class="meta">
+                <span class="avatar-sm" style="background: var(--grad-sunset);">货</span>
+                <span>吃货档案 · ❤️ 1.7k</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 个人技能评价 -->
+          <div class="card skillreview">
+            <span class="feed-type-chip chip-skillreview">✋ 技能评价</span>
+            <div class="user-row">
+              <div class="av">Y</div>
+              <div style="flex:1;">
+                <div class="uname">Yvonne <span class="stars">★★★★★</span></div>
+                <div class="time" style="font-size:10px; color:var(--text-3);">3 天前</div>
+              </div>
+            </div>
+            <div class="review-box">
+              <div class="review-text">教得超耐心，第一次拍写真完全不紧张，成品很满意，约下次！</div>
+            </div>
+            <span class="skill-tag">✋ 摄影 / 写真指导</span>
+          </div>
+
+          <!-- 达人卡 -->
+          <div class="card expert">
+            <div class="cover" style="background: var(--grad-pink);">
+              🎨
+              <span class="avatar-lg" style="background: var(--grad-blue);">L</span>
+            </div>
+            <div class="body">
+              <div class="name">Lily 设计</div>
+              <div class="skills">
+                <span class="skill-tag">UI/UX</span>
+                <span class="skill-tag">Figma</span>
+              </div>
+              <div class="stats">
+                <span><span class="star">★</span> 4.8</span>
+                <span>·</span>
+                <span>已接 86 单</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 帖子 -->
+          <div class="card post">
+            <div class="img" style="background: var(--grad-skyblue);">🏠</div>
+            <div class="body">
+              <span class="feed-type-chip chip-post">📝 帖子</span>
+              <div class="title">Zone 2 单间转租 £780</div>
+              <div class="meta">
+                <span class="avatar-sm" style="background: var(--grad-mint);">J</span>
+                <span>Jamie · ❤️ 41</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 竞品评价 -->
+          <div class="card compreview">
+            <span class="feed-type-chip chip-compreview">💬 竞品评价</span>
+            <div class="user-row">
+              <div class="av">M</div>
+              <div style="flex:1;">
+                <div class="uname">Mia</div>
+                <div class="time">昨天</div>
+              </div>
+            </div>
+            <div class="review-box">
+              <div class="target">
+                <span class="icon" style="background: var(--grad-skyblue);">🏃</span>
+                <span>Soho Gym</span>
+              </div>
+              <div class="review-text">器械较旧但人少不拥挤，学生价 £18/月，对预算敏感的同学可以考虑。</div>
+            </div>
+            <div class="vote-row">
+              <div class="vote up">👍 UP 28</div>
+              <div class="vote down">👎 DOWN 5</div>
+            </div>
           </div>
 
         </div>
       </section>
     </div>
 
-    <!-- 悬浮发动态 -->
-    <div class="fab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      <span>发动态</span>
-    </div>
-
-    <!-- 底部 tab bar -->
+    <!-- 底部 5 tab (含中间 Create + 按钮) -->
     <div class="bottom-nav">
       <div class="nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
         <span>首页</span>
       </div>
       <div class="nav-item active">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 8h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-1l-4 4v-4H7a2 2 0 0 1-2-2v-1H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a4 4 0 100 8 4 4 0 000-8zM2 20c0-4 4-7 10-7s10 3 10 7v1H2v-1z"/></svg>
         <span>社区</span>
+      </div>
+      <div class="nav-item create">
+        <div class="plus">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
       </div>
       <div class="nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -861,20 +909,5 @@
     </div>
   </div>
 
-<script>
-  document.querySelectorAll('.center-tab .ct').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.center-tab .ct').forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-    });
-  });
-  document.querySelectorAll('.board-join').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      btn.classList.toggle('joined');
-      btn.textContent = btn.classList.contains('joined') ? '已关注' : '关注';
-    });
-  });
-</script>
 </body>
 </html>
