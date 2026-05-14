@@ -145,6 +145,7 @@ class _SliverDiscoveryFeed extends StatelessWidget {
           icon: Icons.campaign,
           linkType: b.linkType,
           linkUrl: b.linkUrl,
+          badgeType: b.badgeType,
         ),
     ];
 
@@ -523,11 +524,71 @@ class _DiscoveryBannerCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              // 角标(promotion / new / hot / limited),后端 badge_type 字段控制
+              if (banner.badgeType != null && banner.badgeType!.isNotEmpty)
+                Positioned(
+                  left: 8, top: 8,
+                  child: _BannerBadge(badgeType: banner.badgeType!),
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+/// banner 角标 — 根据 badgeType 显示不同颜色 + 文案
+/// 未知 badgeType 直接渲染空(防御性处理,避免显示乱码)
+class _BannerBadge extends StatelessWidget {
+  const _BannerBadge({required this.badgeType});
+  final String badgeType;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _styleFor(badgeType);
+    if (style == null) return const SizedBox.shrink();
+    final (label, color) = style;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+
+  /// 后端 badge_type 约定值 → (展示文案, 角标背景色)
+  /// TODO(i18n): 文案后续走 l10n,目前先硬编码中文
+  static (String, Color)? _styleFor(String type) {
+    switch (type) {
+      case 'promotion':
+        return ('推广', const Color(0xFFE94E4E));
+      case 'new':
+        return ('新', const Color(0xFF4CAF50));
+      case 'hot':
+        return ('热门', const Color(0xFFFF6B35));
+      case 'limited':
+        return ('限时', const Color(0xFF9C27B0));
+      default:
+        return null;
+    }
   }
 }
 

@@ -712,6 +712,7 @@ class _BannerData {
     required this.icon,
     this.linkType = 'internal',
     this.linkUrl,
+    this.badgeType,
   });
 
   final String? title;
@@ -723,6 +724,8 @@ class _BannerData {
   final IconData icon;
   final String linkType;
   final String? linkUrl;
+  // 角标类型: promotion / new / hot / limited / null (null=不显示角标)
+  final String? badgeType;
 
   bool get hasImage => localImage != null || (networkImage != null && networkImage!.isNotEmpty);
 }

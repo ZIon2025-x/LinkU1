@@ -4570,6 +4570,10 @@ class BannerBase(BaseModel):
     link_type: str = Field(default="internal", description="链接类型：internal（内部链接）或 external（外部链接）")
     order: int = Field(default=0, description="排序顺序，数字越小越靠前")
     is_active: bool = Field(default=True, description="是否启用")
+    badge_type: Optional[str] = Field(
+        None, max_length=16,
+        description="角标类型: promotion/new/hot/limited/None (None=不显示角标)",
+    )
 
 
 class BannerCreate(BannerBase):
@@ -4586,6 +4590,10 @@ class BannerUpdate(BaseModel):
     link_type: Optional[str] = Field(None, description="链接类型：internal（内部链接）或 external（外部链接）")
     order: Optional[int] = Field(None, description="排序顺序，数字越小越靠前")
     is_active: Optional[bool] = Field(None, description="是否启用")
+    badge_type: Optional[str] = Field(
+        None, max_length=16,
+        description="角标类型: promotion/new/hot/limited/None (None=不显示角标)",
+    )
 
 
 class BannerOut(BaseModel):
@@ -4598,9 +4606,10 @@ class BannerOut(BaseModel):
     link_type: str
     order: int
     is_active: bool
+    badge_type: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    
+
     class Config:
         from_attributes = True
 

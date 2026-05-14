@@ -3366,9 +3366,11 @@ class Banner(Base):
     link_type = Column(String(20), default="internal")  # 链接类型：internal（内部链接）或 external（外部链接）
     order = Column(Integer, default=0)  # 排序顺序，数字越小越靠前
     is_active = Column(Boolean, default=True)  # 是否启用
+    # 角标类型: promotion/new/hot/limited/NULL (NULL=不显示角标)。migration 232 新增
+    badge_type = Column(String(16), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
-    
+
     __table_args__ = (
         Index('idx_banners_order', 'order'),
         Index('idx_banners_is_active', 'is_active'),
