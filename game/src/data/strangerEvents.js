@@ -35,7 +35,7 @@ export const STRANGER_EVENTS = [
     title: '小李来求拍摄帮忙',
     body: '小李群里 @你："学弟/学妹 救救命 我想做一个 Soho 美食 vlog 但我不会运镜 你能不能陪我拍一下午 请你吃 Chinatown 所有好吃的"',
     choices: [
-      { label: '"行 周六见"', effect: { energy: -8, wallet: 0, belonging: 12, flag: 'helped_xl' },
+      { label: '"行 周六见"', effect: { energy: -8, wallet: 30, belonging: 12, skipDays: 1, flag: 'helped_xl' },
         feedback: '你陪她走了 6 家店，吃了 3 份不一样的食物。她自己其实只啃了一口 falafel——"我得忌口 镜头里要瘦"。\n\n临走时她给了你 £30："请你吃晚饭。我知道这个钱不多 但我现在能给的就这么多。" 你愣了一下。原来她不是表面那么"精致"——她在养自己。' },
       { label: '"我没空 抱歉"', effect: { belonging: -2 },
         feedback: '小李在群里冷下来三周。你后来听说她自己拍了。' },
@@ -46,7 +46,7 @@ export const STRANGER_EVENTS = [
     title: '小李：要不要一起做 IP',
     body: '小李突然给你发消息："那次拍的视频火了 80 万播放。小红书上有品牌找我合作。我一个人忙不过来。要不要做我搭子？分成五五开。"',
     choices: [
-      { label: '"试试看"', effect: { wallet: 200, energy: -10, belonging: 8, flag: 'xl_brand_partner' },
+      { label: '"试试看"', effect: { wallet: 200, energy: -10, belonging: 8, stress: 8, skipDays: 3, flag: 'xl_brand_partner' },
         feedback: '你接了第一个单子。化妆品品牌，£400，你拿一半。你帮她拍了 3 天。账户里多出 £200。\n\n你想：原来在伦敦也可以这样赚钱——不是端盘子，是用脑子。' },
       { label: '"我得专心学业"', effect: { academic: 4 },
         feedback: '小李说"理解"。她后来真的火了，6 个月后 30 万粉。你偶尔刷到她的视频，里面有你拍的那个下午。' },

@@ -95,6 +95,48 @@ export const LINK2UR_CS_MESSAGES = [
       + '我们这边的数据都说你做出来过。\n\n'
       + '这是真的。',
   },
+
+  // ── 首次触发型预警 (v11.1)·只在玩家第一次踩到红线时各发一条 ──
+  {
+    id: 'cs_low_wallet_warn',
+    flag: 'l2u_cs_low_wallet',
+    delayMs: 1200,
+    condition: ({ flags = {}, stats = {} }) =>
+      !flags.l2u_cs_low_wallet && (stats.wallet ?? 0) < 500,
+    text:
+      '💰 后台扫了一眼——你卡里 < £500 了。\n\n'
+      + '不是要 push 你接单。是 heads up 一下:\n'
+      + '· 每漏一顿饭夜里自动扣 £15 外卖费——这事悄悄就负数了\n'
+      + '· 钱包真到 0 以下就回不去了\n\n'
+      + 'Board 上跑腿单 £15-£25 一单。要的话点开 app。',
+  },
+  {
+    id: 'cs_no_meal_warn',
+    flag: 'l2u_cs_no_meal',
+    delayMs: 1500,
+    condition: ({ flags = {} }) =>
+      !flags.l2u_cs_no_meal && !!flags.first_no_meal_day,
+    text:
+      '🛵 看到你昨天一顿没吃，深夜自动 Deliveroo 扣了 £30。\n\n'
+      + '说一句不是管你:漏顿饭压力涨得最狠 (+8),'
+      + '比 essay 没写完还狠。\n\n'
+      + '即使是 Tesco Meal Deal £3.40——也比挨饿+£15 外卖+8 压力划算。',
+  },
+  {
+    id: 'cs_stress_first_warn',
+    flag: 'l2u_cs_stress_first',
+    delayMs: 1000,
+    condition: ({ flags = {}, stress = 25 }) =>
+      !flags.l2u_cs_stress_first && stress >= 60,
+    text:
+      '📈 你压力指数第一次摸到 60。\n\n'
+      + '机制说清楚一遍——之后你不会再收到这条:\n'
+      + '· 60-74:表现轻微下滑 (energy/academic 慢扣)\n'
+      + '· 75-84:**行动点变 2 个/天**\n'
+      + '· 85-94:**行动点变 1 个/天** + belonging/energy 重扣\n'
+      + '· 95 + :burnout 失败 ending\n\n'
+      + '解压最快的两条路:发 Link2Ur post (-18 stress 一发)、接单 (-12)。',
+  },
 ];
 
 /**

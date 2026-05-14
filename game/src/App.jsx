@@ -214,7 +214,7 @@ export default function App() {
         addMessage('l2u_cs', '👤 小U · Link2Ur 助手', msg.text);
       }, msg.delayMs || 800);
     });
-  }, [state.flags, state.link2urCompleted.length, state.link2urRating, state.screen]);
+  }, [state.flags, state.link2urCompleted.length, state.link2urRating, state.stats.wallet, state.stress, state.screen]);
 
   // -- Audio lifecycle --
   useEffect(() => { audio.init(); audio.setMuted(muted); }, [muted]);
@@ -386,6 +386,37 @@ export default function App() {
     if (effect?.flag && diaryContext) {
       dispatch({ type: 'LOG_DIARY', title: diaryContext.title, line: diaryContext.line });
     }
+    // effect.skipDays: N → 推进 N 天（一日 / 一周 / 长 narrative 跨度用）
+    if (effect?.skipDays && effect.skipDays > 0) {
+      handleSkipDays(effect.skipDays);
+    }
+    // effect.spendActions: N → 额外消耗 N 个行动点（除事件本身已扣的之外）
+    if (effect?.spendActions && effect.spendActions > 0) {
+      for (let i = 0; i < effect.spendActions; i++) {
+        dispatch({ type: 'SPEND_ACTION' });
+      }
+    }
+  }
+
+  // 推进多天 —— event/story choice 带 skipDays:N 时调用。
+  // reducer 已把 mealsPenalty/phaseInc/stipend 都内置；这里只补 'mom' 消息 + 失败 ending 判定。
+  function handleSkipDays(N) {
+    if (!N || N <= 0) return;
+    const startDay = state.day;
+    const stipendsHit = [];
+    for (let i = 1; i <= N; i++) {
+      const d = startDay + i;
+      if (d > 364) break;
+      const w = Math.ceil(d / 7);
+      if (isStipendWeek(w) && (d - 1) % 7 === 0) stipendsHit.push(w);
+    }
+    dispatch({ type: 'SKIP_DAYS', days: N });
+    stipendsHit.forEach((w, i) => {
+      setTimeout(() => {
+        addMessage('mom', '🇨🇳 妈妈', `这个月生活费转给你了 £${MONTHLY_STIPEND}。少吃外卖。`);
+        audio.ding();
+      }, 600 + i * 400);
+    });
   }
 
   // ============================================================
@@ -1254,14 +1285,30 @@ export default function App() {
     // 漏顿外卖：今日 mealsToday < 2 → 自动 Deliveroo 扣钱（END_DAY reducer 会扣 wallet）
     // 这里发个 message 让玩家知道扣了多少
     const mealsToday = state.mealsToday || 0;
+    const mealsMissed = Math.max(0, 2 - mealsToday);
     if (mealsToday < 2) {
-      const missed = 2 - mealsToday;
+      const missed = mealsMissed;
       const fee = missed * 15;
       const msg = missed === 2
         ? `🛵 你今天一顿没吃。深夜饿到不行点了两份 Deliveroo —— 扣 £${fee}。压力 +8，明天精力 -10。`
         : `🛵 你今天只吃了一顿。睡前饿了点 Deliveroo —— 扣 £${fee}。压力 +4，明天精力 -5。`;
       addMessage('system', '🛵 Deliveroo', msg);
+      // 首次漏顿 → flag 触发小U 'cs_no_meal_warn' 那条
+      if (!state.flags?.first_no_meal_day) {
+        dispatch({ type: 'SET_FLAG', flag: 'first_no_meal_day' });
+      }
     }
+
+    // 预算计算（mirror reducer advanceOneDay）—— 用于本帧的阈值判定 / broke ending /
+    // 'mom' 转账 message。reducer END_DAY 会把这些数都 patch 上去，这里仅为 UI 决策用。
+    const mealsPenaltyStress = mealsToday === 0 ? 8 : mealsToday === 1 ? 4 : 0;
+    const phaseInc = newWeek <= 6 ? 3 : newWeek <= 30 ? 5 : newWeek <= 36 ? 7 : 8;
+    const stateBonus = (
+      (state.flags?.scammed_pig_full || state.flags?.scammed_trading_full) ? 2 : 0
+    ) + (state.flags?.parents_arriving_soon ? 2 : 0);
+    const newStress = Math.min(100, (state.stress ?? 25) + mealsPenaltyStress + phaseInc + stateBonus);
+    const stipendCrossed = isStipendWeek(newWeek) && (newDay - 1) % 7 === 0;
+    const projectedWallet = state.stats.wallet - mealsMissed * 15 + (stipendCrossed ? MONTHLY_STIPEND : 0);
 
     let attendanceHistory = state.attendanceHistory;
     let monthAttendance = state.monthAttendance;
@@ -1314,48 +1361,33 @@ export default function App() {
       }
     }
 
-    // Bump day & restore actions/energy.
+    // Bump day & restore actions/energy. END_DAY reducer 现在内置 phaseInc + stipend，
+    // mealsPenalty wallet/stress/energy 也全部归并；下方仅做阈值判定 + 消息提示。
     dispatch({ type: 'END_DAY' });
 
-    // ── 压力指数 (stress) 处理 · 阶梯惩罚 + 失败触发 ──
-    // 每日自然增长：基础 +3 / 天 + 阶段叠加（freshman 期低、dissertation 期最高）
-    //   W1-W6  迎新/秋初:  +3   (玩家摸索期，温和)
-    //   W7-W30 学期/春期:  +5   (学业开始堆积)
-    //   W31-W36 复习+考试: +7   (考试压力 + 学校 ddl)
-    //   W37-W52 论文期:    +8   (dissertation grind)
-    // + 特殊状态额外 +2: scam 后 / parents 来访 / 4:38AM crisis
-    const phaseInc =
-      week <= 6 ? 3 :
-      week <= 30 ? 5 :
-      week <= 36 ? 7 : 8;
-    const stateBonus = (
-      (state.flags?.scammed_pig_full || state.flags?.scammed_trading_full) ? 2 : 0
-    ) + (state.flags?.parents_arriving_soon ? 2 : 0);
-    dispatch({ type: 'L2U_BACKLOG_TICK', amount: phaseInc + stateBonus });
-    const currentStress = state.stress ?? 25;
-    if (currentStress >= 95) {
+    if (newStress >= 95) {
       // ★ 失败 ending · burnout breakdown
       dispatch({ type: 'SET_ENDING', ending: SPECIAL_ENDINGS.stress_breakdown() });
       audio.fail();
       return;
-    } else if (currentStress >= 85) {
+    } else if (newStress >= 85) {
       // 极高：actionsLeft 已经在 END_DAY 里降到 1，再叠加 -5 belonging -5 energy
       dispatch({ type: 'APPLY_EFFECT', effect: { belonging: -5, energy: -5, academic: -2 } });
       setTimeout(() => addMessage('l2u_cs', '👤 小U · Link2Ur 助手',
         '⚠️ 系统提示：你压力指数 85+。今天只剩 1 个行动点。求救不丢人——发个 post 把事 offload 出去。'), 800);
-    } else if (currentStress >= 75) {
+    } else if (newStress >= 75) {
       // 高：actionsLeft 降到 2，叠加表现下降
       dispatch({ type: 'APPLY_EFFECT', effect: { belonging: -3, energy: -3, academic: -1 } });
       setTimeout(() => addMessage('l2u_cs', '👤 小U · Link2Ur 助手',
         '压力指数 75。今天行动点 -1（剩 2 个）。建议发 1-2 个 post 让别人帮你 cover。'), 800);
-    } else if (currentStress >= 60) {
+    } else if (newStress >= 60) {
       // 中高：表现略下滑但 actionsLeft 不变
       dispatch({ type: 'APPLY_EFFECT', effect: { energy: -2, academic: -1 } });
       if (Math.random() < 0.4) {
         setTimeout(() => addMessage('l2u_cs', '👤 小U · Link2Ur 助手',
           '注意压力指数 60+。表现开始受影响。试试在 Link2Ur 发个 post 让自己喘口气。'), 1000);
       }
-    } else if (currentStress <= 30) {
+    } else if (newStress <= 30) {
       // 低：表现略 boost
       dispatch({ type: 'APPLY_EFFECT', effect: { belonging: 1 } });
     }
@@ -1395,7 +1427,9 @@ export default function App() {
       generateEnding();
       return;
     }
-    if (walletAfter < 0) {
+    // broke check uses projectedWallet（已含 mealsMissed 外卖费 + stipend），
+    // 比 walletAfter 准确——后者是 pre-END_DAY 的 wallet。
+    if (projectedWallet < 0) {
       dispatch({ type: 'SET_ENDING', ending: SPECIAL_ENDINGS.broke() });
       return;
     }
@@ -1447,9 +1481,8 @@ export default function App() {
         dispatch({ type: 'L2U_REFRESH_BOARD', tasks: generateBoard(newWeek, { state, phase: state.link2urPhase }), week: newWeek });
       }
 
-      // Monthly stipend — fires on entering a new "month" (every 4 weeks).
+      // Monthly stipend — END_DAY reducer 已把 £500 加到 wallet；这里只发 'mom' 消息。
       if (isStipendWeek(newWeek)) {
-        dispatch({ type: 'PATCH_STATS', stats: { wallet: walletAfter + MONTHLY_STIPEND } });
         addMessage('mom', '🇨🇳 妈妈', `这个月生活费转给你了 £${MONTHLY_STIPEND}。少吃外卖。`);
         audio.ding();
       }

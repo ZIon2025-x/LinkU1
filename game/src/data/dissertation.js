@@ -107,9 +107,9 @@ export const DISSERTATION_EVENTS = {
       condition: ({ flags }) => !!flags.diss_lit_review_started,
       body: 'Word 文档底部 progress bar：4,524 / 15,000 字。\n\n离 deadline 还有 5 周。\n\n你算了一下：每天必须写 300 字才能写完。但你过去一周平均一天 120 字。\n\n你的 supervisor 说 chapter 3 还需要重写。chapter 4 (analysis) 还没动。conclusion 没影。',
       choices: [
-        { label: '把 outline 砍成 12,000 字（学校允许 ±10%）', effect: { energy: -3, academic: 8, flag: 'diss_scope_trimmed' },
+        { label: '把 outline 砍成 12,000 字（学校允许 ±10%）', effect: { energy: -3, academic: 8, stress: -5, flag: 'diss_scope_trimmed' },
           feedback: '你重新算 outline——chapter 4 从 5,000 字砍到 3,500，conclusion 从 2,000 砍到 1,500。\n\n12,000 字现在 reachable。每天 250 字就行。\n\n你给 Whitmore 邮件 confirm："tightening scope to 12,000". 他回 "Sensible. Better tight than padded."\n\n你想：原来 deadline 不是 enemy——是逼你 prioritize 的工具。' },
-        { label: '"我要写完 15,000 字 死磕到底"', effect: { energy: -10, academic: 10, flag: 'diss_full_count' },
+        { label: '"我要写完 15,000 字 死磕到底"', effect: { energy: -10, academic: 10, stress: 12, flag: 'diss_full_count' },
           feedback: '你接下来 5 周每天 300 字。有 4 天写不出来——你就在 ensuite 抄笔记。\n\n最后一周你写了 3,200 字（包括 conclusion）。15,003 字交了。\n\n你 distinction 拿了——Whitmore 说"You ground it out. Respect."\n\n但你也意识到——那 3,000 字里有 800 字是 padding。Whitmore 知道。你也知道。' },
         { label: '崩溃 + WhatsApp Aditi/Sarah', effect: { energy: -3, belonging: 8 },
           condition: ({ npcRel }) => (npcRel.aditi || 0) >= 4 || (npcRel.sarah || 0) >= 4,

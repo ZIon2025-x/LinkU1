@@ -111,7 +111,7 @@ export const STORYLINES = {
         title_full: 'Bicester 一日游',
         body: '王凯发消息："这周六去 Bicester Village 吗？我表姐让我代购 Burberry，需要个人帮我扛包。给你 £80。" 后面一个流泪的表情。',
         choices: [
-          { label: '去（消耗一整天）', effect: { rel: 2, wallet: 80, energy: -18, belonging: 2 },
+          { label: '去（消耗一整天）', effect: { rel: 2, wallet: 80, energy: -18, belonging: 2, skipDays: 1 },
             feedback: '你们坐 coach 一个半小时到 Bicester。王凯排了 4 个店，你帮他抱了 6 个袋子。回来的车上他给你买了 Pret，"哥们 仗义。" £80 当场转账。你想，这一天换三天伙食费，行。' },
           { label: '不去', effect: { rel: -1, energy: 2 },
             feedback: '"理解理解 学习要紧。" 王凯发了一个 OK 的表情。但你知道下次他不会再叫你了。' },

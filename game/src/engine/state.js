@@ -11,7 +11,7 @@
 
 import { clamp } from './util.js';
 import { DAILY_ACTIONS } from '../data/calendar.js';
-import { STARTING_WALLET, STARTING_ACADEMIC } from '../data/onboarding.js';
+import { STARTING_WALLET, STARTING_ACADEMIC, MONTHLY_STIPEND } from '../data/onboarding.js';
 import { maybePromoteToRepeat } from './link2urRepeat.js';
 
 // 哪些 message sender 是"可点开私聊的真人"——他们的消息会同时进 chatThreads。
@@ -175,6 +175,68 @@ export const derive = {
       ? state.monthAttendance[state.monthAttendance.length - 1].rate
       : null,
 };
+
+/**
+ * 推进一天 —— END_DAY 和 SKIP_DAYS 共用。包括：
+ *   1. mealsToday penalty (stress+ / energy- / 外卖费扣钱)
+ *   2. 阶段性 stress 自然增长 (phaseInc, 按周阶段)
+ *   3. 行动点按新一天的 stress 阶梯发放
+ *   4. 能量恢复按 stress 衰减
+ *   5. 月津贴 stipend 自动到账 (跨 stipend 周边界时)
+ *   6. mealsToday / 当日交互 set 跨天重置
+ * 注意：'mom' 转账 message 是 side effect，由 App.jsx 检测 day 变化后补发。
+ */
+function advanceOneDay(state) {
+  const meals = state.mealsToday || 0;
+  const mealsMissed = Math.max(0, 2 - meals);
+  const mealsPenaltyStress = meals === 0 ? 8 : meals === 1 ? 4 : 0;
+  const mealsPenaltyEnergy = meals === 0 ? -10 : meals === 1 ? -5 : 0;
+  const DELIVERY_FEE = 15;
+  const deliveryCost = mealsMissed * DELIVERY_FEE;
+
+  const newDay = state.day + 1;
+  const newWeek = Math.ceil(newDay / 7);
+  // 阶段性 stress 自然增长（原本散在 App.jsx，现在归一进 reducer）
+  const phaseInc =
+    newWeek <= 6 ? 3 :
+    newWeek <= 30 ? 5 :
+    newWeek <= 36 ? 7 : 8;
+  // 特殊状态额外 +2
+  const stateBonus =
+    ((state.flags?.scammed_pig_full || state.flags?.scammed_trading_full) ? 2 : 0)
+    + (state.flags?.parents_arriving_soon ? 2 : 0);
+
+  const baseStress = state.stress ?? 25;
+  const s = clamp(baseStress + mealsPenaltyStress + phaseInc + stateBonus, 0, 100);
+
+  let dailyActions = DAILY_ACTIONS;
+  if (s >= 85) dailyActions = 1;
+  else if (s >= 75) dailyActions = 2;
+
+  const energyRecover = s >= 75 ? 5 : s >= 60 ? 10 : 15;
+
+  // 跨入 stipend 周（每 4 周一次，第一次在 W5）→ 自动到账 £500
+  const isStipendBoundary =
+    newWeek > 1
+    && (newWeek - 1) % 4 === 0
+    && (newDay - 1) % 7 === 0;  // 仅在该周第一天到账
+  const stipendAdd = isStipendBoundary ? MONTHLY_STIPEND : 0;
+
+  return {
+    ...state,
+    day: newDay,
+    actionsLeft: dailyActions,
+    stress: s,
+    mealsToday: 0,
+    stats: {
+      ...state.stats,
+      energy: clamp(state.stats.energy + energyRecover + mealsPenaltyEnergy, 0, 100),
+      wallet: state.stats.wallet - deliveryCost + stipendAdd,
+    },
+    seenChatOptionsToday: [],
+    npcSpokenToday: [],
+  };
+}
 
 /**
  * Apply an effect object ({ academic, wallet, energy, belonging, flag, npc, rel })
@@ -722,35 +784,21 @@ export function reducer(state, action) {
       //   75-84  2 actions ("我今天只能 cover 2 件事")
       //   85+    1 action  ("快崩了 只能撑一件")
       // 失败游戏由 App.jsx 在 stress >= 95 时通过 SET_ENDING 触发。
-      const meals = state.mealsToday || 0;
-      const mealsMissed = Math.max(0, 2 - meals);   // 0 / 1 / 2 顿没吃
-      // 没吃够饭的 penalty —— 次日 stress 涨 + energy 受损 + **晚上自动点外卖扣钱**
-      const mealsPenaltyStress = meals === 0 ? 8 : meals === 1 ? 4 : 0;
-      const mealsPenaltyEnergy = meals === 0 ? -10 : meals === 1 ? -5 : 0;
-      const DELIVERY_FEE = 15;  // 每漏一顿 £15 外卖费
-      const deliveryCost = mealsMissed * DELIVERY_FEE;
-      const baseStress = state.stress ?? 25;
-      const s = clamp(baseStress + mealsPenaltyStress, 0, 100);
-      let dailyActions = DAILY_ACTIONS;  // 3
-      if (s >= 85) dailyActions = 1;
-      else if (s >= 75) dailyActions = 2;
-      // 能量恢复也按压力衰减：高压时睡不好
-      const energyRecover = s >= 75 ? 5 : s >= 60 ? 10 : 15;
-      return {
-        ...state,
-        day: state.day + 1,
-        actionsLeft: dailyActions,
-        stress: s,
-        mealsToday: 0,   // 跨天重置
-        stats: {
-          ...state.stats,
-          energy: clamp(state.stats.energy + energyRecover + mealsPenaltyEnergy, 0, 100),
-          // 漏的顿数 × £15 自动 Deliveroo 扣钱（饿狠了的人最后还是会点外卖）
-          wallet: state.stats.wallet - deliveryCost,
-        },
-        seenChatOptionsToday: [],   // 跨天重置：smalltalk 和普通 ask 重新可问
-        npcSpokenToday: [],         // 跨天重置：每个 NPC 又能聊一次
-      };
+      const next = advanceOneDay(state);
+      return next;
+    }
+
+    case 'SKIP_DAYS': {
+      // 多日推进。用于"全天 assessment centre"、"病倒一周"等 narrative beats。
+      // 每天 = 0 顿饭 = 最大 mealsPenalty(stress+8 / energy-10 / wallet-30 外卖)
+      // 不复跑 App.jsx 里那套 festival/group/proactive scan（玩家选择跳过 = 接受错过）
+      const N = Math.max(1, action.days | 0);
+      let next = state;
+      for (let i = 0; i < N; i++) {
+        if (next.day >= 364) break;
+        next = advanceOneDay(next);
+      }
+      return next;
     }
 
     case 'MARK_NPC_SPOKEN_TODAY':

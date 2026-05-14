@@ -276,10 +276,10 @@ export const FESTIVAL_EVENTS = {
     title: 'Notting Hill 嘉年华', emoji: '🎉',
     body: '8 月最后一个周末。Westbourne Park 站封站。Notting Hill 整片区被加勒比鼓声、烤鸡香味、20 万人占领。\n\n你 dissertation 已经在 final edit。Sarah 发消息："Carnival! You\'ve gotta come at least once. Bring water and lose your dignity."',
     choices: [
-      { label: '一群朋友约一起去 跳一整天', effect: { energy: -12, wallet: -25, belonging: 22, flag: 'carnival_squad' },
+      { label: '一群朋友约一起去 跳一整天', effect: { energy: -12, wallet: -25, belonging: 22, skipDays: 1, flag: 'carnival_squad' },
         condition: ({ npcRel }) => anyRel(npcRel, 5),
         feedback: '你们 4 个人 11 点在 Ladbroke Grove 集合。买了 £8 的"jerk chicken + rice"和一罐 Red Stripe。一辆花车开过——音箱大得能震碎你的胸腔——你们整队人冲进了人群跳舞。\n\n下午 4 点你们走丢了一次（Sarah 在 sound system 旁边狂跳），又重新汇合。傍晚一个朋友哭着说"this is the best year of my life"——大家都没问她为什么哭，只是凑过去抱了一下。\n\n你回家时鞋上全是泥，T 恤湿透，耳朵嗡嗡响 3 小时没消。但你笑着洗澡。\n\n伦敦给你的告别礼物，就是这一天。' },
-      { label: '一个人挤进去看花车 + 跳一跳', effect: { energy: -10, wallet: -15, belonging: 14, flag: 'carnival_in' },
+      { label: '一个人挤进去看花车 + 跳一跳', effect: { energy: -10, wallet: -15, belonging: 14, skipDays: 1, flag: 'carnival_in' },
         feedback: '你在 Ladbroke Grove 被人潮推着走。一辆花车开过——音箱大得能震碎你的胸腔。一个加勒比奶奶塞给你一片烤鸡："Eat, baby!" 你嚼着烤鸡跟着鼓点跳了一段——你不知道是什么舞，但旁边没有人在意。\n\n你回家时鞋上全是泥，T 恤湿透，耳朵嗡嗡响 3 小时没消。但你笑着洗澡。\n\n这是你伦敦一年里最不像留学生的一天。' },
       { label: '远远看一眼就回家', effect: { energy: -3, belonging: 4 },
         feedback: '你站在 Notting Hill Gate 站外远远看了 10 分钟。鼓声从街那头传来，能感觉到地在震。\n\n你回去了。\n\n但你回去路上发了一条朋友圈——一张远景。15 个人点赞。' },

@@ -19,6 +19,16 @@ export const WELCOME_WEEK_EVENTS = {
   // ─────────────────────────────────────────────────────────────
   flat: [
     {
+      id: 'survival_brief', auto: true, minWeek: 1, maxWeek: 1,
+      title: '室友 Day 1 · "活下来手册"',
+      body: '搬进来第二天早上。你在共用厨房遇到一个看起来已经熬过来一年的 housemate——King\'s 二年级的女生，正用一个掉漆的摩卡壶煮咖啡。\n\n她递了你一杯："新来的吧？给你说几条 一年前没人告诉我的。"\n\n· 一天**只能干 3 件正经事**——出门一次、上一节课、接一单跑腿。压力一上来掉到 2 件 1 件，别问我怎么知道的。\n· 一天**至少吃 2 顿**。漏一顿夜里饿到不行就点 Deliveroo £15 一份。漏两顿压力涨 8——比挨饿本身更狠的是那 8。\n· 卡里 £1,200 + 妈每月 £500。**钱包真见底就回不去了**——别问我那个学姐去年回国前的事。\n· 压力 75 + 就一天 2 件,85 + 就一天 1 件,95 + ……我没见过 95+ 的人。\n\n"app 里 Link2Ur 那个图标点开,跑腿赚钱解放时间都靠它。第一个月撑过去就活了。"',
+      choices: [
+        { label: '"记下来。谢了。"',
+          effect: { energy: 0, belonging: 3, flag: 'survival_briefed' },
+          feedback: '她耸耸肩："不客气。我去年没人跟我说,12 月那会儿差点崩了。"\n\n她拎着咖啡杯回房间。门关上前补了一句："app 给你说话的那个小 U——别忽略它。它发消息的时候通常是真的有事。"' },
+      ],
+    },
+    {
       id: 'brp_reminder', auto: true, minWeek: 1, maxWeek: 1,
       title: 'BRP · 10 天内必须取',
       body: '你刚醒。手机里一封 UKVI 的邮件——\n\n"Collect your Biometric Residence Permit at Acton Lane Post Office, within 10 days of arrival."\n\n你 google 了一下：BRP 是英国身份证 +居留卡，粉色塑料卡。开银行、续租房、回国回签都要它。错过 10 天罚 £125，还可能影响以后续签。',
@@ -120,11 +130,11 @@ export const WELCOME_WEEK_EVENTS = {
       title: 'Bicester Village · 代购日',
       body: 'Marylebone 站 9 点发车，47 分钟到 Bicester Village outlet。Burberry、Coach、Tory Burch 全场 30-70% off。\n\n群里有人发："带我代 4 个 Burberry 围巾，运费给你 £30/件。"\n\n往返车票 £35。',
       choices: [
-        { label: '帮代购 全天扛 4 个包', effect: { wallet: 85, energy: -22, flag: 'bicester_daigou' },
+        { label: '帮代购 全天扛 4 个包', effect: { wallet: 85, energy: -22, skipDays: 1, stress: 6, flag: 'bicester_daigou' },
           feedback: '你坐 9 点的车去，下午 6 点回。中间排 Burberry 1 小时，付款 30 分钟。回家时肩膀酸得抬不起来。\n\n£120 代购费 - £35 车票 = £85 净入账。但你想：这钱赚得真累。\n\n群里以后会一直有人找你。' },
-        { label: '只给自己买一件 Burberry 围巾', effect: { wallet: -215, energy: -8, belonging: 4 },
+        { label: '只给自己买一件 Burberry 围巾', effect: { wallet: -215, energy: -8, belonging: 4, skipDays: 1 },
           feedback: '你买了一条经典格纹围巾。£180 + £35 车票 = £215。\n\n比国内便宜 60%，但还是英镑。回伦敦的火车上你抱着购物袋睡着了。这是你来英国第一次"奖励自己"。' },
-        { label: '只去逛 不买', effect: { wallet: -45, energy: -10 },
+        { label: '只去逛 不买', effect: { wallet: -45, energy: -10, skipDays: 1 },
           feedback: '£35 车票 + £10 一杯 Pret。你逛了 4 小时，被代购阿姨挤来挤去，一件没买。\n\n但你看清了——下次要么早 8 点到、要么别来。' },
       ],
     },

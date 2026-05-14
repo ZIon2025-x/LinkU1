@@ -67,11 +67,14 @@ export const TRANSPORT_OPTIONS = [
 
 // Initial state values for new game (used by reducer/initialState).
 //
-// Realistic UK MSc student finance: parents wired £10k (annual rent £8k +
-// £2k buffer) before the kid flies. Rent goes straight to the letting agent.
-// What lands in the kid's actual UK bank account is the £2k buffer.
+// Realistic UK MSc student finance: parents wired £9.2k (annual rent £8k +
+// £1.2k buffer) before the kid flies. Rent goes straight to the letting agent.
+// What lands in the kid's actual UK bank account is the £1.2k buffer.
 // Monthly stipend tops up living costs through the year.
-export const STARTING_WALLET = 2000;
+//
+// 经济压力调校 (v11.1)：原 £2000 太宽裕,玩家可以整个 chapter 1 不开 Link2Ur 也撑得过去。
+// 改成 £1200 让 W1-W4 第一笔 stipend 之前必须主动接 1-2 单 Link2Ur 才不会见底。
+export const STARTING_WALLET = 1200;
 export const STARTING_ACADEMIC = 0;
 
 // Annual rent shown in narrative only — not deducted from the player's wallet
@@ -99,8 +102,8 @@ export const APARTMENT_ARRIVAL = {
     '留学生公寓 ensuite——一间 11 平米的单人卧室带独立卫浴。厨房和 5 个 housemate 共用，在走廊尽头。',
     '中介在客厅等你。"你爸妈昨天给我转过来了——全年房租 £8,000 已经收讫。水电煤气网都包了，wifi 密码贴在冰箱上。这是合同副本。" 他递过一个牛皮纸文件夹就走了。',
     '你坐在床边打开手机银行。',
-    '卡里 £2,000。这就是你这一年除了房租之外的全部生活费——吃饭、地铁、社交、买书、机票。',
-    '妈每个月会给你转 £500 补贴。其它的，要么自己挣，要么省。',
+    '卡里 £1,200。这就是你这一年除了房租之外的全部启动金——吃饭、地铁、社交、买书、机票。',
+    '妈每个月会给你转 £500 补贴。下一笔下个月头到——这一个月你得自己撑过去。其它的，要么自己挣，要么省。',
   ],
   cta: '开始第 1 周 →',
 };
