@@ -160,10 +160,20 @@ class OpenAICompatibleProvider:
     使用 httpx 直接调用，兼容所有 OpenAI 协议 API。
     """
 
-    def __init__(self, api_key: str, base_url: str, timeout: float = 30.0):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        timeout: float = 30.0,
+        extra_body: dict | None = None,
+    ):
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
+        # extra_body: 每次请求自动合并的固定字段(provider 私有参数,如 GLM 的
+        # thinking 控制)。在 body 构造完成后 merge,以便上层若显式传入同名字段
+        # 可覆盖。
+        self._extra_body = extra_body or {}
         import httpx
         self._client = httpx.AsyncClient(
             timeout=timeout,
@@ -245,6 +255,9 @@ class OpenAICompatibleProvider:
         }
         if oai_tools:
             body["tools"] = oai_tools
+        # provider 级默认参数(如 GLM thinking: disabled),不覆盖 body 已有 key
+        for k, v in self._extra_body.items():
+            body.setdefault(k, v)
 
         resp = await self._client.post(
             f"{self._base_url}/chat/completions",
@@ -322,14 +335,41 @@ class OpenAICompatibleProvider:
 
 # ==================== 统一客户端 ====================
 
-def _create_provider(provider_type: str, api_key: str, base_url: str, timeout: float):
+def _build_provider_extra_body(provider_type: str, model: str) -> dict:
+    """根据 provider + model 推断需要附加的固定请求字段。
+
+    GLM-4.5+ 系列的 thinking 参数 **默认 enabled**(z.ai 官方文档明示),意味着
+    每次调用都会先走深度思考再生成回答,简单消息("你好")也可能超过 60s timeout
+    触发 ReadTimeout(httpx 的 ReadTimeout str()='',这正是日志里
+    `LLM call error for user ...: ` 空尾巴的根因)。
+    对 backend 小模型(intent 判定 + 简单对话),关闭 thinking 大幅降低延迟,
+    复杂推理已由大模型(Claude)承担。
+    """
+    if provider_type != "openai_compatible":
+        return {}
+    model_lower = (model or "").lower()
+    if "glm-4" in model_lower or "glm-5" in model_lower:
+        return {"thinking": {"type": "disabled"}}
+    return {}
+
+
+def _create_provider(
+    provider_type: str,
+    api_key: str,
+    base_url: str,
+    timeout: float,
+    model: str = "",
+):
     """工厂方法 — 根据 provider 类型创建实例"""
     if provider_type == "anthropic":
         return AnthropicProvider(api_key=api_key, timeout=timeout)
     elif provider_type == "openai_compatible":
         if not base_url:
             raise ValueError(f"openai_compatible provider requires BASE_URL")
-        return OpenAICompatibleProvider(api_key=api_key, base_url=base_url, timeout=timeout)
+        extra_body = _build_provider_extra_body(provider_type, model)
+        return OpenAICompatibleProvider(
+            api_key=api_key, base_url=base_url, timeout=timeout, extra_body=extra_body,
+        )
     else:
         raise ValueError(f"Unknown AI provider: {provider_type}")
 
@@ -353,16 +393,30 @@ class LLMClient:
         if not small_key:
             logger.warning("No API key for small model — AI features disabled")
         small_timeout = Config.AI_LLM_SMALL_TIMEOUT
-        self._small = _create_provider(small_provider, small_key, small_base_url, timeout=small_timeout)
-        logger.info(f"AI small model: {Config.AI_MODEL_SMALL} via {small_provider} (timeout={small_timeout}s)")
+        self._small = _create_provider(
+            small_provider, small_key, small_base_url,
+            timeout=small_timeout, model=Config.AI_MODEL_SMALL,
+        )
+        small_extra = _build_provider_extra_body(small_provider, Config.AI_MODEL_SMALL)
+        logger.info(
+            f"AI small model: {Config.AI_MODEL_SMALL} via {small_provider} "
+            f"(timeout={small_timeout}s, extra_body={small_extra or 'none'})"
+        )
 
         # 大模型
         large_key = Config.AI_MODEL_LARGE_API_KEY or default_key
         large_provider = Config.AI_MODEL_LARGE_PROVIDER
         large_base_url = Config.AI_MODEL_LARGE_BASE_URL
         large_timeout = Config.AI_LLM_LARGE_TIMEOUT
-        self._large = _create_provider(large_provider, large_key, large_base_url, timeout=large_timeout)
-        logger.info(f"AI large model: {Config.AI_MODEL_LARGE} via {large_provider} (timeout={large_timeout}s)")
+        self._large = _create_provider(
+            large_provider, large_key, large_base_url,
+            timeout=large_timeout, model=Config.AI_MODEL_LARGE,
+        )
+        large_extra = _build_provider_extra_body(large_provider, Config.AI_MODEL_LARGE)
+        logger.info(
+            f"AI large model: {Config.AI_MODEL_LARGE} via {large_provider} "
+            f"(timeout={large_timeout}s, extra_body={large_extra or 'none'})"
+        )
 
     async def chat(
         self,
