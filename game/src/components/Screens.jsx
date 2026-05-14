@@ -246,8 +246,12 @@ export function IntroScreen({ onStart, muted, onToggleMute, hasSave, onClearSave
                 <div className="pt-3 border-t border-current/15">
                   <div className="text-xs tracking-[0.3em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>PRESENTED BY · 鸣谢</div>
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="w-7 h-7 rounded flex items-center justify-center text-sm font-bold flex-shrink-0"
-                         style={{ background: '#007AFF', color: 'white' }}>L</div>
+                    {getMiscImage('link2ur') ? (
+                      <img src={getMiscImage('link2ur')} alt="Link2Ur" className="w-8 h-8 object-contain flex-shrink-0" />
+                    ) : (
+                      <div className="w-7 h-7 rounded flex items-center justify-center text-sm font-bold flex-shrink-0"
+                           style={{ background: '#007AFF', color: 'white' }}>L</div>
+                    )}
                     <div>
                       <div className="text-base" style={{ color: '#007AFF' }}>Link2Ur</div>
                       <div className="text-[10px] opacity-50" style={{ fontFamily: 'monospace' }}>link2ur.com · 留学生互助平台</div>
@@ -1079,8 +1083,12 @@ function Link2UrPostCredits() {
       </div>
 
       <div className="mb-2 flex items-center justify-center gap-3">
-        <div className="w-10 h-10 rounded flex items-center justify-center text-xl font-bold"
-          style={{ background: '#007AFF', color: 'white' }}>L</div>
+        {getMiscImage('link2ur') ? (
+          <img src={getMiscImage('link2ur')} alt="Link2Ur" className="w-12 h-12 object-contain" />
+        ) : (
+          <div className="w-10 h-10 rounded flex items-center justify-center text-xl font-bold"
+            style={{ background: '#007AFF', color: 'white' }}>L</div>
+        )}
         <div className="text-3xl font-light tracking-wide" style={{ color: '#007AFF' }}>Link2Ur</div>
       </div>
       <div className="text-sm opacity-70 italic mb-8">留学生互助平台</div>

@@ -387,11 +387,18 @@ export function reducer(state, action) {
       return { ...state, unreadMessages: 0 };
 
     case 'CHAT_THREAD_READ': {
-      // 进入 detail 时清零该 thread 的未读
-      if (!state.chatThreadUnread[action.npcId]) return state;
+      // 进入 detail 时清零该 thread 的未读 + 同步扣 flat unreadMessages
+      // (NPC 消息进来时 ADD_MESSAGE 同时给 flat 和 thread 都 +1,
+      // 读 thread 必须把 flat 这一份也扣掉,否则 tab badge 留 ghost 未读)
+      const threadUnread = state.chatThreadUnread[action.npcId] || 0;
+      if (threadUnread === 0) return state;
       const next = { ...state.chatThreadUnread };
       delete next[action.npcId];
-      return { ...state, chatThreadUnread: next };
+      return {
+        ...state,
+        chatThreadUnread: next,
+        unreadMessages: Math.max(0, state.unreadMessages - threadUnread),
+      };
     }
 
     case 'CHAT_PLAYER_REPLY': {

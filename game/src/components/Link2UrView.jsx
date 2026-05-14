@@ -3,6 +3,7 @@ import { LINK2UR_BRAND, availablePosts } from '../data/link2ur.js';
 import { LINK2UR_REVIEWS } from '../data/link2urReviews.js';
 import { renderLink2UrWall, renderWallToBlob } from '../engine/link2urWall.js';
 import { download } from '../engine/diaryExport.js';
+import { getMiscImage } from '../engine/imageRegistry.js';
 import { InboxCard, PhaseIndicator, TeamMemberRow, ClashWarningModal } from './Atoms.jsx';
 import { BottomSheet } from './BottomSheet.jsx';
 
@@ -37,7 +38,8 @@ export function Link2UrView({
   const pending = gameState?.link2urPending || [];
   const rejected = gameState?.link2urRejected || [];
   // 是否有 emergency post（urgent 标记的）—— 用于在 post tab 上加 red dot
-  const urgentPostCount = postsAvailable.filter(p => p.urgent).length;
+  const urgentPostCount = postsAvailable.filter(p => p.urgent && !posted.includes(p.id)).length;
+  const remainingPostCount = postsAvailable.filter(p => !posted.includes(p.id)).length;
 
   // Phase 4 additions
   const inbox = gameState?.link2urInbox || [];
@@ -73,8 +75,12 @@ export function Link2UrView({
         style={{ borderColor: PRIMARY + '60', background: PRIMARY + '12' }}>
         <div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold"
-              style={{ background: PRIMARY, color: 'white' }}>L</div>
+            {getMiscImage('link2ur') ? (
+              <img src={getMiscImage('link2ur')} alt="Link2Ur" className="w-6 h-6 object-contain" />
+            ) : (
+              <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold"
+                style={{ background: PRIMARY, color: 'white' }}>L</div>
+            )}
             <div className="text-base font-medium" style={{ color: PRIMARY }}>Link2Ur</div>
             <div className="text-xs opacity-60 italic">{LINK2UR_BRAND.tagline}</div>
           </div>
@@ -111,7 +117,7 @@ export function Link2UrView({
         <button onClick={() => setTab('post')}
           className={`py-2 border relative ${tab === 'post' ? 'bg-current/10' : 'border-current/30 opacity-60'}`}
           style={tab === 'post' ? { borderColor: ACCENT, color: ACCENT } : {}}>
-          📤 发单 · {postsAvailable.length}
+          📤 发单 · {remainingPostCount}
           {urgentPostCount > 0 && (
             <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full"
               style={{ background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} />
