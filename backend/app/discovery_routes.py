@@ -96,7 +96,7 @@ async def get_discovery_feed(
                     timeout=0.5,
                 )
         except Exception as e:
-            logger.warning(f"Recommendation engine unavailable: {e}")
+            logger.warning(f"Recommendation engine unavailable: {e!r}")
 
     # 用户偏好 / 城市 / 历史兴趣（共享 helper）
     personalization = await load_user_personalization_context(db, current_user, explicit_city=city)

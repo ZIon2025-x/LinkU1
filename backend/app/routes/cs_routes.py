@@ -386,10 +386,14 @@ def assign_customer_service(
             chat_data = crud.create_customer_service_chat(db, current_user.id, service.id)
             
             # 向客服发送用户连接通知
+            # 当前 endpoint 是 sync def，FastAPI 在 threadpool 里跑，线程内无 event
+            # loop，因此不能直接 asyncio.create_task —— 走主 loop 的
+            # run_coroutine_threadsafe（与 customer_service_tasks.py 一致的 fire-and-forget 模式）
             try:
                 import asyncio
+                from app.state import get_main_event_loop
                 from app.websocket_manager import get_ws_manager
-                
+
                 ws_manager = get_ws_manager()
                 notification_message = {
                     "type": "user_connected",
@@ -400,12 +404,16 @@ def assign_customer_service(
                     "chat_id": chat_data["chat_id"],
                     "timestamp": format_iso_utc(get_utc_time()),
                 }
-                # 使用 WebSocketManager 发送消息
-                asyncio.create_task(
-                    ws_manager.send_to_user(service.id, notification_message)
-                )
+                loop = get_main_event_loop()
+                if loop is None or not loop.is_running():
+                    logger.debug("主事件循环未就绪，跳过客服上线通知")
+                else:
+                    asyncio.run_coroutine_threadsafe(
+                        ws_manager.send_to_user(service.id, notification_message),
+                        loop,
+                    )
             except Exception as e:
-                logger.error(f"发送客服通知失败: {e}")
+                logger.error(f"发送客服通知失败: {e!r}")
             
             return {
                 "service": {

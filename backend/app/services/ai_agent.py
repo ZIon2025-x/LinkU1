@@ -1427,7 +1427,7 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                 model_tier = "large"
 
     except Exception as e:
-        logger.error("LLM call error for user %s: %s", ctx.user.id, e, exc_info=True)
+        logger.error("LLM call error for user %s: %r", ctx.user.id, e, exc_info=True)
         reset_llm_client()
         error_reply = "抱歉，AI 服务暂时不可用，请稍后重试。" if ctx.lang == "zh" \
             else "Sorry, AI service is temporarily unavailable. Please try again later."
