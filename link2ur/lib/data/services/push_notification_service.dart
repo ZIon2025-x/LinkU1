@@ -159,6 +159,17 @@ class PushNotificationService with WidgetsBindingObserver {
   bool _uploading = false;
 
   Future<void> _uploadTokenToServer(String token, {int attempt = 0}) async {
+    // 入口护卫:未登录则不发请求。覆盖三类竞态/堆积情况:
+    //  1) onTokenRefresh 回调晚到,登录状态缓存还显示已登录但 auth token 已清
+    //  2) 重试链在 sleep 5/15/30s 期间用户登出
+    //  3) syncLanguage / uploadToken 在登出后被调用
+    // 任一情况下都直接 short-circuit,避免后端收到 401 device-token 请求。
+    final hasAuth = await StorageService.instance.isLoggedIn();
+    if (!hasAuth) {
+      AppLogger.info('Skip device token upload: not logged in (attempt=$attempt)');
+      _uploading = false;
+      return;
+    }
     if (attempt == 0) {
       if (_uploading) return;
       _uploading = true;
