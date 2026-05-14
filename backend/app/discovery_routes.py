@@ -1,7 +1,9 @@
 """
 Discovery Feed 路由
-聚合多种内容类型（帖子、商品、竞品评论、达人服务评价、排行榜、达人服务）
+聚合多种内容类型（商品、达人推荐、达人服务、任务、活动）
 为首页"发现更多"瀑布流提供统一数据源
+
+注：帖子 / 评价 / 排行榜 已在社区页展示，从发现流中移除以避免重复曝光。
 """
 
 import random
@@ -48,10 +50,10 @@ async def get_discovery_feed(
 ):
     """获取发现 Feed — 混排多种内容类型
 
-    加权随机策略：低频类型（评价、排行榜）权重更高，确保曝光
+    加权随机策略：低频类型（活动、达人推荐）权重更高，确保曝光
     同一类型不连续出现超过 2 条
 
-    帖子仅展示当前用户可见板块下的（普通板块 + 已认证学校板块）
+    帖子 / 评价 / 排行榜 已在社区页展示，不进入发现流
 
     seed: 客户端首次加载不传，后端自动生成并返回；翻页时传回相同 seed 保证排序一致
     """
@@ -105,11 +107,9 @@ async def get_discovery_feed(
     user_interest_types = personalization["user_interest_types"]
 
     # 每个 fetch 用 SAVEPOINT 隔离，单个类型失败不影响其他类型
+    # 帖子 / 评价 / 排行榜 已在社区页展示，从发现流移除
     fetch_tasks = [
-        ("forum posts", lambda: _fetch_forum_posts(db, fetch_limit, visible_category_ids, current_user=current_user)),
         ("flea market items", lambda: _fetch_flea_market_items(db, fetch_limit, current_user=current_user)),
-        ("competitor reviews", lambda: _fetch_competitor_reviews(db, fetch_limit, current_user=current_user)),
-        ("service reviews", lambda: _fetch_service_reviews(db, fetch_limit, current_user=current_user)),
         ("experts", lambda: _fetch_experts(db, fetch_limit)),
         ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
         ("tasks", lambda: _fetch_tasks(db, fetch_limit, current_user, recommendation_scores)),
@@ -1210,8 +1210,7 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
     """加权随机混排
 
     - 每种类型内部按热度分数排序（时间衰减 + 互动加权），而非纯时间
-    - 低频类型（service_review, competitor_review, ranking）权重更高
-    - 高频类型（forum_post, product）权重较低
+    - 低频类型（activity, expert）权重更高
     - 同一类型不连续出现超过 2 条
     - 使用 seed 保证跨页分页结果一致（同一 seed 排列相同）
     """
@@ -1222,11 +1221,8 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
     rng = random.Random(seed)
 
     type_weights = {
-        "forum_post": 1.0,
         "product": 1.0,
-        "competitor_review": 3.0,
-        "service_review": 3.0,
-        "expert": 2.5,      # 达人推荐（取代原 ranking）
+        "expert": 2.5,      # 达人推荐
         "service": 1.5,
         "task": 1.5,       # Tasks: medium frequency
         "activity": 2.0,    # Activities: low frequency, higher weight
