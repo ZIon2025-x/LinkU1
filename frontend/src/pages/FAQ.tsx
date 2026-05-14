@@ -65,7 +65,7 @@ const FAQ: React.FC = () => {
       <header style={{ position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
           <div
-            style={{ fontWeight: 'bold', fontSize: 24, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', cursor: 'pointer' }}
+            style={{ fontWeight: 'bold', fontSize: 24, background: 'linear-gradient(135deg, #007AFF, #B3D9FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
             Link²Ur

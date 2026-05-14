@@ -543,7 +543,7 @@ const TaskExperts: React.FC = () => {
               style={{
                 fontWeight: 'bold', 
                 fontSize: 24, 
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+                background: 'linear-gradient(135deg, #007AFF, #B3D9FF)', 
                 WebkitBackgroundClip: 'text', 
                 WebkitTextFillColor: 'transparent',
                 cursor: 'pointer'
@@ -654,7 +654,7 @@ const TaskExperts: React.FC = () => {
             style={{
               fontWeight: 'bold', 
               fontSize: 24, 
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+              background: 'linear-gradient(135deg, #007AFF, #B3D9FF)', 
               WebkitBackgroundClip: 'text', 
               WebkitTextFillColor: 'transparent',
               cursor: 'pointer'
@@ -734,7 +734,7 @@ const TaskExperts: React.FC = () => {
               <button
                 onClick={() => navigate('/task-experts/intro')}
                 style={{
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '50px',
@@ -769,7 +769,7 @@ const TaskExperts: React.FC = () => {
               <button
                 onClick={() => navigate('/task-experts/me/dashboard')}
                 style={{
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '50px',

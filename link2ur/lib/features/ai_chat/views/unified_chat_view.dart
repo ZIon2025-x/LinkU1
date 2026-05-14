@@ -769,7 +769,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
       _Suggestion(
         label: l10n.aiChatPostTask,
         icon: Icons.add_circle_outline,
-        gradient: const [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+        gradient: const [Color(0xFF007AFF), Color(0xFFB3D9FF)],
         onTap: () => send(l10n.aiChatPostTask),
       ),
       _Suggestion(
@@ -1442,7 +1442,7 @@ class _UnifiedQuickActionChip extends StatelessWidget {
             boxShadow: featured
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.32),
+                      color: const Color(0xFF007AFF).withValues(alpha: 0.32),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),

@@ -76,7 +76,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+  background: linear-gradient(to bottom, #007AFF, #B3D9FF);
   transform: translateX(-50%);
   border-radius: 2px;
 }
@@ -201,7 +201,7 @@
 .statNumber {
   font-size: 42px;
   font-weight: 800;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #007AFF, #B3D9FF);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

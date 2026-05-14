@@ -108,7 +108,7 @@ const TaskExpertsIntro: React.FC = () => {
             style={{
               fontWeight: 'bold', 
               fontSize: 24, 
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+              background: 'linear-gradient(135deg, #007AFF, #B3D9FF)', 
               WebkitBackgroundClip: 'text', 
               WebkitTextFillColor: 'transparent',
               cursor: 'pointer'
@@ -151,7 +151,7 @@ const TaskExpertsIntro: React.FC = () => {
               fontWeight: '700',
               color: '#1e293b',
               marginBottom: isMobile ? '16px' : '20px',
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
@@ -373,7 +373,7 @@ const TaskExpertsIntro: React.FC = () => {
                       position: 'absolute',
                       top: '-12px',
                       left: '24px',
-                      background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                      background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
                       color: '#fff',
                       width: '36px',
                       height: '36px',
@@ -492,7 +492,7 @@ const TaskExpertsIntro: React.FC = () => {
             <button
               onClick={() => navigate('/task-experts')}
               style={{
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
                 color: '#fff',
                 padding: '16px 48px',
                 borderRadius: '50px',

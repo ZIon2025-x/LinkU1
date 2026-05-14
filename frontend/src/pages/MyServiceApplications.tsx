@@ -206,7 +206,7 @@ const MyServiceApplications: React.FC = () => {
             style={{
               fontWeight: 'bold',
               fontSize: 24,
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               cursor: 'pointer'

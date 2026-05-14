@@ -22,7 +22,7 @@
 .logo {
   font-weight: bold;
   font-size: 24px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #007AFF, #B3D9FF);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -210,7 +210,7 @@
 }
 
 .featureIconValues {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #007AFF, #B3D9FF);
 }
 
 .featureIconMission {
@@ -378,7 +378,7 @@
 }
 
 .taskTypeBadge {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #007AFF, #B3D9FF);
   color: #fff;
   padding: 4px 12px;
   border-radius: 20px;
@@ -494,7 +494,7 @@
 }
 
 .taskViewButton {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #007AFF, #B3D9FF);
   color: #fff;
   border: none;
   border-radius: 8px;

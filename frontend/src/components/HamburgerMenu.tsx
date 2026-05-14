@@ -411,7 +411,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           .menu-logo {
             font-weight: bold;
             font-size: 1.5rem;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(135deg, #007AFF, #B3D9FF);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
           }

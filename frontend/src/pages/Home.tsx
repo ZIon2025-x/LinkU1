@@ -2060,7 +2060,7 @@ const Home: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: isMobile ? '12px' : '14px',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
                         border: 'none',
                         borderRadius: isMobile ? '10px' : '12px',
                         color: 'white',
@@ -2079,7 +2079,7 @@ const Home: React.FC = () => {
                       }}
                       onMouseLeave={(e) => {
                         if (!isMobile) {
-                          e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #007AFF, #B3D9FF)';
                           e.currentTarget.style.transform = 'scale(1)';
                           e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
                         }

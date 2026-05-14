@@ -172,7 +172,7 @@ const About: React.FC = () => {
             style={{
               fontWeight: 'bold', 
               fontSize: 24, 
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+              background: 'linear-gradient(135deg, #007AFF, #B3D9FF)', 
               WebkitBackgroundClip: 'text', 
               WebkitTextFillColor: 'transparent',
               cursor: 'pointer',
@@ -190,7 +190,7 @@ const About: React.FC = () => {
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #007AFF, #B3D9FF)';
               (e.currentTarget.style as any).webkitBackgroundClip = 'text';
               (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
             }}
@@ -389,7 +389,7 @@ const About: React.FC = () => {
               padding: '0 32px',
               fontSize: '16px',
               fontWeight: '600',
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
               border: 'none',
               borderRadius: '24px',
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
@@ -473,7 +473,7 @@ const About: React.FC = () => {
             padding: '0 32px',
             fontSize: '16px',
             fontWeight: '600',
-            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
             border: 'none',
             borderRadius: '24px',
             boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',

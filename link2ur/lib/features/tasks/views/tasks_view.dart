@@ -849,7 +849,7 @@ class _TaskGridCard extends StatelessWidget {
           ),
         ),
 
-        // 右下角：任务类型标签（与 frontend .taskTypeBadge 一致：蓝紫渐变）
+        // 右下角：任务类型标签（与 frontend .taskTypeBadge 一致：蓝白渐变）
         Positioned(
           bottom: 8,
           right: 8,

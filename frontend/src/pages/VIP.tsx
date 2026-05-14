@@ -135,7 +135,7 @@ const VIP: React.FC = () => {
         <button
           onClick={() => navigate('/')}
           style={{
-            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            background: 'linear-gradient(135deg, #007AFF, #B3D9FF)',
             color: '#fff',
             border: 'none',
             padding: '12px 24px',

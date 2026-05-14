@@ -32,19 +32,19 @@ class LinkerAvatar extends StatelessWidget {
         boxShadow: withGlow
             ? [
                 BoxShadow(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.30),
+                  color: const Color(0xFF007AFF).withValues(alpha: 0.30),
                   blurRadius: size * 0.50,
                   spreadRadius: size * 0.06,
                 ),
                 BoxShadow(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.18),
+                  color: const Color(0xFF007AFF).withValues(alpha: 0.18),
                   blurRadius: size * 0.30,
                   offset: Offset(0, size * 0.12),
                 ),
               ]
             : [
                 BoxShadow(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.28),
+                  color: const Color(0xFF007AFF).withValues(alpha: 0.28),
                   blurRadius: size * 0.32,
                   offset: Offset(0, size * 0.10),
                 ),
@@ -94,7 +94,7 @@ class CSAvatar extends StatelessWidget {
   }
 }
 
-/// 蓝紫渐变文字（标题等小段文字）。
+/// 蓝白渐变文字（标题等小段文字）。
 class LinkerGradientText extends StatelessWidget {
   const LinkerGradientText(
     this.text, {

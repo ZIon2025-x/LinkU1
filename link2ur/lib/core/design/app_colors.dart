@@ -20,10 +20,10 @@ class AppColors {
     Color(0xFF409CFF),
   ];
 
-  /// 任务类型/平台徽章渐变 — 与 frontend .taskTypeBadge 一致 (135deg #3b82f6 → #8b5cf6)
+  /// 任务类型/平台徽章渐变 — 与 frontend .taskTypeBadge 一致 (135deg #007AFF → #B3D9FF)
   static const List<Color> taskTypeBadgeGradient = [
-    Color(0xFF3b82f6),
-    Color(0xFF8b5cf6),
+    Color(0xFF007AFF),
+    Color(0xFFB3D9FF),
   ];
 
   // ==================== 辅助色 ====================

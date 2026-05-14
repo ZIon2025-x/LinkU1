@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>蓝白渐变方案对比 — Link2Ur 品牌色重塑</title>
+<style>
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+    background: #f5f5f5;
+    margin: 0;
+    padding: 24px;
+    color: #1d1d1f;
+  }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  h2 { font-size: 16px; margin: 24px 0 12px; color: #555; font-weight: 600; }
+  .meta { color: #888; font-size: 13px; margin-bottom: 24px; }
+
+  .option-row {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .option-label {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .option-code {
+    font-family: SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 16px;
+  }
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    align-items: center;
+  }
+  .demo-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .demo-label {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* —— 4 个使用场景 —— */
+
+  /* 1. Hero 大块背景渐变 */
+  .hero {
+    width: 100%;
+    height: 80px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 18px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+
+  /* 2. 任务类型小徽章 */
+  .badge {
+    color: white;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.12);
+  }
+
+  /* 3. 渐变标题文字 (About 顶部那种) */
+  .title-text {
+    font-size: 28px;
+    font-weight: 800;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* 4. CTA 按钮 */
+  .cta {
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 122, 255, 0.25);
+  }
+
+  /* ---------- 各方案渐变定义 ---------- */
+
+  /* 原 (基线) — 蓝紫 */
+  .g0 { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+
+  /* A — 主色 → 纯白 */
+  .gA { background: linear-gradient(135deg, #007AFF, #FFFFFF); }
+
+  /* B — 主色 → 浅蓝 (#B3D9FF) */
+  .gB { background: linear-gradient(135deg, #007AFF, #B3D9FF); }
+
+  /* C — 主色 → 主色 5% 透明白 (几乎纯色,极轻渐变) */
+  .gC { background: linear-gradient(135deg, #007AFF, rgba(255,255,255,0.05) ), #007AFF; background-blend-mode: lighten; }
+  /* fallback 简洁写法: */
+  .gC { background: linear-gradient(135deg, #007AFF 0%, #1A8AFF 100%); }
+
+  /* D — 深蓝 → 浅蓝白 */
+  .gD { background: linear-gradient(135deg, #0059B3, #E5F0FF); }
+
+  /* ============= 文字渐变特别处理 ============= */
+  .text-g0 { background-image: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+  .text-gA { background-image: linear-gradient(135deg, #007AFF, #FFFFFF); }
+  .text-gB { background-image: linear-gradient(135deg, #007AFF, #B3D9FF); }
+  .text-gC { background-image: linear-gradient(135deg, #007AFF, #1A8AFF); }
+  .text-gD { background-image: linear-gradient(135deg, #0059B3, #E5F0FF); }
+
+  /* 深色背景对照(看看白色端在深色背景上的对比) */
+  .dark-strip {
+    background: #1c1c1e;
+    padding: 16px 20px;
+    margin-top: 12px;
+    border-radius: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .dark-strip .demo-label { color: #999; }
+  .dark-strip .badge { font-size: 12px; }
+
+  /* 风险提示 */
+  .warn {
+    background: #FFF4E5;
+    color: #8a5a00;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-top: 12px;
+    border-left: 3px solid #FFA600;
+  }
+  .ok {
+    background: #E5F8EE;
+    color: #1b6b3f;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-top: 12px;
+    border-left: 3px solid #26BF73;
+  }
+</style>
+</head>
+<body>
+
+<h1>蓝白渐变方案对比</h1>
+<div class="meta">
+  Link2Ur 品牌渐变重塑 · 4 个候选 + 1 个原方案做基线 · 每个候选在 4 种典型场景下渲染
+</div>
+
+<!-- ========== 基线（原蓝紫）========== -->
+<div class="option-row">
+  <div class="option-label">原方案 (基线) · 蓝紫</div>
+  <div class="option-code">linear-gradient(135deg, #3b82f6, #8b5cf6)</div>
+  <div class="demo-grid">
+    <div class="demo-cell">
+      <div class="hero g0">Hero 背景</div>
+      <div class="demo-label">大块背景</div>
+    </div>
+    <div class="demo-cell">
+      <span class="badge g0">任务类型</span>
+      <div class="demo-label">小徽章</div>
+    </div>
+    <div class="demo-cell">
+      <span class="title-text text-g0">Link2Ur</span>
+      <div class="demo-label">标题文字</div>
+    </div>
+    <div class="demo-cell">
+      <button class="cta g0">立即参与</button>
+      <div class="demo-label">CTA 按钮</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== A — 主色 → 纯白 ========== -->
+<div class="option-row">
+  <div class="option-label">A · 主色 → 纯白</div>
+  <div class="option-code">linear-gradient(135deg, #007AFF, #FFFFFF)</div>
+  <div class="demo-grid">
+    <div class="demo-cell">
+      <div class="hero gA" style="color:#1d1d1f; text-shadow:none;">Hero 背景</div>
+      <div class="demo-label">大块背景</div>
+    </div>
+    <div class="demo-cell">
+      <span class="badge gA" style="color:#0059B3; text-shadow:none; border:1px solid rgba(0,122,255,0.2)">任务类型</span>
+      <div class="demo-label">小徽章</div>
+    </div>
+    <div class="demo-cell">
+      <span class="title-text text-gA">Link2Ur</span>
+      <div class="demo-label">标题文字</div>
+    </div>
+    <div class="demo-cell">
+      <button class="cta gA" style="color:#0059B3; text-shadow:none;">立即参与</button>
+      <div class="demo-label">CTA 按钮</div>
+    </div>
+  </div>
+  <div class="warn">⚠️ 白端在白背景上消失;文字/徽章/按钮必须改文字色为深蓝,且加边框才能识别 — 改造成本最高</div>
+  <div class="dark-strip">
+    <div class="demo-label">深色背景对照:</div>
+    <span class="badge gA">任务类型</span>
+    <button class="cta gA" style="color:#0059B3; text-shadow:none;">立即参与</button>
+    <span style="color:#999; font-size:12px">— 深色背景上反而清晰</span>
+  </div>
+</div>
+
+<!-- ========== B — 主色 → 浅蓝 ========== -->
+<div class="option-row">
+  <div class="option-label">B · 主色 → 浅蓝 (推荐)</div>
+  <div class="option-code">linear-gradient(135deg, #007AFF, #B3D9FF)</div>
+  <div class="demo-grid">
+    <div class="demo-cell">
+      <div class="hero gB">Hero 背景</div>
+      <div class="demo-label">大块背景</div>
+    </div>
+    <div class="demo-cell">
+      <span class="badge gB">任务类型</span>
+      <div class="demo-label">小徽章</div>
+    </div>
+    <div class="demo-cell">
+      <span class="title-text text-gB">Link2Ur</span>
+      <div class="demo-label">标题文字</div>
+    </div>
+    <div class="demo-cell">
+      <button class="cta gB">立即参与</button>
+      <div class="demo-label">CTA 按钮</div>
+    </div>
+  </div>
+  <div class="ok">✅ 4 个场景都不需改文字色 / 加边框;白底深底通杀;清新柔和</div>
+</div>
+
+<!-- ========== C — 主色 → 主色亮 5% ========== -->
+<div class="option-row">
+  <div class="option-label">C · 主色 → 主色亮 5%</div>
+  <div class="option-code">linear-gradient(135deg, #007AFF, #1A8AFF)</div>
+  <div class="demo-grid">
+    <div class="demo-cell">
+      <div class="hero gC">Hero 背景</div>
+      <div class="demo-label">大块背景</div>
+    </div>
+    <div class="demo-cell">
+      <span class="badge gC">任务类型</span>
+      <div class="demo-label">小徽章</div>
+    </div>
+    <div class="demo-cell">
+      <span class="title-text text-gC">Link2Ur</span>
+      <div class="demo-label">标题文字</div>
+    </div>
+    <div class="demo-cell">
+      <button class="cta gC">立即参与</button>
+      <div class="demo-label">CTA 按钮</div>
+    </div>
+  </div>
+  <div class="warn">⚠️ 接近纯主色,几乎看不出渐变;品牌识别度 = Apple Blue 平板色,不再有"渐变感"</div>
+</div>
+
+<!-- ========== D — 深蓝 → 浅蓝白 ========== -->
+<div class="option-row">
+  <div class="option-label">D · 深蓝 → 浅蓝白</div>
+  <div class="option-code">linear-gradient(135deg, #0059B3, #E5F0FF)</div>
+  <div class="demo-grid">
+    <div class="demo-cell">
+      <div class="hero gD">Hero 背景</div>
+      <div class="demo-label">大块背景</div>
+    </div>
+    <div class="demo-cell">
+      <span class="badge gD">任务类型</span>
+      <div class="demo-label">小徽章</div>
+    </div>
+    <div class="demo-cell">
+      <span class="title-text text-gD">Link2Ur</span>
+      <div class="demo-label">标题文字</div>
+    </div>
+    <div class="demo-cell">
+      <button class="cta gD">立即参与</button>
+      <div class="demo-label">CTA 按钮</div>
+    </div>
+  </div>
+  <div class="warn">⚠️ 起点不是 Apple System Blue (#007AFF), 与现 AppColors.primary 解耦;冷峻、专业,但偏离原品牌色</div>
+</div>
+
+<!-- ========== 视觉决策提示 ========== -->
+<div class="option-row" style="background:#fafafa; border:1px solid #e5e5e5;">
+  <div class="option-label" style="margin-bottom:12px;">📝 决策建议</div>
+  <div style="font-size:13px; line-height:1.7; color:#444;">
+    <p><strong>视觉对比要点:</strong></p>
+    <ul>
+      <li><strong>A (蓝→纯白)</strong>:在白页面上失去"渐变形状",必须加边框或文字色重定义 — 改造成本最大,但深色模式下最惊艳</li>
+      <li><strong>B (蓝→浅蓝 #B3D9FF)</strong>:白底/深底通用,无需改文字色,直接替换 — <strong>改造成本最低,推荐</strong></li>
+      <li><strong>C (主色→主色亮 5%)</strong>:看上去几乎纯色,失去"渐变"语义,等于把"蓝紫渐变"降级成"纯主色"</li>
+      <li><strong>D (深蓝→浅蓝白)</strong>:与 AppColors.primary 脱钩,需要同步把 primary 也调成 #0059B3 才协调</li>
+    </ul>
+    <p><strong>30+ Web 文件硬编码改造的难易度:</strong></p>
+    <ul>
+      <li><strong>B/C/D</strong>:单纯改 background 字符串就行</li>
+      <li><strong>A</strong>:还要逐个改文字色 / 加边框 / 调整 box-shadow</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>
