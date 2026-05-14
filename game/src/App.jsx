@@ -1692,12 +1692,6 @@ export default function App() {
         />
       )}
 
-      {state.screen === 'intro' && (
-        <button onClick={() => setMuted(!muted)}
-          className="fixed top-3 right-3 z-30 w-9 h-9 border border-current/40 bg-[#1a1612]/80 hover:border-current/80 active:bg-current/5 flex items-center justify-center text-sm">
-          {muted ? '🔇' : '🔊'}
-        </button>
-      )}
       <BagSheet
         open={bagOpen}
         onClose={() => setBagOpen(false)}
@@ -1736,7 +1730,15 @@ export default function App() {
       )}
 
       <div className="relative max-w-3xl mx-auto px-3 py-6" style={{ zIndex: 2 }}>
-        {state.screen === 'intro' && <IntroScreen onStart={startGame} />}
+        {state.screen === 'intro' && (
+          <IntroScreen
+            onStart={startGame}
+            muted={muted}
+            onToggleMute={() => setMuted(!muted)}
+            hasSave={!!persistence.load()}
+            onClearSave={restart}
+          />
+        )}
         {state.screen === 'plane' && <PlaneScreen onContinue={leavePlaneScene} />}
         {state.screen === 'arrival' && (
           <ArrivalScreen wallet={state.stats.wallet} onChoose={chooseTransport} />

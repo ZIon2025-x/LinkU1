@@ -76,35 +76,9 @@ export function ArrivalScreen({ wallet, onChoose }) {
         <div className="space-y-4 text-sm leading-relaxed opacity-90 mb-8" style={{ lineHeight: '1.95' }}>
           {APARTMENT_ARRIVAL.body.map((p, i) => <p key={i}>{p}</p>)}
         </div>
-        <button onClick={() => setPhase('credits')}
+        <button onClick={() => onChoose(chosen)}
           className="w-full py-3 border border-current/60 hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
           {APARTMENT_ARRIVAL.cta}
-        </button>
-      </div>
-    );
-  }
-
-  if (chosen && phase === 'credits') {
-    return (
-      <div className="text-center pt-16 pb-8 max-w-md mx-auto animate-fadein-slow">
-        <div className="text-xs tracking-[0.4em] opacity-50 mb-12" style={{ fontFamily: 'monospace' }}>
-          PRESENTED BY · 鸣谢
-        </div>
-        <div className="mb-2 flex items-center justify-center gap-3">
-          <div className="w-10 h-10 rounded flex items-center justify-center text-xl font-bold"
-            style={{ background: '#007AFF', color: 'white' }}>L</div>
-          <div className="text-3xl font-light tracking-wide" style={{ color: '#007AFF' }}>Link2Ur</div>
-        </div>
-        <div className="text-sm opacity-70 italic mb-1">留学生互助平台</div>
-        <div className="text-xs opacity-40 mb-12" style={{ fontFamily: 'monospace' }}>link2ur.com</div>
-        <div className="max-w-xs mx-auto text-xs opacity-60 italic leading-relaxed" style={{ lineHeight: '1.9' }}>
-          本作的灵感来自留学生互助平台 Link2Ur ——<br/>
-          也是这群孩子真的在用的 app。
-        </div>
-        <div className="text-xs opacity-30 mt-6" style={{ fontFamily: 'monospace' }}>♥</div>
-        <button onClick={() => onChoose(chosen)}
-          className="mt-12 px-12 py-3 border border-current/60 hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
-          开始这一年 →
         </button>
       </div>
     );
@@ -161,11 +135,20 @@ export function ArrivalScreen({ wallet, onChoose }) {
   );
 }
 
-export function IntroScreen({ onStart }) {
+export function IntroScreen({ onStart, muted, onToggleMute, hasSave, onClearSave }) {
   const logo = getMiscImage('logo');
+  const [panel, setPanel] = useState(null);  // null | 'settings' | 'about'
+  const [confirmClear, setConfirmClear] = useState(false);
+
   return (
     <div className="text-center pt-12 pb-8 animate-fadein">
-      <div className="text-xs tracking-[0.4em] opacity-50 mb-6" style={{ fontFamily: 'monospace' }}>A STUDY ABROAD RPG · V10</div>
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <div className="text-xs tracking-[0.4em] opacity-50" style={{ fontFamily: 'monospace' }}>A STUDY ABROAD RPG · V10</div>
+        <span className="px-2 py-0.5 text-[10px] font-mono tracking-[0.2em] border"
+              style={{ background: 'rgba(212,176,112,0.15)', borderColor: 'rgba(212,176,112,0.5)', color: '#d4b070' }}>
+          BETA · 测试版
+        </span>
+      </div>
       {logo ? (
         <img src={logo} alt="異鄉" className="mx-auto mb-2 max-h-40 object-contain" />
       ) : (
@@ -186,9 +169,117 @@ export function IntroScreen({ onStart }) {
         <div className="border border-current/30 p-2">📮 结局回响</div>
       </div>
       <button onClick={onStart} className="mt-10 px-12 py-3 border border-current hover:bg-current hover:text-black active:bg-current/30 transition-colors duration-500 tracking-[0.3em] text-sm">
-        BEGIN
+        {hasSave ? 'CONTINUE · 继续' : 'BEGIN · 开始游戏'}
       </button>
+      <div className="mt-6 flex justify-center gap-6 text-xs">
+        <button onClick={() => { audio.click(); setPanel('settings'); }}
+                className="opacity-60 hover:opacity-100 tracking-[0.3em]">设置</button>
+        <span className="opacity-30">·</span>
+        <button onClick={() => { audio.click(); setPanel('about'); }}
+                className="opacity-60 hover:opacity-100 tracking-[0.3em]">关于</button>
+      </div>
       <div className="mt-4 text-xs opacity-40 italic">建议开启声音 🔊</div>
+
+      {panel && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4"
+             style={{ background: 'rgba(10,8,6,0.85)' }}
+             onClick={() => { setPanel(null); setConfirmClear(false); }}>
+          <div className="max-w-sm w-full border border-current/40 bg-[#1a1612] p-6 text-left animate-fadein"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-5">
+              <div className="text-xs tracking-[0.4em] opacity-60" style={{ fontFamily: 'monospace' }}>
+                {panel === 'settings' ? 'SETTINGS · 设置' : 'ABOUT · 关于'}
+              </div>
+              <button onClick={() => { setPanel(null); setConfirmClear(false); }}
+                      className="opacity-60 hover:opacity-100 text-lg leading-none">×</button>
+            </div>
+
+            {panel === 'settings' && (
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between items-center border-b border-current/15 pb-3">
+                  <span>音效</span>
+                  <button onClick={() => { audio.click(); onToggleMute && onToggleMute(); }}
+                          className="px-3 py-1 border border-current/40 hover:border-current text-xs">
+                    {muted ? '🔇 已静音' : '🔊 开'}
+                  </button>
+                </div>
+                {hasSave && (
+                  <div className="border-b border-current/15 pb-3">
+                    {!confirmClear ? (
+                      <button onClick={() => setConfirmClear(true)}
+                              className="w-full py-2 text-xs opacity-70 hover:opacity-100" style={{ color: '#c86060' }}>
+                        清除存档 · 重新开始
+                      </button>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-xs opacity-70">清档后无法恢复。确定？</div>
+                        <div className="flex gap-2">
+                          <button onClick={() => { onClearSave && onClearSave(); setConfirmClear(false); setPanel(null); }}
+                                  className="flex-1 py-1.5 text-xs border" style={{ borderColor: '#c86060', color: '#c86060' }}>
+                            确定清除
+                          </button>
+                          <button onClick={() => setConfirmClear(false)}
+                                  className="flex-1 py-1.5 text-xs border border-current/40">
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="text-xs opacity-50 leading-relaxed">
+                  游戏进度自动保存在浏览器本地。换设备 / 清浏览器数据会丢失。
+                </div>
+              </div>
+            )}
+
+            {panel === 'about' && (
+              <div className="space-y-3 text-sm leading-relaxed max-h-[70vh] overflow-y-auto pr-1">
+                <div>
+                  <div className="text-base">異鄉 · somewhere else</div>
+                  <div className="text-xs opacity-50 mt-1" style={{ fontFamily: 'monospace' }}>V10 · BETA · 测试版</div>
+                </div>
+                <div className="text-xs opacity-75 leading-relaxed pt-2 border-t border-current/15">
+                  一个关于留学生 52 周生活的文字 RPG。每个事件都来自真实经历——BRP、council tax、4:38 AM、Mei 姐红烧肉、Notting Hill、最后那张机票。
+                </div>
+
+                <div className="pt-3 border-t border-current/15">
+                  <div className="text-xs tracking-[0.3em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>PRESENTED BY · 鸣谢</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded flex items-center justify-center text-sm font-bold flex-shrink-0"
+                         style={{ background: '#007AFF', color: 'white' }}>L</div>
+                    <div>
+                      <div className="text-base" style={{ color: '#007AFF' }}>Link2Ur</div>
+                      <div className="text-[10px] opacity-50" style={{ fontFamily: 'monospace' }}>link2ur.com · 留学生互助平台</div>
+                    </div>
+                  </div>
+                  <div className="text-xs opacity-70 leading-relaxed mt-2">
+                    本作的灵感来自 Link2Ur —— 也是这群孩子真的在用的 app。游戏里的接单 / 发 post / 评分体系直接映射自这个平台。
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-current/15">
+                  <div className="text-xs tracking-[0.3em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>WITH THANKS TO</div>
+                  <div className="text-xs opacity-70 leading-relaxed space-y-1.5">
+                    <div>· 所有匿名分享过 CSSA 群聊截图 / 反诈故事 / Whitmore 风格邮件的留学生</div>
+                    <div>· 真实存在的 Mei 们 —— 给我们留过饭、忘收钱、塞红包的伦敦华人老板</div>
+                    <div>· Bicester / Acton Lane Post Office / Senate House 4 楼 / The Crown 那条街</div>
+                    <div>· 每一个写过 "where are you really from" 后续 thread 的人</div>
+                  </div>
+                </div>
+
+                <div className="text-xs opacity-60 leading-relaxed pt-3 border-t border-current/15">
+                  本作仍在测试中。事件、数值、结局会持续调整。你的存档可能在版本更新后行为略有变化。
+                </div>
+                <div className="text-xs opacity-50 pt-2 border-t border-current/15">
+                  Bug / 建议:在游戏里截图发到反馈渠道。
+                </div>
+                <div className="text-xs opacity-30 text-center pt-2" style={{ fontFamily: 'monospace' }}>♥</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
