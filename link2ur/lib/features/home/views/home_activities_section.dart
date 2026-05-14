@@ -588,3 +588,26 @@ class _BannerBadge extends StatelessWidget {
 // _ServiceReviewCard, _RankingCard, _ServiceCard) and shared widgets
 // (_DiscoveryUserRow, _LinkedItemTag, _TargetItemTag, _ActivityPriceRow)
 // are defined in home_discovery_cards.dart
+
+/// 社区 tab(DiscoverView)使用的发现流 Sliver 入口。
+///
+/// 复用首页 HomeBloc.state.discoveryItems(MainTabView 全局 provider 跨 tab
+/// 共享:main_tab_view.dart:312),行为与首页发现流完全一致 —— 共享分页/加载
+/// 状态/内容排序,首页滑过的 item 切到社区也是同样的位置。
+///
+/// 设计取舍:这是 part-of home_view 的 public wrapper,只为 community 提供
+/// 一个最小的"对外接口",避免把 _SliverDiscoveryFeed 整段公开化。社区不
+/// 穿插 banner,因此 banners 不暴露成参数。
+class CommunityDiscoveryFeedSliver extends StatelessWidget {
+  const CommunityDiscoveryFeedSliver({
+    super.key,
+    this.horizontalPadding = 0,
+  });
+
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SliverDiscoveryFeed(horizontalPadding: horizontalPadding);
+  }
+}

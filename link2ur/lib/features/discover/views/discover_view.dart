@@ -1,3 +1,8 @@
+// 旧版 sections (_TrendingSection / _BoardsSection / _LeaderboardsSection /
+// _SkillCategoriesSection / _ExpertsSection / _ActivitiesSection 等)目前未被
+// 新布局引用。保留代码作为渐进过渡的备份;明确确认不回滚后可删除。
+// ignore_for_file: unused_element
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,6 +30,9 @@ import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/trending_search_repository.dart';
 import '../bloc/discover_bloc.dart';
+// 复用首页 masonry feed (CommunityDiscoveryFeedSliver 是 home_view 的 public
+// wrapper,内部走 HomeBloc.state.discoveryItems,数据跨 tab 共享)
+import '../../home/views/home_view.dart';
 
 // ==================== Gradient palettes ====================
 
@@ -139,18 +147,32 @@ class _DiscoverContent extends StatelessWidget {
               },
               child: CustomScrollView(
                 slivers: [
-                  SliverToBoxAdapter(child: _TrendingSection(items: state.trendingSearches)),
-                  if (state.boards.isNotEmpty)
-                    SliverToBoxAdapter(child: _BoardsSection(boards: state.boards)),
-                  if (state.leaderboards.isNotEmpty)
-                    SliverToBoxAdapter(child: _LeaderboardsSection(leaderboards: state.leaderboards)),
-                  if (state.skillCategories.isNotEmpty)
-                    SliverToBoxAdapter(child: _SkillCategoriesSection(categories: state.skillCategories)),
-                  if (state.experts.isNotEmpty)
-                    SliverToBoxAdapter(child: _ExpertsSection(experts: state.experts)),
-                  if (state.activities.isNotEmpty)
-                    SliverToBoxAdapter(child: _ActivitiesSection(activities: state.activities)),
-                  SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + AppSpacing.md)),
+                  // 1) 4 功能宫格(榜单/活动/板块/技能)
+                  SliverToBoxAdapter(
+                    child: _CommunityFeatureGrid(
+                      leaderboards: state.leaderboards,
+                      activities: state.activities,
+                      boards: state.boards,
+                      skillCategories: state.skillCategories,
+                    ),
+                  ),
+                  // 2) 热搜榜(横滑)
+                  if (state.trendingSearches.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _TrendingHorizontal(items: state.trendingSearches),
+                    ),
+                  // 3) "发现更多" 标题
+                  const SliverToBoxAdapter(child: _DiscoverMoreHeader()),
+                  // 4) Masonry 发现流(复用首页 HomeBloc.state.discoveryItems)
+                  const SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    sliver: CommunityDiscoveryFeedSliver(),
+                  ),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -980,6 +1002,328 @@ class _SectionContainer extends StatelessWidget {
           ),
           AppSpacing.vSm,
           child,
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== 社区 tab 新布局 widgets (对齐 community-page-mockup.html) ====================
+
+/// 4 功能宫格 (2x2): 榜单 / 活动 / 板块 / 技能
+class _CommunityFeatureGrid extends StatelessWidget {
+  const _CommunityFeatureGrid({
+    required this.leaderboards,
+    required this.activities,
+    required this.boards,
+    required this.skillCategories,
+  });
+
+  final List<Leaderboard> leaderboards;
+  final List<Activity> activities;
+  final List<ForumCategory> boards;
+  final List<ForumCategory> skillCategories;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      child: GridView.count(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          _FeatureTile(
+            title: '榜单',
+            tag: '同城热门',
+            tagColor: const Color(0xFFE09000),
+            background: const LinearGradient(
+              colors: [Color(0xFFFFFBEB), Color(0xFFFEF0C7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            emoji: '🏆',
+            primaryText: leaderboards.isNotEmpty ? leaderboards.first.name : '榜单中心',
+            secondaryText: leaderboards.isNotEmpty
+                ? '${leaderboards.length} 个榜单'
+                : '',
+            onTap: () => context.push('/leaderboard'),
+          ),
+          _FeatureTile(
+            title: '活动',
+            tag: '限时报名',
+            tagColor: const Color(0xFFFF6B35),
+            background: const LinearGradient(
+              colors: [Color(0xFFFFF8F3), Color(0xFFFFE9D9)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            emoji: '🎉',
+            primaryText: activities.isNotEmpty ? activities.first.title : '活动大厅',
+            secondaryText:
+                activities.isNotEmpty ? '${activities.length} 个进行中' : '',
+            onTap: () => context.push('/activities'),
+          ),
+          _FeatureTile(
+            title: '板块',
+            tag: '一起讨论',
+            tagColor: const Color(0xFF2F80ED),
+            background: const LinearGradient(
+              colors: [Color(0xFFF4F8FF), Color(0xFFE3EDFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            emoji: '💬',
+            primaryText: boards.isNotEmpty ? boards.first.name : '论坛板块',
+            secondaryText: boards.isNotEmpty ? '${boards.length} 个板块' : '',
+            onTap: () => context.push('/forum'),
+          ),
+          _FeatureTile(
+            title: '技能',
+            tag: '发现兴趣',
+            tagColor: const Color(0xFF7359F2),
+            background: const LinearGradient(
+              colors: [Color(0xFFF7F2FF), Color(0xFFEBE1FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            emoji: '✨',
+            primaryText:
+                skillCategories.isNotEmpty ? skillCategories.first.name : '技能广场',
+            secondaryText:
+                skillCategories.isNotEmpty ? '${skillCategories.length} 个分类' : '',
+            onTap: () => context.push('/task-experts'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureTile extends StatelessWidget {
+  const _FeatureTile({
+    required this.title,
+    required this.tag,
+    required this.tagColor,
+    required this.background,
+    required this.emoji,
+    required this.primaryText,
+    required this.secondaryText,
+    required this.onTap,
+  });
+
+  final String title;
+  final String tag;
+  final Color tagColor;
+  final Gradient background;
+  final String emoji;
+  final String primaryText;
+  final String secondaryText;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: background,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1C1C1E),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tagColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    tag,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Center(child: Text(emoji, style: const TextStyle(fontSize: 42))),
+            const Spacer(),
+            Text(
+              primaryText,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1C1C1E),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (secondaryText.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                secondaryText,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: tagColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 热搜横滑(替代竖向 _TrendingSection)
+class _TrendingHorizontal extends StatelessWidget {
+  const _TrendingHorizontal({required this.items});
+  final List<TrendingSearchItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Text('🔥', style: TextStyle(fontSize: 16)),
+                SizedBox(width: 6),
+                Text(
+                  '热搜榜',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1C1C1E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 76,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: items.length.clamp(0, 10),
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (_, i) => _TrendingHorizontalCard(item: items[i]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendingHorizontalCard extends StatelessWidget {
+  const _TrendingHorizontalCard({required this.item});
+  final TrendingSearchItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _gradientAt(item.rank - 1);
+    final heatSuffix = context.l10n.trendingHeatSuffix;
+    return GestureDetector(
+      onTap: () => context.push(
+        '/search?q=${Uri.encodeComponent(item.keyword)}',
+      ),
+      child: Container(
+        width: 200,
+        height: 76,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${item.rank} ${item.rank <= 3 ? "HOT" : ""}',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                height: 1,
+              ),
+            ),
+            Text(
+              item.keyword,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                height: 1.3,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              '🔥 ${item.localizedHeatDisplay(heatSuffix)}',
+              style: const TextStyle(fontSize: 10, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "发现更多" 标题(masonry feed 之前)
+class _DiscoverMoreHeader extends StatelessWidget {
+  const _DiscoverMoreHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Row(
+        children: [
+          Text('✨', style: TextStyle(fontSize: 18)),
+          SizedBox(width: 6),
+          Text(
+            '发现更多',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1C1C1E),
+            ),
+          ),
         ],
       ),
     );
