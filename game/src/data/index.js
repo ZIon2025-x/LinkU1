@@ -37,6 +37,7 @@ export * from './lateScams.js';
 export * from './npcLightInteractions.js';
 export * from './scamPulses.js';
 export * from './dailyAccidents.js';
+export * from './transitEvents.js';
 export * from './meiWork.js';
 export * from './link2ur.js';
 export * from './link2urFriends.js';

@@ -26,6 +26,7 @@ import {
   MARK_ARC_EVENTS, FLAT_HUNT_EVENTS, JOB_HUNT_DEEP_EVENTS,
   NPC_DEEPENING_EVENTS, CROSS_LINE_RIPPLE_EVENTS, DISSERTATION_EVENTS, LATE_SCAM_EVENTS,
   NPC_LIGHT_INTERACTIONS, SCAM_PULSE_EVENTS, DAILY_ACCIDENT_EVENTS, MEI_WORK_EVENTS,
+  TRANSIT_EVENTS,
   generateBoard, availablePosts,
   getEligibleCsMessages,
   HOLIDAY_CHOICES_XMAS, HOLIDAY_CHOICES_EASTER,
@@ -570,11 +571,31 @@ export default function App() {
     audio.click();
     const weatherKey = state.weekWeather[week] || 'cloudy';
     withLoading({ type: 'location', locationId: loc.id, weather: weatherKey, label: loc.name }, () => {
-      _doGoToLocation(loc, weatherKey, t);
+      _doGoToLocation(loc, weatherKey, t, mode);
     });
   }
 
-  function _doGoToLocation(loc, weatherKey, transit) {
+  // 抽一个出行事件 —— bus 模式 25% 概率,taxi 8% 概率。优先未见过的 first-time,
+  // 都见过就从 repeatable 池里 random。
+  function tryFireTransitEvent(mode) {
+    const chance = mode === 'taxi' ? 0.08 : 0.25;
+    if (Math.random() >= chance) return null;
+    const seen = state.seenLocationEvents._transit || [];
+    const eligible = TRANSIT_EVENTS.filter(e => {
+      if (e.mode !== mode) return false;
+      if (week < (e.minWeek || 1)) return false;
+      if (e.maxWeek && week > e.maxWeek) return false;
+      if (!e.repeatable && seen.includes(e.id)) return false;
+      return true;
+    });
+    if (eligible.length === 0) return null;
+    // 优先 first-time 事件 (有 maxWeek 或非 repeatable)
+    const firstTime = eligible.filter(e => !e.repeatable);
+    const pool = firstTime.length > 0 ? firstTime : eligible;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function _doGoToLocation(loc, weatherKey, transit, mode = 'bus') {
     // 出行 fare + (可选) action + weather modulated energy
     if (transit.action > 0) {
       for (let i = 0; i < transit.action; i++) dispatch({ type: 'SPEND_ACTION' });
@@ -588,6 +609,21 @@ export default function App() {
       wallet: state.stats.wallet - transit.fare,
       energy: clamp(state.stats.energy - energyCost, 0, 100),
     }});
+
+    // 出行随机事件 —— 选 bus / taxi 时按概率抽一条。优先 storyline / network /
+    // weather 这种"大事件"——transit 事件只是 flavor,不该挡住主线。
+    const transitEv = tryFireTransitEvent(mode);
+    if (transitEv) {
+      setTimeout(() => {
+        setActiveEvent(transitEv);
+        audio.ding();
+        if (!transitEv.repeatable) {
+          // 复用 MARK_LOCATION_EVENT_SEEN 的 _transit 命名空间
+          dispatch({ type: 'MARK_LOCATION_EVENT_SEEN', locId: '_transit', eventId: transitEv.id });
+        }
+      }, 400);
+      return;
+    }
 
     const story = checkStoryTriggers(loc.id);
     if (story) {
@@ -1317,7 +1353,7 @@ export default function App() {
     // Sunday — settle the week.
     if (dayOfWeek === 7) {
       if (oldWeekInfo.requireClass) {
-        const entry = { week, attended: state.classesAttendedThisWeek, required: 6 };
+        const entry = { week, attended: state.classesAttendedThisWeek, required: 5 };
         attendanceHistory = [...attendanceHistory, entry];
         dispatch({ type: 'PUSH_ATTENDANCE', entry });
 
@@ -1346,7 +1382,7 @@ export default function App() {
 
       const allClassWeeks = attendanceHistory.filter(a => a.required > 0);
       const totalAtt = allClassWeeks.reduce((s, a) => s + a.attended, 0);
-      const totalReq = allClassWeeks.reduce((s, a) => s + (a.required || 6), 0);
+      const totalReq = allClassWeeks.reduce((s, a) => s + (a.required || 5), 0);
       const newRate = totalReq > 0 ? Math.round((totalAtt / totalReq) * 100) : 100;
 
       // Rent is prepaid annually (handled in onboarding narrative), so no
@@ -1376,10 +1412,10 @@ export default function App() {
       setTimeout(() => addMessage('l2u_cs', '👤 小U · Link2Ur 助手',
         '⚠️ 系统提示：你压力指数 85+。今天只剩 1 个行动点。求救不丢人——发个 post 把事 offload 出去。'), 800);
     } else if (newStress >= 75) {
-      // 高：actionsLeft 降到 2，叠加表现下降
+      // 高：actionsLeft 降到 3，叠加表现下降
       dispatch({ type: 'APPLY_EFFECT', effect: { belonging: -3, energy: -3, academic: -1 } });
       setTimeout(() => addMessage('l2u_cs', '👤 小U · Link2Ur 助手',
-        '压力指数 75。今天行动点 -1（剩 2 个）。建议发 1-2 个 post 让别人帮你 cover。'), 800);
+        '压力指数 75。今天行动点 -2（剩 3 个）。建议发 1-2 个 post 让别人帮你 cover。'), 800);
     } else if (newStress >= 60) {
       // 中高：表现略下滑但 actionsLeft 不变
       dispatch({ type: 'APPLY_EFFECT', effect: { energy: -2, academic: -1 } });

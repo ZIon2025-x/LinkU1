@@ -21,11 +21,40 @@ export const WELCOME_WEEK_EVENTS = {
     {
       id: 'survival_brief', auto: true, minWeek: 1, maxWeek: 1,
       title: '室友 Day 1 · "活下来手册"',
-      body: '搬进来第二天早上。你在共用厨房遇到一个看起来已经熬过来一年的 housemate——King\'s 二年级的女生，正用一个掉漆的摩卡壶煮咖啡。\n\n她递给你一杯："新来的吧？给你说几条——一年前没人告诉我的。"\n\n· 一天**只能干 3 件正经事**——出门一次、上一节课、接一单跑腿。压力一上来会掉到 2 件、甚至 1 件，别问我怎么知道的。\n· 一天**至少吃 2 顿**。漏一顿，夜里饿到不行就点 Deliveroo，一份 £15。漏两顿压力直接涨 8 点——比挨饿本身更狠的是那 8 点。\n· 卡里 £1,200 + 妈每月 £500。**钱包真见底就回不去了**——别问我那个学姐去年回国前的事。\n· 压力 75+ 一天就剩 2 件，85+ 剩 1 件，95+……我没见过有人撑回来。\n\n"app 里 Link2Ur 那个图标——点开。跑腿赚钱、解放时间都靠它。第一个月撑过去就活了。"',
+      body: '搬进来第二天早上。你在共用厨房遇到一个已经熬过一年的 housemate——King\'s 二年级的女生，正用一个掉漆的摩卡壶煮咖啡。\n\n她递给你一杯："新来的吧？告诉你几件事——一年前没人提醒过我。"\n\n· 你**一天能做的事就那么几件**——上课、跑腿、吃饭、社交,够呛超过 5 件。压力一上来,只剩 3 件、甚至 1 件，别问我怎么知道的。\n· **一天至少吃 2 顿**。漏一顿，半夜饿得受不了就点 Deliveroo，一份 £15。漏两顿压力直接涨 8 点——比挨饿本身更狠的是那 8 点压力。\n· 卡里 £1,200 + 妈每月 £500。**钱包真见底就回不去了**——别问我那个学姐去年回国前的事。\n· 压力涨到 75 你一天只能做 3 件,85 只剩 1 件,95……我没见过有人撑过来。\n\n"app 里 Link2Ur 那个蓝色图标点开看看。跑腿赚钱、发 post 让别人帮你都靠它。第一个月撑过去就活了。"',
       choices: [
         { label: '"记下来。谢了。"',
           effect: { energy: 0, belonging: 3, flag: 'survival_briefed' },
-          feedback: '她耸耸肩："不客气。我去年没人跟我说，12 月那会儿差点崩了。"\n\n她拎着咖啡杯回房间。门关上前补了一句："app 里那个会给你发消息的小 U——别忽略它。它出声的时候通常是真的有事。"' },
+          feedback: '她耸耸肩："不客气。我去年没人跟我说，12 月那会儿差点崩了。"\n\n她拎着咖啡杯回房间。门关上前补了一句："app 里那个会发消息的小 U——别忽略它。它说话的时候通常是真的有事。"' },
+      ],
+    },
+    {
+      id: 'first_night_insomnia', minWeek: 1, maxWeek: 2,
+      title: '第一晚 · 凌晨 4 点',
+      body: '凌晨 4:12。你醒在自己的房间里。\n\n8 小时时差——国内现在是中午 12 点。你妈在做饭，你爸在午睡。\n\n你听见走廊有声音——大概是 Mark 从厨房回房间。墙是纸糊的，你能听见他袜子在地板上拖的声音。\n\n你盯着天花板。脑子转个不停——BRP 还没取，GP 还没注册，reading list 一页没碰。',
+      choices: [
+        { label: '硬闭眼数羊 + 等天亮',
+          effect: { energy: -3, stress: 2 },
+          feedback: '你闭上眼。脑子里反复在播 "下周一第一节课是什么"。\n\n7 点闹钟响时你还醒着。早上 lecture 你全程在打瞌睡。' },
+        { label: '下楼煮一碗白象方便面',
+          effect: { wallet: -1, energy: 3, belonging: 2 },
+          feedback: '你蹑手蹑脚下楼。厨房是空的——Mark 已经回房了。\n\n你煮了一碗老坛酸菜。第一口热汤下去——时差缓和了 30%。\n\n你坐在凌晨 4 点的厨房里看着窗外的伦敦夜——很安静，但你不孤独。' },
+        { label: '不睡了 + 翻开 reading list 第一页',
+          effect: { energy: -5, academic: 3, stress: -2 },
+          feedback: '你翻开 Foucault。读到第 4 页发现自己大概只懂 30%。\n\n但你也读完了 reading list 第一周的 1/3——比 cohort 里 80% 的人都早。\n\n早上 9 点的 lecture 你坐第一排——眼睛红红的，Whitmore 注意到了。' },
+      ],
+    },
+    {
+      id: 'first_video_call_mom', auto: true, minWeek: 1, maxWeek: 1,
+      title: '第一次给妈视频',
+      body: '伦敦下午 6 点 = 国内凌晨 1 点。你之前跟妈说"到了就报平安"，但忘了时差。\n\n你按下视频键——3 秒后妈接了。她在客厅，头发乱乱的，显然刚被吵醒。但她笑得像没事一样。\n\n"到了啊？公寓什么样？让妈看看。"',
+      choices: [
+        { label: '镜头扫一圈房间 + 跟她聊几句',
+          effect: { energy: -2, belonging: 12, flag: 'first_mom_call' },
+          feedback: '你把镜头转过去——11 平米的单人间、独立卫浴、Tesco 黄色塑料袋还堆在角落。\n\n你妈："哎呀挺小的，不过独立卫浴好，你那点东西够用了。" 然后她突然问："晚饭吃了吗？"\n\n你说还没。她沉默了 3 秒——你能从屏幕里看出来，她在想这一刻能不能给你做点什么——然后她说："那你下楼买点。妈在国内，管不到你。"\n\n挂电话之后你坐在床边 5 分钟没动。' },
+        { label: '简短报平安 + "你睡吧"',
+          effect: { energy: 0, belonging: 5, flag: 'first_mom_call' },
+          feedback: '你说："到了，安全。你睡。"\n\n她说："行，我睡了。" 30 秒挂电话。\n\n挂完她又给你发了 5 条微信:\n· "记得多穿"\n· "wifi 怎么样"\n· "邻居怎么样"\n· "晚饭别忘"\n· "妈睡了，你忙"\n\n你每条回了一个"嗯"。' },
       ],
     },
     {
@@ -116,6 +145,20 @@ export const WELCOME_WEEK_EVENTS = {
   // ─────────────────────────────────────────────────────────────
   station: [
     {
+      id: 'brp_help_stranger', minWeek: 1, maxWeek: 4,
+      title: 'Acton Lane · 替一个韩国大叔翻译',
+      body: '你在 Acton Lane Post Office 取 BRP。\n\n前面一个 50 岁的韩国大叔——英语磕磕巴巴，工作人员皱眉了："Sir, do you have a printed copy of your decision letter or not?"\n\n大叔慌:"Letter... letter... I have phone..."\n\n他不知道 "decision letter" 是什么。',
+      condition: ({ flags }) => flags.brp_pending && !flags.brp_collected,
+      choices: [
+        { label: '上前帮忙翻译',
+          effect: { energy: -3, belonging: 10, flag: 'helped_brp_stranger' },
+          feedback: '你走上前："Hi, my Korean is zero but he\'s asking about the BRP collection letter. Can he show it on his phone?"\n\n工作人员表情松了下来："Yes — email is fine."\n\n大叔翻出邮箱，工作人员核对完，5 分钟搞定。\n\n大叔出门前转身找到你——拿出一袋韩国蜜瓜糖塞你手里。"Thank you. Thank you." 他鞠了两次躬就走了。\n\n那袋糖你装进兜里——这是你这一年第一次"以一个外人的身份，帮另一个外人"。' },
+        { label: '装没听见继续排队',
+          effect: { energy: 0, belonging: -2 },
+          feedback: '你低头玩手机。工作人员重复了 3 次。\n\n10 分钟后大叔被退回——"Come back with the letter printed."\n\n他出门时从你身边挤过去——你低头没看他。\n\n那天回家路上你一直在想：我下次会上前吗？' },
+      ],
+    },
+    {
       id: 'brp_collect', minWeek: 1, maxWeek: 4,
       title: 'BRP 取证 · Acton Lane Post Office',
       body: '你按指示从 Marylebone 站坐 Bakerloo 到 Stonebridge Park，再走 8 分钟到 Acton Lane Post Office。\n\n门口排了 12 个亚洲面孔——都是新生。',
@@ -173,6 +216,35 @@ export const WELCOME_WEEK_EVENTS = {
   // TESCO — daily reality
   // ─────────────────────────────────────────────────────────────
   tesco: [
+    {
+      id: 'tesco_5p_bag_shame', minWeek: 1, maxWeek: 3,
+      title: '5p 塑料袋之耻',
+      body: 'Tesco Express Bloomsbury。你结完账——一周菜 £18。\n\n收银员："Need a bag, love?" 你第一反应"yes 当然要，我手里这么多东西"。\n\n她从下面拿出一个塑料袋递过来——"5p, please."\n\n你愣了 1 秒。后面排了 4 个英国人。',
+      choices: [
+        { label: '掏出 5p 付了',
+          effect: { wallet: -1, energy: -1, belonging: 1, flag: 'plastic_bag_learned' },
+          feedback: '你付了。出门把袋子塞进 Uniqlo 包里。\n\n回房间 google "5p bag charge UK"——2015 年开始的环保政策，所有 supermarket 一袋 5p，Tesco / Sainsbury 强制收。\n\n你学到一条最基本的英国常识:**自己带袋子来**。下次你专门买了一个 £2 的 reusable Tesco tote——用到回国。' },
+        { label: '"No, no, I have my arm"',
+          effect: { energy: -2 },
+          feedback: '你硬抱着 6 件东西出门。在 Bedford Square 半路一个 Coke 罐掉地滚走。\n\n你弯腰捡——其他 4 件趁机从怀里滑下来。你蹲在路边 1 分钟才全部捡起来。\n\n两个英国本科生路过没笑出声——但你心里清楚，你刚才省下 5p 丢了 £5 的脸。' },
+      ],
+    },
+    {
+      id: 'you_alright_misread', minWeek: 1, maxWeek: 4,
+      title: '"You alright, mate?" · 文化误读',
+      body: 'Tesco 收银台。一个 19 岁的英国本科收银员看你过来："You alright, mate?"\n\n你脑子转了 2 秒——他在关心你的精神状态？还是觉得你看起来累？\n\n你认真答："Honestly, a bit tired. Jet lag is killing me, and I haven\'t found a GP yet..."\n\n他脸僵了 1 秒。',
+      choices: [
+        { label: '看出对方表情 + 快速纠正 "Just kidding! Good thanks, you?"',
+          effect: { energy: -1, belonging: 4, flag: 'you_alright_learned' },
+          feedback: '他笑了："Mate, you had me worried for a sec. \'You alright\' is just hello here, you don\'t actually answer it. Or you answer \'You alright, yeah?\' and we both pretend that\'s a conversation."\n\n你笑了。你才知道这是英国最容易让人迷糊的一句招呼:**"You alright" = "hi"**。**正确答法:回一句 "You alright?"**\n\n他扫完你的购物袋说 "have a good one mate"——你也回 "you too mate"——你们都装作刚才那 2 秒尴尬没发生。' },
+        { label: '继续认真 + 讲完 jet lag + GP',
+          effect: { energy: -3, belonging: -2 },
+          feedback: '他点头听完。然后尴尬地说："Yeah... well... GP just register on the NHS website mate. £4.50 please."\n\n你扫了卡走。他对下一个客人又问了一遍 "you alright"——那个白人男生秒回 "you alright?"\n\n你回房间 5 分钟才意识到，刚才那句话根本不是在问你。\n\n你这一年还会再撞一次。' },
+        { label: '不知道怎么答 + 沉默微笑',
+          effect: { energy: -1 },
+          feedback: '你笑了一下没说话。他也点头把购物扫完。\n\n出门那一刻你想:他在问什么？是 friendly 还是 query？我应不应该回点什么？\n\n这种小困惑你这一年会撞 50 次。每次都在心里积一点。' },
+      ],
+    },
     {
       id: 'meal_deal', minWeek: 1, repeatable: true,
       title: 'Meal Deal · £3.40',

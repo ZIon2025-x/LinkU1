@@ -164,10 +164,10 @@ export const derive = {
   week: (state) => Math.ceil(state.day / 7),
   dayOfWeek: (state) => ((state.day - 1) % 7) + 1,
   attendanceRate: (state) => {
-    const classWeeks = state.attendanceHistory.filter(a => (a.required || 6) > 0);
+    const classWeeks = state.attendanceHistory.filter(a => (a.required || 5) > 0);
     if (classWeeks.length === 0) return 100;
     const att = classWeeks.reduce((s, h) => s + h.attended, 0);
-    const req = classWeeks.reduce((s, h) => s + (h.required || 6), 0);
+    const req = classWeeks.reduce((s, h) => s + (h.required || 5), 0);
     return req > 0 ? Math.round((att / req) * 100) : 100;
   },
   currentMonthRate: (state) =>
@@ -209,9 +209,10 @@ function advanceOneDay(state) {
   const baseStress = state.stress ?? 25;
   const s = clamp(baseStress + mealsPenaltyStress + phaseInc + stateBonus, 0, 100);
 
+  // stress 阶梯映射 (base 5)：< 75 / 75-84 / 85+ → 5 / 3 / 1
   let dailyActions = DAILY_ACTIONS;
   if (s >= 85) dailyActions = 1;
-  else if (s >= 75) dailyActions = 2;
+  else if (s >= 75) dailyActions = 3;
 
   const energyRecover = s >= 75 ? 5 : s >= 60 ? 10 : 15;
 
@@ -780,8 +781,8 @@ export function reducer(state, action) {
 
     case 'END_DAY': {
       // 新一天的行动点按 stress 阶梯发：压力越高，今天能做的事越少。
-      //   0-74   3 actions (正常)
-      //   75-84  2 actions ("我今天只能 cover 2 件事")
+      //   0-74   5 actions (正常)
+      //   75-84  3 actions ("我今天只能 cover 3 件事")
       //   85+    1 action  ("快崩了 只能撑一件")
       // 失败游戏由 App.jsx 在 stress >= 95 时通过 SET_ENDING 触发。
       const next = advanceOneDay(state);

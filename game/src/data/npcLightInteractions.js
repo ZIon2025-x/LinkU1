@@ -171,6 +171,23 @@ export const NPC_LIGHT_INTERACTIONS = {
   // ─────────────────────────────────────────────────────────────
   mei: [
     {
+      id: 'mei_asks_hometown', minWeek: 2, maxWeek: 6,
+      title: 'Mei 姐 · "你哪儿口音"',
+      condition: ({ npcRel, flags }) => (npcRel.mei || 0) >= 1 && !flags.mei_hometown_asked,
+      body: '你第二次或第三次来 Mei\'s。她端来一碗你点的牛肉面——但她没立刻走。\n\n她在你对面坐下,擦着柜台:"你哪儿口音?听着不是北京的。"',
+      choices: [
+        { label: '老实说家乡',
+          effect: { rel: 2, energy: 2, belonging: 8, flag: 'mei_hometown_asked' },
+          feedback: '你说了你家乡——杭州 / 长沙 / 沈阳 / 成都……\n\nMei 姐眼睛亮了:"哎呀!我有个堂弟当年也在那边读书。" 她跟你扯了 5 分钟那条线——她堂弟、堂弟的同学、她小时候的事。\n\n你听完已经吃完了面。她结账时多给你装了一盒泡菜:"你那边人爱吃这个吧?"\n\n这是 Mei 姐第一次把你当"自己人"。' },
+        { label: '"南方的 您应该没听过"',
+          effect: { rel: 1, belonging: 3 },
+          feedback: 'Mei 姐笑了:"南方哪都听过。我以前 1995-2000 在曼城那条 China Town 干过 5 年——南北的孩子都见过。"\n\n你这才想起来:她在英国 30 年了。\n\n她没追问。但你出门时她说:"下次想吃啥提前跟姐说一声。"' },
+        { label: '"不重要 您随便"',
+          effect: { rel: 0, belonging: -1 },
+          feedback: 'Mei 姐 nod 一下回厨房。\n\n你结账时她没说话。你出门时她也没说"下次来"。\n\n你这一刻没意识到——你刚错过一次 Mei 把你当"自己人"的窗口。下次再触发要等。' },
+      ],
+    },
+    {
       id: 'mei_extra_scoop', minWeek: 3, maxWeek: 50, repeatable: true,
       title: 'Mei 姐 · 多打一勺',
       condition: ({ npcRel }) => (npcRel.mei || 0) >= 2,
@@ -362,6 +379,34 @@ export const NPC_LIGHT_INTERACTIONS = {
       ],
     },
     {
+      id: 'aditi_dad_mumbai_mention', minWeek: 5, maxWeek: 12,
+      title: 'Aditi · 第一次提到她爸',
+      condition: ({ npcRel }) => (npcRel.aditi || 0) >= 2,
+      body: '深夜 11 点。Senate House 4 楼。\n\nAditi 在你旁边的位置——视频通话，声音压得很低。你能听到她说 "papa, please eat the rice, just one bite"。\n\n5 分钟后她挂电话——眼睛红红的，但她没说什么，继续打字。\n\n10 分钟后她推一颗 chai biscuit 到你桌上。',
+      choices: [
+        { label: '"Everything OK?" 轻声问',
+          effect: { energy: -2, belonging: 8, npc: { aditi: 2 }, flag: 'aditi_dad_mentioned' },
+          feedback: 'Aditi 抬头——沉默了 3 秒。然后:\n\n"My dad. He\'s in Mumbai. Liver disease — they\'ve been saying \'manageable\' for two years but mum just told me he stopped eating last week."\n\n她抹眼睛:"Sorry. I shouldn\'t dump this. We barely know each other."\n\n你说 "It\'s fine. I\'m here."\n\n她笑了一下:"Thanks. Keep this between us for now though." 你点头。\n\n（你不知道——这是 W30 dad_worsening 5 个月前的伏笔。）' },
+        { label: '装没注意 + 继续打字',
+          effect: { energy: 0 },
+          feedback: '你假装没看见。\n\nAditi 继续打字。15 分钟后她收拾东西回宿舍。\n\n下次见她还会跟你礼貌点头——但她不会再视频时坐你旁边了。' },
+      ],
+    },
+    {
+      id: 'linnan_first_chinese', minWeek: 4, maxWeek: 8,
+      title: '林可儿 / 林楠 · 第一次用中文说话',
+      condition: ({ npcRel }) => (npcRel.linnan || 0) >= 1,
+      body: 'Senate House 4 楼。你跟 ta 在图书馆第三次见。\n\n你们一直用英文聊 Foucault——客气、学术、有点累。\n\nta 突然小声:"诶——你是不是从国内来的?"\n\n这是 ta 跟你说的第一句中文。',
+      choices: [
+        { label: '"是啊 老乡!" 切中文',
+          effect: { energy: 3, belonging: 12, npc: { linnan: 2 }, flag: 'linnan_chinese_switch' },
+          feedback: 'ta 整个人肉眼可见地松下来——肩膀都低了一截。"靠，憋了 3 周英文了。我老家南京，你呢？"\n\n你们用中文聊了 40 分钟——从家乡话题到 Whitmore 的口音到 Tesco 的 pak choi。\n\nta 临走说:"哥们 / 姐们 终于。这一年估计要靠你 sanity check 了。"\n\n你回家路上——你不孤独。这是你这一年第一次跟同班同学说真心话。' },
+        { label: '"Yeah, I am. But let\'s keep practising English"',
+          effect: { energy: -2, belonging: 2, academic: 2 },
+          feedback: 'ta 愣了 1 秒——然后:"Oh, sure. Yeah, you\'re right, we\'re here for that."\n\n你们继续用英文聊。20 分钟后 ta 走了。\n\n你之后跟 ta 永远是客客气气的英文。你英语进步了——但你错过了一扇友谊的门。\n\n半年后你看 ta 的 IG story 在跟另一个同学说中文——那个人不是你。' },
+      ],
+    },
+    {
       id: 'aditi_chai_thermos', minWeek: 18, maxWeek: 50,
       title: 'Aditi · 一杯 chai 从保温杯倒出来',
       condition: ({ npcRel }) => (npcRel.aditi || 0) >= 4,
@@ -437,6 +482,20 @@ export const NPC_LIGHT_INTERACTIONS = {
   // uni · Whitmore 学术线 + 走廊偶遇
   // ─────────────────────────────────────────────────────────────
   uni: [
+    {
+      id: 'whitmore_stops_you_tutorial', minWeek: 3, maxWeek: 6,
+      title: 'Whitmore · "actually, one moment—"',
+      condition: ({ flags }) => !flags.whitmore_stopped_first,
+      body: 'Tutorial 散场。你收拾东西准备走——Whitmore 收 handout 的时候叫住你:\n\n"Actually, one moment. The point you made about \'internalised surveillance\'—it caught my ear. You\'ve read more Foucault than the syllabus, haven\'t you?"',
+      choices: [
+        { label: '老实说是大学 thesis 写过',
+          effect: { rel: 3, energy: -2, academic: 6, belonging: 4, flag: 'whitmore_stopped_first' },
+          feedback: '你说你 undergrad thesis 写的是 surveillance economy + 王阳明。\n\nWhitmore 眉毛挑了一下:"Ah—a cross-traditions move. We don\'t get that here often. Office hours Wednesday 4 pm, my door\'s always open."\n\n他把 handout 抱稳点头走了。\n\n你跟 Whitmore 之间从这一刻起不只是"教授 - 学生"。你下次 office hour 进他门时,他会从你的 thesis 那一行说起。' },
+        { label: '"刚好读到 sir" + 谦虚带过',
+          effect: { rel: 1, belonging: 2, flag: 'whitmore_stopped_first' },
+          feedback: 'Whitmore 点头:"Modesty is fine, but accuracy is better. Come to office hours when you want to talk about it properly."\n\n他抱着 handout 走了。\n\n你这次没踩坑——但也没接 ta 递过来的那条线。下次想接,要主动去 office hours。' },
+      ],
+    },
     {
       id: 'whitmore_corridor_nod', minWeek: 6, maxWeek: 50, repeatable: true,
       title: 'Whitmore · 走廊偶遇',

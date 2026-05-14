@@ -48,6 +48,13 @@ export const PROACTIVE_CHAT_HOOKS = [
   // SARAH · 周末 mum 转述 / 烂醉拉你 / 邀新尝试
   // ─────────────────────────────────────────────────────────────
   {
+    id: 'sarah_first_pub_invite',
+    npcId: 'sarah', fromName: 'Sarah',
+    condition: (s) => flag(s, 'sarah_first_met') && Math.ceil(s.day / 7) >= 2 && Math.ceil(s.day / 7) <= 6 && rel(s, 'sarah') < 2,
+    text: "hey it\'s sarah! 厨房 noodle person 😄 a few of us going to The Crown friday after 7. fancy joining? first cider on me",
+    priority: 3,
+  },
+  {
     id: 'sarah_post_cotswolds_mum',
     npcId: 'sarah', fromName: 'Sarah',
     condition: (s) => flag(s, 'cotswolds_visited') && Math.ceil(s.day / 7) >= 16,
@@ -178,6 +185,14 @@ export const PROACTIVE_CHAT_HOOKS = [
   // ─────────────────────────────────────────────────────────────
   // WANGKAI · 业务节点 / 求救
   // ─────────────────────────────────────────────────────────────
+  {
+    id: 'wk_first_small_errand',
+    npcId: 'wangkai', fromName: '王凯学长',
+    condition: (s) => sp(s, 'wangkai') >= 1 && Math.ceil(s.day / 7) >= 3 && Math.ceil(s.day / 7) <= 6 && !flag(s, 'wk_first_errand_seen'),
+    text: '哥们 帮个忙 我表姐让我去 Westfield Boots 买一个 La Roche-Posay 防晒（货架原价 £20 她让我代购 £30）。我这周三天 PhD 课没空。你下午要是顺路给我跑一趟 我分你 £8 你只用待 15 分钟',
+    priority: 3,
+    flag: 'wk_first_errand_seen',
+  },
   {
     id: 'wk_business_open',
     npcId: 'wangkai', fromName: '王凯学长',

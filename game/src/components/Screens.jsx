@@ -159,7 +159,7 @@ export function IntroScreen({ onStart, muted, onToggleMute, hasSave, onClearSave
         <p>九月，伦敦。两个箱子，一张录取通知书。</p>
         <p>52 周。10 个地点。5 个朋友。</p>
         <p>秋学期 → 圣诞 → 春学期 → 复活节 → 期末考 → 论文。</p>
-        <p>每天 3 个行动。这一年怎么过，由你决定。</p>
+        <p>每天 5 个行动。这一年怎么过，由你决定。</p>
         <p className="opacity-60 italic">这次，你来掌控故事。</p>
       </div>
       <div className="max-w-sm mx-auto mt-10 grid grid-cols-2 gap-2 text-xs opacity-60" style={{ fontFamily: 'monospace' }}>

@@ -72,4 +72,4 @@ export function getWeekInfo(week) {
 }
 
 export const TOTAL_DAYS = 364;
-export const DAILY_ACTIONS = 3;
+export const DAILY_ACTIONS = 5;
