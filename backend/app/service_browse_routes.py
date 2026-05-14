@@ -34,6 +34,7 @@ async def browse_services(
     lat: float = Query(None),
     lng: float = Query(None),
     radius: int = Query(25, ge=1, le=100),
+    city: Optional[str] = Query(None, max_length=100, description="同城模式：传入城市名时按城市名过滤（in_person/both 服务），覆盖 radius/lat/lng"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -61,11 +62,31 @@ async def browse_services(
         if keyword_expr is not None:
             base_filter = base_filter.where(keyword_expr)
 
-    # Apply filters (including nearby) before counting
+    # Apply filters (including nearby/city) before counting
     query = base_filter
-    distance_sq = None  # will be set if sort == "nearby"
+    distance_sq = None  # will be set if sort == "nearby" 且非同城模式
 
-    if sort == "nearby":
+    if city:
+        # 同城模式：按城市名匹配，不依赖 GPS。优先级高于 radius/lat/lng。
+        # 复用 build_city_location_filter 处理英中别名 + UK 地址边界（"Bristol Road" 不会误中 Bristol）。
+        from app.utils.city_filter_utils import build_city_location_filter
+
+        query = query.outerjoin(Expert, or_(
+            and_(S.owner_type == 'expert', S.owner_id == Expert.id),
+            and_(S.owner_type.is_(None), S.expert_id == Expert.id),
+        ))
+        # 仅 in_person/both 服务参与地理筛（online 服务不属于"同城"语义）
+        query = query.where(S.location_type.in_(["in_person", "both"]))
+
+        s_filter = build_city_location_filter(S.location, city)
+        e_filter = build_city_location_filter(Expert.location, city)
+        if s_filter is not None and e_filter is not None:
+            query = query.where(or_(s_filter, e_filter))
+        elif s_filter is not None:
+            query = query.where(s_filter)
+        elif e_filter is not None:
+            query = query.where(e_filter)
+    elif sort == "nearby":
         if lat is None or lng is None:
             raise HTTPException(status_code=400, detail="lat and lng required for nearby sort")
 
@@ -142,7 +163,11 @@ async def browse_services(
             order_clauses.append(S.base_price.is_(None))
             order_clauses.append(S.base_price.desc())
         elif sort == "nearby":
-            order_clauses.append(distance_sq.asc())
+            if distance_sq is not None:
+                order_clauses.append(distance_sq.asc())
+            else:
+                # 同城模式接管了 nearby（distance_sq 未计算），改按最新排
+                order_clauses.append(S.created_at.desc())
 
         query = query.order_by(*order_clauses)
 
