@@ -412,6 +412,16 @@ class ApiEndpoints {
       '/api/services/$serviceId/reviews';
   static String serviceReviewSummary(int serviceId) =>
       '/api/services/$serviceId/reviews/summary';
+  // 活动评价(通过 Task.parent_activity_id 反查 reviews)
+  static String activityReviews(int activityId) =>
+      '/api/activities/$activityId/reviews';
+  static String activityReviewSummary(int activityId) =>
+      '/api/activities/$activityId/reviews/summary';
+  // 套餐评价(直接走 Review.package_id)
+  static String packageReviews(int packageId) =>
+      '/api/packages/$packageId/reviews';
+  static String packageReviewSummary(int packageId) =>
+      '/api/packages/$packageId/reviews/summary';
   // --- 服务所有者管理收到的申请（个人服务 + 达人服务通用） ---
   static const String myReceivedApplications =
       '/api/users/me/service-applications/received';

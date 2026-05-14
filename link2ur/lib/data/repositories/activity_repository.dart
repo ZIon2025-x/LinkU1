@@ -267,6 +267,26 @@ class ActivityRepository {
     }
     return OfficialActivityResult.fromJson(response.data!);
   }
+
+  /// 活动评价列表(后端通过 Task.parent_activity_id 反查 Review)
+  /// 返回 {items: List<Map>, total: int, page: int, page_size: int}
+  Future<Map<String, dynamic>> getActivityReviews(
+    int activityId, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.activityReviews(activityId),
+      queryParameters: {'page': page, 'page_size': pageSize},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw ActivityException(
+        response.errorCode ?? response.message ?? 'load_reviews_failed',
+        code: response.errorCode,
+      );
+    }
+    return Map<String, dynamic>.from(response.data!);
+  }
 }
 
 /// 活动异常

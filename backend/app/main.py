@@ -498,6 +498,14 @@ app.include_router(personal_service_router)
 from app.service_review_routes import service_review_router
 app.include_router(service_review_router)
 
+# 活动评价路由(通过 Task.parent_activity_id 反查 reviews)
+from app.activity_review_routes import activity_review_router
+app.include_router(activity_review_router)
+
+# 套餐评价路由(直接走 Review.package_id)
+from app.package_review_routes import package_review_router
+app.include_router(package_review_router)
+
 # 服务浏览（公开）路由
 from app.service_browse_routes import service_browse_router
 app.include_router(service_browse_router)

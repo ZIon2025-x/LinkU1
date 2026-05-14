@@ -112,6 +112,18 @@ class ActivityLoadFavoriteStatus extends ActivityEvent {
   List<Object?> get props => [activityId];
 }
 
+/// 加载活动评价列表
+/// loadMore=true 时追加下一页,否则重置为第 1 页
+class ActivityLoadReviews extends ActivityEvent {
+  const ActivityLoadReviews(this.activityId, {this.loadMore = false});
+
+  final int activityId;
+  final bool loadMore;
+
+  @override
+  List<Object?> get props => [activityId, loadMore];
+}
+
 class ActivityClearActionMessage extends ActivityEvent {
   const ActivityClearActionMessage();
 }
@@ -142,6 +154,10 @@ class ActivityState extends Equatable {
     this.officialResult,
     this.isFavorited = false,
     this.isTogglingFavorite = false,
+    this.reviews = const [],
+    this.isLoadingReviews = false,
+    this.hasMoreReviews = false,
+    this.reviewsPage = 1,
   });
 
   final ActivityStatus status;
@@ -157,6 +173,12 @@ class ActivityState extends Equatable {
   final List<ServiceTimeSlot> timeSlots;
   final bool isLoadingTimeSlots;
   final bool isLoadingMore;
+
+  /// 评价列表(items 原样 Map,字段对齐后端 activity_review_routes.py)
+  final List<Map<String, dynamic>> reviews;
+  final bool isLoadingReviews;
+  final bool hasMoreReviews;
+  final int reviewsPage;
 
   /// 活动发布者的达人信息（对齐iOS viewModel.expert）
   final TaskExpert? expert;
@@ -189,6 +211,10 @@ class ActivityState extends Equatable {
     bool clearOfficialResult = false,
     bool? isFavorited,
     bool? isTogglingFavorite,
+    List<Map<String, dynamic>>? reviews,
+    bool? isLoadingReviews,
+    bool? hasMoreReviews,
+    int? reviewsPage,
   }) {
     return ActivityState(
       status: status ?? this.status,
@@ -209,6 +235,10 @@ class ActivityState extends Equatable {
       officialResult: clearOfficialResult ? null : (officialResult ?? this.officialResult),
       isFavorited: isFavorited ?? this.isFavorited,
       isTogglingFavorite: isTogglingFavorite ?? this.isTogglingFavorite,
+      reviews: reviews ?? this.reviews,
+      isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      hasMoreReviews: hasMoreReviews ?? this.hasMoreReviews,
+      reviewsPage: reviewsPage ?? this.reviewsPage,
     );
   }
 
@@ -232,6 +262,10 @@ class ActivityState extends Equatable {
         officialResult,
         isFavorited,
         isTogglingFavorite,
+        reviews,
+        isLoadingReviews,
+        hasMoreReviews,
+        reviewsPage,
       ];
 }
 
@@ -257,6 +291,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     on<ActivityLoadResult>(_onLoadResult);
     on<ActivityToggleFavorite>(_onToggleFavorite);
     on<ActivityLoadFavoriteStatus>(_onLoadFavoriteStatus);
+    on<ActivityLoadReviews>(_onLoadReviews);
     on<ActivityClearActionMessage>(_onClearActionMessage);
   }
 
@@ -569,5 +604,35 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     Emitter<ActivityState> emit,
   ) {
     emit(state.copyWith());
+  }
+
+  Future<void> _onLoadReviews(
+    ActivityLoadReviews event,
+    Emitter<ActivityState> emit,
+  ) async {
+    if (state.isLoadingReviews) return;
+    final nextPage = event.loadMore ? state.reviewsPage + 1 : 1;
+    emit(state.copyWith(isLoadingReviews: true));
+    try {
+      // pageSize 走 repository 默认值 20
+      final data = await _activityRepository.getActivityReviews(
+        event.activityId,
+        page: nextPage,
+      );
+      final items = (data['items'] as List<dynamic>? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      final total = (data['total'] as int?) ?? 0;
+      final mergedReviews = event.loadMore ? [...state.reviews, ...items] : items;
+      emit(state.copyWith(
+        reviews: mergedReviews,
+        isLoadingReviews: false,
+        hasMoreReviews: mergedReviews.length < total,
+        reviewsPage: nextPage,
+      ));
+    } catch (e) {
+      AppLogger.warning('Failed to load reviews for activity ${event.activityId}', e);
+      emit(state.copyWith(isLoadingReviews: false));
+    }
   }
 }

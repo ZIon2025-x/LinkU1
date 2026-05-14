@@ -53,7 +53,9 @@ class ActivityDetailView extends StatelessWidget {
         taskExpertRepository:
             context.read<TaskExpertRepository>(),
         paymentService: PaymentService.instance,
-      )..add(ActivityLoadDetail(activityId)),
+      )
+        ..add(ActivityLoadDetail(activityId))
+        ..add(ActivityLoadReviews(activityId)),
       child: _ActivityDetailViewContent(activityId: activityId),
     );
   }
@@ -334,6 +336,27 @@ class _ActivityDetailViewContent extends StatelessWidget {
                       expert: expertState.expert,
                     );
                   },
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // 评价区(通过 Task.parent_activity_id 反查 reviews)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: BlocBuilder<ActivityBloc, ActivityState>(
+                    buildWhen: (p, c) =>
+                        p.reviews != c.reviews ||
+                        p.isLoadingReviews != c.isLoadingReviews ||
+                        p.hasMoreReviews != c.hasMoreReviews,
+                    builder: (context, reviewsState) {
+                      return _ActivityReviewsCard(
+                        reviews: reviewsState.reviews,
+                        isLoading: reviewsState.isLoadingReviews,
+                        hasMore: reviewsState.hasMoreReviews,
+                        activityId: activityId,
+                        isDark: isDark,
+                      );
+                    },
+                  ),
                 ),
 
                 const SizedBox(height: 120),
@@ -2632,6 +2655,221 @@ class _ActivityTimeSlotCard extends StatelessWidget {
       return '${fmt.format(start)}-${fmt.format(end)}';
     } catch (_) {
       return '';
+    }
+  }
+}
+
+// =============================================================
+// 评价区 - 对齐 service_detail_view._ReviewsCard 的设计,改 bloc 引用
+// =============================================================
+class _ActivityReviewsCard extends StatelessWidget {
+  const _ActivityReviewsCard({
+    required this.reviews,
+    required this.isLoading,
+    required this.hasMore,
+    required this.activityId,
+    required this.isDark,
+  });
+
+  final List<Map<String, dynamic>> reviews;
+  final bool isLoading;
+  final bool hasMore;
+  final int activityId;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.l10n.taskExpertReviews,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
+              ),
+              const Spacer(),
+              if (reviews.isNotEmpty)
+                Text(
+                  context.l10n.taskExpertReviewsCount(reviews.length),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (isLoading && reviews.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: LoadingView(),
+              ),
+            )
+          else if (reviews.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.rate_review_outlined,
+                      size: 32,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.taskExpertNoReviews,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else ...[
+            ...reviews.map((review) => _ActivityReviewRow(review: review, isDark: isDark)),
+            if (hasMore)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Center(
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : TextButton(
+                          onPressed: () {
+                            context.read<ActivityBloc>().add(
+                                  ActivityLoadReviews(activityId, loadMore: true),
+                                );
+                          },
+                          child: Text(
+                            context.l10n.commonLoadMore,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivityReviewRow extends StatelessWidget {
+  const _ActivityReviewRow({required this.review, required this.isDark});
+
+  final Map<String, dynamic> review;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = (review['rating'] as num?)?.toDouble() ?? 0;
+    final comment = review['comment'] as String?;
+    final createdAt = review['created_at'] as String?;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8F8FA),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ...List.generate(5, (i) {
+                final star = i + 1;
+                final fullStars = rating.floor();
+                final hasHalf = rating - fullStars >= 0.5;
+                IconData icon;
+                Color color;
+                if (star <= fullStars) {
+                  icon = Icons.star;
+                  color = AppColors.gold;
+                } else if (star == fullStars + 1 && hasHalf) {
+                  icon = Icons.star_half;
+                  color = AppColors.gold;
+                } else {
+                  icon = Icons.star_border;
+                  color = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+                }
+                return Icon(icon, size: 14, color: color);
+              }),
+              const Spacer(),
+              if (createdAt != null)
+                Text(
+                  _formatTime(createdAt),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  ),
+                ),
+            ],
+          ),
+          if (comment != null && comment.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              comment,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('yyyy-MM-dd').format(date);
+    } catch (_) {
+      return dateStr;
     }
   }
 }
