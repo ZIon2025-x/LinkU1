@@ -299,7 +299,7 @@ class _ProductCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFFFF6B9D),
+                            color: AppColors.priceRed,
                           ),
                         ),
                       const Spacer(),
@@ -536,15 +536,15 @@ class _ServiceReviewCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFFFF6B6B).withValues(alpha: 0.1),
-                      const Color(0xFFFF8E53).withValues(alpha: 0.05),
+                      AppColors.priceRed.withValues(alpha: 0.1),
+                      AppColors.priceRed.withValues(alpha: 0.05),
                     ],
                   ),
                 ),
                 child: Row(
                   children: [
                     const Icon(Icons.local_fire_department,
-                        size: 14, color: Color(0xFFFF6B6B)),
+                        size: 14, color: AppColors.priceRed),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -553,7 +553,7 @@ class _ServiceReviewCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11,
-                          color: Color(0xFFFF6B6B),
+                          color: AppColors.priceRed,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -798,7 +798,7 @@ class _ServiceReviewCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    color: Color(0xFFDB2777),
+                                    color: AppColors.priceRed,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -1372,7 +1372,7 @@ class _ServiceCard extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFFFF6B9D),
+                                color: AppColors.priceRed,
                               ),
                             ),
                           if (item.price != null && item.rating != null)
@@ -1503,7 +1503,7 @@ class _LinkedItemTag extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: _iconBgColor(linkedItem.itemType),
+              color: AppColors.surface2(Theme.of(context).brightness),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(_iconForType(linkedItem.itemType), size: 16, color: AppColors.purple),
@@ -1529,16 +1529,6 @@ class _LinkedItemTag extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Color _iconBgColor(String type) {
-    switch (type) {
-      case 'product': return const Color(0xFFFEF3C7);
-      case 'service': return const Color(0xFFDBEAFE);
-      case 'activity': return const Color(0xFFD1FAE5);
-      case 'ranking': return const Color(0xFFDBEAFE);
-      default: return const Color(0xFFEDE9FE);
-    }
   }
 
   IconData _iconForType(String type) {
@@ -1716,8 +1706,8 @@ class _DiscoveryTaskCard extends StatelessWidget {
                                 : '${Helpers.currencySymbolFor(item.currency ?? 'GBP')}${item.price!.toStringAsFixed(0)}',
                             isDark
                                 ? Colors.white.withValues(alpha: 0.12)
-                                : const Color(0xFFFFF0F0),
-                            isDark ? const Color(0xFFFF8A65) : const Color(0xFFEE5A24),
+                                : AppColors.priceRed.withValues(alpha: 0.08),
+                            AppColors.priceRed,
                             isBold: true,
                           ),
                       ],
@@ -1882,7 +1872,7 @@ class _DiscoveryActivityCard extends StatelessWidget {
                             '${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(0)}',
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFFEE5A24),
+                              color: AppColors.priceRed,
                               fontWeight: FontWeight.w600,
                             ),
                           )
@@ -2039,7 +2029,7 @@ class _ActivityPriceRow extends StatelessWidget {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: Color(0xFFFF6B9D),
+            color: AppColors.priceRed,
           ),
         ),
         const SizedBox(width: 6),
@@ -2058,7 +2048,7 @@ class _ActivityPriceRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
+              color: AppColors.priceRed.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -2066,7 +2056,7 @@ class _ActivityPriceRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFFFF6B6B),
+                color: AppColors.priceRed,
               ),
             ),
           ),
