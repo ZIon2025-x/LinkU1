@@ -6538,5 +6538,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "bannerBadgePromotion": "Promo",
+  "bannerBadgeNew": "New",
+  "bannerBadgeHot": "Hot",
+  "bannerBadgeLimited": "Limited"
 }

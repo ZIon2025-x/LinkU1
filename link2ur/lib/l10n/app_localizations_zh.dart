@@ -13728,6 +13728,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String expertTeamPayoutHolderNote(String name) {
     return '本团队收款由 $name 以个人身份代收。';
   }
+
+  @override
+  String get bannerBadgePromotion => '推广';
+
+  @override
+  String get bannerBadgeNew => '新';
+
+  @override
+  String get bannerBadgeHot => '热门';
+
+  @override
+  String get bannerBadgeLimited => '限时';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -27454,4 +27466,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String expertTeamPayoutHolderNote(String name) {
     return '本團隊收款由 $name 以個人身份代收。';
   }
+
+  @override
+  String get bannerBadgePromotion => '推廣';
+
+  @override
+  String get bannerBadgeNew => '新';
+
+  @override
+  String get bannerBadgeHot => '熱門';
+
+  @override
+  String get bannerBadgeLimited => '限時';
 }

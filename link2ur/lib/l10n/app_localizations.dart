@@ -26333,6 +26333,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payments to this team are received by {name} in a personal capacity.'**
   String expertTeamPayoutHolderNote(String name);
+
+  /// No description provided for @bannerBadgePromotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Promo'**
+  String get bannerBadgePromotion;
+
+  /// No description provided for @bannerBadgeNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get bannerBadgeNew;
+
+  /// No description provided for @bannerBadgeHot.
+  ///
+  /// In en, this message translates to:
+  /// **'Hot'**
+  String get bannerBadgeHot;
+
+  /// No description provided for @bannerBadgeLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Limited'**
+  String get bannerBadgeLimited;
 }
 
 class _AppLocalizationsDelegate

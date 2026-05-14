@@ -14,6 +14,17 @@ import { getErrorMessage } from '../../../utils/errorHandler';
 import { resolveImageUrl } from '../../../utils/urlUtils';
 import LazyImage from '../../../components/LazyImage';
 
+// 后端 badge_type 约定值(migration 232)。'' = 无角标(NULL)
+type BadgeType = '' | 'promotion' | 'new' | 'hot' | 'limited';
+
+const BADGE_OPTIONS: { value: BadgeType; label: string }[] = [
+  { value: '', label: '无角标' },
+  { value: 'promotion', label: '推广' },
+  { value: 'new', label: '新' },
+  { value: 'hot', label: '热门' },
+  { value: 'limited', label: '限时' },
+];
+
 interface Banner {
   id: number;
   title: string;
@@ -23,6 +34,7 @@ interface Banner {
   link_type: 'internal' | 'external';
   order: number;
   is_active: boolean;
+  badge_type?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -36,6 +48,7 @@ interface FormData {
   link_type: 'internal' | 'external';
   order: number;
   is_active: boolean;
+  badge_type: BadgeType;
 }
 
 const initialForm: FormData = {
@@ -46,6 +59,7 @@ const initialForm: FormData = {
   link_type: 'internal',
   order: 0,
   is_active: true,
+  badge_type: '',
 };
 
 /**
@@ -84,6 +98,8 @@ const BannerManagement: React.FC = () => {
         link_type: values.link_type,
         order: values.order,
         is_active: values.is_active,
+        // '' → null,让后端清空角标;其它值直接透传
+        badge_type: values.badge_type || null,
       };
 
       if (isEdit && values.id) {
@@ -131,6 +147,7 @@ const BannerManagement: React.FC = () => {
       link_type: banner.link_type,
       order: banner.order,
       is_active: banner.is_active,
+      badge_type: (banner.badge_type as BadgeType) || '',
     });
   }, [modal]);
 
@@ -203,6 +220,23 @@ const BannerManagement: React.FC = () => {
                   alt={banner.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
+                {/* 左上角:角标预览(与 Flutter 端 _BannerBadge 视觉一致) */}
+                {banner.badge_type && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '10px',
+                    padding: '3px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    letterSpacing: '0.2px',
+                  }}>
+                    {BADGE_OPTIONS.find((o) => o.value === banner.badge_type)?.label || banner.badge_type}
+                  </span>
+                )}
                 <span style={{
                   position: 'absolute',
                   top: '10px',
@@ -357,6 +391,21 @@ const BannerManagement: React.FC = () => {
               onChange={(e) => modal.updateField('order', parseInt(e.target.value) || 0)}
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+          </div>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>角标</label>
+            <select
+              value={modal.formData.badge_type}
+              onChange={(e) => modal.updateField('badge_type', e.target.value as BadgeType)}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+            >
+              {BADGE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <div style={{ marginTop: '6px', fontSize: '12px', color: '#888' }}>
+              在首页瀑布流穿插卡片左上角显示。App 端文案根据用户语言自动切换（中英繁）。
+            </div>
           </div>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>

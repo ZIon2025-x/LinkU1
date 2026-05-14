@@ -14355,4 +14355,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String expertTeamPayoutHolderNote(String name) {
     return 'Payments to this team are received by $name in a personal capacity.';
   }
+
+  @override
+  String get bannerBadgePromotion => 'Promo';
+
+  @override
+  String get bannerBadgeNew => 'New';
+
+  @override
+  String get bannerBadgeHot => 'Hot';
+
+  @override
+  String get bannerBadgeLimited => 'Limited';
 }

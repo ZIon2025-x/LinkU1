@@ -6339,5 +6339,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "bannerBadgePromotion": "推廣",
+  "bannerBadgeNew": "新",
+  "bannerBadgeHot": "熱門",
+  "bannerBadgeLimited": "限時"
 }

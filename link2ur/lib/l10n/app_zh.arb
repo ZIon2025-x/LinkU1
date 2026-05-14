@@ -6367,5 +6367,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "bannerBadgePromotion": "推广",
+  "bannerBadgeNew": "新",
+  "bannerBadgeHot": "热门",
+  "bannerBadgeLimited": "限时"
 }

@@ -538,7 +538,7 @@ class _DiscoveryBannerCard extends StatelessWidget {
   }
 }
 
-/// banner 角标 — 根据 badgeType 显示不同颜色 + 文案
+/// banner 角标 — 统一半透明黑底白字风格(对齐 mockup),不同 badgeType 仅文案不同
 /// 未知 badgeType 直接渲染空(防御性处理,避免显示乱码)
 class _BannerBadge extends StatelessWidget {
   const _BannerBadge({required this.badgeType});
@@ -546,46 +546,38 @@ class _BannerBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = _styleFor(badgeType);
-    if (style == null) return const SizedBox.shrink();
-    final (label, color) = style;
+    final label = _labelFor(badgeType, context);
+    if (label == null) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color,
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
       ),
       child: Text(
         label,
         style: const TextStyle(
           color: Colors.white,
           fontSize: 10,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
         ),
       ),
     );
   }
 
-  /// 后端 badge_type 约定值 → (展示文案, 角标背景色)
-  /// TODO(i18n): 文案后续走 l10n,目前先硬编码中文
-  static (String, Color)? _styleFor(String type) {
+  /// 后端 badge_type 约定值 → 本地化文案
+  static String? _labelFor(String type, BuildContext context) {
+    final l10n = context.l10n;
     switch (type) {
       case 'promotion':
-        return ('推广', const Color(0xFFE94E4E));
+        return l10n.bannerBadgePromotion;
       case 'new':
-        return ('新', const Color(0xFF4CAF50));
+        return l10n.bannerBadgeNew;
       case 'hot':
-        return ('热门', const Color(0xFFFF6B35));
+        return l10n.bannerBadgeHot;
       case 'limited':
-        return ('限时', const Color(0xFF9C27B0));
+        return l10n.bannerBadgeLimited;
       default:
         return null;
     }
