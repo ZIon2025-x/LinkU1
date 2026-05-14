@@ -254,7 +254,7 @@ export function IntroScreen({ onStart, muted, onToggleMute, hasSave, onClearSave
                     </div>
                   </div>
                   <div className="text-xs opacity-70 leading-relaxed mt-2">
-                    本作的灵感来自 Link2Ur —— 也是这群孩子真的在用的 app。游戏里的接单 / 发 post / 评分体系直接映射自这个平台。
+                    本作的灵感来自 Link2Ur —— 也是真实留学生在用的 app。游戏里的接单 / 发 post / 评分体系直接对应这个平台。
                   </div>
                 </div>
 
