@@ -26357,6 +26357,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Limited'**
   String get bannerBadgeLimited;
+
+  /// No description provided for @communityTileLeaderboards.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboards'**
+  String get communityTileLeaderboards;
+
+  /// No description provided for @communityTileActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get communityTileActivities;
+
+  /// No description provided for @communityTileBoards.
+  ///
+  /// In en, this message translates to:
+  /// **'Boards'**
+  String get communityTileBoards;
+
+  /// No description provided for @communityTileSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills'**
+  String get communityTileSkills;
+
+  /// No description provided for @communityTagLocalHot.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Trending'**
+  String get communityTagLocalHot;
+
+  /// No description provided for @communityTagLimitedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Limited Time'**
+  String get communityTagLimitedTime;
+
+  /// No description provided for @communityTagDiscuss.
+  ///
+  /// In en, this message translates to:
+  /// **'Discuss'**
+  String get communityTagDiscuss;
+
+  /// No description provided for @communityTagDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get communityTagDiscover;
+
+  /// No description provided for @communityFallbackLeaderboards.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard Center'**
+  String get communityFallbackLeaderboards;
+
+  /// No description provided for @communityFallbackActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Hall'**
+  String get communityFallbackActivities;
+
+  /// No description provided for @communityFallbackBoards.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum Boards'**
+  String get communityFallbackBoards;
+
+  /// No description provided for @communityFallbackSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills Plaza'**
+  String get communityFallbackSkills;
+
+  /// No description provided for @communityStatsLeaderboards.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} leaderboards'**
+  String communityStatsLeaderboards(int count);
+
+  /// No description provided for @communityStatsActivitiesActive.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} active'**
+  String communityStatsActivitiesActive(int count);
+
+  /// No description provided for @communityStatsBoards.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} boards'**
+  String communityStatsBoards(int count);
+
+  /// No description provided for @communityStatsCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} categories'**
+  String communityStatsCategories(int count);
+
+  /// No description provided for @communityHotSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get communityHotSearches;
+
+  /// No description provided for @communityDiscoverMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover more'**
+  String get communityDiscoverMore;
+
+  /// No description provided for @discoveryAnonymousUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous'**
+  String get discoveryAnonymousUser;
 }
 
 class _AppLocalizationsDelegate

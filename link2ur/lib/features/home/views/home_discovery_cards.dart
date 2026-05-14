@@ -639,6 +639,11 @@ class _ServiceReviewCard extends StatelessWidget {
   ) {
     final rating = item.rating;
     final targetName = item.targetItem?.name ?? '';
+    // 匿名评价(userName 为 null/空)显示本地化的"匿名用户"
+    final rawUserName = item.userName;
+    final displayUserName = (rawUserName == null || rawUserName.isEmpty)
+        ? context.l10n.discoveryAnonymousUser
+        : rawUserName;
     return Semantics(
       button: true,
       label: 'View service review',
@@ -759,13 +764,13 @@ class _ServiceReviewCard extends StatelessWidget {
                         children: [
                           AvatarView(
                             imageUrl: item.userAvatar,
-                            name: item.userName,
+                            name: displayUserName,
                             size: 20,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              item.userName ?? '',
+                              displayUserName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

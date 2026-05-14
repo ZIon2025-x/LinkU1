@@ -6371,5 +6371,36 @@
   "bannerBadgePromotion": "推广",
   "bannerBadgeNew": "新",
   "bannerBadgeHot": "热门",
-  "bannerBadgeLimited": "限时"
+  "bannerBadgeLimited": "限时",
+  "communityTileLeaderboards": "榜单",
+  "communityTileActivities": "活动",
+  "communityTileBoards": "板块",
+  "communityTileSkills": "技能",
+  "communityTagLocalHot": "同城热门",
+  "communityTagLimitedTime": "限时报名",
+  "communityTagDiscuss": "一起讨论",
+  "communityTagDiscover": "发现兴趣",
+  "communityFallbackLeaderboards": "榜单中心",
+  "communityFallbackActivities": "活动大厅",
+  "communityFallbackBoards": "论坛板块",
+  "communityFallbackSkills": "技能广场",
+  "communityStatsLeaderboards": "{count} 个榜单",
+  "@communityStatsLeaderboards": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsActivitiesActive": "{count} 个进行中",
+  "@communityStatsActivitiesActive": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsBoards": "{count} 个板块",
+  "@communityStatsBoards": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsCategories": "{count} 个分类",
+  "@communityStatsCategories": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityHotSearches": "热搜榜",
+  "communityDiscoverMore": "发现更多",
+  "discoveryAnonymousUser": "匿名用户"
 }

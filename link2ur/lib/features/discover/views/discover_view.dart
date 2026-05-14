@@ -1026,6 +1026,7 @@ class _CommunityFeatureGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
       child: GridView.count(
@@ -1036,8 +1037,8 @@ class _CommunityFeatureGrid extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         children: [
           _FeatureTile(
-            title: '榜单',
-            tag: '同城热门',
+            title: l10n.communityTileLeaderboards,
+            tag: l10n.communityTagLocalHot,
             tagColor: const Color(0xFFE09000),
             background: const LinearGradient(
               colors: [Color(0xFFFFFBEB), Color(0xFFFEF0C7)],
@@ -1045,15 +1046,17 @@ class _CommunityFeatureGrid extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             emoji: '🏆',
-            primaryText: leaderboards.isNotEmpty ? leaderboards.first.name : '榜单中心',
+            primaryText: leaderboards.isNotEmpty
+                ? leaderboards.first.name
+                : l10n.communityFallbackLeaderboards,
             secondaryText: leaderboards.isNotEmpty
-                ? '${leaderboards.length} 个榜单'
+                ? l10n.communityStatsLeaderboards(leaderboards.length)
                 : '',
             onTap: () => context.push('/leaderboard'),
           ),
           _FeatureTile(
-            title: '活动',
-            tag: '限时报名',
+            title: l10n.communityTileActivities,
+            tag: l10n.communityTagLimitedTime,
             tagColor: const Color(0xFFFF6B35),
             background: const LinearGradient(
               colors: [Color(0xFFFFF8F3), Color(0xFFFFE9D9)],
@@ -1061,14 +1064,17 @@ class _CommunityFeatureGrid extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             emoji: '🎉',
-            primaryText: activities.isNotEmpty ? activities.first.title : '活动大厅',
-            secondaryText:
-                activities.isNotEmpty ? '${activities.length} 个进行中' : '',
+            primaryText: activities.isNotEmpty
+                ? activities.first.title
+                : l10n.communityFallbackActivities,
+            secondaryText: activities.isNotEmpty
+                ? l10n.communityStatsActivitiesActive(activities.length)
+                : '',
             onTap: () => context.push('/activities'),
           ),
           _FeatureTile(
-            title: '板块',
-            tag: '一起讨论',
+            title: l10n.communityTileBoards,
+            tag: l10n.communityTagDiscuss,
             tagColor: const Color(0xFF2F80ED),
             background: const LinearGradient(
               colors: [Color(0xFFF4F8FF), Color(0xFFE3EDFF)],
@@ -1076,13 +1082,17 @@ class _CommunityFeatureGrid extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             emoji: '💬',
-            primaryText: boards.isNotEmpty ? boards.first.name : '论坛板块',
-            secondaryText: boards.isNotEmpty ? '${boards.length} 个板块' : '',
+            primaryText: boards.isNotEmpty
+                ? boards.first.name
+                : l10n.communityFallbackBoards,
+            secondaryText: boards.isNotEmpty
+                ? l10n.communityStatsBoards(boards.length)
+                : '',
             onTap: () => context.push('/forum'),
           ),
           _FeatureTile(
-            title: '技能',
-            tag: '发现兴趣',
+            title: l10n.communityTileSkills,
+            tag: l10n.communityTagDiscover,
             tagColor: const Color(0xFF7359F2),
             background: const LinearGradient(
               colors: [Color(0xFFF7F2FF), Color(0xFFEBE1FF)],
@@ -1090,10 +1100,12 @@ class _CommunityFeatureGrid extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             emoji: '✨',
-            primaryText:
-                skillCategories.isNotEmpty ? skillCategories.first.name : '技能广场',
-            secondaryText:
-                skillCategories.isNotEmpty ? '${skillCategories.length} 个分类' : '',
+            primaryText: skillCategories.isNotEmpty
+                ? skillCategories.first.name
+                : l10n.communityFallbackSkills,
+            secondaryText: skillCategories.isNotEmpty
+                ? l10n.communityStatsCategories(skillCategories.length)
+                : '',
             onTap: () => context.push('/task-experts'),
           ),
         ],
@@ -1212,15 +1224,15 @@ class _TrendingHorizontal extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               children: [
-                Text('🔥', style: TextStyle(fontSize: 16)),
-                SizedBox(width: 6),
+                const Text('🔥', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 6),
                 Text(
-                  '热搜榜',
-                  style: TextStyle(
+                  context.l10n.communityHotSearches,
+                  style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF1C1C1E),
@@ -1310,15 +1322,15 @@ class _DiscoverMoreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(
         children: [
-          Text('✨', style: TextStyle(fontSize: 18)),
-          SizedBox(width: 6),
+          const Text('✨', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 6),
           Text(
-            '发现更多',
-            style: TextStyle(
+            context.l10n.communityDiscoverMore,
+            style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w800,
               color: Color(0xFF1C1C1E),

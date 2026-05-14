@@ -6343,5 +6343,36 @@
   "bannerBadgePromotion": "推廣",
   "bannerBadgeNew": "新",
   "bannerBadgeHot": "熱門",
-  "bannerBadgeLimited": "限時"
+  "bannerBadgeLimited": "限時",
+  "communityTileLeaderboards": "榜單",
+  "communityTileActivities": "活動",
+  "communityTileBoards": "板塊",
+  "communityTileSkills": "技能",
+  "communityTagLocalHot": "同城熱門",
+  "communityTagLimitedTime": "限時報名",
+  "communityTagDiscuss": "一起討論",
+  "communityTagDiscover": "發現興趣",
+  "communityFallbackLeaderboards": "榜單中心",
+  "communityFallbackActivities": "活動大廳",
+  "communityFallbackBoards": "論壇板塊",
+  "communityFallbackSkills": "技能廣場",
+  "communityStatsLeaderboards": "{count} 個榜單",
+  "@communityStatsLeaderboards": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsActivitiesActive": "{count} 個進行中",
+  "@communityStatsActivitiesActive": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsBoards": "{count} 個板塊",
+  "@communityStatsBoards": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsCategories": "{count} 個分類",
+  "@communityStatsCategories": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityHotSearches": "熱搜榜",
+  "communityDiscoverMore": "發現更多",
+  "discoveryAnonymousUser": "匿名用戶"
 }

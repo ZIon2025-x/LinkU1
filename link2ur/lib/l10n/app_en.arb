@@ -6542,5 +6542,36 @@
   "bannerBadgePromotion": "Promo",
   "bannerBadgeNew": "New",
   "bannerBadgeHot": "Hot",
-  "bannerBadgeLimited": "Limited"
+  "bannerBadgeLimited": "Limited",
+  "communityTileLeaderboards": "Leaderboards",
+  "communityTileActivities": "Activities",
+  "communityTileBoards": "Boards",
+  "communityTileSkills": "Skills",
+  "communityTagLocalHot": "Local Trending",
+  "communityTagLimitedTime": "Limited Time",
+  "communityTagDiscuss": "Discuss",
+  "communityTagDiscover": "Discover",
+  "communityFallbackLeaderboards": "Leaderboard Center",
+  "communityFallbackActivities": "Activity Hall",
+  "communityFallbackBoards": "Forum Boards",
+  "communityFallbackSkills": "Skills Plaza",
+  "communityStatsLeaderboards": "{count} leaderboards",
+  "@communityStatsLeaderboards": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsActivitiesActive": "{count} active",
+  "@communityStatsActivitiesActive": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsBoards": "{count} boards",
+  "@communityStatsBoards": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityStatsCategories": "{count} categories",
+  "@communityStatsCategories": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityHotSearches": "Trending",
+  "communityDiscoverMore": "Discover more",
+  "discoveryAnonymousUser": "Anonymous"
 }

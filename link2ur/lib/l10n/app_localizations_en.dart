@@ -14367,4 +14367,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bannerBadgeLimited => 'Limited';
+
+  @override
+  String get communityTileLeaderboards => 'Leaderboards';
+
+  @override
+  String get communityTileActivities => 'Activities';
+
+  @override
+  String get communityTileBoards => 'Boards';
+
+  @override
+  String get communityTileSkills => 'Skills';
+
+  @override
+  String get communityTagLocalHot => 'Local Trending';
+
+  @override
+  String get communityTagLimitedTime => 'Limited Time';
+
+  @override
+  String get communityTagDiscuss => 'Discuss';
+
+  @override
+  String get communityTagDiscover => 'Discover';
+
+  @override
+  String get communityFallbackLeaderboards => 'Leaderboard Center';
+
+  @override
+  String get communityFallbackActivities => 'Activity Hall';
+
+  @override
+  String get communityFallbackBoards => 'Forum Boards';
+
+  @override
+  String get communityFallbackSkills => 'Skills Plaza';
+
+  @override
+  String communityStatsLeaderboards(int count) {
+    return '$count leaderboards';
+  }
+
+  @override
+  String communityStatsActivitiesActive(int count) {
+    return '$count active';
+  }
+
+  @override
+  String communityStatsBoards(int count) {
+    return '$count boards';
+  }
+
+  @override
+  String communityStatsCategories(int count) {
+    return '$count categories';
+  }
+
+  @override
+  String get communityHotSearches => 'Trending';
+
+  @override
+  String get communityDiscoverMore => 'Discover more';
+
+  @override
+  String get discoveryAnonymousUser => 'Anonymous';
 }

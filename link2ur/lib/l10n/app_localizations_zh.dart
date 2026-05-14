@@ -13740,6 +13740,71 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get bannerBadgeLimited => '限时';
+
+  @override
+  String get communityTileLeaderboards => '榜单';
+
+  @override
+  String get communityTileActivities => '活动';
+
+  @override
+  String get communityTileBoards => '板块';
+
+  @override
+  String get communityTileSkills => '技能';
+
+  @override
+  String get communityTagLocalHot => '同城热门';
+
+  @override
+  String get communityTagLimitedTime => '限时报名';
+
+  @override
+  String get communityTagDiscuss => '一起讨论';
+
+  @override
+  String get communityTagDiscover => '发现兴趣';
+
+  @override
+  String get communityFallbackLeaderboards => '榜单中心';
+
+  @override
+  String get communityFallbackActivities => '活动大厅';
+
+  @override
+  String get communityFallbackBoards => '论坛板块';
+
+  @override
+  String get communityFallbackSkills => '技能广场';
+
+  @override
+  String communityStatsLeaderboards(int count) {
+    return '$count 个榜单';
+  }
+
+  @override
+  String communityStatsActivitiesActive(int count) {
+    return '$count 个进行中';
+  }
+
+  @override
+  String communityStatsBoards(int count) {
+    return '$count 个板块';
+  }
+
+  @override
+  String communityStatsCategories(int count) {
+    return '$count 个分类';
+  }
+
+  @override
+  String get communityHotSearches => '热搜榜';
+
+  @override
+  String get communityDiscoverMore => '发现更多';
+
+  @override
+  String get discoveryAnonymousUser => '匿名用户';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -27478,4 +27543,69 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get bannerBadgeLimited => '限時';
+
+  @override
+  String get communityTileLeaderboards => '榜單';
+
+  @override
+  String get communityTileActivities => '活動';
+
+  @override
+  String get communityTileBoards => '板塊';
+
+  @override
+  String get communityTileSkills => '技能';
+
+  @override
+  String get communityTagLocalHot => '同城熱門';
+
+  @override
+  String get communityTagLimitedTime => '限時報名';
+
+  @override
+  String get communityTagDiscuss => '一起討論';
+
+  @override
+  String get communityTagDiscover => '發現興趣';
+
+  @override
+  String get communityFallbackLeaderboards => '榜單中心';
+
+  @override
+  String get communityFallbackActivities => '活動大廳';
+
+  @override
+  String get communityFallbackBoards => '論壇板塊';
+
+  @override
+  String get communityFallbackSkills => '技能廣場';
+
+  @override
+  String communityStatsLeaderboards(int count) {
+    return '$count 個榜單';
+  }
+
+  @override
+  String communityStatsActivitiesActive(int count) {
+    return '$count 個進行中';
+  }
+
+  @override
+  String communityStatsBoards(int count) {
+    return '$count 個板塊';
+  }
+
+  @override
+  String communityStatsCategories(int count) {
+    return '$count 個分類';
+  }
+
+  @override
+  String get communityHotSearches => '熱搜榜';
+
+  @override
+  String get communityDiscoverMore => '發現更多';
+
+  @override
+  String get discoveryAnonymousUser => '匿名用戶';
 }
