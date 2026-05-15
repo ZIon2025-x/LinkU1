@@ -96,12 +96,17 @@ async def search_posts(
                 school_ids = await visible_forums(current_user, db)
                 visible_category_ids.extend(school_ids)
 
-            # 3. 只搜索可见板块的帖子
+            # 3. 只搜索可见板块的帖子（NULL category 帖子对所有用户可见 - spec 2026-05-15 Part 1）
             if visible_category_ids:
-                query = query.where(models.ForumPost.category_id.in_(visible_category_ids))
+                query = query.where(
+                    or_(
+                        models.ForumPost.category_id.in_(visible_category_ids),
+                        models.ForumPost.category_id.is_(None),
+                    )
+                )
             else:
-                # 如果用户没有任何可见板块（理论上不应该发生），返回空结果
-                query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
+                # 即使无任何可见 categories，NULL category 帖子仍可见
+                query = query.where(models.ForumPost.category_id.is_(None))
 
     # 搜索条件（双语扩展 + pg_trgm 相似度搜索）
     from app.utils.search_expander import build_keyword_filter
@@ -169,7 +174,7 @@ async def search_posts(
             id=post.id,
             title=post.title,
             content_preview=strip_markdown(post.content),
-            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh),
+            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh) if post.category else None,
             author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=display_view_count,
             reply_count=post.reply_count,
@@ -290,17 +295,17 @@ async def get_notifications(
                     if post_id in post_id_to_category
                 }
 
-        # 过滤通知
+        # 过滤通知（NULL category 帖子对所有用户可见 - spec 2026-05-15 Part 1）
         for n in notifications:
             has_permission = False
 
             if n.target_type == "post":
                 category_id = post_category_map.get(n.target_id)
-                if category_id and category_id in visible_category_ids:
+                if category_id is None or category_id in visible_category_ids:
                     has_permission = True
             elif n.target_type == "reply":
                 category_id = reply_category_map.get(n.target_id)
-                if category_id and category_id in visible_category_ids:
+                if category_id is None or category_id in visible_category_ids:
                     has_permission = True
 
             # 只添加有权限访问的通知
@@ -474,17 +479,17 @@ async def get_unread_notification_count(
                     if post_id in post_id_to_category
                 }
 
-        # 统计有权限的通知数量
+        # 统计有权限的通知数量（NULL category 帖子对所有用户可见 - spec 2026-05-15 Part 1）
         for n in notifications:
             has_permission = False
 
             if n.target_type == "post":
                 category_id = post_category_map.get(n.target_id)
-                if category_id and category_id in visible_category_ids:
+                if category_id is None or category_id in visible_category_ids:
                     has_permission = True
             elif n.target_type == "reply":
                 category_id = reply_category_map.get(n.target_id)
-                if category_id and category_id in visible_category_ids:
+                if category_id is None or category_id in visible_category_ids:
                     has_permission = True
 
             if has_permission:
@@ -547,12 +552,17 @@ async def get_hot_posts(
                 school_ids = await visible_forums(current_user, db)
                 visible_category_ids.extend(school_ids)
 
-            # 3. 只搜索可见板块的帖子
+            # 3. 只搜索可见板块的帖子（NULL category 帖子对所有用户可见 - spec 2026-05-15 Part 1）
             if visible_category_ids:
-                query = query.where(models.ForumPost.category_id.in_(visible_category_ids))
+                query = query.where(
+                    or_(
+                        models.ForumPost.category_id.in_(visible_category_ids),
+                        models.ForumPost.category_id.is_(None),
+                    )
+                )
             else:
-                # 如果用户没有任何可见板块，返回空结果
-                query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
+                # 即使无任何可见 categories，NULL category 帖子仍可见
+                query = query.where(models.ForumPost.category_id.is_(None))
 
     # 改进的热度算法：综合考虑点赞、收藏、评论和最近活跃度
     # 使用 last_reply_at 作为时间因子（如果存在），否则使用 created_at
@@ -627,7 +637,7 @@ async def get_hot_posts(
             content_preview=content_preview,
             content_preview_en=content_preview_en,
             content_preview_zh=content_preview_zh,
-            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh),
+            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh) if post.category else None,
             author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=display_view_count,
             reply_count=post.reply_count,
@@ -780,12 +790,17 @@ async def get_user_hot_posts(
             school_ids = await visible_forums(current_user, db)
             visible_category_ids.extend(school_ids)
 
-        # 3. 只返回可见板块的帖子
+        # 3. 只返回可见板块的帖子（NULL category 帖子对所有用户可见 - spec 2026-05-15 Part 1）
         if visible_category_ids:
-            query = query.where(models.ForumPost.category_id.in_(visible_category_ids))
+            query = query.where(
+                or_(
+                    models.ForumPost.category_id.in_(visible_category_ids),
+                    models.ForumPost.category_id.is_(None),
+                )
+            )
         else:
-            # 如果用户没有任何可见板块，返回空结果
-            query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
+            # 即使无任何可见 categories，NULL category 帖子仍可见
+            query = query.where(models.ForumPost.category_id.is_(None))
 
     # 改进的热度算法：综合考虑点赞、收藏、评论和最近活跃度
     # 使用 last_reply_at 作为时间因子（如果存在），否则使用 created_at
@@ -860,7 +875,7 @@ async def get_user_hot_posts(
             content_preview=content_preview,
             content_preview_en=content_preview_en,
             content_preview_zh=content_preview_zh,
-            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh),
+            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh) if post.category else None,
             author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=display_view_count,
             reply_count=post.reply_count,

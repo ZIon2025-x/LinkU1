@@ -612,23 +612,31 @@ async def visible_forums(user: Optional[models.User], db: AsyncSession) -> List[
 
 
 async def assert_forum_visible(
-    user: Optional[models.User], 
-    forum_id: int, 
+    user: Optional[models.User],
+    forum_id: Optional[int],
     db: AsyncSession,
     raise_exception: bool = True
 ) -> bool:
     """
     校验用户是否有权限访问指定板块
-    
+
     注意：此函数应在 require_student_verified(country="UK") 依赖之后调用，
     或确保传入的用户已通过 UK 学生认证。否则非 UK 大学认证用户也会被允许访问。
+
+    NULL 短路 (spec 2026-05-15 Part 1)：当 forum_id 为 None 时（即帖子未归属任何
+    板块），直接视为可见，对所有用户开放。NULL category 帖子出现在社区发现流，
+    但不会被任何具体板块详情页过滤命中（用户主动选板块时传入的是具体 id）。
     """
+    # NULL category 帖子（无板块归属）对所有用户可见
+    if forum_id is None:
+        return True
+
     # 当前版本：管理员/版主全局越权；如需细分，改为"版主-板块映射"校验
     # 检查是否为管理员（通过检查是否有管理员会话）
     # 注意：这里简化处理，实际应该检查用户是否为管理员
     # 由于 User 模型没有直接的 is_admin 属性，这里暂时跳过管理员检查
     # 管理员权限检查应在调用此函数之前完成
-    
+
     # 获取板块信息
     forum_result = await db.execute(
         select(models.ForumCategory).where(models.ForumCategory.id == forum_id)

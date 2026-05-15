@@ -1612,7 +1612,10 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
                 models.ForumFavorite.user_id == user_id,
                 models.ForumPost.is_deleted == False,
                 models.ForumPost.is_visible == True,
-                models.ForumPost.category_id.in_(allowed_cat_ids),
+                or_(
+                    models.ForumPost.category_id.in_(allowed_cat_ids),
+                    models.ForumPost.category_id.is_(None),
+                ),
             ))
             .order_by(desc(models.ForumFavorite.created_at))
             .limit(10)
@@ -1639,7 +1642,10 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
                 models.ForumReply.is_visible == True,
                 models.ForumPost.is_deleted == False,
                 models.ForumPost.is_visible == True,
-                models.ForumPost.category_id.in_(allowed_cat_ids),
+                or_(
+                    models.ForumPost.category_id.in_(allowed_cat_ids),
+                    models.ForumPost.category_id.is_(None),
+                ),
             ))
             .order_by(desc(models.ForumReply.created_at))
             .limit(10)
@@ -1659,7 +1665,10 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
             .where(and_(
                 models.ForumPost.is_deleted == False,
                 models.ForumPost.is_visible == True,
-                models.ForumPost.category_id.in_(allowed_cat_ids),
+                or_(
+                    models.ForumPost.category_id.in_(allowed_cat_ids),
+                    models.ForumPost.category_id.is_(None),
+                ),
             ))
             .order_by(desc(models.ForumPost.view_count))
             .limit(10)
@@ -1682,7 +1691,10 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
         .where(and_(
             models.ForumPost.is_deleted == False,
             models.ForumPost.is_visible == True,
-            models.ForumPost.category_id.in_(allowed_cat_ids),
+            or_(
+                models.ForumPost.category_id.in_(allowed_cat_ids),
+                models.ForumPost.category_id.is_(None),
+            ),
             or_(
                 models.ForumPost.title.ilike(like_kw),
                 models.ForumPost.content.ilike(like_kw),

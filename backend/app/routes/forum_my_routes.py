@@ -7,7 +7,7 @@ from typing import Optional
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -186,8 +186,9 @@ async def get_my_posts(
 
     for post in posts:
         # 如果不是管理员，过滤掉无权限访问的学校板块
+        # NULL category 帖子对所有用户可见 (spec 2026-05-15 Part 1)
         if not is_admin_user and visible_category_ids is not None:
-            if post.category_id not in visible_category_ids:
+            if post.category_id is not None and post.category_id not in visible_category_ids:
                 continue
 
         _otype, _oid = _post_identity(post)
@@ -197,7 +198,7 @@ async def get_my_posts(
             id=post.id,
             title=post.title,
             content_preview=strip_markdown(post.content),
-            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh),
+            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh) if post.category else None,
             author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=post.view_count,
             reply_count=post.reply_count,
@@ -233,7 +234,13 @@ async def get_my_posts(
                 models.ForumPost.author_id == current_user.id,
                 models.ForumPost.is_deleted == False
             )
-        filtered_query = filtered_query.where(models.ForumPost.category_id.in_(visible_category_ids))
+        # NULL category 帖子对所有用户可见 (spec 2026-05-15 Part 1)
+        filtered_query = filtered_query.where(
+            or_(
+                models.ForumPost.category_id.in_(visible_category_ids),
+                models.ForumPost.category_id.is_(None),
+            )
+        )
         filtered_count_query = select(func.count()).select_from(filtered_query.subquery())
         filtered_total_result = await db.execute(filtered_count_query)
         total = filtered_total_result.scalar() or 0
@@ -397,7 +404,7 @@ async def get_my_favorites(
                     id=post.id,
                     title=post.title,
                     content_preview=strip_markdown(post.content),
-                    category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh),
+                    category=schemas.CategoryInfo(id=post.category.id, name=post.category.name, name_en=post.category.name_en, name_zh=post.category.name_zh) if post.category else None,
                     author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
                     view_count=post.view_count,
                     reply_count=post.reply_count,
@@ -515,7 +522,7 @@ async def get_my_likes(
                         "category": {
                             "id": post.category.id,
                             "name": post.category.name
-                        },
+                        } if post.category else None,
                         "author": {
                             "id": author_info.id,
                             "name": author_info.name,
