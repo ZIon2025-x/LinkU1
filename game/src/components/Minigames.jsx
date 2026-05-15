@@ -665,12 +665,17 @@ function LectureRulesBody({ dirInfo, totalTime, theme, week }) {
   );
 }
 
-export function LectureMinigame({ onComplete, onCancel, week }) {
+export function LectureMinigame({ onComplete, onCancel, week, tierFlags = {}, onMarkTierSeen = () => {} }) {
   const theme = useMemo(() => pickLectureTheme(week || 1), [week]);
   const totalTime = useMemo(() => lectureTimeForWeek(week || 1), [week]);
   const dirInfo = useMemo(() => lectureDirInfo(week || 1), [week]);
 
-  const [phase, setPhase] = useState('intro');
+  const [phase, setPhase] = useState(() => {
+    const w = week || 1;
+    if (w >= 23 && !tierFlags.tier3Seen) return 'tier-upgrade-3';
+    if (w >= 11 && !tierFlags.tier2Seen) return 'tier-upgrade-2';
+    return 'intro';
+  });
   const [grid] = useState(() => generateLectureGrid(theme));
   const [path, setPath] = useState([]);
   const [foundWords, setFoundWords] = useState([]);
@@ -807,6 +812,56 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
         <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#d4b070' }}>📖 MINIGAME · LECTURE</div>
         <h2 className="text-lg mb-1 font-light">{theme.name}</h2>
         <div className="text-xs opacity-60 italic mb-3" style={{ fontFamily: 'monospace' }}>字母连词 · {totalTime} 秒 · 抓当周关键词 ★</div>
+
+        {phase === 'tier-upgrade-2' && (
+          <div className="text-center py-6">
+            <div className="text-3xl mb-3">🎓</div>
+            <div className="text-xs tracking-[0.3em] mb-2" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
+              难度升级
+            </div>
+            <div className="text-base font-light mb-2">
+              W{week || 11} · 你的英文连词能力升了一档
+            </div>
+            <div className="text-sm opacity-80 mb-6" style={{ lineHeight: '1.85' }}>
+              现在开始：可以「<strong style={{ color: '#d4b070' }}>竖着</strong>」连词了
+            </div>
+            <button
+              onClick={() => {
+                audio.click();
+                onMarkTierSeen(2);
+                setPhase('intro');
+              }}
+              className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm"
+            >
+              开始挑战
+            </button>
+          </div>
+        )}
+
+        {phase === 'tier-upgrade-3' && (
+          <div className="text-center py-6">
+            <div className="text-3xl mb-3">🎓</div>
+            <div className="text-xs tracking-[0.3em] mb-2" style={{ fontFamily: 'monospace', color: '#d4b070' }}>
+              难度升级
+            </div>
+            <div className="text-base font-light mb-2">
+              W{week || 23} · 你的英文连词能力再升一档
+            </div>
+            <div className="text-sm opacity-80 mb-6" style={{ lineHeight: '1.85' }}>
+              现在开始：横、竖、<strong style={{ color: '#d4b070' }}>斜，全 8 方向</strong>都能连
+            </div>
+            <button
+              onClick={() => {
+                audio.click();
+                onMarkTierSeen(3);
+                setPhase('intro');
+              }}
+              className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm"
+            >
+              开始挑战
+            </button>
+          </div>
+        )}
 
         {phase === 'intro' && (
           <>

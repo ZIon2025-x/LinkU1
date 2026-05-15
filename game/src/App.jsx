@@ -2064,6 +2064,14 @@ export default function App() {
         {activeMinigameLecture && (
           <LectureMinigame
             week={week}
+            tierFlags={{
+              tier2Seen: !!state.flags?.lecture_tier2_seen,
+              tier3Seen: !!state.flags?.lecture_tier3_seen,
+            }}
+            onMarkTierSeen={(tier) => dispatch({
+              type: 'SET_FLAG',
+              flag: tier === 2 ? 'lecture_tier2_seen' : 'lecture_tier3_seen',
+            })}
             onComplete={(result) => {
               audio.click();
               dispatch({ type: 'APPLY_EFFECT', effect: result.effect });
