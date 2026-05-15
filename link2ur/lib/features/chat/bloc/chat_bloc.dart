@@ -104,6 +104,23 @@ class ChatSendVideo extends ChatEvent {
       ];
 }
 
+class ChatSendFile extends ChatEvent {
+  const ChatSendFile({
+    required this.bytes,
+    required this.filename,
+    required this.contentType,
+    this.senderId,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String contentType;
+  final String? senderId;
+
+  @override
+  List<Object?> get props => [bytes, filename, contentType, senderId];
+}
+
 class ChatMessageReceived extends ChatEvent {
   const ChatMessageReceived(this.message);
 
@@ -254,6 +271,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSendMessage>(_onSendMessage);
     on<ChatSendImage>(_onSendImage);
     on<ChatSendVideo>(_onSendVideo);
+    on<ChatSendFile>(_onSendFile);
     on<ChatMessageReceived>(_onMessageReceived);
     on<ChatMarkAsRead>(_onMarkAsRead);
     on<ChatPeerTypingReceived>(_onPeerTyping);
@@ -694,6 +712,95 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
     } catch (e) {
       AppLogger.error('Failed to send video', e);
+      List<Message> list = state.messages;
+      if (pendingMessage != null) {
+        list = state.messages.where((m) => m.id != pendingMessage!.id).toList();
+      }
+      String errorCode = 'chat_upload_failed';
+      if (e is MessageException && e.code != null) {
+        errorCode = e.code!;
+      }
+      emit(state.copyWith(
+        messages: list,
+        isSending: false,
+        errorMessage: errorCode,
+      ));
+    }
+  }
+
+  Future<void> _onSendFile(
+    ChatSendFile event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (!NetworkMonitor.instance.isConnected) {
+      emit(state.copyWith(errorMessage: 'chat_network_offline'));
+      return;
+    }
+    if (state.taskId == null) {
+      emit(state.copyWith(errorMessage: 'chat_upload_failed'));
+      return;
+    }
+
+    emit(state.copyWith(isSending: true));
+    Message? pendingMessage;
+
+    try {
+      final upload = await _messageRepository.uploadChatPdf(
+        event.bytes,
+        event.filename,
+        state.taskId!,
+      );
+
+      final senderId = event.senderId?.trim();
+      final canOptimistic = senderId != null && senderId.isNotEmpty;
+      if (canOptimistic) {
+        pendingMessage = Message(
+          id: _nextPendingId(),
+          senderId: senderId,
+          receiverId: state.userId,
+          content: '[文件:${event.filename}]',
+          messageType: 'file',
+          createdAt: DateTime.now().toUtc(),
+        );
+        emit(state.copyWith(
+          messages: state.isTaskChat
+              ? [pendingMessage, ...state.messages]
+              : [...state.messages, pendingMessage],
+        ));
+      }
+
+      final message = await _messageRepository.sendTaskChatMessage(
+        state.taskId!,
+        content: '[文件:${event.filename}]',
+        messageType: 'file',
+        attachments: [
+          {
+            'attachment_type': 'file',
+            'blob_id': upload.blobId,
+            'meta': {
+              'original_filename': upload.originalName,
+              'content_type': event.contentType,
+              'size': upload.size,
+            },
+          },
+        ],
+      );
+
+      if (canOptimistic && pendingMessage != null) {
+        final list = state.messages
+            .map((m) => m.id == pendingMessage!.id ? message : m)
+            .toList();
+        emit(state.copyWith(messages: list, isSending: false));
+      } else {
+        emit(state.copyWith(
+          messages: state.isTaskChat
+              ? [message, ...state.messages]
+              : [...state.messages, message],
+          isSending: false,
+        ));
+      }
+    } catch (e) {
+      AppLogger.error('Failed to send file', e);
       List<Message> list = state.messages;
       if (pendingMessage != null) {
         list = state.messages.where((m) => m.id != pendingMessage!.id).toList();
