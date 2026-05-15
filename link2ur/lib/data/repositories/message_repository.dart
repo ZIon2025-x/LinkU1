@@ -483,6 +483,67 @@ class MessageRepository {
     return response.data!['url'] as String? ?? '';
   }
 
+  /// 上传任务聊天视频(走 /api/upload/file?usage=chat_media&task_id=).
+  ///
+  /// 返回 (url, blobId, size, originalName):
+  /// - url: 15min 签名访问 URL,可直接传给 video_player
+  /// - blobId: 持久 file_id,要作为 attachment.blob_id 发到 sendTaskChatMessage
+  /// - size: 文件实际大小(bytes),写入 meta
+  /// - originalName: 原始文件名,写入 meta
+  Future<({String url, String blobId, int size, String originalName})> uploadChatVideo(
+    Uint8List bytes,
+    String filename,
+    int taskId,
+  ) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
+      '${ApiEndpoints.uploadFile}?usage=chat_media&task_id=$taskId',
+      bytes: bytes,
+      filename: filename,
+      fieldName: 'file',
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw MessageException(
+        response.errorCode ?? response.message ?? 'chat_upload_failed',
+        code: response.errorCode,
+      );
+    }
+    final d = response.data!;
+    return (
+      url: d['url'] as String? ?? '',
+      blobId: d['file_id'] as String? ?? '',
+      size: d['size'] as int? ?? 0,
+      originalName: d['original_name'] as String? ?? filename,
+    );
+  }
+
+  /// 上传任务聊天 PDF(走 /api/upload/file?usage=chat_media&task_id=)。
+  /// 返回结构同 [uploadChatVideo]。
+  Future<({String url, String blobId, int size, String originalName})> uploadChatPdf(
+    Uint8List bytes,
+    String filename,
+    int taskId,
+  ) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
+      '${ApiEndpoints.uploadFile}?usage=chat_media&task_id=$taskId',
+      bytes: bytes,
+      filename: filename,
+      fieldName: 'file',
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw MessageException(
+        response.errorCode ?? response.message ?? 'chat_upload_failed',
+        code: response.errorCode,
+      );
+    }
+    final d = response.data!;
+    return (
+      url: d['url'] as String? ?? '',
+      blobId: d['file_id'] as String? ?? '',
+      size: d['size'] as int? ?? 0,
+      originalName: d['original_name'] as String? ?? filename,
+    );
+  }
+
   /// 发送正在输入状态
   void sendTypingStatus(String receiverId, {int? taskId}) {
     WebSocketService.instance.sendTyping(receiverId: receiverId, taskId: taskId);
