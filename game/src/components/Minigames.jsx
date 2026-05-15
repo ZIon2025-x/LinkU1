@@ -666,16 +666,6 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
   function start() {
     audio.click();
     setPhase('playing');
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
-          clearInterval(timerRef.current);
-          setPhase('done');
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
   }
 
   const cellKey = (r, c) => `${r}:${c}`;
@@ -775,7 +765,20 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
     });
   }
 
-  useEffect(() => () => clearInterval(timerRef.current), []);
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          setPhase('done');
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [phase]);
 
   const currentWord = path.map(p => grid[p.r][p.c]).join('');
 
