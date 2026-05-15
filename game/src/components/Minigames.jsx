@@ -10,6 +10,7 @@ import {
   pickEssayPuzzles, pickMatchRound,
   generateYellowLabelRound, yellowLabelConfig,
 } from '../data/index.js';
+import { MinigameHelpButton, MinigameRulesModal } from './MinigameRulesModal.jsx';
 
 // 按 mask rate 决定一个词是否被打码。短词(≤2 chars)永不打。
 function maskKeyWord(text, rate) {
@@ -648,6 +649,22 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
 // ========================================
 // 上课字母连词 minigame
 // ========================================
+function LectureRulesBody({ dirInfo, totalTime, theme, week }) {
+  return (
+    <>
+      Whitmore 在黑板上写理论。你的笔记本上是一团字母。<br/>
+      <br/>
+      <span style={{ color: '#d4b070' }}>· 本周可连：<strong>{dirInfo.label}</strong>（{dirInfo.desc}）</span><br/>
+      · 点击相邻字母连成英文单词<br/>
+      · 3+ 字母才算分，越长分越高<br/>
+      · 撞当周主题词 ★ 分数翻倍<br/>
+      · 时间到自动交卷<br/>
+      <br/>
+      <span className="opacity-60">本场:{totalTime} 秒 · W{week} · 主题 {theme.bonus.slice(0, 4).join(' / ')} ...</span>
+    </>
+  );
+}
+
 export function LectureMinigame({ onComplete, onCancel, week }) {
   const theme = useMemo(() => pickLectureTheme(week || 1), [week]);
   const totalTime = useMemo(() => lectureTimeForWeek(week || 1), [week]);
@@ -661,6 +678,7 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(totalTime);
   const [lastWordFeedback, setLastWordFeedback] = useState(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const timerRef = useRef(null);
 
   function start() {
@@ -766,7 +784,7 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
   }
 
   useEffect(() => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing' || rulesOpen) return;
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
@@ -778,13 +796,14 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [phase]);
+  }, [phase, rulesOpen]);
 
   const currentWord = path.map(p => grid[p.r][p.c]).join('');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-4 max-h-[95vh] overflow-y-auto">
+      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-4 max-h-[95vh] overflow-y-auto relative">
+        <MinigameHelpButton onClick={() => { audio.click(); setRulesOpen(true); }} />
         <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#d4b070' }}>📖 MINIGAME · LECTURE</div>
         <h2 className="text-lg mb-1 font-light">{theme.name}</h2>
         <div className="text-xs opacity-60 italic mb-3" style={{ fontFamily: 'monospace' }}>字母连词 · {totalTime} 秒 · 抓当周关键词 ★</div>
@@ -792,15 +811,7 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
         {phase === 'intro' && (
           <>
             <div className="text-sm opacity-90 mb-4" style={{ lineHeight: '1.85' }}>
-              Whitmore 在黑板上写理论。你的笔记本上是一团字母。<br/>
-              <br/>
-              <span style={{ color: '#d4b070' }}>· 本周可连：<strong>{dirInfo.label}</strong>（{dirInfo.desc}）</span><br/>
-              · 点击相邻字母连成英文单词<br/>
-              · 3+ 字母才算分，越长分越高<br/>
-              · 撞当周主题词 ★ 分数翻倍<br/>
-              · 时间到自动交卷<br/>
-              <br/>
-              <span className="opacity-60">本场:{totalTime} 秒 · 主题 {theme.bonus.slice(0, 4).join(' / ')} ...</span>
+              <LectureRulesBody dirInfo={dirInfo} totalTime={totalTime} theme={theme} week={week || 1} />
             </div>
             <button onClick={start} className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm">
               开始
@@ -898,6 +909,14 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
             </button>
           </>
         )}
+
+        <MinigameRulesModal
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          title={`LECTURE · ${theme.name}`}
+        >
+          <LectureRulesBody dirInfo={dirInfo} totalTime={totalTime} theme={theme} week={week || 1} />
+        </MinigameRulesModal>
       </div>
     </div>
   );
