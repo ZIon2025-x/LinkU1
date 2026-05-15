@@ -260,6 +260,14 @@ export function YellowLabelMinigame({ onComplete, feedback, onDismiss, week }) {
     </div>
   );
 }
+function PretRulesBody({ set }) {
+  return (
+    <div className="text-sm opacity-90 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
+      {set.intro}
+    </div>
+  );
+}
+
 export function PretMinigame({ onComplete, onCancel, week, pretPlaysCount }) {
   // 按玩家进度选一套对话(避免重复) + 锁定本场 maskRate
   const set = useMemo(() => pickPretSet(pretPlaysCount || 0), [pretPlaysCount]);
@@ -274,6 +282,7 @@ export function PretMinigame({ onComplete, onCancel, week, pretPlaysCount }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [showFeedback, setShowFeedback] = useState(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   function start() { audio.click(); setPhase('quiz'); }
 
@@ -318,7 +327,8 @@ export function PretMinigame({ onComplete, onCancel, week, pretPlaysCount }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-5">
+      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-5 relative">
+        <MinigameHelpButton onClick={() => { audio.click(); setRulesOpen(true); }} />
         <div className="text-xs tracking-[0.3em] opacity-50 mb-2" style={{ fontFamily: 'monospace' }}>☕ MINIGAME · LISTENING {100 - maskRate}%</div>
         <h2 className="text-xl mb-1 font-light">{set.setting}</h2>
         <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>5 句对话 · 你能听懂多少？</div>
@@ -335,8 +345,8 @@ export function PretMinigame({ onComplete, onCancel, week, pretPlaysCount }) {
 
         {phase === 'intro' && (
           <>
-            <div className="text-sm opacity-90 mb-5 whitespace-pre-line" style={{ lineHeight: '1.85' }}>
-              {set.intro}
+            <div className="mb-5">
+              <PretRulesBody set={set} />
             </div>
             <button onClick={start} className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm">
               点单
@@ -391,6 +401,14 @@ export function PretMinigame({ onComplete, onCancel, week, pretPlaysCount }) {
             </button>
           </>
         )}
+
+        <MinigameRulesModal
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          title="PRET · 听不懂的英语"
+        >
+          <PretRulesBody set={set} />
+        </MinigameRulesModal>
       </div>
     </div>
   );
