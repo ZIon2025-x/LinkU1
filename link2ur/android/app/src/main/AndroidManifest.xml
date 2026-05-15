@@ -11,12 +11,12 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
 
-    <!-- 任务聊天附件 — 相册保存权限(Android 13+ READ_MEDIA_* + 旧版 WRITE_EXTERNAL_STORAGE) -->
+    <!-- 任务聊天附件 — 媒体选择 + 保存权限(Android 13+ READ_MEDIA_* + Android 10/API 29 及更早需 WRITE_EXTERNAL_STORAGE) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
+        android:maxSdkVersion="29" />
 
     <application
         android:label="Link²Ur"
@@ -24,6 +24,7 @@
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
+        android:requestLegacyExternalStorage="true"
         android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"

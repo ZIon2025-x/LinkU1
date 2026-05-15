@@ -12,3 +12,5 @@
 "NSCameraUsageDescription" = "該應用程式將使用相機拍攝您的身份證件照片，以設定您的支付帳戶。";
 
 "NSPhotoLibraryUsageDescription" = "該應用需要存取您的相簿，以上傳個人頭像、任務圖片和貼文圖片。";
+
+"NSPhotoLibraryAddUsageDescription" = "Link2Ur 需要相簿寫入權限,以便將任務聊天的圖片和影片儲存到您的相簿。";

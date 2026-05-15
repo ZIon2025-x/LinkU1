@@ -12,3 +12,5 @@
 "NSCameraUsageDescription" = "This app will use the camera to take photos of your ID documents for setting up your payment account.";
 
 "NSPhotoLibraryUsageDescription" = "This app needs access to your photo library to upload images for your profile, tasks, and posts.";
+
+"NSPhotoLibraryAddUsageDescription" = "Link2Ur saves images and videos from task chats to your photo library.";
