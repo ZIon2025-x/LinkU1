@@ -34,6 +34,19 @@ function renderMaskedText(text, maskable, maskRate) {
   return result;
 }
 
+function YellowLabelRulesBody({ cfg }) {
+  return (
+    <>
+      晚上 9 点 Tesco。员工把一批 <span style={{ color: '#d4b070' }}>£X 黄标</span> 商品摆出来。<br/>
+      <br/>
+      · 看 {cfg.peekMs/1000}s 记住哪几张是黄标<br/>
+      · 卡牌翻面 + 洗 {cfg.shuffles} 次<br/>
+      · 点出 <strong style={{ color: '#d4b070' }}>{cfg.yellowCount}</strong> 张黄标的位置<br/>
+      · 错抢扣 1.5× 价
+    </>
+  );
+}
+
 export function YellowLabelMinigame({ onComplete, feedback, onDismiss, week }) {
   // 生成本场 round + 难度配置
   const round = useMemo(() => generateYellowLabelRound(week || 1), [week]);
@@ -48,6 +61,8 @@ export function YellowLabelMinigame({ onComplete, feedback, onDismiss, week }) {
   const [phase, setPhase] = useState('ready');
   const [picked, setPicked] = useState(new Set());
   const [shuffleCount, setShuffleCount] = useState(0);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const helpAvailable = phase === 'ready' || phase === 'pick' || phase === 'done';
   const timerRef = useRef(null);
   const shuffleRef = useRef(null);
 
@@ -203,19 +218,17 @@ export function YellowLabelMinigame({ onComplete, feedback, onDismiss, week }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: 'rgba(10, 8, 6, 0.9)' }}>
-      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-5 animate-fadein">
+      <div className="bg-[#1a1612] border border-current/40 max-w-md w-full p-5 animate-fadein relative">
+        {helpAvailable && (
+          <MinigameHelpButton onClick={() => { audio.click(); setRulesOpen(true); }} />
+        )}
         <div className="text-xs tracking-[0.3em] opacity-50 mb-2" style={{ fontFamily: 'monospace' }}>MINIGAME · LV {cfg.cards}x{cfg.yellowCount}</div>
         <h2 className="text-xl mb-3 font-light">🛒 抢黄标 · 记忆挑战</h2>
 
         {phase === 'ready' && (
           <>
             <div className="text-sm opacity-90 mb-4" style={{ lineHeight: '1.8' }}>
-              晚上 9 点 Tesco。员工把一批 <span style={{ color: '#d4b070' }}>£X 黄标</span> 商品摆出来。<br/>
-              <br/>
-              · 看 {cfg.peekMs/1000}s 记住哪几张是黄标<br/>
-              · 卡牌翻面 + 洗 {cfg.shuffles} 次<br/>
-              · 点出 <strong style={{ color: '#d4b070' }}>{cfg.yellowCount}</strong> 张黄标的位置<br/>
-              · 错抢扣 1.5× 价
+              <YellowLabelRulesBody cfg={cfg} />
             </div>
             <button onClick={start} className="w-full py-3 border border-current hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm">
               开始
@@ -256,6 +269,13 @@ export function YellowLabelMinigame({ onComplete, feedback, onDismiss, week }) {
         {feedback && phase === 'done' && (
           <div className="mt-3 border-l-2 border-current/50 pl-4 py-1 italic opacity-90 text-sm" style={{ lineHeight: '1.8' }}>{feedback}</div>
         )}
+        <MinigameRulesModal
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          title={`抢黄标 · LV ${cfg.cards}x${cfg.yellowCount}`}
+        >
+          <YellowLabelRulesBody cfg={cfg} />
+        </MinigameRulesModal>
       </div>
     </div>
   );
