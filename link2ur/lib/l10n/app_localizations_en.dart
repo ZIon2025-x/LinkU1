@@ -8294,6 +8294,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumSelectCategory => 'Select category';
 
   @override
+  String get forumAddTopicOptional => 'Add a topic (optional)';
+
+  @override
   String get settingsPleaseLoginFirst => 'Please login first';
 
   @override

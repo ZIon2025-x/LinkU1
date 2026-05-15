@@ -15227,6 +15227,12 @@ abstract class AppLocalizations {
   /// **'Select category'**
   String get forumSelectCategory;
 
+  /// Topic picker section label on create-post page
+  ///
+  /// In en, this message translates to:
+  /// **'Add a topic (optional)'**
+  String get forumAddTopicOptional;
+
   /// No description provided for @settingsPleaseLoginFirst.
   ///
   /// In en, this message translates to:

@@ -3808,6 +3808,7 @@
   "forumEnterTitle": "請輸入標題",
   "forumShareThoughts": "分享你的想法...",
   "forumSelectCategory": "選擇分類",
+  "forumAddTopicOptional": "新增話題（可選）",
   "settingsPleaseLoginFirst": "請先登入",
   "settingsUnknown": "未知",
   "settingsLoading": "載入中...",

@@ -280,10 +280,7 @@ class _CreatePostViewState extends State<CreatePostView> {
       return;
     }
 
-    if (_selectedCategoryId == null) {
-      AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
-      return;
-    }
+    // category_id 现在可选 (Task 6 / migration 220): 用户可以不选板块直接发帖
 
     // 在 await 之前捕获 bloc 和 repo 引用，避免 async gap 后 context 失效
     final repo = context.read<ForumRepository>();
@@ -329,7 +326,7 @@ class _CreatePostViewState extends State<CreatePostView> {
         CreatePostRequest(
           title: title,
           content: content,
-          categoryId: _selectedCategoryId!,
+          categoryId: _selectedCategoryId,
           images: imageUrls,
           attachments: uploadedAttachments,
           linkedItemType: _linkedItemType,
@@ -558,8 +555,8 @@ class _CreatePostViewState extends State<CreatePostView> {
                     return AppSelectField<int>(
                       key: ValueKey(_selectedCategoryId),
                       value: _selectedCategoryId,
-                      hint: context.l10n.forumSelectCategory,
-                      sheetTitle: context.l10n.forumSelectCategory,
+                      hint: context.l10n.forumAddTopicOptional,
+                      sheetTitle: context.l10n.forumAddTopicOptional,
                       prefixIcon: Icons.forum_outlined,
                       options: postableCategories.map((category) {
                         return SelectOption(

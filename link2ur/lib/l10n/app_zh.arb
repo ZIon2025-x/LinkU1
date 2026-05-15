@@ -3836,6 +3836,7 @@
   "forumEnterTitle": "请输入标题",
   "forumShareThoughts": "分享你的想法...",
   "forumSelectCategory": "选择分类",
+  "forumAddTopicOptional": "添加话题（可选）",
   "settingsPleaseLoginFirst": "请先登录",
   "settingsUnknown": "未知",
   "settingsLoading": "加载中...",

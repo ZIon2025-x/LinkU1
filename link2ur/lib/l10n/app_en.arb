@@ -3900,6 +3900,10 @@
   "forumEnterTitle": "Enter title",
   "forumShareThoughts": "Share your thoughts...",
   "forumSelectCategory": "Select category",
+  "forumAddTopicOptional": "Add a topic (optional)",
+  "@forumAddTopicOptional": {
+    "description": "Topic picker section label on create-post page"
+  },
   "settingsPleaseLoginFirst": "Please login first",
   "settingsUnknown": "Unknown",
   "settingsLoading": "Loading...",

@@ -7959,6 +7959,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumSelectCategory => '选择分类';
 
   @override
+  String get forumAddTopicOptional => '添加话题（可选）';
+
+  @override
   String get settingsPleaseLoginFirst => '请先登录';
 
   @override
@@ -21772,6 +21775,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumSelectCategory => '選擇分類';
+
+  @override
+  String get forumAddTopicOptional => '新增話題（可選）';
 
   @override
   String get settingsPleaseLoginFirst => '請先登入';
