@@ -197,6 +197,36 @@ def test_ai_tools_forum_search_includes_null():
 
 
 # ============================================================
+# Step 7: message_routes 通知 visibility 2 处 (C2 follow-up)
+# ============================================================
+
+def test_message_routes_notification_visibility_allows_null():
+    """message_routes.py 通知可见性 2 处应允许 NULL category"""
+    src = (REPO_ROOT / "app" / "routes" / "message_routes.py").read_text(encoding="utf-8")
+    # 旧形式不应该存在
+    bad1 = re.compile(r"if\s+cat_id\s+and\s+cat_id\s+in\s+visible_category_ids")
+    bad2 = re.compile(r"if\s+not\s+cat_id\s+or\s+cat_id\s+not\s+in\s+visible_category_ids")
+    assert not bad1.findall(src), "message_routes.py:449 区域还有旧形式 NULL-unsafe 检查"
+    assert not bad2.findall(src), "message_routes.py:543 区域还有旧形式 NULL-unsafe 检查"
+
+
+# ============================================================
+# Step 8: ai_tools forum INNER JOIN 检查 (I1 follow-up)
+# ============================================================
+
+def test_ai_tools_forum_uses_outerjoin_for_null_safety():
+    """ai_tools.py _list_my_forum_posts / _get_forum_post_detail 应用 outerjoin 不丢 NULL 帖"""
+    src = AI_TOOLS.read_text(encoding="utf-8")
+    # 检查 ForumCategory 相关 JOIN 都是 outerjoin 而非 join
+    # 直接 grep: 不应该有 .join(models.ForumCategory, 的形式（应当全是 outerjoin）
+    bad = re.compile(r"\.join\(\s*models\.ForumCategory")
+    matches = bad.findall(src)
+    assert not matches, (
+        f"ai_tools.py 还有 {len(matches)} 处 .join(ForumCategory) — 应改 .outerjoin 否则 NULL 帖被过滤"
+    )
+
+
+# ============================================================
 # Sanity: 所有改过的源文件都还能 ast.parse
 # ============================================================
 

@@ -675,7 +675,8 @@ async def _list_my_forum_posts(executor: ToolExecutor, input: dict) -> dict:
 
     rows = (await executor.db.execute(
         select(models.ForumPost, models.ForumCategory)
-        .join(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
+        # outerjoin: NULL category 帖也能被列出 (spec 2026-05-15)
+        .outerjoin(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
         .where(and_(*conditions))
         .order_by(desc(models.ForumPost.created_at))
         .offset((page - 1) * page_size).limit(page_size)
@@ -686,7 +687,10 @@ async def _list_my_forum_posts(executor: ToolExecutor, input: dict) -> dict:
     posts = [{
         "id": post.id,
         "title": _forum_post_display_title(post, lang),
-        "category_name": getattr(cat, f"name_{lang_key}", None) or cat.name,
+        # cat 可能是 None（NULL category 帖子，outerjoin 之后）
+        "category_name": (
+            (getattr(cat, f"name_{lang_key}", None) or cat.name) if cat else None
+        ),
         "view_count": post.view_count,
         "reply_count": post.reply_count,
         "created_at": format_iso_utc(post.created_at) if post.created_at else None,
@@ -954,7 +958,8 @@ async def _get_forum_post_detail(executor: ToolExecutor, input: dict) -> dict:
 
     row = (await executor.db.execute(
         select(models.ForumPost, models.ForumCategory)
-        .join(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
+        # outerjoin: NULL category 帖也能被查到 (spec 2026-05-15)
+        .outerjoin(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
         .where(and_(models.ForumPost.id == post_id, models.ForumPost.is_deleted == False))
     )).first()
     if not row:
@@ -964,7 +969,8 @@ async def _get_forum_post_detail(executor: ToolExecutor, input: dict) -> dict:
     if not post.is_visible and post.author_id != executor.user.id:
         return {"error": msgs["post_not_found"]}
     visible = await assert_forum_visible(executor.user, post.category_id, executor.db, raise_exception=False)
-    if not visible or not category.is_visible:
+    # category 可能是 None（NULL category 帖），视为可见
+    if not visible or (category is not None and not category.is_visible):
         return {"error": msgs["post_not_found"]}
 
     lang = executor._tool_lang()
@@ -982,7 +988,10 @@ async def _get_forum_post_detail(executor: ToolExecutor, input: dict) -> dict:
         "id": post.id,
         "title": _forum_post_display_title(post, lang),
         "content": _truncate(content, 500),
-        "category_name": getattr(category, f"name_{lang_key}", None) or category.name or "",
+        "category_name": (
+            (getattr(category, f"name_{lang_key}", None) or category.name or "")
+            if category is not None else ""
+        ),
         "author_name": author_name,
         "view_count": post.view_count,
         "reply_count": post.reply_count,

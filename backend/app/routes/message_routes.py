@@ -446,7 +446,8 @@ async def get_unread_notification_count_api(
             cat_id = post_cat_map.get(r.target_id)
         else:
             cat_id = reply_cat_map.get(r.target_id)
-        if cat_id and cat_id in visible_category_ids:
+        # NULL category 帖/回复对所有用户可见 (spec 2026-05-15)
+        if cat_id is None or cat_id in visible_category_ids:
             forum_unread += 1
 
     return {
@@ -540,7 +541,8 @@ async def get_interaction_notifications_api(
             cat_id = post_category_map.get(n.target_id)
         else:
             cat_id = reply_category_map.get(n.target_id)
-        if not cat_id or cat_id not in visible_category_ids:
+        # NULL category 帖/回复对所有用户可见 (spec 2026-05-15)
+        if cat_id is not None and cat_id not in visible_category_ids:
             continue
 
         if n.target_type == "reply":
