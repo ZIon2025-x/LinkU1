@@ -3891,7 +3891,7 @@ class ForumPostBase(BaseModel):
     content: str = Field(..., min_length=10, max_length=50000, description="帖子内容，10-50000字符")
     content_en: Optional[str] = Field(None, max_length=50000, description="帖子内容（英文）")
     content_zh: Optional[str] = Field(None, max_length=50000, description="帖子内容（中文）")
-    category_id: int = Field(..., description="板块ID")
+    category_id: Optional[int] = Field(None, description="板块ID（可选，留空表示帖子不归属任何话题/板块）")
 
 
 class ForumPostAttachment(BaseModel):
@@ -3995,7 +3995,7 @@ class ForumPostOut(BaseModel):
     content: str
     content_en: Optional[str] = None
     content_zh: Optional[str] = None
-    category: CategoryInfo
+    category: Optional[CategoryInfo] = None
     author: UserInfo
     view_count: int  # 浏览量（前端负责格式化显示）
     reply_count: int
@@ -4034,7 +4034,7 @@ class ForumPostListItem(BaseModel):
     content_preview: str  # 内容预览（前200字符）
     content_preview_en: Optional[str] = None
     content_preview_zh: Optional[str] = None
-    category: CategoryInfo
+    category: Optional[CategoryInfo] = None
     author: UserInfo
     view_count: int
     reply_count: int
