@@ -29,7 +29,7 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | 播放行为 | 点击缩略图直接进全屏播放器,不做移动数据二次确认 |
 | 撤回 | 不支持(与现有图片一致) |
 | 限流 | 复用现有 `@rate_limit("upload_file")` |
-| 本地保存 | 图片和视频在全屏查看页右上角加下载按钮,保存到系统相册;PDF 点击即下载并系统打开(本来就是下载行为) |
+| 本地保存 | 图片和视频在全屏查看页右上角加 **三点更多按钮**,点击弹菜单含"保存到相册";PDF 点击即下载并系统打开(本来就是下载行为,不需要额外保存入口) |
 
 ## 3. 决策依据
 
@@ -104,8 +104,8 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | `lib/features/chat/widgets/task_chat_action_menu.dart` | 改 | "图片"label 改"照片";`onImagePicker` 回调内部用 `pickMedia`,UI 不变;新增 `onFilePicker` 入口按钮(PDF) |
 | `lib/features/chat/widgets/video_message_bubble.dart` | 新 | 渲染缩略图 + 时长徽章 + 中央播放按钮覆盖层;点击 push 全屏播放页 |
 | `lib/features/chat/widgets/file_message_bubble.dart` | 新 | PDF 图标 + 文件名 + 大小标签;点击 → 下载并系统打开 |
-| `lib/features/chat/views/video_player_view.dart` | 新 | 全屏 chewie 播放器;签名 URL 从 attachment 解析;右上角"下载到相册"按钮 |
-| `lib/core/widgets/full_screen_image_view.dart` | 改 | `FullScreenImageView` 加可选参数 `allowDownload`(默认 false,保持其他调用方不变);任务聊天调用方传 true,显示右上角"保存到相册"按钮 |
+| `lib/features/chat/views/video_player_view.dart` | 新 | 全屏 chewie 播放器;签名 URL 从 attachment 解析;右上角三点 `PopupMenuButton` → 含"保存到相册"项 |
+| `lib/core/widgets/full_screen_image_view.dart` | 改 | `FullScreenImageView` 加可选参数 `allowSaveToAlbum`(默认 false,保持其他调用方不变);任务聊天调用方传 true 时右上角渲染三点 `PopupMenuButton` → 含"保存到相册"项。后续要加"转发""举报"等动作时再重构为通用 actions 列表(YAGNI) |
 | `lib/core/utils/media_saver.dart` | 新 | 封装相册保存逻辑(图片 + 视频统一入口),处理 iOS / Android 权限请求与错误反馈 |
 | `lib/features/chat/widgets/message_group_bubble.dart` | 改 | 按 `message.messageType` 分发到 image / video / file bubble |
 | `lib/features/chat/bloc/chat_bloc.dart` | 改 | 新事件 `ChatSendVideo` / `ChatSendFile`;复用 SendImage 的 optimistic update + retry 模式 |
@@ -169,9 +169,9 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 
 ### 交互
 
-- **图片**:消息气泡点击 → 现有 `FullScreenImageView`(`photo_view` 全屏 lightbox);本次给它加可选参数 `allowDownload`,任务聊天的调用方传 `true`,右上角显示下载图标。点击 → 调用 `MediaSaver.saveImage(url)` → 弹 SnackBar(成功/失败)。
-- **视频**:点击缩略图 → push 新增的 `VideoPlayerView`(chewie);右上角下载图标。点击 → 先把视频流落到 app 临时目录 → `MediaSaver.saveVideo(localPath)` → SnackBar。
-- **PDF**:本身就是"点击 → 下载并系统打开"流程,不需要额外"保存"入口。如果用户想留底,系统的"文件"App 自带管理能力。
+- **图片**:消息气泡点击 → 现有 `FullScreenImageView`(`photo_view` 全屏 lightbox);本次给它加可选参数 `allowSaveToAlbum`,任务聊天的调用方传 `true`,右上角渲染三点 `PopupMenuButton`,菜单含"保存到相册"。点击 → 调用 `MediaSaver.saveImage(url)` → 弹 SnackBar(成功/失败)。
+- **视频**:点击缩略图 → push 新增的 `VideoPlayerView`(chewie);右上角三点 `PopupMenuButton`,菜单含"保存到相册"。点击 → 先把视频流落到 app 临时目录 → `MediaSaver.saveVideo(localPath)` → SnackBar。
+- **PDF**:点击消息气泡 → 后台下载到 app 临时目录 → 调用 `open_filex` 用系统默认 App 打开。**不需要单独"保存"入口**——系统打开后用户可在系统"文件"App 里另存,且 PDF 已不在沙盒外暴露。
 
 ### MediaSaver 实现要点
 
