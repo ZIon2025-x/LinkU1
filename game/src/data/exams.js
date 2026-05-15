@@ -1,6 +1,19 @@
 export const READING_WEEK_EVENTS = [
-  { id: 'rw_lucky', title: 'Reading Week 第一天', body: '没有课。整个伦敦的留学生都在做同一件事——睡到自然醒。',
-    effect: { energy: 12, academic: 2 }, isAuto: true },
+  { id: 'rw_first_day', title: 'Reading Week 第一天 · 醒来没闹钟',
+    isAuto: true,
+    body: '周一早 10:30。你醒来——没闹钟。整个公寓楼安静的。\n\n你 phone 上没有 lecture 提醒。Tutorial 取消。Reading list 在 Moodle 上躺着——但没人催你今天读多少。\n\n你坐床上 5 秒——大脑第一次没有 schedule 撑住。\n\n国内 12 年应试节奏教你一周 5 天 6 节课 + 周末写作业。现在突然 7 天**完全自由**。',
+    choices: [
+      { label: '列一张 Reading Week to-do list',
+        effect: { energy: -2, academic: 5, stress: -3, flag: 'rw_planned' },
+        feedback: '你打开 Notion 列了一张表:\n· chapter 3-7 of Foucault\n· essay 1 outline\n· GP 预约电话\n· clean ensuite\n· 周三去 Cambridge\n· 周日联系妈\n\n6 件事。这一周如果做完 4 件就赢。\n\n你 unlock 一个留学生 self-management 技能:**Reading Week ≠ 真休息,= 你自己设节奏**。' },
+      { label: '什么都不做 + 睡到 1 点',
+        effect: { energy: 10, academic: -3, belonging: -2 },
+        feedback: '你又睡了 2.5 小时。中午醒来煮泡面 + 刷小红书 4 小时。\n\n下午 4 点你打开 Foucault——读了 2 页就困。\n\n晚上你看了一部电影。睡前突然想:**我今天什么都没做**。\n\n这种感觉接下来 6 天会复利累加。' },
+      { label: '直接打开 essay 卷起来',
+        effect: { energy: -5, academic: 8, stress: 4 },
+        feedback: '你 11 点坐在书桌前开始写 essay 1 outline。3 小时后你已经写了 600 字 — 比 cohort 80% 的人都早。\n\n但你也意识到一件事:**Reading Week 不是 head start,是 buffer**。你今天卷了,周三周四你会燃尽。\n\n下次你会平均分配。' },
+    ],
+  },
 ];
 
 // ========================================

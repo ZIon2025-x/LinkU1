@@ -295,6 +295,7 @@ export function PlayingScreen(props) {
     onStudyAtFlat, onStudyAtLibrary, onStudyAtUni, onActivity,
     onWriteDissertation, dissertationProgress, dissertationTopic,
     onEndDay, messages, unreadMessages, onReadMessages, npcRel,
+    emails, unreadEmails, onReadEmail,
     attendanceRate, currentMonthRate, classesAttendedThisWeek, storyProgress,
     travelMode, onStartTravel, monthAttendance, examResults,
     weather, groupChat, unreadGroup, onReadGroup, addedStrangers,
@@ -405,6 +406,8 @@ export function PlayingScreen(props) {
           flags={flags || {}} week={week} day={day}
           stats={stats} gender={gender} storyProgress={storyProgress}
           groupChat={groupChat || []} addedStrangers={addedStrangers || []}
+          emails={emails || []} unreadEmails={unreadEmails || 0}
+          onReadEmail={onReadEmail}
           onPickChatOption={onPickChatOption} onMarkThreadRead={onMarkThreadRead}
           onPickGroupOption={onPickGroupOption}
         />
@@ -457,9 +460,9 @@ export function PlayingScreen(props) {
             className={`flex flex-col items-center py-2 active:bg-current/10 transition-colors ${tab === 'phone' ? 'text-[#d4b070]' : 'opacity-55'}`}>
             <span className="text-[18px] leading-none">💬</span>
             <span className="text-[10px] mt-0.5 tracking-wide">
-              消息{(unreadMessages + unreadGroup) > 0 &&
+              消息{(unreadMessages + unreadGroup + (unreadEmails || 0)) > 0 &&
                 <span className="ml-0.5 px-1 rounded text-white text-[8px]" style={{ background: '#f97316' }}>
-                  {unreadMessages + unreadGroup}
+                  {unreadMessages + unreadGroup + (unreadEmails || 0)}
                 </span>}
             </span>
           </button>

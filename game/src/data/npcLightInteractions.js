@@ -171,6 +171,20 @@ export const NPC_LIGHT_INTERACTIONS = {
   // ─────────────────────────────────────────────────────────────
   mei: [
     {
+      id: 'mei_winter_coat_concern', minWeek: 9, maxWeek: 14,
+      title: 'Mei 姐 · "你怎么还穿这个"',
+      condition: ({ npcRel, flags }) => (npcRel.mei || 0) >= 3 && !flags.mei_coat_concern,
+      body: '11 月某周三下午。你穿 hoodie + 牛仔裤进来——外面 7°C 多云。\n\nMei 姐看你一眼,放下擦碗的抹布。\n\n"傻孩子。你这穿的是什么?11 月伦敦,你这身儿冻死。"\n\n她从柜台后面拿出一件灰色羊毛围巾——明显是她自己用的。',
+      choices: [
+        { label: '收下围巾 + 谢她',
+          effect: { rel: 3, energy: 3, belonging: 12, flag: 'mei_coat_concern' },
+          feedback: '你接过来。围巾上有 Mei 姐家油烟 + 洗衣液的味道——一种说不上来的"妈"的味道。\n\n你说"姐我洗了还您"。她摆手:"你拿着。我家里 3 条。"\n\n她回厨房继续干活。你围着那条围巾走出店——外面风没那么冷了。\n\n这一刻你跟 Mei 之间的关系从"老板娘 - 客人" 升级到"半个家人"。她从此每次见你都看你穿够没。' },
+        { label: '"姐我有外套 在 ensuite" 婉拒',
+          effect: { rel: 1, belonging: 4 },
+          feedback: 'Mei 姐:"那你赶紧回去换。" 她不勉强,但她不开心。\n\n你回 ensuite 真的拿了 puffer 套上。第二天再去 Mei\'s 她看你一眼 nod。\n\n你这一刻保留了你的 boundary——但你也错过一次 belonging 加速。' },
+      ],
+    },
+    {
       id: 'mei_asks_hometown', minWeek: 2, maxWeek: 6,
       title: 'Mei 姐 · "你哪儿口音"',
       condition: ({ npcRel, flags }) => (npcRel.mei || 0) >= 1 && !flags.mei_hometown_asked,
@@ -233,6 +247,23 @@ export const NPC_LIGHT_INTERACTIONS = {
   // soho · 王凯创业线
   // ─────────────────────────────────────────────────────────────
   soho: [
+    {
+      id: 'wangkai_bicester_pitch', minWeek: 9, maxWeek: 14,
+      title: '王凯 · "兄弟想跟你聊个事"',
+      condition: ({ npcRel, flags }) => (npcRel.wangkai || 0) >= 3 && !flags.wk_bicester_pitched,
+      body: 'Mei\'s 周三下午。王凯坐你对面——他平时打招呼就走,这次不走。\n\n他点了一杯热水,清了清嗓子。\n\n"哥们 / 姐们,我想跟你聊个事。我在国内圈里有 30 个客户找代购——Burberry / Coach / Tory Burch。我一个人扛不动。\n\n你帮我跑 Bicester 一次,我抽 20%——一天大概能赚 £100-150。长期合作我抽更少。"\n\n他从包里掏出一个 Excel 截图——他过去 2 周已经接了 £8,000 的代购订单。',
+      choices: [
+        { label: '"行 周六我试一次"',
+          effect: { rel: 3, energy: -2, belonging: 5, flag: 'wk_bicester_pitched' },
+          feedback: '王凯眼睛亮了:"靠 谢了哥们/姐们。周六我们 9 点 Marylebone 见——我教你怎么挑包看真伪。"\n\n你跟他出门时他说:"这事别在群里说——CSSA 里有人看不惯学生做生意。我们小群讲。"\n\n你 unlock 王凯的创业线第一步——之后 wangkai_2 (rel:3 已经够) 在 station bicester_trip 一起触发。\n\n这是你的第一份非端盘子的"副业"——用脑子赚钱。' },
+        { label: '"我想想 + 一两天后回你"',
+          effect: { rel: 1 },
+          feedback: '王凯 nod:"OK 不催你。" \n\n你纠结 3 天——最后没答应。一周后王凯在群里发"招代购合伙人 £100/天"——一个学姐"上岸了的姐"接了。\n\n你 unlock 一条:**留学生圈机会不等人**。她从此跟王凯的关系比你近。' },
+        { label: '"我想专心学业 谢了"',
+          effect: { rel: 0, academic: 2 },
+          feedback: '王凯:"理解 学业最重要。" 他喝完水走了。\n\n之后他还跟你打招呼,但 voucher_brief 那种 freelance 单不会再问你。你的关系停在"认识但不熟"。\n\n这是你的选择——academic 优先没错,只是 wangkai 的创业线对你关上了。' },
+      ],
+    },
     {
       id: 'wangkai_voucher_brief', minWeek: 6, maxWeek: 50, repeatable: true,
       title: '王凯 · "兄弟 帮我个忙"',
@@ -494,6 +525,34 @@ export const NPC_LIGHT_INTERACTIONS = {
         { label: '"刚好读到 sir" + 谦虚带过',
           effect: { rel: 1, belonging: 2, flag: 'whitmore_stopped_first' },
           feedback: 'Whitmore 点头:"Modesty is fine, but accuracy is better. Come to office hours when you want to talk about it properly."\n\n他抱着 handout 走了。\n\n你这次没踩坑——但也没接 ta 递过来的那条线。下次想接,要主动去 office hours。' },
+      ],
+    },
+    {
+      id: 'whitmore_essay1_marked', minWeek: 12, maxWeek: 15,
+      title: 'Whitmore · 第一篇 essay 拿回来了',
+      condition: ({ npcRel, flags }) => !flags.essay1_received && (npcRel.whitmore || 0) >= 1,
+      body: 'Office hour。Whitmore 把你 essay 1 推过来——封面上他用红笔写了大字:**68 / 100**。\n\n下面一行小字:"Solid mid-distinction territory. We can push to 75 by improving (1) argument structure (2) engagement with secondary literature. See annotated PDF."\n\n他翻开:每一页都有 3-4 处红笔——大多是问号、challenge、suggestion。',
+      choices: [
+        { label: '认真听完 + 记 30 分钟笔记',
+          effect: { rel: 3, energy: -3, academic: 8, flag: 'essay1_received' },
+          feedback: '你 30 分钟问了 5 个问题——他每个都答得详细。\n\n临走他说:"68 is a real first essay grade. Distinction-level 写作不是从天上掉下来,是从 65 → 70 → 73 → 78 慢慢爬。下次 aim for 72。"\n\n你 unlock 一条:**英国 grading 是阶梯,不是 binary**。68 不是失败——是底盘。下次 essay 你的目标明确。' },
+        { label: '"68 不够 distinction 啊..." 失落',
+          effect: { energy: -3, academic: 3, stress: 4, flag: 'essay1_received' },
+          feedback: 'Whitmore 看你 1 秒:"Don\'t do that. 68 first essay is good. distinction (70+) for first essay is unusual unless you\'re 4 years into the discipline. Step by step."\n\n你 nod 但心里还是失落。\n\n你回 ensuite 给国内同学发"我才 68"——国内同学:"卧槽 68 不是良好 + 吗?" 你才意识到 UK 的 distinction (70+) 跟国内 75 / 80 的 distinction 不是一回事。\n\n你 unlock 一条:**英国分制独立,不要换算国内**。' },
+      ],
+    },
+    {
+      id: 'linnan_essay_swap_w10', minWeek: 10, maxWeek: 12,
+      title: '林楠 · "咱俩互看 essay?"',
+      condition: ({ npcRel, flags }) => (npcRel.linnan || 0) >= 3 && !flags.linnan_essay_swap_w10,
+      body: 'Senate House 4 楼周日下午。林楠走过来——他/她已经写了 essay 1 第一稿 1200 字。\n\n"诶你写完没? 我 draft 1 出来了——咱俩互看怎么样? 你给我挑毛病我给你挑。Pret 我请。"',
+      choices: [
+        { label: '"行 周一 Pret 见"',
+          effect: { rel: 3, energy: -5, academic: 10, belonging: 8, flag: 'linnan_essay_swap_w10' },
+          feedback: '周一下午你们在 Pret 坐 2 小时。\n\n你给 ta 的草稿挑了 5 个 weak spots——ta 说"靠 你眼这么毒。"\n\nta 给你的草稿挑了 6 个——其中一个是你最得意的句子。"这句你想 argue 啥? 我读完不知道。"\n\n你愣 5 秒——然后 internalize:**你以为自己说清了,读者读不清就是没说清**。\n\n你们两个分数都被这次互改拉高了 4-5 分。这是留学生学术友谊最实用的一种。' },
+        { label: '"我才写 500 字 你别看我了"',
+          effect: { rel: 1, belonging: 2 },
+          feedback: '林楠:"哦 那你写完了找我。" Ta 走了。\n\n你 essay 没赶上互看的窗口——deadline 前才完成。你交了 65 分(没 swap 的 baseline)。\n\nLinnan 那一稿被你看过会更好——但你也没 enable 自己被人看。' },
       ],
     },
     {

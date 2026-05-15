@@ -620,10 +620,12 @@ export function PhoneView({
   flags, week, day,
   stats, gender, storyProgress,
   groupChat, addedStrangers,
+  emails, unreadEmails, onReadEmail,
   onPickChatOption, onMarkThreadRead,
   onPickGroupOption,
 }) {
-  // openId: null = 列表 · 'group' = 群聊详情 · npcId = 私聊详情
+  // openId: null = 列表 · 'group' = 群聊详情 · '_system' = 系统通知 · '_email' = 邮箱列表
+  //         · '_email_<id>' = 邮件详情 · npcId = 私聊详情
   const [openId, setOpenId] = useState(null);
 
   const allGroupMembers = useMemo(() => {
@@ -729,6 +731,82 @@ export function PhoneView({
       </div>
     );
   }
+  // 邮件详情(openId 形如 '_email_<id>')
+  if (typeof openId === 'string' && openId.startsWith('_email_')) {
+    const emailId = openId.slice('_email_'.length);
+    const email = (emails || []).find(e => String(e.id) === emailId);
+    if (!email) { setOpenId('_email'); return null; }
+    return (
+      <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
+        <div className="flex items-center gap-2 pb-3 border-b border-current/20">
+          <button onClick={() => setOpenId('_email')} className="text-base hover:opacity-100 active:opacity-90 opacity-60 px-1">←</button>
+          <div className="w-8 h-8 rounded flex items-center justify-center text-base flex-shrink-0"
+            style={{ background: email.priority === 'high' ? '#c86060' : '#5a8aa8', color: 'white' }}>✉</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{email.subject}</div>
+            <div className="text-[10px] opacity-60 truncate">
+              {email.fromName} &lt;{email.fromEmail || 'no-reply@uni.ac.uk'}&gt;
+            </div>
+          </div>
+          <div className="text-[10px] opacity-50 flex-shrink-0" style={{ fontFamily: 'monospace' }}>D{email.day} · {email.time}</div>
+        </div>
+        <div className="flex-1 overflow-y-auto py-4 pr-1 text-sm leading-relaxed whitespace-pre-line"
+             style={{ lineHeight: '1.8' }}>
+          {email.body}
+        </div>
+      </div>
+    );
+  }
+  // 邮箱列表
+  if (openId === '_email') {
+    const sorted = (emails || []).slice().sort((a, b) => (b.day - a.day) || (b.id > a.id ? 1 : -1));
+    return (
+      <div className="animate-fadein flex flex-col" style={{ height: 'calc(100dvh - 120px)', maxHeight: 600 }}>
+        <div className="flex items-center gap-2 pb-3 border-b border-current/20">
+          <button onClick={() => setOpenId(null)} className="text-base hover:opacity-100 active:opacity-90 opacity-60 px-1">←</button>
+          <div className="w-8 h-8 rounded flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+            style={{ background: '#5a8aa8' }}>📬</div>
+          <div className="flex-1">
+            <div className="text-sm font-medium">邮箱 · Inbox</div>
+            <div className="text-[10px] opacity-50">SOAS / 教授 / Library / careers / Home Office 等</div>
+          </div>
+          {unreadEmails > 0 && (
+            <div className="text-[10px] opacity-70" style={{ fontFamily: 'monospace' }}>{unreadEmails} 未读</div>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto py-3 pr-1 space-y-1.5">
+          {sorted.length === 0 ? (
+            <div className="text-center text-xs opacity-50 italic py-8">没有邮件</div>
+          ) : (
+            sorted.map(e => (
+              <button key={e.id}
+                onClick={() => {
+                  if (!e.read && onReadEmail) onReadEmail(e.id);
+                  setOpenId('_email_' + e.id);
+                }}
+                className={`w-full text-left p-2.5 border rounded transition-colors ${e.read ? 'border-current/15 opacity-60' : 'border-current/30 hover:border-current/50'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  {!e.read && (
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: e.priority === 'high' ? '#c86060' : '#5a8aa8' }} />
+                  )}
+                  <span className="text-[11px] opacity-70 truncate flex-1">{e.fromName}</span>
+                  <span className="text-[10px] opacity-50" style={{ fontFamily: 'monospace' }}>D{e.day}</span>
+                </div>
+                <div className={`text-sm truncate ${e.read ? '' : 'font-medium'}`}
+                     style={e.priority === 'high' && !e.read ? { color: '#c86060' } : {}}>
+                  {e.priority === 'high' ? '⚠ ' : ''}{e.subject}
+                </div>
+                <div className="text-[11px] opacity-50 truncate mt-0.5">
+                  {e.body.split('\n').filter(l => l.trim())[1] || e.body.slice(0, 60)}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
   if (openId && CHAT_NPC_META[openId]) {
     const npcMeta = CHAT_NPC_META[openId];
     const thread = chatThreads[openId] || [];
@@ -766,7 +844,7 @@ export function PhoneView({
 
   const lastSystem = systemMsgs[systemMsgs.length - 1];
 
-  if (npcThreadEntries.length === 0 && groupChat.length === 0 && systemMsgs.length === 0) {
+  if (npcThreadEntries.length === 0 && groupChat.length === 0 && systemMsgs.length === 0 && (emails || []).length === 0) {
     return <div className="text-center opacity-50 italic py-12 text-sm">还没有消息</div>;
   }
 
@@ -805,6 +883,23 @@ export function PhoneView({
           }}
         />
       ))}
+
+      {/* 邮箱入口 —— UK 大学正式 channel,有未读时红点 */}
+      {(emails || []).length > 0 && (() => {
+        const sorted = emails.slice().sort((a, b) => b.day - a.day);
+        const latest = sorted[0];
+        const hasHigh = sorted.some(e => !e.read && e.priority === 'high');
+        return (
+          <ChatListItem
+            avatar="📬" color={hasHigh ? '#c86060' : '#5a8aa8'}
+            name={hasHigh ? '邮箱 ⚠ 重要' : '邮箱 · Inbox'}
+            time={`D${latest.day}`}
+            last={`${latest.fromName}: ${latest.subject.slice(0, 36)}`}
+            badge={unreadEmails || 0}
+            onClick={() => setOpenId('_email')}
+          />
+        );
+      })()}
 
       {/* 系统通知折叠 */}
       {systemMsgs.length > 0 && (

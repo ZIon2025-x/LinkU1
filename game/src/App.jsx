@@ -26,7 +26,7 @@ import {
   MARK_ARC_EVENTS, FLAT_HUNT_EVENTS, JOB_HUNT_DEEP_EVENTS,
   NPC_DEEPENING_EVENTS, CROSS_LINE_RIPPLE_EVENTS, DISSERTATION_EVENTS, LATE_SCAM_EVENTS,
   NPC_LIGHT_INTERACTIONS, SCAM_PULSE_EVENTS, DAILY_ACCIDENT_EVENTS, MEI_WORK_EVENTS,
-  TRANSIT_EVENTS,
+  TRANSIT_EVENTS, SCHEDULED_EMAILS,
   generateBoard, availablePosts,
   getEligibleCsMessages,
   HOLIDAY_CHOICES_XMAS, HOLIDAY_CHOICES_EASTER,
@@ -94,6 +94,8 @@ const YellowLabelMinigame = lazy(() => import('./components/Minigames.jsx').then
 const PretMinigame        = lazy(() => import('./components/Minigames.jsx').then(m => ({ default: m.PretMinigame })));
 const EssayMinigame       = lazy(() => import('./components/Minigames.jsx').then(m => ({ default: m.EssayMinigame })));
 const MatchMinigame       = lazy(() => import('./components/Minigames.jsx').then(m => ({ default: m.MatchMinigame })));
+const LectureMinigame     = lazy(() => import('./components/Minigames.jsx').then(m => ({ default: m.LectureMinigame })));
+const DesignBriefMinigame = lazy(() => import('./components/Minigames.jsx').then(m => ({ default: m.DesignBriefMinigame })));
 import { LoadingOverlay } from './components/LoadingOverlay.jsx';
 
 export default function App() {
@@ -142,6 +144,7 @@ export default function App() {
   const [activeMinigamePret, setActiveMinigamePret] = useState(false);
   const [activeMinigameEssay, setActiveMinigameEssay] = useState(false);
   const [activeMinigameMatch, setActiveMinigameMatch] = useState(false);
+  const [activeMinigameLecture, setActiveMinigameLecture] = useState(false);
   // Link2Ur 完成时正在跑的 minigame —— { task, type } 形如 { task, type: 'yellow'|'pret'|'essay'|'match' }
   const [activeL2uMinigame, setActiveL2uMinigame] = useState(null);
 
@@ -254,6 +257,24 @@ export default function App() {
     audio.message();
   }
 
+  // UK 大学正式邮件 —— Whitmore office hour 更新 / International Office /
+  // Faculty / Library / Careers / Home Office 警告 等。走 emails state,
+  // 跟微信式 messages 分开。
+  function addEmail({ from, fromName, fromEmail, subject, body, priority }) {
+    dispatch({
+      type: 'ADD_EMAIL',
+      email: {
+        id: Date.now() + Math.random(),
+        from, fromName, fromEmail, subject, body,
+        day: state.day,
+        time: new Date().toLocaleTimeString().slice(0, 5),
+        read: false,
+        priority: priority || 'normal',
+      },
+    });
+    audio.ding();
+  }
+
   // 玩家在私聊里选了一个回复 / 提问选项。
   // option = { id, kind, label, playerText, npcReply, effect }
   // NPC 回复延迟 800-1400ms 模拟"正在输入"的真实感。
@@ -312,7 +333,7 @@ export default function App() {
     accompany: 'pret',          // 陪同 → 对话
     rental_housing: 'pret',     // 找房咨询中介 → 对话
     writing: 'essay',           // 代修文章 → 打字
-    design: 'essay',            // 设计 → creative
+    design: 'brief',            // 设计 → AI 客户简介解码
     digital: 'essay',           // 数字活 → 打字
     tech: 'essay',              // 技术 → 打字
     tutoring: 'match',          // 家教 → 教学卡牌配对
@@ -910,10 +931,17 @@ export default function App() {
   }
 
   function attendClass() {
-    runLocationAction('uni',
-      { academic: 6, energy: -8 },
-      () => dispatch({ type: 'CLASSES_ATTENDED_INC' }),
-    );
+    // 检查行动 + 不在 weekend / vacation / reading week / exam / dissertation
+    if (state.actionsLeft <= 0) return;
+    // 周末 / Reading Week / 假期 / 论文期 没课,fallback 到旧逻辑(自习 = +academic 但不算考勤)
+    if (!weekInfo?.requireClass) {
+      runLocationAction('uni', { academic: 3, energy: -5 });
+      return;
+    }
+    // 上课 = 触发字母连词 minigame。Minigame onComplete 内做 CLASSES_ATTENDED_INC + effect。
+    audio.click();
+    dispatch({ type: 'SPEND_ACTION' });
+    setActiveMinigameLecture(true);
   }
 
   function workShift() {
@@ -1368,33 +1396,54 @@ export default function App() {
           monthAttendance = [...monthAttendance, ma];
           dispatch({ type: 'PUSH_MONTH_ATTENDANCE', entry: ma });
 
-          if (rate < 60) {
-            addMessage('uni', 'International Office', `⚠️ Month ${monthNum} attendance: ${rate}%. Below 60% requires immediate meeting. Risk of visa curtailment.`);
+          // 出勤阶梯:
+          // · < 50%:第一次 → 移民局警告 + Whitmore 慰问 + 设 first_warning flag
+          //         第二次 → 直接 visa_curtailed ending(2 strike out)
+          // · 50-74%:Personal Tutor 提醒
+          // · ≥ 75%:不打扰
+          if (rate < 50) {
+            if (state.flags?.attendance_first_warning) {
+              // Strike 2 — visa curtailed,结束游戏
+              dispatch({ type: 'SET_ENDING', ending: SPECIAL_ENDINGS.visa_curtailed(rate) });
+              audio.fail();
+              return;
+            }
+            // Strike 1
+            dispatch({ type: 'SET_FLAG', flag: 'attendance_first_warning' });
+            addEmail({
+              from: 'intl_office',
+              fromName: 'International Student Office',
+              fromEmail: 'intl-office@soas.ac.uk',
+              subject: `⚠️ URGENT: Attendance Below Visa Threshold (Month ${monthNum})`,
+              priority: 'high',
+              body: `Dear Student,\n\nOur records show your attendance for Month ${monthNum} was ${rate}%. This falls below the 50% threshold required under the conditions of your student visa.\n\nWe are obligated to report this to UKVI (Home Office) as part of our sponsorship duties.\n\nIf your attendance in Month ${monthNum + 1} remains below 50%, your visa sponsorship will be withdrawn and you will be required to leave the UK within 60 days.\n\nIf you are facing personal circumstances affecting your attendance, please contact your Personal Tutor or the Student Wellbeing Service immediately.\n\nRegards,\nInternational Student Office\nSOAS University of London`,
+            });
             audio.warning();
-          } else if (rate < 70) {
-            addMessage('uni', 'International Office', `📋 Month ${monthNum} attendance: ${rate}%. We are monitoring this closely.`);
-          } else if (rate < 80) {
-            addMessage('uni', 'Personal Tutor', `Hi, just checking in—your attendance this month was ${rate}%. Anything we can help with?`);
+            // Whitmore 主动慰问(只在玩家认识他时)—— 私人消息走 chat thread
+            if ((state.npcRel?.whitmore || 0) >= 1) {
+              setTimeout(() => addMessage('whitmore', 'Prof. Whitmore',
+                `I noticed you\'ve missed several tutorials this month. I won\'t pry — but if something\'s going on, my door is always open. Office hours Wednesday 4 PM, or just email.`), 1800);
+            }
+          } else if (rate < 75) {
+            addEmail({
+              from: 'personal_tutor',
+              fromName: 'Personal Tutor (Dr Hassan)',
+              fromEmail: 'm.hassan@soas.ac.uk',
+              subject: `Wellbeing Check-in · Month ${monthNum} Attendance`,
+              priority: 'normal',
+              body: `Hi,\n\nJust a quick check-in — your attendance this month was ${rate}%. School policy flags anything under 75% for an automatic wellbeing follow-up.\n\nNo immediate action needed, but if something\'s affecting your studies (homesickness, health, finances, anything), my door is open. We can also signpost you to Wellbeing Service or Financial Hardship Fund if useful.\n\nReply when convenient.\n\nBest,\nDr Hassan\nPersonal Tutor`,
+            });
           }
         }
       }
       dispatch({ type: 'CLASSES_ATTENDED_RESET' });
 
-      const allClassWeeks = attendanceHistory.filter(a => a.required > 0);
-      const totalAtt = allClassWeeks.reduce((s, a) => s + a.attended, 0);
-      const totalReq = allClassWeeks.reduce((s, a) => s + (a.required || 5), 0);
-      const newRate = totalReq > 0 ? Math.round((totalAtt / totalReq) * 100) : 100;
-
       // Rent is prepaid annually (handled in onboarding narrative), so no
       // weekly deduction. walletAfter stays at the current wallet for the
       // downstream broke-ending check.
       walletAfter = state.stats.wallet;
-
-      if (newRate < 50 && week >= 4 && allClassWeeks.length >= 4) {
-        dispatch({ type: 'SET_ENDING', ending: SPECIAL_ENDINGS.visa_curtailed(newRate) });
-        audio.warning();
-        return;
-      }
+      // 累计 attendance 失败的 instant-ending 路径已并入上面的 2-strike 月度逻辑,
+      // 不再需要 cumulative check
     }
 
     // Bump day & restore actions/energy. END_DAY reducer 现在内置 phaseInc + stipend，
@@ -1503,7 +1552,13 @@ export default function App() {
       return;
     }
     if (newWeekInfo.type === 'reading' && newWeekInfo.week !== oldWeekInfo.week) {
-      addMessage('uni', 'Faculty Office', '📅 Reminder: This week is Reading Week. No classes scheduled. Catch up on readings or take a break.');
+      addEmail({
+        from: 'faculty_office',
+        fromName: 'Faculty of Arts & Humanities',
+        fromEmail: 'faculty-office@soas.ac.uk',
+        subject: '📅 Reading Week — No Classes Scheduled',
+        body: `Dear Students,\n\nThis is a reminder that Week ${newWeek} is Reading Week. No tutorials, seminars, or lectures are scheduled.\n\nYou are encouraged to use this time to:\n· Catch up on reading list\n· Begin work on Essay 1 (due Week 11)\n· Visit the library — recommended hours are weekday mornings\n· Take a short break if needed\n\nNote: Library and Student Services remain open during Reading Week.\n\nFaculty Office\nSOAS University of London`,
+      });
     }
 
     // === New week triggers ===
@@ -1522,6 +1577,22 @@ export default function App() {
         addMessage('mom', '🇨🇳 妈妈', `这个月生活费转给你了 £${MONTHLY_STIPEND}。少吃外卖。`);
         audio.ding();
       }
+
+      // 定时邮件 —— SOAS / 教授 / Library / careers 等正式 channel
+      SCHEDULED_EMAILS.forEach((em) => {
+        if (em.week !== newWeek) return;
+        if (state.flags?.[em.flag]) return;
+        if (em.condition && !em.condition(state)) return;
+        dispatch({ type: 'SET_FLAG', flag: em.flag });
+        // 错峰 800-2400ms 避免一次性 4 封邮件同时蹦出来
+        const delay = 600 + Math.random() * 1800;
+        setTimeout(() => {
+          addEmail({
+            from: em.from, fromName: em.fromName, fromEmail: em.fromEmail,
+            subject: em.subject, body: em.body, priority: em.priority,
+          });
+        }, delay);
+      });
 
       // Festival
       const festival = FESTIVALS[newWeek];
@@ -1798,6 +1869,8 @@ export default function App() {
             onEndDay={endDay}
             messages={state.messages} unreadMessages={state.unreadMessages}
             onReadMessages={() => dispatch({ type: 'READ_MESSAGES' })}
+            emails={state.emails || []} unreadEmails={state.unreadEmails || 0}
+            onReadEmail={(id) => dispatch({ type: 'READ_EMAIL', id })}
             npcRel={state.npcRel}
             attendanceRate={attendanceRate}
             currentMonthRate={currentMonthRate}
@@ -1916,7 +1989,7 @@ export default function App() {
             onChoose={chooseEventOption} onDismiss={dismissEvent} />
         )}
         {activeEvent && activeEvent.minigame === 'yellow_grab' && (
-          <YellowLabelMinigame onComplete={(result) => {
+          <YellowLabelMinigame week={week} onComplete={(result) => {
             audio.click();
             if (result.success) audio.success(); else audio.fail();
             dispatch({ type: 'PATCH_STATS', stats: {
@@ -1988,8 +2061,27 @@ export default function App() {
           <CrisisModal crisis={pronounizeEvent(activeCrisis, state.gender)} feedback={pronounize(eventFeedback, state.gender)}
             onChoose={chooseCrisis} onDismiss={dismissCrisis} />
         )}
+        {activeMinigameLecture && (
+          <LectureMinigame
+            week={week}
+            onComplete={(result) => {
+              audio.click();
+              dispatch({ type: 'APPLY_EFFECT', effect: result.effect });
+              if (result.attendedClass) dispatch({ type: 'CLASSES_ATTENDED_INC' });
+              setActiveMinigameLecture(false);
+              setActiveEvent({
+                id: 'lecture_result', title: '下课了',
+                body: result.feedback,
+                choices: [{ label: '回去', effect: {}, feedback: '...' }],
+              });
+            }}
+            onCancel={() => { audio.click(); setActiveMinigameLecture(false); }}
+          />
+        )}
         {activeMinigamePret && (
           <PretMinigame
+            week={week}
+            pretPlaysCount={state.pretPlaysCount || 0}
             onComplete={(result) => {
               audio.click();
               dispatch({ type: 'PATCH_STATS', stats: {
@@ -1997,8 +2089,11 @@ export default function App() {
                 energy: clamp(state.stats.energy + (result.effect.energy || 0), 0, 100),
                 belonging: clamp(state.stats.belonging + (result.effect.belonging || 0), 0, 100),
               }});
-              // 完成 Pret minigame = 第一次 Pret 成就解锁
+              // 完成 Pret minigame = 第一次 Pret 成就解锁 + 听力训练 +1
               dispatch({ type: 'SET_FLAG', flag: 'first_pret' });
+              if (result.incrementPretPlays) {
+                dispatch({ type: 'INCREMENT_PRET_PLAYS' });
+              }
               setActiveMinigamePret(false);
               setActiveEvent({
                 id: 'pret_result', title: '走出 Pret',
@@ -2011,6 +2106,7 @@ export default function App() {
         )}
         {activeMinigameEssay && (
           <EssayMinigame
+            week={week}
             onComplete={(result) => {
               audio.click();
               dispatch({ type: 'PATCH_STATS', stats: {
@@ -2031,6 +2127,7 @@ export default function App() {
         )}
         {activeMinigameMatch && (
           <MatchMinigame
+            week={week}
             onComplete={(result) => {
               audio.click();
               dispatch({ type: 'PATCH_STATS', stats: {
@@ -2053,6 +2150,7 @@ export default function App() {
             走完 minigame 自动 finalizeL2uTask；中途 cancel 任务回到 approved 状态等再点 */}
         {activeL2uMinigame?.type === 'yellow' && (
           <YellowLabelMinigame
+            week={week}
             onComplete={(result) => {
               audio.click();
               if (result.success) audio.success(); else audio.fail();
@@ -2069,8 +2167,11 @@ export default function App() {
         )}
         {activeL2uMinigame?.type === 'pret' && (
           <PretMinigame
+            week={week}
+            pretPlaysCount={state.pretPlaysCount || 0}
             onComplete={(result) => {
               audio.click();
+              if (result.incrementPretPlays) dispatch({ type: 'INCREMENT_PRET_PLAYS' });
               finalizeL2uTask(activeL2uMinigame.task);
             }}
             onCancel={() => { audio.click(); setActiveL2uMinigame(null); }}
@@ -2078,6 +2179,7 @@ export default function App() {
         )}
         {activeL2uMinigame?.type === 'essay' && (
           <EssayMinigame
+            week={week}
             onComplete={(result) => {
               audio.click();
               finalizeL2uTask(activeL2uMinigame.task);
@@ -2087,9 +2189,34 @@ export default function App() {
         )}
         {activeL2uMinigame?.type === 'match' && (
           <MatchMinigame
+            week={week}
             onComplete={(result) => {
               audio.click();
               finalizeL2uTask(activeL2uMinigame.task);
+            }}
+            onCancel={() => { audio.click(); setActiveL2uMinigame(null); }}
+          />
+        )}
+        {activeL2uMinigame?.type === 'brief' && (
+          <DesignBriefMinigame
+            week={week}
+            seenBriefIds={state.seenBriefIds || []}
+            onComplete={(result) => {
+              audio.click();
+              dispatch({ type: 'MARK_BRIEF_SEEN', id: result.briefId });
+              // brief 给出动态 reward (基础 reward × tier multiplier),覆盖 task default reward
+              const adjustedTask = { ...activeL2uMinigame.task, reward: result.reward };
+              dispatch({ type: 'APPLY_EFFECT', effect: {
+                energy: result.effect.energy,
+                academic: result.effect.academic,
+                belonging: result.effect.belonging,
+              }});
+              setActiveEvent({
+                id: 'design_brief_result', title: `客户评价 · ${result.stars}⭐`,
+                body: result.feedback,
+                choices: [{ label: '关闭', effect: {}, feedback: '...' }],
+              });
+              finalizeL2uTask(adjustedTask);
             }}
             onCancel={() => { audio.click(); setActiveL2uMinigame(null); }}
           />

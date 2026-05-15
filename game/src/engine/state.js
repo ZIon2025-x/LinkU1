@@ -43,6 +43,17 @@ export function initialState() {
     seenGroupWeeks: [],
     unreadGroup: 0,
 
+    // 邮箱 (UK 大学 default communication channel —— 教授 / 学校行政 / Library /
+    // careers / Home Office 警告等正式信件都在这里。区别于 messages(微信式)。
+    emails: [],
+    unreadEmails: 0,
+
+    // Pret 听力训练 plays counter —— minigame 完成时 +1, 用于 mask rate 衰减
+    pretPlaysCount: 0,
+
+    // AI 设计 brief 已见过的 brief id list,避免重复
+    seenBriefIds: [],
+
     // Per-NPC chat threads (V6 微信改造) —— 每个交互 NPC 一组对话历史
     // shape: { [npcId]: [{ role: 'them'|'you', text, day, time, fromName? }] }
     chatThreads: {},
@@ -385,6 +396,42 @@ export function reducer(state, action) {
     }
     case 'READ_MESSAGES':
       return { ...state, unreadMessages: 0 };
+
+    case 'ADD_EMAIL':
+      return {
+        ...state,
+        emails: [...state.emails, action.email],
+        unreadEmails: state.unreadEmails + 1,
+      };
+
+    case 'READ_EMAIL': {
+      // 标记某封邮件为已读 + 同步扣 unreadEmails (类似 CHAT_THREAD_READ 的处理)
+      const target = state.emails.find(e => e.id === action.id);
+      if (!target || target.read) return state;
+      return {
+        ...state,
+        emails: state.emails.map(e =>
+          e.id === action.id ? { ...e, read: true } : e
+        ),
+        unreadEmails: Math.max(0, state.unreadEmails - 1),
+      };
+    }
+
+    case 'MARK_ALL_EMAILS_READ':
+      return {
+        ...state,
+        emails: state.emails.map(e => ({ ...e, read: true })),
+        unreadEmails: 0,
+      };
+
+    case 'INCREMENT_PRET_PLAYS':
+      return { ...state, pretPlaysCount: (state.pretPlaysCount || 0) + 1 };
+
+    case 'MARK_BRIEF_SEEN': {
+      const list = state.seenBriefIds || [];
+      if (list.includes(action.id)) return state;
+      return { ...state, seenBriefIds: [...list, action.id] };
+    }
 
     case 'CHAT_THREAD_READ': {
       // 进入 detail 时清零该 thread 的未读 + 同步扣 flat unreadMessages

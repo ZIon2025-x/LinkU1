@@ -16,6 +16,22 @@ export const AT_YOU_EVENTS = [
     ],
   },
   {
+    id: 'at_xiaowang_rw_picnic',
+    week: 7,
+    askerId: 'xiao_wang',
+    title: 'Reading Week · @所有人 周四 Hyde Park 野餐',
+    setup: '周二晚。小王在群里热情发言。',
+    askerMsg: '@所有人 这周 Reading Week 哎!!! 我看大家都没课 + 不是都在图书馆吧 周四下午 2 点 Hyde Park Serpentine 边野餐怎么样 我带火锅底料 大家带菜 自助 ❤️',
+    choices: [
+      { label: '"+1 我带白象 + 老干妈"',
+        effect: { wallet: -8, energy: 3, belonging: 14, skipDays: 1, flag: 'rw_picnic_joined' },
+        feedback: '周四 14:00 Serpentine 西岸。9 个人来——小王 + 你 + Lily + 阿强 + 凯泽 + 狗哥 + 上岸了的姐 + 露露 + 婷婷。\n\n小王带了 portable 卡式炉 + 火锅底料。Lily 带 spinach。狗哥带啤酒 6 罐。\n\n你们围着野餐布吃了 3 小时。15:30 一个跑步的英国大叔停下来:"That smells AMAZING what is it?" 凯泽喊:"Hot pot! Want some?"\n\n大叔真的坐下吃了 5 分钟。\n\n你回家时不孤独——这种小聚会比 Welcome Week 那场 CSSA 100 人晚宴都温暖。' },
+      { label: '"周四我有 essay" 婉拒',
+        effect: { energy: 1, academic: 2, belonging: -3 },
+        feedback: '小王:"OK 大家加油"。\n\n你周四下午在 ensuite 写 essay——写了 1 小时累了。你 google "Hyde Park weather" 看了一眼——15°C 多云。\n\n你打开小红书——刷到 Lily 发的野餐九宫格。9 个人围着卡式炉 + 标签 #伦敦留学生 #火锅日常 #没课就出门。\n\n你点赞。但你也想:**我刚才其实 essay 写不动了**。' },
+    ],
+  },
+  {
     id: 'at_kaize_hotpot_org',
     week: 4,
     askerId: 'kaize',

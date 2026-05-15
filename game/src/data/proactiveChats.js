@@ -55,6 +55,20 @@ export const PROACTIVE_CHAT_HOOKS = [
     priority: 3,
   },
   {
+    id: 'sarah_bonfire_night_invite',
+    npcId: 'sarah', fromName: 'Sarah',
+    condition: (s) => Math.ceil(s.day / 7) === 10 && rel(s, 'sarah') >= 2,
+    text: "tomorrow\'s Bonfire Night!! Primrose Hill 8pm for fireworks?? bring a flask, it gets cold. it\'s the most British thing you\'ll do all year I promise",
+    priority: 3,
+  },
+  {
+    id: 'sarah_essay_vent_w11',
+    npcId: 'sarah', fromName: 'Sarah',
+    condition: (s) => Math.ceil(s.day / 7) >= 10 && Math.ceil(s.day / 7) <= 12 && rel(s, 'sarah') >= 3,
+    text: 'essay 1 due in 4 days and I\'ve written… 350 words. how are *you* doing. lie to me if you have to',
+    priority: 2,
+  },
+  {
     id: 'sarah_post_cotswolds_mum',
     npcId: 'sarah', fromName: 'Sarah',
     condition: (s) => flag(s, 'cotswolds_visited') && Math.ceil(s.day / 7) >= 16,
@@ -89,6 +103,14 @@ export const PROACTIVE_CHAT_HOOKS = [
     condition: (s) => Math.ceil(s.day / 7) === 13 && rel(s, 'sarah') >= 5,
     text: "Cotswolds Christmas — yes/no? mum needs the headcount for stuffing. seriously.",
     priority: 3,
+  },
+  {
+    id: 'mom_xmas_decision_call',
+    npcId: 'mom', fromName: '🇨🇳 妈妈',
+    condition: (s) => Math.ceil(s.day / 7) >= 11 && Math.ceil(s.day / 7) <= 13 && !flag(s, 'mom_xmas_asked'),
+    text: '你那边圣诞快放假了吧?机票现在订还来得及。你王阿姨家女儿那个学校都已经放了。\n\n回不回啊?妈给你订?',
+    priority: 4,
+    flag: 'mom_xmas_asked',
   },
 
   // ─────────────────────────────────────────────────────────────
