@@ -581,6 +581,19 @@ export function EssayMinigame({ onComplete, onCancel, week }) {
 // 理论家概念匹配迷你游戏
 // ========================================
 
+function MatchRulesBody({ totalConcepts }) {
+  return (
+    <>
+      期末复习。你列了一张表想搞清谁说了什么。<br/>
+      <br/>
+      · 把 {totalConcepts} 个概念匹配到对应的理论家<br/>
+      · 步骤：先点一个概念 → 再点理论家<br/>
+      · 全部匹配完看评分，对越多 academic 越高<br/>
+      · 5/6+ 还有 belonging 加成
+    </>
+  );
+}
+
 export function MatchMinigame({ onComplete, onCancel, week }) {
   // 按 week 抽:phase 1 = 4 theorists + 6 concepts, phase 2 = 6+9, phase 3 = 8+12
   const [roundData] = useState(() => pickMatchRound(week || 1));
@@ -591,7 +604,8 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
   const visibleTheorists = roundData.theorists;
   const [matched, setMatched] = useState({}); // { conceptId: theoristId }
   const [selectedConcept, setSelectedConcept] = useState(null);
-  const [phase, setPhase] = useState('play'); // play | done
+  const [phase, setPhase] = useState('intro'); // intro | play | done
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   function selectConcept(c) {
     if (matched[c.id]) return;
@@ -635,10 +649,27 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-blue-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5">
+      <div className="bg-[#1a1612] border border-blue-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5 relative">
+        <MinigameHelpButton onClick={() => { audio.click(); setRulesOpen(true); }} />
         <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#a0a0c8' }}>🎴 MINIGAME</div>
         <h2 className="text-xl mb-1 font-light">理论家与概念</h2>
         <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>把概念匹配到对的人</div>
+
+        {phase === 'intro' && (
+          <>
+            <div className="text-sm opacity-90 mb-4" style={{ lineHeight: '1.85' }}>
+              <MatchRulesBody totalConcepts={round.length} />
+            </div>
+            <button
+              onClick={() => { audio.click(); setPhase('play'); }}
+              className="w-full py-3 border hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm"
+              style={{ borderColor: '#a0a0c8', color: '#a0a0c8' }}
+            >
+              开始匹配
+            </button>
+            <button onClick={onCancel} className="w-full mt-2 p-2 text-xs opacity-60 hover:opacity-100">先不玩 →</button>
+          </>
+        )}
 
         {phase === 'play' && (
           <>
@@ -719,6 +750,14 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
             </button>
           </>
         )}
+
+        <MinigameRulesModal
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          title="MATCH · 理论家与概念"
+        >
+          <MatchRulesBody totalConcepts={round.length} />
+        </MinigameRulesModal>
       </div>
     </div>
   );
