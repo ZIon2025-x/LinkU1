@@ -552,6 +552,7 @@ async def upload_file(
     file: UploadFile = File(...),
     task_id: Optional[int] = Query(None, description="任务ID（任务聊天时提供）"),
     chat_id: Optional[str] = Query(None, description="聊天ID（客服聊天时提供）"),
+    usage: Optional[str] = Query(None, description="使用场景: 'chat_media' 表示任务聊天视频/PDF"),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
@@ -560,16 +561,37 @@ async def upload_file(
     支持按任务ID或聊天ID分类存储
     - task_id: 任务聊天时提供，文件会存储在 tasks/{task_id}/ 文件夹
     - chat_id: 客服聊天时提供，文件会存储在 chats/{chat_id}/ 文件夹
+    - usage='chat_media': 走白名单校验(视频 mp4/mov/m4v ≤30MB,PDF ≤20MB);其他 usage 走默认 10MB 通用校验
     """
     try:
         # 使用流式读取文件内容，避免大文件一次性读入内存
         from app.file_stream_utils import read_file_with_size_check
 
-        # 文件最大大小：10MB（支持文档等大文件）
-        MAX_FILE_SIZE_UPLOAD = 10 * 1024 * 1024
+        # 按 usage 选最大上限:chat_media 视频 30MB 兜底;其他 10MB
+        if usage == "chat_media":
+            MAX_FILE_SIZE_UPLOAD = 30 * 1024 * 1024  # 视频上限兜底;PDF 在 validator 内独立卡 20MB
+        else:
+            MAX_FILE_SIZE_UPLOAD = 10 * 1024 * 1024
 
         # 流式读取文件内容
         content, file_size = await read_file_with_size_check(file, MAX_FILE_SIZE_UPLOAD)
+
+        # chat_media 分支:走白名单校验(拒绝非 mp4/mov/m4v/PDF)
+        if usage == "chat_media":
+            from app.services.chat_media_validators import (
+                validate_chat_video,
+                validate_chat_pdf,
+            )
+            ext = Path(file.filename or "").suffix.lower()
+            if ext in {".mp4", ".mov", ".m4v"}:
+                validate_chat_video(content, file.filename or "")
+            elif ext == ".pdf":
+                validate_chat_pdf(content, file.filename or "")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="任务聊天附件只接受视频(mp4/mov/m4v)或 PDF",
+                )
 
         # 使用新的私密文件系统上传
         from app.file_system import private_file_system
