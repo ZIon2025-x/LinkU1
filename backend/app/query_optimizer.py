@@ -63,11 +63,18 @@ class QueryOptimizer:
             elif loc.lower() == 'online':
                 query = query.filter(models.Task.location.ilike("%online%"))
             else:
-                # 精确城市匹配 + 中英文互查（中文支持包含匹配）
-                from app.utils.city_filter_utils import build_city_location_filter
-                city_expr = build_city_location_filter(models.Task.location, loc)
-                if city_expr is not None:
-                    query = query.filter(city_expr)
+                # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+                from app.utils.city_filter_utils import (
+                    build_city_location_filter,
+                    resolve_city_canonical,
+                )
+                canonical = resolve_city_canonical(loc)
+                if canonical:
+                    query = query.filter(models.Task.city_canonical == canonical)
+                else:
+                    city_expr = build_city_location_filter(models.Task.location, loc)
+                    if city_expr is not None:
+                        query = query.filter(city_expr)
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"
@@ -151,11 +158,18 @@ class QueryOptimizer:
             elif loc.lower() == 'online':
                 base_query = base_query.filter(models.Task.location.ilike("%online%"))
             else:
-                # 精确城市匹配 + 中英文互查（中文支持包含匹配）
-                from app.utils.city_filter_utils import build_city_location_filter
-                city_expr = build_city_location_filter(models.Task.location, loc)
-                if city_expr is not None:
-                    base_query = base_query.filter(city_expr)
+                # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+                from app.utils.city_filter_utils import (
+                    build_city_location_filter,
+                    resolve_city_canonical,
+                )
+                canonical = resolve_city_canonical(loc)
+                if canonical:
+                    base_query = base_query.filter(models.Task.city_canonical == canonical)
+                else:
+                    city_expr = build_city_location_filter(models.Task.location, loc)
+                    if city_expr is not None:
+                        base_query = base_query.filter(city_expr)
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"
@@ -333,11 +347,18 @@ class AsyncQueryOptimizer:
             elif loc.lower() == 'online':
                 query = query.filter(models.Task.location.ilike("%online%"))
             else:
-                # 精确城市匹配 + 中英文互查（中文支持包含匹配）
-                from app.utils.city_filter_utils import build_city_location_filter
-                city_expr = build_city_location_filter(models.Task.location, loc)
-                if city_expr is not None:
-                    query = query.filter(city_expr)
+                # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+                from app.utils.city_filter_utils import (
+                    build_city_location_filter,
+                    resolve_city_canonical,
+                )
+                canonical = resolve_city_canonical(loc)
+                if canonical:
+                    query = query.filter(models.Task.city_canonical == canonical)
+                else:
+                    city_expr = build_city_location_filter(models.Task.location, loc)
+                    if city_expr is not None:
+                        query = query.filter(city_expr)
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"

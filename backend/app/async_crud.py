@@ -441,10 +441,18 @@ class AsyncTaskCRUD:
                     # Online 精确匹配
                     query = query.where(models.Task.location.ilike("%online%"))
                 else:
-                    from app.utils.city_filter_utils import build_city_location_filter
-                    city_expr = build_city_location_filter(models.Task.location, location)
-                    if city_expr is not None:
-                        query = query.where(city_expr)
+                    # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+                    from app.utils.city_filter_utils import (
+                        build_city_location_filter,
+                        resolve_city_canonical,
+                    )
+                    canonical = resolve_city_canonical(location)
+                    if canonical:
+                        query = query.where(models.Task.city_canonical == canonical)
+                    else:
+                        city_expr = build_city_location_filter(models.Task.location, location)
+                        if city_expr is not None:
+                            query = query.where(city_expr)
             if status and status not in ['全部状态', '全部', 'all']:
                 query = query.where(models.Task.status == status)
             
@@ -603,10 +611,18 @@ class AsyncTaskCRUD:
                 elif location.lower() == 'online':
                     base_query = base_query.where(models.Task.location.ilike("%online%"))
                 else:
-                    from app.utils.city_filter_utils import build_city_location_filter
-                    city_expr = build_city_location_filter(models.Task.location, location)
-                    if city_expr is not None:
-                        base_query = base_query.where(city_expr)
+                    # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+                    from app.utils.city_filter_utils import (
+                        build_city_location_filter,
+                        resolve_city_canonical,
+                    )
+                    canonical = resolve_city_canonical(location)
+                    if canonical:
+                        base_query = base_query.where(models.Task.city_canonical == canonical)
+                    else:
+                        city_expr = build_city_location_filter(models.Task.location, location)
+                        if city_expr is not None:
+                            base_query = base_query.where(city_expr)
             
             # 关键词筛选（jieba 分词 + 双语扩展 + pg_trgm）
             if keyword:
@@ -1107,10 +1123,18 @@ class AsyncTaskCRUD:
             elif location.lower() == 'online':
                 query = query.where(models.Task.location.ilike("%online%"))
             else:
-                from app.utils.city_filter_utils import build_city_location_filter
-                city_expr = build_city_location_filter(models.Task.location, location)
-                if city_expr is not None:
-                    query = query.where(city_expr)
+                # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+                from app.utils.city_filter_utils import (
+                    build_city_location_filter,
+                    resolve_city_canonical,
+                )
+                canonical = resolve_city_canonical(location)
+                if canonical:
+                    query = query.where(models.Task.city_canonical == canonical)
+                else:
+                    city_expr = build_city_location_filter(models.Task.location, location)
+                    if city_expr is not None:
+                        query = query.where(city_expr)
         
         if keyword:
             keyword = keyword.strip()

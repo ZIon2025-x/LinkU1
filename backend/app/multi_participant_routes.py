@@ -1388,10 +1388,19 @@ def get_activities(
         query = query.filter(Activity.has_time_slots == has_time_slots)
     
     if location and location.strip():
-        from app.utils.city_filter_utils import build_city_location_filter
-        location_filter = build_city_location_filter(Activity.location, location.strip())
-        if location_filter is not None:
-            query = query.filter(location_filter)
+        # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+        from app.utils.city_filter_utils import (
+            build_city_location_filter,
+            resolve_city_canonical,
+        )
+        loc_input = location.strip()
+        canonical = resolve_city_canonical(loc_input)
+        if canonical:
+            query = query.filter(Activity.city_canonical == canonical)
+        else:
+            location_filter = build_city_location_filter(Activity.location, loc_input)
+            if location_filter is not None:
+                query = query.filter(location_filter)
 
     if keyword and keyword.strip():
         from app.utils.search_expander import build_keyword_filter

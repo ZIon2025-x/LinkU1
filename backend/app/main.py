@@ -29,6 +29,8 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
 from app import crud
+# 注册 SQLAlchemy 事件钩子（city_canonical 自动维护等）—— import 即生效
+from app import event_listeners  # noqa: F401
 # auth_routes 已移除，使用 secure_auth_routes 替代
 from app.secure_auth_routes import secure_auth_router
 # 旧的客服认证路由已删除，使用新的独立认证系统

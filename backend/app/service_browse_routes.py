@@ -67,9 +67,13 @@ async def browse_services(
     distance_sq = None  # will be set if sort == "nearby" 且非同城模式
 
     if city:
-        # 同城模式：按城市名匹配，不依赖 GPS。优先级高于 radius/lat/lng。
-        # 复用 build_city_location_filter 处理英中别名 + UK 地址边界（"Bristol Road" 不会误中 Bristol）。
-        from app.utils.city_filter_utils import build_city_location_filter
+        # 同城模式：按 city_canonical 索引等值匹配，不依赖 GPS。优先级高于 radius/lat/lng。
+        # 输入 city 先 canonicalize（Camden → London），命中已知城市走索引，
+        # 罕见/未知城市回退 ILIKE 兼容（与 build_city_location_filter 同语义）。
+        from app.utils.city_filter_utils import (
+            build_city_location_filter,
+            resolve_city_canonical,
+        )
 
         query = query.outerjoin(Expert, or_(
             and_(S.owner_type == 'expert', S.owner_id == Expert.id),
@@ -78,14 +82,22 @@ async def browse_services(
         # 仅 in_person/both 服务参与地理筛（online 服务不属于"同城"语义）
         query = query.where(S.location_type.in_(["in_person", "both"]))
 
-        s_filter = build_city_location_filter(S.location, city)
-        e_filter = build_city_location_filter(Expert.location, city)
-        if s_filter is not None and e_filter is not None:
-            query = query.where(or_(s_filter, e_filter))
-        elif s_filter is not None:
-            query = query.where(s_filter)
-        elif e_filter is not None:
-            query = query.where(e_filter)
+        canonical = resolve_city_canonical(city)
+        if canonical:
+            # service.city_canonical 优先，回退 expert.city_canonical（达人服务继承团队地址）
+            query = query.where(or_(
+                S.city_canonical == canonical,
+                Expert.city_canonical == canonical,
+            ))
+        else:
+            s_filter = build_city_location_filter(S.location, city)
+            e_filter = build_city_location_filter(Expert.location, city)
+            if s_filter is not None and e_filter is not None:
+                query = query.where(or_(s_filter, e_filter))
+            elif s_filter is not None:
+                query = query.where(s_filter)
+            elif e_filter is not None:
+                query = query.where(e_filter)
     elif sort == "nearby":
         if lat is None or lng is None:
             raise HTTPException(status_code=400, detail="lat and lng required for nearby sort")

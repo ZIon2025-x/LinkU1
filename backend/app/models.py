@@ -196,6 +196,9 @@ class Task(Base):
     reward_to_be_quoted = Column(Boolean, default=False, nullable=False)  # 是否待报价（发布时未填金额，由接单者报价）
     currency = Column(String(3), default="GBP")  # 货币类型
     location = Column(String(255), nullable=False)  # 位置文本（用于显示）
+    # 由 location 规范化得到的 canonical UK 城市名（London/Birmingham/...）；
+    # 由 SQLAlchemy 事件钩子自动维护，"同城"查询走索引等值。NULL = 无法识别。
+    city_canonical = Column(String(50), nullable=True, index=True)
     latitude = Column(DECIMAL(10, 8), nullable=True)  # 纬度（用于地图选点和距离计算）
     longitude = Column(DECIMAL(11, 8), nullable=True)  # 经度（用于地图选点和距离计算）
     task_type = Column(String(50), nullable=False)
@@ -1611,6 +1614,9 @@ class TaskExpertService(Base):
     pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'negotiable'
     location_type = Column(String(20), nullable=False, default="online", server_default="online")  # 'online' | 'in_person' | 'both'
     location = Column(String(255), nullable=True)  # city/address text for display
+    # 由 location 规范化得到的 canonical UK 城市名；事件钩子自动维护。
+    # personal 服务用 service.location；expert 服务在此列 NULL 时由查询层回退到 expert.city_canonical。
+    city_canonical = Column(String(50), nullable=True, index=True)
     latitude = Column(DECIMAL(10, 8), nullable=True)  # for distance calc
     longitude = Column(DECIMAL(11, 8), nullable=True)  # for distance calc
     service_radius_km = Column(Integer, nullable=True)  # null = inherit from expert team
@@ -2199,6 +2205,8 @@ class Activity(Base):
     owner_type = Column(String(20), nullable=False, server_default='user')
     owner_id = Column(String(8), nullable=False)
     location = Column(String(255), nullable=False)
+    # 由 location 规范化得到的 canonical UK 城市名；事件钩子自动维护。
+    city_canonical = Column(String(50), nullable=True, index=True)
     latitude = Column(DECIMAL(10, 8), nullable=True)
     longitude = Column(DECIMAL(11, 8), nullable=True)
     service_radius_km = Column(Integer, nullable=True)
@@ -3964,3 +3972,9 @@ from app.models_expert import (  # noqa: E402, F401
     GroupBuyParticipant,
     generate_expert_id,
 )
+
+# 注册 SQLAlchemy 事件钩子（city_canonical 自动维护等）。
+# 放在 models.py 末尾保证 FastAPI / Celery worker / 一次性脚本 / migration 等
+# 任何加载 models 的代码路径都触发钩子注册 —— 此前只在 main.py import，
+# Celery worker 写入 Task/Service/Activity/Expert 时钩子不触发，会留 NULL。
+import app.event_listeners  # noqa: F401, E402

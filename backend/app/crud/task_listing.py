@@ -53,11 +53,18 @@ def list_tasks(
         elif loc.lower() == "online":
             query = query.filter(Task.location.ilike("%online%"))
         else:
-            from app.utils.city_filter_utils import build_city_location_filter
-
-            city_expr = build_city_location_filter(Task.location, loc)
-            if city_expr is not None:
-                query = query.filter(city_expr)
+            # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+            from app.utils.city_filter_utils import (
+                build_city_location_filter,
+                resolve_city_canonical,
+            )
+            canonical = resolve_city_canonical(loc)
+            if canonical:
+                query = query.filter(Task.city_canonical == canonical)
+            else:
+                city_expr = build_city_location_filter(Task.location, loc)
+                if city_expr is not None:
+                    query = query.filter(city_expr)
 
     if keyword and keyword.strip():
         from app.utils.search_expander import build_keyword_filter
@@ -186,11 +193,18 @@ def count_tasks(
         elif loc.lower() == "online":
             query = query.filter(Task.location.ilike("%online%"))
         else:
-            from app.utils.city_filter_utils import build_city_location_filter
-
-            city_expr = build_city_location_filter(Task.location, loc)
-            if city_expr is not None:
-                query = query.filter(city_expr)
+            # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+            from app.utils.city_filter_utils import (
+                build_city_location_filter,
+                resolve_city_canonical,
+            )
+            canonical = resolve_city_canonical(loc)
+            if canonical:
+                query = query.filter(Task.city_canonical == canonical)
+            else:
+                city_expr = build_city_location_filter(Task.location, loc)
+                if city_expr is not None:
+                    query = query.filter(city_expr)
 
     if keyword and keyword.strip():
         from app.utils.search_expander import build_keyword_filter

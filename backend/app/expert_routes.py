@@ -524,11 +524,19 @@ async def list_experts(
         query = query.where(Expert.category == category)
 
     if location:
-        # 与 legacy 一致: build_city_location_filter 处理大小写不敏感 + 中英文城市别名
-        from app.utils.city_filter_utils import build_city_location_filter
-        loc_filter = build_city_location_filter(Expert.location, location.strip())
-        if loc_filter is not None:
-            query = query.where(loc_filter)
+        # 优先走 city_canonical 索引等值；canonicalize 失败时回退 ILIKE 兼容罕见城市
+        from app.utils.city_filter_utils import (
+            build_city_location_filter,
+            resolve_city_canonical,
+        )
+        loc_input = location.strip()
+        canonical = resolve_city_canonical(loc_input)
+        if canonical:
+            query = query.where(Expert.city_canonical == canonical)
+        else:
+            loc_filter = build_city_location_filter(Expert.location, loc_input)
+            if loc_filter is not None:
+                query = query.where(loc_filter)
 
     if keyword and keyword.strip():
         # 与 legacy 一致: build_keyword_filter 支持同义词扩展 (Phase B1 行为对齐)

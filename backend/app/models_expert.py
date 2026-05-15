@@ -67,6 +67,9 @@ class Expert(Base):
     # admin 后台编辑表单 + buyer 端达人详情页都依赖这些
     category = Column(String(50), nullable=True)
     location = Column(String(100), nullable=True)
+    # 由 location 规范化得到的 canonical UK 城市名；事件钩子自动维护。
+    # 用于 expert 服务在 service.city_canonical 缺失时兜底。
+    city_canonical = Column(String(50), nullable=True, index=True)
     display_order = Column(Integer, nullable=False, default=0, server_default="0")
     is_verified = Column(Boolean, nullable=False, default=False, server_default="false")
     expertise_areas = Column(JSON, nullable=True)
