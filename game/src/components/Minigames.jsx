@@ -5,6 +5,7 @@ import {
   PRET_SETS, pickPretSet, pretMaskRate,
   WORD_SET, LECTURE_THEMES, pickLectureTheme, lectureTimeForWeek,
   scoreWord, lectureAcademic, generateLectureGrid,
+  lectureDirInfo, isLectureAdjacent,
   DESIGN_BRIEFS, DESIGN_PALETTES, pickDesignBrief, scoreDesignBrief,
   pickEssayPuzzles, pickMatchRound,
   generateYellowLabelRound, yellowLabelConfig,
@@ -650,6 +651,7 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
 export function LectureMinigame({ onComplete, onCancel, week }) {
   const theme = useMemo(() => pickLectureTheme(week || 1), [week]);
   const totalTime = useMemo(() => lectureTimeForWeek(week || 1), [week]);
+  const dirInfo = useMemo(() => lectureDirInfo(week || 1), [week]);
 
   const [phase, setPhase] = useState('intro');
   const [grid] = useState(() => generateLectureGrid(theme));
@@ -677,10 +679,7 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
   }
 
   const cellKey = (r, c) => `${r}:${c}`;
-  const isAdjacent = useCallback((a, b) => {
-    if (!a || !b) return false;
-    return Math.abs(a.r - b.r) <= 1 && Math.abs(a.c - b.c) <= 1 && !(a.r === b.r && a.c === b.c);
-  }, []);
+  const isAdjacent = useCallback((a, b) => isLectureAdjacent(a, b, dirInfo.dirs), [dirInfo]);
 
   function tapCell(r, c) {
     if (phase !== 'playing') return;
@@ -692,8 +691,29 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
       return;
     }
     if (path.some(p => p.r === r && p.c === c)) return;
-    if (path.length === 0 || isAdjacent(last, { r, c })) {
+    if (path.length === 0) {
       setPath([...path, { r, c }]);
+      return;
+    }
+    if (isAdjacent(last, { r, c })) {
+      setPath([...path, { r, c }]);
+      return;
+    }
+    // 不相邻或方向受 tier 限制 — 给反馈
+    const dr = Math.abs(last.r - r);
+    const dc = Math.abs(last.c - c);
+    if (dr <= 1 && dc <= 1 && !(dr === 0 && dc === 0)) {
+      let dirName = '';
+      if (dr === 1 && dc === 0) dirName = '竖';
+      else if (dr === 1 && dc === 1) dirName = '斜';
+      if (dirName) {
+        audio.fail();
+        setLastWordFeedback({
+          word: '',
+          message: `W${week} 还不能${dirName}着连 (本周:${dirInfo.label})`,
+          bad: true,
+        });
+      }
     }
   }
 
@@ -771,7 +791,8 @@ export function LectureMinigame({ onComplete, onCancel, week }) {
             <div className="text-sm opacity-90 mb-4" style={{ lineHeight: '1.85' }}>
               Whitmore 在黑板上写理论。你的笔记本上是一团字母。<br/>
               <br/>
-              · 点击相邻字母 (横/竖/斜) 连成英文单词<br/>
+              <span style={{ color: '#d4b070' }}>· 本周可连：<strong>{dirInfo.label}</strong>（{dirInfo.desc}）</span><br/>
+              · 点击相邻字母连成英文单词<br/>
               · 3+ 字母才算分，越长分越高<br/>
               · 撞当周主题词 ★ 分数翻倍<br/>
               · 时间到自动交卷<br/>
