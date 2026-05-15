@@ -93,7 +93,7 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 2. 前端校验 size ≤20MB
 3. `POST /api/upload/file?usage=chat_media` → blob_id_f
 4. `POST /api/messages/task-chat` body 含 `attachments=[{attachment_type:'file', blob_id, meta:{original_filename, content_type, size}}]`,content = `[文件:filename.pdf]`,message_type=`'file'`
-5. 接收端按 `message_type=='file'` 渲染文件气泡;点击 → 调用 `open_filex` 或下载到本地后系统打开
+5. 接收端按 `message_type=='file'` 渲染文件气泡;点击 → push `PdfPreviewView` → 后台下载到 app 临时目录 → 用 `flutter_pdfview` 嵌入预览;预览页右上角三点 `PopupMenuButton`,菜单含「用其他应用打开」(`open_filex`) 和「分享 / 保存」(`share_plus` 调系统分享面板,iOS 含"存储到文件"项,Android 含"保存到设备")
 
 ## 5. 组件与文件
 
@@ -103,8 +103,9 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 |---|---|---|
 | `lib/features/chat/widgets/task_chat_action_menu.dart` | 改 | "图片"label 改"照片";`onImagePicker` 回调内部用 `pickMedia`,UI 不变;新增 `onFilePicker` 入口按钮(PDF) |
 | `lib/features/chat/widgets/video_message_bubble.dart` | 新 | 渲染缩略图 + 时长徽章 + 中央播放按钮覆盖层;点击 push 全屏播放页 |
-| `lib/features/chat/widgets/file_message_bubble.dart` | 新 | PDF 图标 + 文件名 + 大小标签;点击 → 下载并系统打开 |
-| `lib/features/chat/views/video_player_view.dart` | 新 | 全屏 chewie 播放器;签名 URL 从 attachment 解析;右上角三点 `PopupMenuButton` → 含"保存到相册"项 |
+| `lib/features/chat/widgets/file_message_bubble.dart` | 新 | PDF 图标 + 文件名 + 大小标签;点击 push `PdfPreviewView` |
+| `lib/features/chat/views/pdf_preview_view.dart` | 新 | app 内嵌 PDF 预览(`flutter_pdfview`);下载到临时目录后渲染;右上角三点 `PopupMenuButton` → 「用其他应用打开」+「分享 / 保存」 |
+| `lib/features/chat/views/video_player_view.dart` | 新 | 全屏 chewie 播放器;签名 URL 从 attachment 解析;右上角三点 `PopupMenuButton` → 含「保存到相册」项 |
 | `lib/core/widgets/full_screen_image_view.dart` | 改 | `FullScreenImageView` 加可选参数 `allowSaveToAlbum`(默认 false,保持其他调用方不变);任务聊天调用方传 true 时右上角渲染三点 `PopupMenuButton` → 含"保存到相册"项。后续要加"转发""举报"等动作时再重构为通用 actions 列表(YAGNI) |
 | `lib/core/utils/media_saver.dart` | 新 | 封装相册保存逻辑(图片 + 视频统一入口),处理 iOS / Android 权限请求与错误反馈 |
 | `lib/features/chat/widgets/message_group_bubble.dart` | 改 | 按 `message.messageType` 分发到 image / video / file bubble |
@@ -112,7 +113,7 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | `lib/data/repositories/message_repository.dart` | 改 | 新方法 `uploadChatVideo(bytes, filename) → blob_id`,`uploadChatFile(bytes, filename) → blob_id` |
 | `lib/data/models/message.dart` | 改 | 解析 `attachments` 列表(若现有 Message 模型尚未支持非 image 类型) |
 | `lib/l10n/app_zh.arb` / `app_en.arb` / `app_zh_Hant.arb` | 改 | 加 `chatPhotoLabel`、`chatVideoLabel`、`chatFileLabel`、`chatVideoMessage`、`chatFileMessage(filename)`、各错误码翻译 |
-| `pubspec.yaml` | 改 | 加 `video_compress`、`video_thumbnail`、`video_player`、`chewie`、`file_picker`、`open_filex`、`gal`(图片/视频保存到相册) |
+| `pubspec.yaml` | 改 | 加 `video_compress`、`video_thumbnail`、`video_player`、`chewie`、`file_picker`、`open_filex`、`gal`(图片/视频保存到相册)、`flutter_pdfview`(PDF 嵌入预览)、`share_plus`(系统分享面板,做"保存"和"用其他应用打开"的后端) |
 | `ios/Runner/Info.plist` | 改 | 加 `NSPhotoLibraryAddUsageDescription`(写相册权限说明文案,三语) |
 | `android/app/src/main/AndroidManifest.xml` | 改 | 加 `WRITE_EXTERNAL_STORAGE` (maxSdkVersion=28) + `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` (SDK 33+);`gal` 包通常会自动声明,需核查 |
 
@@ -151,6 +152,7 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | `chat_upload_failed` | 网络/超时 | SnackBar + optimistic 消息回滚 |
 | `chat_video_play_failed` | 播放器初始化失败 | 全屏页错误 + 重试按钮 |
 | `chat_file_download_failed` | PDF 下载失败 | SnackBar |
+| `chat_pdf_preview_failed` | flutter_pdfview 初始化或渲染失败 | 预览页错误占位 + "用其他应用打开"按钮 + 重试 |
 | `chat_save_permission_denied` | 用户拒绝相册写入权限 | SnackBar + "去设置"按钮(跳系统设置) |
 | `chat_save_failed` | 写相册失败(磁盘满 / 文件损坏) | SnackBar |
 | `chat_save_success` | 保存成功 | SnackBar 绿色 + 文案"已保存到相册" |
@@ -171,7 +173,9 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 
 - **图片**:消息气泡点击 → 现有 `FullScreenImageView`(`photo_view` 全屏 lightbox);本次给它加可选参数 `allowSaveToAlbum`,任务聊天的调用方传 `true`,右上角渲染三点 `PopupMenuButton`,菜单含"保存到相册"。点击 → 调用 `MediaSaver.saveImage(url)` → 弹 SnackBar(成功/失败)。
 - **视频**:点击缩略图 → push 新增的 `VideoPlayerView`(chewie);右上角三点 `PopupMenuButton`,菜单含"保存到相册"。点击 → 先把视频流落到 app 临时目录 → `MediaSaver.saveVideo(localPath)` → SnackBar。
-- **PDF**:点击消息气泡 → 后台下载到 app 临时目录 → 调用 `open_filex` 用系统默认 App 打开。**不需要单独"保存"入口**——系统打开后用户可在系统"文件"App 里另存,且 PDF 已不在沙盒外暴露。
+- **PDF**:点击消息气泡 → push `PdfPreviewView` → 后台下载到 app 临时目录 → `flutter_pdfview` 嵌入预览(不离开 app)。预览页右上角三点 `PopupMenuButton`,菜单含:
+  - **「用其他应用打开」** → `open_filex`,调起系统 PDF app(Books / Files / Drive / WPS 等)
+  - **「分享 / 保存」** → `share_plus.shareXFiles([XFile(localPath)])`,弹系统分享面板;iOS 含"存储到文件"、Android 含"保存到设备 / Drive / 邮件"等,用户自选目的地
 
 ### MediaSaver 实现要点
 
@@ -238,4 +242,6 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | 视频播放 codec 兼容性(HEVC) | video_compress 默认输出 H.264 baseline,跨平台兼容 |
 | iOS 首次拒绝相册权限后无法弹二次系统弹窗 | UI 显示"去设置"按钮直接跳系统 App 设置页(`AppSettings.openAppSettings`) |
 | Android 13+ 权限分裂(READ_MEDIA_IMAGES vs READ_MEDIA_VIDEO) | `gal` 包内部按 SDK 自动处理;manifest 同时声明两个 |
+| flutter_pdfview 在大 PDF (>10MB) 或加密 PDF 上渲染慢 / 失败 | 加 loading 状态;失败时显示错误 + "用其他应用打开"按钮兜底;PDF 上限 20MB 在合理范围内 |
+| 包体积上涨(`flutter_pdfview` ~5MB + `share_plus` ~0.5MB) | 单次扩容可接受;后续若加更多媒体类型再评估是否做 dynamic feature module |
 
