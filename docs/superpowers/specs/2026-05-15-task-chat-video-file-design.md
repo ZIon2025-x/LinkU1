@@ -29,6 +29,7 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | 播放行为 | 点击缩略图直接进全屏播放器,不做移动数据二次确认 |
 | 撤回 | 不支持(与现有图片一致) |
 | 限流 | 复用现有 `@rate_limit("upload_file")` |
+| 本地保存 | 图片和视频在全屏查看页右上角加下载按钮,保存到系统相册;PDF 点击即下载并系统打开(本来就是下载行为) |
 
 ## 3. 决策依据
 
@@ -103,13 +104,17 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | `lib/features/chat/widgets/task_chat_action_menu.dart` | 改 | "图片"label 改"照片";`onImagePicker` 回调内部用 `pickMedia`,UI 不变;新增 `onFilePicker` 入口按钮(PDF) |
 | `lib/features/chat/widgets/video_message_bubble.dart` | 新 | 渲染缩略图 + 时长徽章 + 中央播放按钮覆盖层;点击 push 全屏播放页 |
 | `lib/features/chat/widgets/file_message_bubble.dart` | 新 | PDF 图标 + 文件名 + 大小标签;点击 → 下载并系统打开 |
-| `lib/features/chat/views/video_player_view.dart` | 新 | 全屏 chewie 播放器;签名 URL 从 attachment 解析 |
+| `lib/features/chat/views/video_player_view.dart` | 新 | 全屏 chewie 播放器;签名 URL 从 attachment 解析;右上角"下载到相册"按钮 |
+| `lib/core/widgets/full_screen_image_view.dart` | 改 | `FullScreenImageView` 加可选参数 `allowDownload`(默认 false,保持其他调用方不变);任务聊天调用方传 true,显示右上角"保存到相册"按钮 |
+| `lib/core/utils/media_saver.dart` | 新 | 封装相册保存逻辑(图片 + 视频统一入口),处理 iOS / Android 权限请求与错误反馈 |
 | `lib/features/chat/widgets/message_group_bubble.dart` | 改 | 按 `message.messageType` 分发到 image / video / file bubble |
 | `lib/features/chat/bloc/chat_bloc.dart` | 改 | 新事件 `ChatSendVideo` / `ChatSendFile`;复用 SendImage 的 optimistic update + retry 模式 |
 | `lib/data/repositories/message_repository.dart` | 改 | 新方法 `uploadChatVideo(bytes, filename) → blob_id`,`uploadChatFile(bytes, filename) → blob_id` |
 | `lib/data/models/message.dart` | 改 | 解析 `attachments` 列表(若现有 Message 模型尚未支持非 image 类型) |
 | `lib/l10n/app_zh.arb` / `app_en.arb` / `app_zh_Hant.arb` | 改 | 加 `chatPhotoLabel`、`chatVideoLabel`、`chatFileLabel`、`chatVideoMessage`、`chatFileMessage(filename)`、各错误码翻译 |
-| `pubspec.yaml` | 改 | 加 `video_compress`、`video_thumbnail`、`video_player`、`chewie`、`file_picker`、`open_filex` |
+| `pubspec.yaml` | 改 | 加 `video_compress`、`video_thumbnail`、`video_player`、`chewie`、`file_picker`、`open_filex`、`gal`(图片/视频保存到相册) |
+| `ios/Runner/Info.plist` | 改 | 加 `NSPhotoLibraryAddUsageDescription`(写相册权限说明文案,三语) |
+| `android/app/src/main/AndroidManifest.xml` | 改 | 加 `WRITE_EXTERNAL_STORAGE` (maxSdkVersion=28) + `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` (SDK 33+);`gal` 包通常会自动声明,需核查 |
 
 ### Backend 端
 
@@ -146,6 +151,9 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | `chat_upload_failed` | 网络/超时 | SnackBar + optimistic 消息回滚 |
 | `chat_video_play_failed` | 播放器初始化失败 | 全屏页错误 + 重试按钮 |
 | `chat_file_download_failed` | PDF 下载失败 | SnackBar |
+| `chat_save_permission_denied` | 用户拒绝相册写入权限 | SnackBar + "去设置"按钮(跳系统设置) |
+| `chat_save_failed` | 写相册失败(磁盘满 / 文件损坏) | SnackBar |
+| `chat_save_success` | 保存成功 | SnackBar 绿色 + 文案"已保存到相册" |
 
 ### Optimistic Update(对齐现有 SendImage)
 
@@ -156,6 +164,27 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 5. 任一步失败 → 移除 pending + emit errorMessage
 
 **取消上传**:pending 消息上加"取消"按钮,绑定 Dio CancelToken。
+
+## 7.5 本地保存(图片 / 视频)
+
+### 交互
+
+- **图片**:消息气泡点击 → 现有 `FullScreenImageView`(`photo_view` 全屏 lightbox);本次给它加可选参数 `allowDownload`,任务聊天的调用方传 `true`,右上角显示下载图标。点击 → 调用 `MediaSaver.saveImage(url)` → 弹 SnackBar(成功/失败)。
+- **视频**:点击缩略图 → push 新增的 `VideoPlayerView`(chewie);右上角下载图标。点击 → 先把视频流落到 app 临时目录 → `MediaSaver.saveVideo(localPath)` → SnackBar。
+- **PDF**:本身就是"点击 → 下载并系统打开"流程,不需要额外"保存"入口。如果用户想留底,系统的"文件"App 自带管理能力。
+
+### MediaSaver 实现要点
+
+- 用 `gal` 包(现代 Flutter 相册写入,iOS Photos 框架 + Android MediaStore,无需 SAF 流程)
+- iOS:首次调用前 `gal.hasAccess(toAlbum: true)` → 没权限调 `requestAccess`;若被拒,UI 显示"去设置"按钮(`AppSettings.openAppSettings`)
+- Android:`gal` 内部按 SDK 版本自动选择写入路径,无需手动判断
+- 视频先下载到 `getTemporaryDirectory()` 再交给 `gal.putVideo(path)`(`gal` 接收本地路径不接收 URL)
+- 图片可以直接 `gal.putImageBytes(bytes)` 或先下载再 `putImage`
+
+### 安全与隐私
+
+- 任务聊天的视频/图片走 `/api/private-file/{blob_id}?token=...` 签名访问,**下载也走同一路径**,token 仅会话双方持有
+- 保存到相册后变成用户本地资产,平台无法控制其传播——这是平台一贯的尺度(图片已经能截屏,无本质差异),不视为新风险
 
 ## 8. 安全边界
 
@@ -182,6 +211,7 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 |---|---|---|
 | Flutter BLoC | `ChatSendVideo` / `ChatSendFile` 的成功 / 失败 / 取消 / 离线路径 | `bloc_test` + `mocktail`,mock MessageRepository |
 | Flutter Widget | VideoMessageBubble / FileMessageBubble 各状态渲染 | flutter_test(golden 可选) |
+| Flutter MediaSaver | 权限通过 / 权限拒绝 / 保存失败 3 种路径 | flutter_test + mock gal |
 | Backend unit | `validate_chat_video` / `validate_chat_pdf` 边界(最大尺寸、错 magic byte、错后缀、空文件) | pytest |
 | Backend route | `/api/upload/file?usage=chat_media` 各 reject 路径 + 成功 + rate_limit | pytest + FastAPI TestClient |
 | Backend integration | 发视频消息 → DB 落两条 attachment → fetch 消息 → 序列化包含 meta.role='thumbnail' | pytest |
@@ -206,4 +236,6 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 | 用户误传非 PDF(改扩展名) | magic byte 服务端拦截 |
 | 存储成本上涨过快 | 跟随任务清理 + 监控 dashboard;若超预期可加单文件大小/单用户视频频率收紧 |
 | 视频播放 codec 兼容性(HEVC) | video_compress 默认输出 H.264 baseline,跨平台兼容 |
+| iOS 首次拒绝相册权限后无法弹二次系统弹窗 | UI 显示"去设置"按钮直接跳系统 App 设置页(`AppSettings.openAppSettings`) |
+| Android 13+ 权限分裂(READ_MEDIA_IMAGES vs READ_MEDIA_VIDEO) | `gal` 包内部按 SDK 自动处理;manifest 同时声明两个 |
 
