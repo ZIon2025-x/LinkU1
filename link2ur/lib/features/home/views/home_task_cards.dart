@@ -348,7 +348,6 @@ class _NearbyTabState extends State<_NearbyTab> {
               _NearbyRadiusSelector(
                 selectedRadius: state.nearbyRadius,
                 onChanged: _onRadiusChanged,
-                city: _city,
               ),
               const Spacer(),
               Icon(Icons.location_off_outlined,
@@ -396,7 +395,6 @@ class _NearbyTabState extends State<_NearbyTab> {
                     child: _NearbyRadiusSelector(
                       selectedRadius: state.nearbyRadius,
                       onChanged: _onRadiusChanged,
-                      city: _city,
                     ),
                   ),
                   // Waterfall grid
@@ -466,17 +464,15 @@ class _NearbyTabState extends State<_NearbyTab> {
 }
 
 /// 半径选择器 — 横向 ChoiceChip 列表
-/// radius==0 的 chip 渲染为"同城・$city"（没拿到 city 时退化为"同城"）
+/// radius==0 的 chip 渲染为"同城"（i18n: nearbyRadiusSameCity）
 class _NearbyRadiusSelector extends StatelessWidget {
   const _NearbyRadiusSelector({
     required this.selectedRadius,
     required this.onChanged,
-    this.city,
   });
 
   final int selectedRadius;
   final ValueChanged<int> onChanged;
-  final String? city;
 
   @override
   Widget build(BuildContext context) {
@@ -509,9 +505,7 @@ class _NearbyRadiusSelector extends StatelessWidget {
                 final radius = _NearbyTabState._radiusOptions[index];
                 final isSelected = radius == selectedRadius;
                 final label = radius == 0
-                    ? (city != null && city!.isNotEmpty
-                        ? l10n.nearbyRadiusSameCityWithName(city!)
-                        : l10n.nearbyRadiusSameCity)
+                    ? l10n.nearbyRadiusSameCity
                     : '${radius}km';
                 return ChoiceChip(
                   label: Text(label),

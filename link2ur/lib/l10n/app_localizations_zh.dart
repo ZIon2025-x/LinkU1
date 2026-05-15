@@ -11362,11 +11362,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nearbyRadiusSameCity => '同城';
 
   @override
-  String nearbyRadiusSameCityWithName(String city) {
-    return '同城・$city';
-  }
-
-  @override
   String get nearbyTypeTask => '任务';
 
   @override
@@ -25180,11 +25175,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get nearbyRadiusSameCity => '同城';
-
-  @override
-  String nearbyRadiusSameCityWithName(String city) {
-    return '同城・$city';
-  }
 
   @override
   String get nearbyTypeTask => '任務';

@@ -11849,11 +11849,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nearbyRadiusSameCity => 'Same City';
 
   @override
-  String nearbyRadiusSameCityWithName(String city) {
-    return 'Same City · $city';
-  }
-
-  @override
   String get nearbyTypeTask => 'Task';
 
   @override
