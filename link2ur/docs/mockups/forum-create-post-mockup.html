@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>发布帖子 · Link2Ur Mockup</title>
+<style>
+  :root {
+    --primary: #007AFF;
+    --primary-light: #409CFF;
+    --primary-soft: rgba(0, 122, 255, 0.08);
+    --primary-softer: rgba(0, 122, 255, 0.04);
+    --accent: #FF8033;
+    --pink: #FF4D80;
+    --success: #26BF73;
+    --warning: #FFA600;
+    --error: #F24D4D;
+    --bg: #F5F5F7;
+    --bg-grad-1: #EAF1FF;
+    --bg-grad-2: #F8F4FF;
+    --card: #FFFFFF;
+    --text-1: #111418;
+    --text-2: #5A6478;
+    --text-3: #99A0AE;
+    --line: rgba(15, 20, 30, 0.06);
+    --line-strong: rgba(15, 20, 30, 0.12);
+    --shadow-card: 0 24px 60px -16px rgba(20, 36, 80, 0.18), 0 8px 24px -12px rgba(20, 36, 80, 0.10);
+    --shadow-elev: 0 6px 18px -6px rgba(0, 122, 255, 0.35), 0 2px 6px rgba(0, 122, 255, 0.15);
+    --radius-lg: 28px;
+    --radius-md: 18px;
+    --radius-sm: 12px;
+    --radius-xs: 8px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, var(--bg-grad-1), transparent 60%),
+      radial-gradient(900px 500px at 110% 110%, var(--bg-grad-2), transparent 60%),
+      linear-gradient(180deg, #F2F5FA 0%, #ECEEF5 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 16px 80px;
+    gap: 24px;
+  }
+
+  /* ── 标题 ── */
+  .page-title {
+    text-align: center;
+    color: var(--text-2);
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .page-title strong {
+    display: block;
+    color: var(--text-1);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+    text-transform: none;
+  }
+
+  /* ── 手机外壳 ── */
+  .phone {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 820px;
+  }
+
+  /* ── 状态栏 ── */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 22px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+  .status-bar .right { display: flex; align-items: center; gap: 6px; }
+  .battery {
+    width: 24px; height: 12px;
+    border: 1.5px solid var(--text-1);
+    border-radius: 3px;
+    position: relative;
+    display: inline-block;
+  }
+  .battery::after {
+    content: "";
+    position: absolute;
+    right: -3px;
+    top: 50%; transform: translateY(-50%);
+    width: 2px; height: 5px;
+    background: var(--text-1);
+    border-radius: 0 1px 1px 0;
+  }
+  .battery::before {
+    content: "";
+    position: absolute;
+    inset: 1px 6px 1px 1px;
+    background: var(--text-1);
+    border-radius: 1px;
+  }
+
+  /* ── 顶部 App Bar ── */
+  .appbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .appbar .left, .appbar .right { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-1);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .icon-btn:hover { background: rgba(0,0,0,0.04); }
+
+  .appbar-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .publish-btn {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-elev);
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+  }
+  .publish-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -6px rgba(0,122,255,0.45); }
+  .publish-btn:active { transform: translateY(0); }
+
+  /* ── 内容区 ── */
+  .body {
+    flex: 1;
+    padding: 16px 18px 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ── 草稿恢复 banner ── */
+  .draft-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(255,166,0,0.10), rgba(255,166,0,0.04));
+    border: 1px solid rgba(255,166,0,0.25);
+  }
+  .draft-banner .icon-circle {
+    width: 32px; height: 32px;
+    background: rgba(255,166,0,0.18);
+    color: var(--warning);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .draft-banner .text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-1);
+    line-height: 1.4;
+  }
+  .draft-banner .text small { display: block; color: var(--text-2); font-size: 11px; margin-top: 2px; }
+  .pill-btn {
+    border: 1px solid var(--line-strong);
+    background: #fff;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-1);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill-btn.primary {
+    background: var(--warning);
+    color: #fff;
+    border-color: transparent;
+  }
+  .pill-btn:hover { transform: translateY(-1px); }
+
+  /* ── 分类选择 ── */
+  .category {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--primary-soft);
+    border: 1px solid rgba(0,122,255,0.18);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .category:hover { background: rgba(0,122,255,0.12); }
+  .category .cat-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px -2px rgba(0,122,255,0.4);
+  }
+  .category .cat-text { flex: 1; }
+  .category .cat-text b { display: block; font-size: 15px; font-weight: 600; color: var(--text-1); }
+  .category .cat-text small { font-size: 12px; color: var(--text-2); }
+
+  /* ── 标题输入 ── */
+  .title-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-1);
+    padding: 4px 0;
+    background: transparent;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+  }
+  .title-input::placeholder { color: var(--text-3); font-weight: 600; }
+
+  .soft-divider { height: 1px; background: var(--line); border: none; margin: 0; }
+
+  /* ── 内容输入 ── */
+  .content-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text-1);
+    resize: none;
+    background: transparent;
+    font-family: inherit;
+    min-height: 140px;
+  }
+  .content-input::placeholder { color: var(--text-3); }
+
+  .char-counter {
+    display: flex;
+    justify-content: flex-end;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .char-counter b { color: var(--text-2); font-weight: 600; }
+
+  /* ── section 标题 ── */
+  .section-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .section-label .left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+  .section-label .count {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  /* ── 图片预览栅格 ── */
+  .image-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .image-tile {
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+    background: #EEF1F6;
+    box-shadow: 0 2px 8px -2px rgba(0,0,0,0.08);
+  }
+  .image-tile img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .image-tile .remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    border: 1.5px solid rgba(255,255,255,0.6);
+    color: #fff;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .image-tile .order {
+    position: absolute;
+    bottom: 4px; left: 4px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .image-tile.cover::before {
+    content: "封面";
+    position: absolute;
+    top: 4px; left: 4px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-weight: 600;
+    z-index: 1;
+  }
+  .image-tile.add {
+    background: var(--primary-softer);
+    border: 1.5px dashed rgba(0,122,255,0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--primary);
+    cursor: pointer;
+    box-shadow: none;
+    transition: all 0.15s;
+  }
+  .image-tile.add:hover { background: var(--primary-soft); border-color: var(--primary); }
+  .image-tile.add svg { width: 22px; height: 22px; }
+  .image-tile.add span { font-size: 10px; font-weight: 600; }
+
+  /* ── 文件卡片 ── */
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #FFF, #FAFBFD);
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px -3px rgba(15,20,30,0.05);
+  }
+  .file-icon {
+    width: 44px; height: 44px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #F24D4D, #FF7A7A);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 10px -2px rgba(242,77,77,0.35);
+  }
+  .file-info { flex: 1; min-width: 0; }
+  .file-info .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-info .meta {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+  .file-info .progress {
+    height: 3px;
+    background: rgba(0,122,255,0.12);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .file-info .progress span {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    border-radius: 2px;
+  }
+  .file-card .x-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(242,77,77,0.10);
+    color: var(--error);
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── 关联内容 chip ── */
+  .link-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(115,89,242,0.08), rgba(115,89,242,0.02));
+    border: 1px solid rgba(115,89,242,0.25);
+  }
+  .link-chip .l-icon {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #7359F2, #A18BFF);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px -2px rgba(115,89,242,0.4);
+  }
+  .link-chip .l-info { flex: 1; min-width: 0; }
+  .link-chip .l-info .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    color: #7359F2;
+    background: rgba(115,89,242,0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-bottom: 2px;
+  }
+  .link-chip .l-info .name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .link-chip .x-btn {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.05);
+    color: var(--text-2);
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── 底部工具栏 ── */
+  .toolbar {
+    border-top: 1px solid var(--line);
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 10px 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 4px;
+  }
+  .tool {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 4px;
+    border-radius: 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-2);
+  }
+  .tool:hover { background: rgba(0,0,0,0.03); color: var(--text-1); }
+  .tool .t-icon-wrap {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.04);
+    transition: all 0.15s;
+  }
+  .tool:hover .t-icon-wrap { transform: scale(1.05); }
+  .tool .t-label { font-size: 11px; font-weight: 500; }
+  .tool .t-badge {
+    position: absolute;
+    top: 4px;
+    margin-left: 22px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid #fff;
+    z-index: 1;
+  }
+  .tool.image .t-icon-wrap { background: rgba(38,191,115,0.10); color: var(--success); }
+  .tool.file .t-icon-wrap  { background: rgba(242,77,77,0.10); color: var(--error); }
+  .tool.link .t-icon-wrap  { background: rgba(115,89,242,0.10); color: #7359F2; }
+  .tool.emoji .t-icon-wrap { background: rgba(255,128,51,0.10); color: var(--accent); }
+  .tool.image.active .t-icon-wrap { background: var(--success); color: #fff; }
+
+  .tool { position: relative; }
+
+  /* ── 注解 ── */
+  .annotation {
+    font-size: 12px;
+    color: var(--text-2);
+    text-align: center;
+    max-width: 420px;
+    line-height: 1.6;
+  }
+  .annotation kbd {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="page-title">
+    <strong>发布帖子 · Mockup</strong>
+    现代轻拟物 · 横向工具栏
+  </div>
+
+  <div class="phone">
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="right">
+        <span>●●●●●</span>
+        <span style="margin-left:6px">WiFi</span>
+        <span class="battery" style="margin-left:6px"></span>
+      </div>
+    </div>
+
+    <!-- App Bar -->
+    <div class="appbar">
+      <div class="left">
+        <button class="icon-btn" aria-label="返回">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="appbar-title">发布帖子</span>
+      </div>
+      <div class="right">
+        <button class="icon-btn" aria-label="预览">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="publish-btn">发布</button>
+      </div>
+    </div>
+
+    <!-- 内容 -->
+    <div class="body">
+
+      <!-- 草稿恢复 -->
+      <div class="draft-banner">
+        <div class="icon-circle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+        </div>
+        <div class="text">
+          检测到上次未完成的草稿
+          <small>保存于 2 小时前 · 共 142 字</small>
+        </div>
+        <button class="pill-btn">丢弃</button>
+        <button class="pill-btn primary">恢复</button>
+      </div>
+
+      <!-- 分类 -->
+      <div class="category">
+        <div class="cat-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="cat-text">
+          <b>技能交流</b>
+          <small>聊聊你的专长、经验或想学的技能</small>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#99A0AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+
+      <!-- 标题 -->
+      <div>
+        <input class="title-input" placeholder="起一个吸引人的标题…" value="如何在 30 天内从零学会 Figma？" />
+        <hr class="soft-divider">
+      </div>
+
+      <!-- 内容 -->
+      <div>
+        <textarea class="content-input" placeholder="分享你的想法、经历或问题…&#10;&#10;清晰的描述能帮助更多人看到这篇内容。">作为一个产品经理，我最近用 30 天时间集中突击了 Figma。
+
+把过程整理成了一份学习路径，包括每天 1 小时的练习清单、推荐的免费资源、以及我踩过的坑。
+
+附件里是完整的学习计划 PDF，希望对正在学 Figma 的朋友有帮助 ✨</textarea>
+        <div class="char-counter"><b>187</b>&nbsp;/ 5000</div>
+      </div>
+
+      <!-- 图片 -->
+      <div>
+        <div class="section-label">
+          <div class="left">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            图片
+          </div>
+          <span class="count">3 / 5</span>
+        </div>
+        <div class="image-grid">
+          <div class="image-tile cover">
+            <img src="https://images.unsplash.com/photo-1611224885990-ab7363d1f2a9?w=300&h=300&fit=crop" alt="cover" />
+            <button class="remove">×</button>
+          </div>
+          <div class="image-tile">
+            <img src="https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=300&h=300&fit=crop" alt="" />
+            <button class="remove">×</button>
+            <div class="order">2</div>
+          </div>
+          <div class="image-tile">
+            <img src="https://images.unsplash.com/photo-1559028012-481c04fa702d?w=300&h=300&fit=crop" alt="" />
+            <button class="remove">×</button>
+            <div class="order">3</div>
+          </div>
+          <div class="image-tile add">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span>添加</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 文件 -->
+      <div>
+        <div class="section-label">
+          <div class="left">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            附件
+          </div>
+          <span class="count">1 / 1 · 最大 20MB</span>
+        </div>
+        <div class="file-card">
+          <div class="file-icon">PDF</div>
+          <div class="file-info">
+            <div class="name">Figma-30天学习计划-完整版.pdf</div>
+            <div class="meta">2.4 MB · 已上传</div>
+            <div class="progress"><span></span></div>
+          </div>
+          <button class="x-btn" aria-label="删除">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 关联内容 -->
+      <div>
+        <div class="section-label">
+          <div class="left">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            关联
+          </div>
+          <span class="count">可选</span>
+        </div>
+        <div class="link-chip">
+          <div class="l-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H3v10h6V11zM21 11h-6v10h6V11zM15 3H9v8h6V3z"/></svg>
+          </div>
+          <div class="l-info">
+            <div class="tag">任务</div>
+            <div class="name">找一位资深设计师做 LOGO 品牌升级</div>
+          </div>
+          <button class="x-btn" aria-label="移除">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部工具栏 -->
+    <div class="toolbar">
+      <button class="tool image active">
+        <div class="t-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <span class="t-badge">3</span>
+        <span class="t-label">图片</span>
+      </button>
+      <button class="tool file">
+        <div class="t-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <span class="t-badge">1</span>
+        <span class="t-label">附件</span>
+      </button>
+      <button class="tool link">
+        <div class="t-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <span class="t-badge">1</span>
+        <span class="t-label">关联</span>
+      </button>
+      <button class="tool emoji">
+        <div class="t-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </div>
+        <span class="t-label">表情</span>
+      </button>
+    </div>
+
+  </div>
+
+  <div class="annotation">
+    Mockup 演示。直接双击 HTML 文件用浏览器打开即可看到效果，<br>
+    按 <kbd>Cmd/Ctrl + Shift + M</kbd> 切换移动视图查看真实手机比例。
+  </div>
+
+</body>
+</html>
