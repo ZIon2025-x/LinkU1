@@ -70,6 +70,38 @@ class ChatSendImage extends ChatEvent {
   List<Object?> get props => [bytes, filename, senderId];
 }
 
+class ChatSendVideo extends ChatEvent {
+  const ChatSendVideo({
+    required this.videoBytes,
+    required this.videoFilename,
+    required this.videoDurationMs,
+    required this.videoWidth,
+    required this.videoHeight,
+    required this.thumbnailBytes,
+    required this.thumbnailFilename,
+    this.senderId,
+  });
+
+  final Uint8List videoBytes;
+  final String videoFilename;
+  final int videoDurationMs;
+  final int videoWidth;
+  final int videoHeight;
+  final Uint8List thumbnailBytes;
+  final String thumbnailFilename;
+  final String? senderId;
+
+  @override
+  List<Object?> get props => [
+        videoBytes,
+        videoFilename,
+        videoDurationMs,
+        thumbnailBytes,
+        thumbnailFilename,
+        senderId,
+      ];
+}
+
 class ChatMessageReceived extends ChatEvent {
   const ChatMessageReceived(this.message);
 
@@ -219,6 +251,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatLoadMore>(_onLoadMore);
     on<ChatSendMessage>(_onSendMessage);
     on<ChatSendImage>(_onSendImage);
+    on<ChatSendVideo>(_onSendVideo);
     on<ChatMessageReceived>(_onMessageReceived);
     on<ChatMarkAsRead>(_onMarkAsRead);
     on<ChatPeerTypingReceived>(_onPeerTyping);
@@ -563,6 +596,117 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           errorMessage: 'chat_send_image_failed',
         ));
       }
+    }
+  }
+
+  Future<void> _onSendVideo(
+    ChatSendVideo event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (!NetworkMonitor.instance.isConnected) {
+      emit(state.copyWith(errorMessage: 'chat_network_offline'));
+      return;
+    }
+    if (state.taskId == null) {
+      emit(state.copyWith(errorMessage: 'chat_upload_failed'));
+      return;
+    }
+
+    emit(state.copyWith(isSending: true));
+    int? pendingId;
+    Message? pendingMessage;
+
+    try {
+      // 并行上传视频和缩略图
+      final results = await Future.wait([
+        _messageRepository.uploadChatVideo(
+          event.videoBytes,
+          event.videoFilename,
+          state.taskId!,
+        ),
+        _messageRepository.uploadImage(
+          event.thumbnailBytes,
+          event.thumbnailFilename,
+        ),
+      ]);
+      final videoUpload = results[0]
+          as ({String url, String blobId, int size, String originalName});
+      final thumbUrl = results[1] as String;
+
+      final senderId = event.senderId?.trim();
+      final canOptimistic = senderId != null && senderId.isNotEmpty;
+      if (canOptimistic) {
+        pendingId = _nextPendingId();
+        pendingMessage = Message(
+          id: pendingId,
+          senderId: senderId,
+          receiverId: state.userId,
+          content: '[视频]',
+          messageType: 'video',
+          createdAt: DateTime.now().toUtc(),
+        );
+        emit(state.copyWith(
+          messages: state.isTaskChat
+              ? [pendingMessage, ...state.messages]
+              : [...state.messages, pendingMessage],
+        ));
+      }
+
+      final message = await _messageRepository.sendTaskChatMessage(
+        state.taskId!,
+        content: '[视频]',
+        messageType: 'video',
+        attachments: [
+          {
+            'attachment_type': 'video',
+            'blob_id': videoUpload.blobId,
+            'meta': {
+              'duration': (event.videoDurationMs / 1000).round(),
+              'width': event.videoWidth,
+              'height': event.videoHeight,
+              'size': videoUpload.size,
+              'original_filename': videoUpload.originalName,
+            },
+          },
+          {
+            'attachment_type': 'image',
+            'url': thumbUrl,
+            'meta': {
+              'role': 'thumbnail',
+              'original_filename': event.thumbnailFilename,
+            },
+          },
+        ],
+      );
+
+      if (canOptimistic && pendingMessage != null) {
+        final list = state.messages
+            .map((m) => m.id == pendingMessage!.id ? message : m)
+            .toList();
+        emit(state.copyWith(messages: list, isSending: false));
+      } else {
+        emit(state.copyWith(
+          messages: state.isTaskChat
+              ? [message, ...state.messages]
+              : [...state.messages, message],
+          isSending: false,
+        ));
+      }
+    } catch (e) {
+      AppLogger.error('Failed to send video', e);
+      List<Message> list = state.messages;
+      if (pendingMessage != null) {
+        list = state.messages.where((m) => m.id != pendingMessage!.id).toList();
+      }
+      String errorCode = 'chat_upload_failed';
+      if (e is MessageException && e.code != null) {
+        errorCode = e.code!;
+      }
+      emit(state.copyWith(
+        messages: list,
+        isSending: false,
+        errorMessage: errorCode,
+      ));
     }
   }
 
