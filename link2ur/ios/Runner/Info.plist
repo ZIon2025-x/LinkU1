@@ -93,6 +93,8 @@
 		<string>We use Face ID to securely authenticate and log you into your account.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>This app needs access to your photo library to upload images for your profile, tasks, and posts.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Link2Ur 需要相册写入权限,以便将任务聊天的图片和视频保存到您的相册。</string>
 		<!-- URL Schemes -->
 		<key>CFBundleURLTypes</key>
 		<array>
