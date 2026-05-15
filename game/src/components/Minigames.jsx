@@ -438,6 +438,19 @@ export function PretMinigame({ onComplete, onCancel, week, pretPlaysCount }) {
 // 论文写作迷你游戏
 // ========================================
 
+function EssayRulesBody({ totalPuzzles }) {
+  return (
+    <>
+      凌晨 1 点。你试图把一段卡壳的 paragraph 写完。<br/>
+      <br/>
+      · 一共 <strong style={{ color: '#9080b8' }}>{totalPuzzles}</strong> 道填空题<br/>
+      · 每题有几个候选句子，挑最贴合 context 的那句填进 ___<br/>
+      · 选错会看到为什么不对（也是知识点）<br/>
+      · 对越多，academic 涨越多；2/3+ 还有 belonging 加成
+    </>
+  );
+}
+
 export function EssayMinigame({ onComplete, onCancel, week }) {
   // 按 week 抽 3 个 puzzle(phase 1/2/3 池),锁定挂载时
   const puzzles = useMemo(() => pickEssayPuzzles(week || 1, []), [week]);
@@ -445,6 +458,8 @@ export function EssayMinigame({ onComplete, onCancel, week }) {
   const [pickedIdx, setPickedIdx] = useState(null);
   const [score, setScore] = useState(0);
   const [showFb, setShowFb] = useState(null);
+  const [introPhase, setIntroPhase] = useState(true);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const puzzle = puzzles[puzzleIdx];
 
@@ -489,12 +504,29 @@ export function EssayMinigame({ onComplete, onCancel, week }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border border-purple-300/40 max-w-md w-full p-5">
+      <div className="bg-[#1a1612] border border-purple-300/40 max-w-md w-full p-5 relative">
+        <MinigameHelpButton onClick={() => { audio.click(); setRulesOpen(true); }} />
         <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#9080b8' }}>📝 MINIGAME</div>
         <h2 className="text-xl mb-1 font-light">写论文</h2>
-        <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>填入最合适的句子 · {puzzleIdx + 1}/{puzzles.length}</div>
+        <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>
+          {introPhase ? `填入最合适的句子 · 共 ${puzzles.length} 题` : `填入最合适的句子 · ${puzzleIdx + 1}/${puzzles.length}`}
+        </div>
 
-        {!showFb ? (
+        {introPhase ? (
+          <>
+            <div className="text-sm opacity-90 mb-4" style={{ lineHeight: '1.85' }}>
+              <EssayRulesBody totalPuzzles={puzzles.length} />
+            </div>
+            <button
+              onClick={() => { audio.click(); setIntroPhase(false); }}
+              className="w-full py-3 border hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm"
+              style={{ borderColor: '#9080b8', color: '#9080b8' }}
+            >
+              开始写
+            </button>
+            <button onClick={onCancel} className="w-full mt-2 p-2 text-xs opacity-60 hover:opacity-100">下次再说 →</button>
+          </>
+        ) : !showFb ? (
           <>
             <div className="text-xs tracking-[0.2em] opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>{puzzle.context}</div>
             <div className="border-l-2 border-purple-300/40 pl-4 py-2 mb-4 text-sm italic bg-purple-300/5"
@@ -532,6 +564,14 @@ export function EssayMinigame({ onComplete, onCancel, week }) {
             </button>
           </>
         )}
+
+        <MinigameRulesModal
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          title="ESSAY · 写论文"
+        >
+          <EssayRulesBody totalPuzzles={puzzles.length} />
+        </MinigameRulesModal>
       </div>
     </div>
   );
