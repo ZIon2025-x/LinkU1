@@ -298,7 +298,7 @@ class ForumPost extends Equatable {
     this.linkedItemType,
     this.linkedItemId,
     this.linkedItemName,
-    required this.categoryId,
+    this.categoryId,
     this.category,
     required this.authorId,
     this.author,
@@ -336,7 +336,7 @@ class ForumPost extends Equatable {
   final String? linkedItemType; // service/expert/activity/product/ranking/forum_post
   final String? linkedItemId;
   final String? linkedItemName;
-  final int categoryId;
+  final int? categoryId;
   final ForumCategory? category;
   final String authorId;
   final UserBrief? author;
@@ -410,7 +410,11 @@ class ForumPost extends Equatable {
       linkedItemType: json['linked_item_type'] as String?,
       linkedItemId: json['linked_item_id']?.toString(),
       linkedItemName: json['linked_item_name'] as String?,
-      categoryId: _parseInt(json['category_id'], fallback: json['category'] != null ? _parseInt((json['category'] as Map<String, dynamic>)['id']) : 0),
+      categoryId: json['category_id'] != null
+          ? _parseInt(json['category_id'])
+          : (json['category'] != null
+              ? _parseInt((json['category'] as Map<String, dynamic>)['id'])
+              : null),
       category: json['category'] != null
           ? ForumCategory.fromJson(json['category'] as Map<String, dynamic>)
           : null,
@@ -651,7 +655,7 @@ class CreatePostRequest {
   const CreatePostRequest({
     required this.title,
     required this.content,
-    required this.categoryId,
+    this.categoryId,
     this.images = const [],
     this.attachments = const [],
     this.linkedItemType,
@@ -661,7 +665,7 @@ class CreatePostRequest {
 
   final String title;
   final String content;
-  final int categoryId;
+  final int? categoryId;
   final List<String> images;
   final List<ForumPostAttachment> attachments;
   final String? linkedItemType;
