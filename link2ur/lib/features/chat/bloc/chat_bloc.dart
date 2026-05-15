@@ -96,6 +96,8 @@ class ChatSendVideo extends ChatEvent {
         videoBytes,
         videoFilename,
         videoDurationMs,
+        videoWidth,
+        videoHeight,
         thumbnailBytes,
         thumbnailFilename,
         senderId,
@@ -613,7 +615,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
 
     emit(state.copyWith(isSending: true));
-    int? pendingId;
     Message? pendingMessage;
 
     try {
@@ -636,9 +637,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final senderId = event.senderId?.trim();
       final canOptimistic = senderId != null && senderId.isNotEmpty;
       if (canOptimistic) {
-        pendingId = _nextPendingId();
         pendingMessage = Message(
-          id: pendingId,
+          id: _nextPendingId(),
           senderId: senderId,
           receiverId: state.userId,
           content: '[视频]',
