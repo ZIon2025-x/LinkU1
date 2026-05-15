@@ -21797,6 +21797,24 @@ abstract class AppLocalizations {
   /// **'Same City · {city}'**
   String nearbyRadiusSameCityWithName(String city);
 
+  /// Top-left type badge on nearby card for task entries
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get nearbyTypeTask;
+
+  /// Top-left type badge on nearby card for personal skill services
+  ///
+  /// In en, this message translates to:
+  /// **'Skill'**
+  String get nearbyTypeSkill;
+
+  /// Top-left type badge on nearby card for expert team services
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get nearbyTypeExpert;
+
   /// No description provided for @nearbyNoServices.
   ///
   /// In en, this message translates to:

@@ -5409,6 +5409,18 @@
       "city": { "type": "String", "example": "London" }
     }
   },
+  "nearbyTypeTask": "Task",
+  "@nearbyTypeTask": {
+    "description": "Top-left type badge on nearby card for task entries"
+  },
+  "nearbyTypeSkill": "Skill",
+  "@nearbyTypeSkill": {
+    "description": "Top-left type badge on nearby card for personal skill services"
+  },
+  "nearbyTypeExpert": "Expert",
+  "@nearbyTypeExpert": {
+    "description": "Top-left type badge on nearby card for expert team services"
+  },
   "nearbyNoServices": "No nearby services",
   "nearbyServiceDistance": "away",
   "locationResolving": "Resolving...",

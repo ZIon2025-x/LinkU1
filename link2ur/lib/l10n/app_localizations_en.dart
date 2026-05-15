@@ -11854,6 +11854,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get nearbyTypeTask => 'Task';
+
+  @override
+  String get nearbyTypeSkill => 'Skill';
+
+  @override
+  String get nearbyTypeExpert => 'Expert';
+
+  @override
   String get nearbyNoServices => 'No nearby services';
 
   @override

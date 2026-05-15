@@ -558,12 +558,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (_personalServiceRepository == null) return;
     try {
       final page = event.loadMore ? state.nearbyServicesPage + 1 : 1;
-      // radius=0 是"同城"哨兵：走 city 过滤；否则按 radius 距离过滤
+      // radius=0 是"同城"哨兵：走 city 过滤；否则按 radius 距离过滤。
+      // 不论何种模式都传 lat/lng，让后端为每条服务计算 distance_km，
+      // 前端切 chip 时可纯客户端按距离过滤、无需 refetch。
       final isSameCity = event.radius == 0;
       final result = await _personalServiceRepository.browseServices(
         sort: 'nearby',
-        lat: isSameCity ? null : event.latitude,
-        lng: isSameCity ? null : event.longitude,
+        lat: event.latitude,
+        lng: event.longitude,
         radius: isSameCity ? null : event.radius,
         city: isSameCity ? event.city : null,
         page: page,

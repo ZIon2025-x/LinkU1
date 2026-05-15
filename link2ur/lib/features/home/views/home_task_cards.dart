@@ -145,17 +145,17 @@ class _NearbyTabState extends State<_NearbyTab> {
       if (distance > 500) {
         _currentLat = position.latitude;
         _currentLng = position.longitude;
+        // raw pool 永远是同城（radius=0），chip 是纯客户端 display filter
         final bloc = context.read<HomeBloc>();
         bloc.add(HomeLoadNearby(
               latitude: position.latitude,
               longitude: position.longitude,
               city: _city,
-              radius: bloc.state.nearbyRadius,
+              radius: 0,
             ));
         bloc.add(HomeLoadNearbyServices(
               latitude: position.latitude,
               longitude: position.longitude,
-              radius: bloc.state.nearbyRadius,
               city: _city,
             ));
       }
@@ -178,47 +178,45 @@ class _NearbyTabState extends State<_NearbyTab> {
         _city = _defaultCity;
       }
     });
+    // raw pool 永远是同城（radius=0），chip 是纯客户端 display filter
     final bloc = context.read<HomeBloc>();
     bloc.add(HomeLoadNearby(
           latitude: lat,
           longitude: lng,
           city: _city,
-          radius: bloc.state.nearbyRadius,
+          radius: 0,
         ));
     bloc.add(HomeLoadNearbyServices(
           latitude: lat,
           longitude: lng,
-          radius: bloc.state.nearbyRadius,
           city: _city,
         ));
   }
 
+  /// 切半径只更 state；任务/服务在 state 里都已有 distance 字段，
+  /// `_buildWaterfallItems` 直接客户端按 radius 过滤，无 refetch、不转圈。
   void _onRadiusChanged(int radius) {
-    final bloc = context.read<HomeBloc>();
-    bloc.add(HomeChangeNearbyRadius(radius));
-    bloc.add(HomeLoadNearby(
-      latitude: _currentLat,
-      longitude: _currentLng,
-      city: _city,
-      radius: radius,
-    ));
-    bloc.add(HomeLoadNearbyServices(
-      latitude: _currentLat,
-      longitude: _currentLng,
-      radius: radius,
-      city: _city,
-    ));
+    context.read<HomeBloc>().add(HomeChangeNearbyRadius(radius));
   }
 
   List<Widget> _buildWaterfallItems(HomeState state) {
     final locale = Localizations.localeOf(context);
     final isEn = locale.languageCode == 'en';
 
+    // 客户端 radius 过滤：radius=0 (同城) 不过滤；其他按 km 卡掉超出的
+    // distance 缺失（无坐标的同城任务/服务）在非同城档位下隐藏 ——
+    // chip 写"5km"就不该出 distance 未知项目。
+    final radius = state.nearbyRadius;
+    final maxMeters = radius == 0 ? null : (radius * 1000.0);
+
     // Collect items with distance for sorting
     final entries = <({Widget widget, double distance})>[];
 
     // Tasks
     for (final task in state.nearbyTasks) {
+      if (maxMeters != null) {
+        if (task.distance == null || task.distance! > maxMeters) continue;
+      }
       final title = isEn
           ? (task.titleEn ?? task.title)
           : (task.titleZh ?? task.title);
@@ -232,6 +230,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}',
           applicantCount: task.currentParticipants,
           itemType: task.taskType,
+          typeKind: 'task',
           onTap: () => context.push('/tasks/${task.id}'),
         ),
         distance: task.distance ?? double.infinity,
@@ -240,6 +239,11 @@ class _NearbyTabState extends State<_NearbyTab> {
 
     // Services
     for (final service in state.nearbyServices) {
+      final distKm = service['distance_km'] as num?;
+      final distMeters = distKm != null ? distKm.toDouble() * 1000 : null;
+      if (maxMeters != null) {
+        if (distMeters == null || distMeters > maxMeters) continue;
+      }
       final name = localizedString(
               service['service_name_zh'] as String?,
               service['service_name_en'] as String?,
@@ -250,8 +254,6 @@ class _NearbyTabState extends State<_NearbyTab> {
       final priceStr = price != null
           ? '\u00A3${_formatServicePrice(price)}'
           : null;
-      final distKm = service['distance_km'] as num?;
-      final distMeters = distKm != null ? distKm.toDouble() * 1000 : null;
       final imageUrl = service['cover_image'] as String?
           ?? ((service['images'] is List && (service['images'] as List).isNotEmpty)
               ? (service['images'] as List).first as String?
@@ -268,6 +270,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           distanceMeters: distMeters,
           price: priceStr,
           itemType: 'service',
+          typeKind: isExpert ? 'expert' : 'skill',
           isExpertVerified: isExpert,
           ownerName: ownerName,
           ownerAvatar: ownerAvatar,
@@ -413,6 +416,9 @@ class _NearbyTabState extends State<_NearbyTab> {
                       child: _NearbyLoadMoreTrigger(
                         key: ValueKey('nearby_more_${state.nearbyPage}_${state.nearbyServicesPage}'),
                         onVisible: () {
+                          // raw pool 永远是同城全集；客户端按 chip 过滤显示。
+                          // loadMore 也走同城（radius=0）扩展可过滤池，
+                          // 避免切到 1km 后 loadMore 只拉 1km 内的几条卡死。
                           final bloc = context.read<HomeBloc>();
                           if (bloc.state.hasMoreNearby) {
                             bloc.add(HomeLoadNearby(
@@ -420,14 +426,13 @@ class _NearbyTabState extends State<_NearbyTab> {
                               longitude: _currentLng,
                               loadMore: true,
                               city: _city,
-                              radius: bloc.state.nearbyRadius,
+                              radius: 0,
                             ));
                           }
                           if (bloc.state.hasMoreNearbyServices) {
                             bloc.add(HomeLoadNearbyServices(
                               latitude: _currentLat,
                               longitude: _currentLng,
-                              radius: bloc.state.nearbyRadius,
                               city: _city,
                               loadMore: true,
                             ));
@@ -631,6 +636,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
     this.applicantCount = 0,
     this.onTap,
     this.itemType = '',
+    this.typeKind = '',
     this.isExpertVerified = false,
     this.ownerName,
     this.ownerAvatar,
@@ -646,7 +652,10 @@ class _NearbyWaterfallCard extends StatelessWidget {
   final String? price;
   final int applicantCount;
   final VoidCallback? onTap;
+  /// 子类型（用于无图片时的渐变占位 + 中心 emoji），如 'delivery'/'shopping'/'service'
   final String itemType;
+  /// 顶层类型，用于左上角徽章："task" | "skill" | "expert"
+  final String typeKind;
   final bool isExpertVerified;
   final String? ownerName;
   final String? ownerAvatar;
@@ -681,8 +690,8 @@ class _NearbyWaterfallCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image area with distance badge + expert badge
-            _buildImageArea(isDark),
+            // Image area with distance badge + expert badge + type badge
+            _buildImageArea(context, isDark),
             // Card body
             Padding(
               padding: const EdgeInsets.all(10),
@@ -834,9 +843,26 @@ class _NearbyWaterfallCard extends StatelessWidget {
     'service': '🔧',
   };
 
-  Widget _buildImageArea(bool isDark) {
+  /// 顶层类型徽章：task/skill/expert → (icon, l10n label)
+  /// 返回 null 表示不渲染（typeKind 为空或未识别）
+  (IconData, String)? _typeBadgeContent(BuildContext context) {
+    final l10n = context.l10n;
+    switch (typeKind) {
+      case 'task':
+        return (Icons.assignment_outlined, l10n.nearbyTypeTask);
+      case 'skill':
+        return (Icons.emoji_objects_outlined, l10n.nearbyTypeSkill);
+      case 'expert':
+        return (Icons.workspace_premium_outlined, l10n.nearbyTypeExpert);
+      default:
+        return null;
+    }
+  }
+
+  Widget _buildImageArea(BuildContext context, bool isDark) {
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     final height = _imageHeight;
+    final typeBadge = _typeBadgeContent(context);
 
     return Stack(
       children: [
@@ -863,6 +889,33 @@ class _NearbyWaterfallCard extends StatelessWidget {
               child: Text(
                 _typeEmojis[itemType] ?? '📋',
                 style: const TextStyle(fontSize: 36),
+              ),
+            ),
+          ),
+        // 顶层类型徽章（左上）— 与右下 distance badge 同款白玻璃风格
+        if (typeBadge != null)
+          Positioned(
+            top: 8,
+            left: 8,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: GlassContainer(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(typeBadge.$1, size: 11, color: Colors.white),
+                    const SizedBox(width: 2),
+                    Text(
+                      typeBadge.$2,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
