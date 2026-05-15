@@ -55,6 +55,32 @@
     gap: 24px;
   }
 
+  .phones-row {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    align-items: center;
+  }
+  @media (min-width: 920px) {
+    .phones-row {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 40px;
+    }
+  }
+  .phone-with-caption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .phone-caption {
+    font-size: 12px;
+    color: var(--text-2);
+    text-align: center;
+  }
+  .phone-caption b { color: var(--text-1); font-weight: 600; }
+
   /* ── 标题 ── */
   .page-title {
     text-align: center;
@@ -71,6 +97,43 @@
     letter-spacing: -0.01em;
     margin-bottom: 4px;
     text-transform: none;
+  }
+
+  /* ── 话题 chip（顶部内联） ── */
+  .topic-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(0,122,255,0.10), rgba(64,156,255,0.06));
+    border: 1px solid rgba(0,122,255,0.25);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--primary);
+    align-self: flex-start;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .topic-chip:hover { background: rgba(0,122,255,0.14); }
+  .topic-chip .t-emoji {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(0,122,255,0.15);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  .topic-chip .x {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(0,122,255,0.15);
+    color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 2px;
   }
 
   /* ── 手机外壳 ── */
@@ -553,10 +616,435 @@
   .tool.image .t-icon-wrap { background: rgba(38,191,115,0.10); color: var(--success); }
   .tool.file .t-icon-wrap  { background: rgba(242,77,77,0.10); color: var(--error); }
   .tool.link .t-icon-wrap  { background: rgba(115,89,242,0.10); color: #7359F2; }
-  .tool.emoji .t-icon-wrap { background: rgba(255,128,51,0.10); color: var(--accent); }
+  .tool.topic .t-icon-wrap { background: rgba(0,122,255,0.10); color: var(--primary); }
   .tool.image.active .t-icon-wrap { background: var(--success); color: #fff; }
 
   .tool { position: relative; }
+
+  /* ────────────────────────────────────────── */
+  /* ──        帖子详情页专用样式            ── */
+  /* ────────────────────────────────────────── */
+
+  /* App Bar 紧凑版（详情页） */
+  .appbar.compact .author-mini {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .appbar.compact .author-mini img,
+  .appbar.compact .author-mini .av {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: linear-gradient(135deg, #7359F2, #A18BFF);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .appbar.compact .author-mini b {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+  .follow-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .follow-btn.outlined {
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+  }
+  .more-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  .more-btn:hover { background: rgba(0,0,0,0.05); }
+
+  /* 作者大头 */
+  .author-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .author-header .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7359F2, #A18BFF);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px -2px rgba(115,89,242,0.35);
+  }
+  .author-header .info { flex: 1; min-width: 0; }
+  .author-header .name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+  .author-header .name .verified {
+    width: 16px; height: 16px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    margin-left: 2px;
+  }
+  .author-header .meta {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .author-header .meta .dot { color: var(--line-strong); }
+  .author-header .meta .city-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* 帖子标题 */
+  .post-title {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--text-1);
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+
+  /* 帖子正文 */
+  .post-body {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text-1);
+    white-space: pre-wrap;
+  }
+
+  /* 图片大图（详情页） */
+  .post-image-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .post-image-grid .pi {
+    aspect-ratio: 1 / 1;
+    position: relative;
+    background: #EEF1F6;
+    cursor: pointer;
+  }
+  .post-image-grid .pi img { width: 100%; height: 100%; object-fit: cover; }
+  .post-image-grid .pi .count-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* 详情页文件卡片（带下载按钮） */
+  .post-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #FFF, #FAFBFD);
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px -3px rgba(15,20,30,0.05);
+  }
+  .post-file .download {
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* 浏览/互动统计行 */
+  .stats-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-3);
+    padding: 4px 0;
+  }
+  .stats-row .dot { color: var(--line-strong); }
+
+  /* 互动条 */
+  .engage-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 12px 8px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin: 4px -18px;
+  }
+  .engage-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .engage-btn:hover { background: rgba(0,0,0,0.04); color: var(--text-1); }
+  .engage-btn.liked { color: var(--pink); }
+  .engage-btn.liked svg { fill: var(--pink); stroke: var(--pink); }
+  .engage-btn.bookmarked { color: var(--warning); }
+  .engage-btn.bookmarked svg { fill: var(--warning); stroke: var(--warning); }
+
+  /* 评论标题 */
+  .comments-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .comments-title .count { color: var(--text-3); font-weight: 500; font-size: 14px; }
+  .sort-pill {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-2);
+    border: 1px solid var(--line-strong);
+    background: #fff;
+    border-radius: 999px;
+    padding: 4px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* 单条评论 */
+  .comment {
+    display: flex;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .comment .av {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .comment .av.c1 { background: linear-gradient(135deg, #FF8033, #FFB84D); }
+  .comment .av.c2 { background: linear-gradient(135deg, #26BF73, #5FD89A); }
+  .comment .av.c3 { background: linear-gradient(135deg, #FF4D80, #FF8AAB); }
+  .comment .av.c4 { background: linear-gradient(135deg, #007AFF, #5AC8FA); }
+  .comment .body { flex: 1; min-width: 0; }
+  .comment .header-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .comment .header-row b { font-weight: 600; color: var(--text-1); }
+  .comment .header-row .tag-author {
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .comment .text {
+    font-size: 14px;
+    color: var(--text-1);
+    line-height: 1.55;
+    margin-top: 2px;
+  }
+  .comment .text .at-mention {
+    color: var(--primary);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .comment .footer-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+  .comment .footer-row .icon-act {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .comment .footer-row .icon-act:hover { color: var(--text-1); }
+  .comment .footer-row .icon-act.liked { color: var(--pink); }
+
+  /* 嵌套回复（扁平展示 + @ 跳转） */
+  .comment.nested { margin-left: 46px; padding-top: 6px; }
+  .comment.nested .av { width: 28px; height: 28px; font-size: 12px; }
+
+  /* 黄色脉冲高亮（@xxx 跳转后被引用的那条） */
+  @keyframes pulse-glow {
+    0%, 100% { background: rgba(255,221,87,0.35); }
+    50%      { background: rgba(255,221,87,0.10); }
+  }
+  .comment.pulsing {
+    animation: pulse-glow 1.6s ease-in-out infinite;
+    border-radius: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+    margin-left: 38px;
+  }
+
+  /* 评论组容器（root + 它的回复） */
+  .comment-group {
+    padding: 6px 0;
+  }
+  .reply-count-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 500;
+    margin-left: 6px;
+  }
+
+  /* 展开更多回复 */
+  .show-more-replies {
+    margin-left: 46px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+    font-weight: 500;
+  }
+  .show-more-replies::before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 1px;
+    background: var(--primary);
+    opacity: 0.4;
+  }
+
+  .comment-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 8px 0;
+    border: none;
+  }
+
+  /* 底部评论输入 */
+  .comment-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px 16px;
+    border-top: 1px solid var(--line);
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .comment-input .av-mine {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #5AC8FA, #007AFF);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .comment-input .input-box {
+    flex: 1;
+    background: rgba(0,0,0,0.04);
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: var(--text-3);
+    cursor: text;
+  }
+  .comment-input .quick-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .comment-input .quick-actions .ic {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.04);
+    color: var(--text-2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .comment-input .quick-actions .ic.like { color: var(--pink); background: rgba(255,77,128,0.10); }
 
   /* ── 注解 ── */
   .annotation {
@@ -578,10 +1066,13 @@
 <body>
 
   <div class="page-title">
-    <strong>发布帖子 · Mockup</strong>
-    现代轻拟物 · 横向工具栏
+    <strong>Link2Ur Forum · Mockup</strong>
+    现代轻拟物 · 发帖 + 详情两屏对照
   </div>
 
+  <div class="phones-row">
+
+  <div class="phone-with-caption">
   <div class="phone">
 
     <!-- 状态栏 -->
@@ -626,16 +1117,13 @@
         <button class="pill-btn primary">恢复</button>
       </div>
 
-      <!-- 分类 -->
-      <div class="category">
-        <div class="cat-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        </div>
-        <div class="cat-text">
-          <b>技能交流</b>
-          <small>聊聊你的专长、经验或想学的技能</small>
-        </div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#99A0AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      <!-- 话题 chip（选中后内联展示；不选则不显示） -->
+      <div class="topic-chip">
+        <span class="t-emoji">🎨</span>
+        <span>设计服务</span>
+        <span class="x">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </span>
       </div>
 
       <!-- 标题 -->
@@ -755,15 +1243,317 @@
         <span class="t-badge">1</span>
         <span class="t-label">关联</span>
       </button>
-      <button class="tool emoji">
+      <button class="tool topic">
         <div class="t-icon-wrap">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
         </div>
-        <span class="t-label">表情</span>
+        <span class="t-badge">1</span>
+        <span class="t-label">话题</span>
       </button>
     </div>
 
   </div>
+  <div class="phone-caption"><b>① 发帖页</b><br>可选话题 · 横向工具栏</div>
+  </div>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- ②  帖子详情页                            -->
+  <!-- ════════════════════════════════════════ -->
+  <div class="phone-with-caption">
+  <div class="phone">
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="right">
+        <span>●●●●●</span>
+        <span style="margin-left:6px">WiFi</span>
+        <span class="battery" style="margin-left:6px"></span>
+      </div>
+    </div>
+
+    <!-- 紧凑 App Bar：返回 + 作者小卡 + 关注 + 更多 -->
+    <div class="appbar compact">
+      <div class="left">
+        <button class="icon-btn" aria-label="返回">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="author-mini">
+          <div class="av">李</div>
+          <b>设计师小李</b>
+        </div>
+      </div>
+      <div class="right">
+        <button class="follow-btn outlined">+ 关注</button>
+        <button class="more-btn" aria-label="更多">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 内容 -->
+    <div class="body">
+
+      <!-- 作者大头 -->
+      <div class="author-header">
+        <div class="avatar">李</div>
+        <div class="info">
+          <div class="name">
+            设计师小李
+            <span class="verified">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+          </div>
+          <div class="meta">
+            <span>产品经理</span>
+            <span class="dot">·</span>
+            <span>2 小时前</span>
+            <span class="dot">·</span>
+            <span class="city-tag">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              同城
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 话题 chip -->
+      <div class="topic-chip">
+        <span class="t-emoji">🎨</span>
+        <span>设计服务</span>
+      </div>
+
+      <!-- 标题 -->
+      <div class="post-title">如何在 30 天内从零学会 Figma？</div>
+
+      <!-- 正文 -->
+      <div class="post-body">作为一个产品经理，我最近用 30 天时间集中突击了 Figma。
+
+把过程整理成了一份学习路径，包括每天 1 小时的练习清单、推荐的免费资源、以及我踩过的坑。
+
+附件里是完整的学习计划 PDF，希望对正在学 Figma 的朋友有帮助 ✨</div>
+
+      <!-- 图片大图 -->
+      <div class="post-image-grid">
+        <div class="pi">
+          <img src="https://images.unsplash.com/photo-1611224885990-ab7363d1f2a9?w=400&h=400&fit=crop" alt="" />
+        </div>
+        <div class="pi">
+          <img src="https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=400&h=400&fit=crop" alt="" />
+        </div>
+        <div class="pi">
+          <img src="https://images.unsplash.com/photo-1559028012-481c04fa702d?w=400&h=400&fit=crop" alt="" />
+          <div class="count-overlay">+2</div>
+        </div>
+      </div>
+
+      <!-- 文件 -->
+      <div class="post-file">
+        <div class="file-icon">PDF</div>
+        <div class="file-info">
+          <div class="name">Figma-30天学习计划-完整版.pdf</div>
+          <div class="meta">2.4 MB · 共 18 页</div>
+        </div>
+        <button class="download">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载
+        </button>
+      </div>
+
+      <!-- 关联内容 -->
+      <div class="link-chip">
+        <div class="l-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H3v10h6V11zM21 11h-6v10h6V11zM15 3H9v8h6V3z"/></svg>
+        </div>
+        <div class="l-info">
+          <div class="tag">关联任务</div>
+          <div class="name">找一位资深设计师做 LOGO 品牌升级</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#99A0AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <!-- 浏览统计 -->
+      <div class="stats-row">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>1,248 浏览</span>
+        <span class="dot">·</span>
+        <span>编辑于 5 分钟前</span>
+      </div>
+
+      <!-- 互动条 -->
+      <div class="engage-bar">
+        <button class="engage-btn liked">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          <b>128</b>
+        </button>
+        <button class="engage-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <b>43</b>
+        </button>
+        <button class="engage-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <b>12</b>
+        </button>
+        <button class="engage-btn bookmarked">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          <b>8</b>
+        </button>
+      </div>
+
+      <!-- 评论标题 -->
+      <div class="comments-title">
+        评论 <span class="count">43</span>
+        <button class="sort-pill">
+          按热度
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+
+      <!-- ───── 评论组 A：热门评论 + 5 条扁平回复（含互相 @） ───── -->
+      <div class="comment-group">
+        <!-- 顶层评论 A -->
+        <div class="comment">
+          <div class="av c1">小</div>
+          <div class="body">
+            <div class="header-row">
+              <b>小红</b>
+              <span class="reply-count-tag">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                9 条回复
+              </span>
+            </div>
+            <div class="text">太有用了！PDF 已收藏，每天 1 小时跟着练，谢谢分享～</div>
+            <div class="footer-row">
+              <span>2 小时前</span>
+              <span class="icon-act liked">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                12
+              </span>
+              <span class="icon-act">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                回复
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 回复 1：阿明 @ 小红 -->
+        <div class="comment nested">
+          <div class="av c2">阿</div>
+          <div class="body">
+            <div class="header-row"><b>阿明</b></div>
+            <div class="text"><span class="at-mention">@小红</span> 同感！我也是从零开始，配合官方 tutorial 学得很快。</div>
+            <div class="footer-row">
+              <span>1 小时前</span>
+              <span class="icon-act"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>5</span>
+              <span class="icon-act">回复</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 回复 2：小红 @ 阿明（回复了上一条 → @ 跳回阿明） -->
+        <div class="comment nested">
+          <div class="av c1">小</div>
+          <div class="body">
+            <div class="header-row"><b>小红</b></div>
+            <div class="text"><span class="at-mention">@阿明</span> 想问一下你每天大概练多久？还有官方 tutorial 你看的是哪一套？</div>
+            <div class="footer-row">
+              <span>58 分钟前</span>
+              <span class="icon-act"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>2</span>
+              <span class="icon-act">回复</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 回复 3：阿明 @ 小红（接着回 → 黄色脉冲高亮表示被 @ 跳转锚定）-->
+        <div class="comment nested pulsing">
+          <div class="av c2">阿</div>
+          <div class="body">
+            <div class="header-row"><b>阿明</b></div>
+            <div class="text"><span class="at-mention">@小红</span> 平均 1.5 小时。我看的是 Figma 官方 YouTube 的「Config 系列」，免费，从基础组件到 Auto Layout 都有。</div>
+            <div class="footer-row">
+              <span>40 分钟前</span>
+              <span class="icon-act"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>8</span>
+              <span class="icon-act">回复</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 回复 4：Lisa 加入对话，@ 小红推荐课程 -->
+        <div class="comment nested">
+          <div class="av c3">L</div>
+          <div class="body">
+            <div class="header-row"><b>Lisa</b></div>
+            <div class="text"><span class="at-mention">@小红</span> 补充一个我常用的：DesignCourse 的 YouTube 频道，进阶组件库搭建讲得很细，免费。</div>
+            <div class="footer-row">
+              <span>28 分钟前</span>
+              <span class="icon-act"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>3</span>
+              <span class="icon-act">回复</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 折叠剩余回复 -->
+        <div class="show-more-replies">展开剩余 5 条回复</div>
+      </div>
+
+      <hr class="comment-divider">
+
+      <!-- ───── 评论组 B：单独评论，没有回复 ───── -->
+      <div class="comment-group">
+        <div class="comment">
+          <div class="av c4">M</div>
+          <div class="body">
+            <div class="header-row"><b>Mia</b></div>
+            <div class="text">请问 PDF 里推荐的免费资源有哪些？方便单独列一下吗？感谢🙏</div>
+            <div class="footer-row">
+              <span>40 分钟前</span>
+              <span class="icon-act"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>3</span>
+              <span class="icon-act">回复</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="comment-divider">
+
+      <!-- ───── 评论组 C：单独评论 ───── -->
+      <div class="comment-group">
+        <div class="comment">
+          <div class="av c2">K</div>
+          <div class="body">
+            <div class="header-row"><b>Kevin</b></div>
+            <div class="text">学完 Figma 接下来怎么过渡到产品稿落地？有没有推荐的进阶资源？</div>
+            <div class="footer-row">
+              <span>15 分钟前</span>
+              <span class="icon-act"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>1</span>
+              <span class="icon-act">回复</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部评论输入 -->
+    <div class="comment-input">
+      <div class="av-mine">我</div>
+      <div class="input-box">友好评论一下吧…</div>
+      <div class="quick-actions">
+        <span class="ic" aria-label="表情">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </span>
+        <span class="ic like" aria-label="点赞">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        </span>
+      </div>
+    </div>
+
+  </div>
+  <div class="phone-caption"><b>② 帖子详情页</b><br>作者头条 · 富文本 · 扁平回复</div>
+  </div>
+
+  </div><!-- /.phones-row -->
 
   <div class="annotation">
     Mockup 演示。直接双击 HTML 文件用浏览器打开即可看到效果，<br>
