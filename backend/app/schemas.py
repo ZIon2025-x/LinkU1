@@ -4101,9 +4101,34 @@ class ForumReplyOut(BaseModel):
         from_attributes = True
 
 
-class ForumReplyListResponse(BaseModel):
-    """回复列表响应"""
+class ForumRootReplyOut(ForumReplyOut):
+    """根评论输出（仅用于列表 API 的 root 项）
+
+    比 ForumReplyOut 多两个字段：
+    - preview_children: 该根评论的前 3 条子回复，按时间正序
+    - total_children: 该根评论下子回复总数（用于"展开剩余 N 条"按钮）
+    """
+    preview_children: List[ForumReplyOut] = Field(
+        default_factory=list,
+        description="前 3 条子回复（按 created_at ASC）",
+    )
+    total_children: int = Field(
+        default=0,
+        description="该根评论下子回复总数（不含软删 is_deleted=True 的）",
+    )
+
+
+class ForumReplyChildrenPage(BaseModel):
+    """根评论的子回复分页响应"""
     replies: List[ForumReplyOut]
+    has_more: bool = Field(description="是否还有更多未加载的子回复")
+    next_offset: int = Field(description="下一批分页 offset")
+
+
+class ForumReplyListResponse(BaseModel):
+    """回复列表响应（重构后：仅根评论 + 每根 preview 3 子回复 + total_children；
+    total 字段语义改为"根评论总数"，子回复数请用 ForumPost.reply_count）"""
+    replies: List[ForumRootReplyOut]
     total: int
     page: int
     page_size: int
