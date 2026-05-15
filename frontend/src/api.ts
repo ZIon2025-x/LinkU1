@@ -2318,7 +2318,7 @@ export const uploadForumPostImage = async (file: File): Promise<{ url: string }>
 export const createForumPost = async (data: {
   title: string;
   content: string;
-  category_id: number;
+  category_id?: number | null;
   images?: string[];
 }) => {
   const token = await getCSRFToken();
@@ -2333,7 +2333,7 @@ export const createForumPost = async (data: {
 export const updateForumPost = async (postId: number, data: {
   title?: string;
   content?: string;
-  category_id?: number;
+  category_id?: number | null;
   images?: string[];
 }) => {
   const token = await getCSRFToken();

@@ -40,7 +40,7 @@ interface ForumPost {
   category: {
     id: number;
     name: string;
-  };
+  } | null;
   view_count: number;  // 浏览量（前端负责格式化显示）
   reply_count: number;
   like_count: number;
@@ -84,7 +84,7 @@ interface ForumFavorite {
     category: {
       id: number;
       name: string;
-    };
+    } | null;
     view_count: number;  // 浏览量（前端负责格式化显示）
     reply_count: number;
     like_count: number;
@@ -354,7 +354,7 @@ const ForumMyContent: React.FC = () => {
                         </div>
                         <div className={styles.itemMeta}>
                           <Space split="|" wrap>
-                            <Tag>{post.category.name}</Tag>
+                            {post.category && <Tag>{post.category.name}</Tag>}
                             {currentUser?.user_level && (currentUser.user_level === 'vip' || currentUser.user_level === 'super') && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                 {t('forum.me') || '我'}
@@ -542,7 +542,7 @@ const ForumMyContent: React.FC = () => {
                         </div>
                         <div className={styles.itemMeta}>
                           <Space split="|">
-                            <Tag>{favorite.post.category.name}</Tag>
+                            {favorite.post.category && <Tag>{favorite.post.category.name}</Tag>}
                             <span>
                               <EyeOutlined /> {formatViewCount(favorite.post.view_count)}
                             </span>

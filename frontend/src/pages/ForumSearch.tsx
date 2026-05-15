@@ -38,7 +38,7 @@ interface ForumPost {
   category: {
     id: number;
     name: string;
-  };
+  } | null;
   author: {
     id: string;
     name: string;
@@ -250,9 +250,11 @@ const ForumSearch: React.FC = () => {
 
                   <div className={styles.postMeta}>
                     <Space split="|">
-                      <span>
-                        <Tag>{post.category.name}</Tag>
-                      </span>
+                      {post.category && (
+                        <span>
+                          <Tag>{post.category.name}</Tag>
+                        </span>
+                      )}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <UserOutlined /> {post.author.name}
                         {post.author.is_admin && (

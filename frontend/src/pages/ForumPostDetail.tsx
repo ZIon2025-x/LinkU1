@@ -82,7 +82,7 @@ interface ForumPost {
   category: {
     id: number;
     name: string;
-  };
+  } | null;
   author: {
     id: string;
     name: string;
@@ -722,7 +722,12 @@ const ForumPostDetail: React.FC = () => {
         try {
           await deleteForumPost(Number(postId));
           message.success(t('forum.deleteSuccess'));
-          navigate(`/${lang}/forum/category/${post?.category.id}`);
+          // 无板块的帖子（NULL category）回论坛首页
+          if (post?.category?.id) {
+            navigate(`/${lang}/forum/category/${post.category.id}`);
+          } else {
+            navigate(`/${lang}/forum`);
+          }
         } catch (error: any) {
           message.error(getErrorMessage(error));
         }

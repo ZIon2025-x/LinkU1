@@ -123,7 +123,7 @@ const ForumCreatePost: React.FC = () => {
       form.setFieldsValue({
         title: response.title,
         content: decodeContent(response.content || ''),
-        category_id: response.category.id
+        category_id: response.category?.id ?? undefined
       });
       setImageList(Array.isArray(response.images) ? response.images : []);
     } catch (error: any) {
@@ -138,12 +138,16 @@ const ForumCreatePost: React.FC = () => {
       setLoading(true);
       // 对内容进行编码：将换行和空格转换为标记格式
       const { encodeContent } = await import('../utils/formatContent');
+      // 用户没选板块时传 explicit null（不是 undefined），让后端清楚收到"无板块"语义
+      const categoryIdValue: number | null =
+        values.category_id == null || values.category_id === '' ? null : Number(values.category_id);
       const encodedValues = {
         ...values,
+        category_id: categoryIdValue,
         content: encodeContent(values.content || ''),
         ...(imageList.length > 0 ? { images: imageList } : {})
       };
-      
+
       if (isEdit && postId) {
         await updateForumPost(Number(postId), encodedValues);
         message.success(t('forum.updateSuccess'));
@@ -151,7 +155,12 @@ const ForumCreatePost: React.FC = () => {
         await createForumPost(encodedValues);
         message.success(t('forum.createSuccess'));
       }
-      navigate(`/${lang}/forum/category/${values.category_id}`);
+      // 无板块时跳回论坛首页，不要跳 /forum/category/null
+      if (categoryIdValue != null) {
+        navigate(`/${lang}/forum/category/${categoryIdValue}`);
+      } else {
+        navigate(`/${lang}/forum`);
+      }
     } catch (error: any) {
       const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
       message.error(getErrorMessage(error));
@@ -308,11 +317,11 @@ const ForumCreatePost: React.FC = () => {
               <Form.Item
                 name="category_id"
                 label={t('forum.selectCategory')}
-                rules={[{ required: true, message: t('forum.selectCategory') }]}
               >
                 <Select
                   placeholder={t('forum.selectCategory')}
                   disabled={isEdit}
+                  allowClear
                 >
                   {categories.map((category) => (
                     <Option key={category.id} value={category.id}>

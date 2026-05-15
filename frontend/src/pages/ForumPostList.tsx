@@ -38,7 +38,7 @@ interface ForumPost {
   category: {
     id: number;
     name: string;
-  };
+  } | null;
   author: {
     id: string;
     name: string;
