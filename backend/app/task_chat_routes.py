@@ -1085,7 +1085,31 @@ async def get_task_messages(
                         attachment.blob_id,
                         e,
                     )
-            
+
+            # 视频 / 文件 (PDF) 附件: 走 signed_url_manager 生成短期签名访问 URL
+            # blob_id 形如 "{user}_{ts}_{rand}.{ext}",signed_url 用 file_path="files/{filename}"
+            elif (
+                attachment.attachment_type in ("video", "file")
+                and attachment.blob_id
+            ):
+                try:
+                    from app.signed_url import signed_url_manager
+                    file_path_for_url = f"files/{attachment.blob_id}"
+                    signed_url = signed_url_manager.generate_signed_url(
+                        file_path=file_path_for_url,
+                        user_id=cuid,
+                        expiry_minutes=15,
+                        one_time=False,
+                    )
+                    attachment_data["url"] = signed_url
+                except Exception as e:
+                    logger.warning(
+                        "Failed to generate signed URL for %s blob_id=%s: %s",
+                        attachment.attachment_type,
+                        attachment.blob_id,
+                        e,
+                    )
+
             attachments_by_message[attachment.message_id].append(attachment_data)
         
         # 构建返回数据
