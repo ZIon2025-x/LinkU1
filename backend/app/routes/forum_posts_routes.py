@@ -495,49 +495,53 @@ async def create_post(
     if content_result.action == "mask":
         post.content = content_result.cleaned_text
 
-    # 验证板块是否存在并检查权限
+    # 验证板块是否存在并检查权限（仅当 category_id 提供时）
     # 对于学校板块，需要学生认证；对于普通板块，所有用户都可以发帖
-    category_result = await db.execute(
-        select(models.ForumCategory).where(models.ForumCategory.id == post.category_id)
-    )
-    category = category_result.scalar_one_or_none()
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="板块不存在",
-            headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
+    # 当 category_id 为 None（未分类发帖）时，跳过所有板块相关校验
+    expert_id = None
+    is_expert = False
+    if post.category_id is not None:
+        category_result = await db.execute(
+            select(models.ForumCategory).where(models.ForumCategory.id == post.category_id)
         )
-
-    # 检查板块可见性（学校板块需要权限）
-    # 管理员可以绕过权限检查
-    if not is_admin_user:
-        await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
-
-    # 检查板块是否可见
-    if not category.is_visible:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="该板块已隐藏",
-            headers={"X-Error-Code": "CATEGORY_HIDDEN"}
-        )
-
-    # 检查板块是否禁止用户发帖
-    if category.is_admin_only:
-        if not is_admin_user:
+        category = category_result.scalar_one_or_none()
+        if not category:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="该板块只允许管理员发帖",
-                headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="板块不存在",
+                headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
             )
 
-    # 达人板块发帖权限检查
-    is_expert, expert_id = await is_expert_board(db, post.category_id)
-    if is_expert:
-        if not current_user:
-            raise HTTPException(status_code=401, detail="达人板块需要登录后发帖")
-        can_post = await check_expert_board_post_permission(db, expert_id, current_user.id)
-        if not can_post:
-            raise HTTPException(status_code=403, detail="只有达人团队成员才能在此板块发帖")
+        # 检查板块可见性（学校板块需要权限）
+        # 管理员可以绕过权限检查
+        if not is_admin_user:
+            await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
+
+        # 检查板块是否可见
+        if not category.is_visible:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="该板块已隐藏",
+                headers={"X-Error-Code": "CATEGORY_HIDDEN"}
+            )
+
+        # 检查板块是否禁止用户发帖
+        if category.is_admin_only:
+            if not is_admin_user:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="该板块只允许管理员发帖",
+                    headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
+                )
+
+        # 达人板块发帖权限检查
+        is_expert, expert_id = await is_expert_board(db, post.category_id)
+        if is_expert:
+            if not current_user:
+                raise HTTPException(status_code=401, detail="达人板块需要登录后发帖")
+            can_post = await check_expert_board_post_permission(db, expert_id, current_user.id)
+            if not can_post:
+                raise HTTPException(status_code=403, detail="只有达人团队成员才能在此板块发帖")
 
     # 翻译字段由后台任务异步填充，发帖先存 None 立即返回
     normalized_content = post.content.strip() if post.content else None
@@ -908,41 +912,43 @@ async def update_post(
             update_data["content_zh"] = None
 
     # 如果更新了板块，需要检查新板块的权限（学校板块需要权限）
+    # 当 category_id 显式置为 None（清空分类）时，跳过所有板块相关校验
     if "category_id" in update_data and update_data["category_id"] != old_category_id:
         new_category_id = update_data["category_id"]
-        # 验证新板块是否存在
-        new_category_result = await db.execute(
-            select(models.ForumCategory).where(models.ForumCategory.id == new_category_id)
-        )
-        new_category = new_category_result.scalar_one_or_none()
-        if not new_category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="目标板块不存在",
-                headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
+        if new_category_id is not None:
+            # 验证新板块是否存在
+            new_category_result = await db.execute(
+                select(models.ForumCategory).where(models.ForumCategory.id == new_category_id)
             )
+            new_category = new_category_result.scalar_one_or_none()
+            if not new_category:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="目标板块不存在",
+                    headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
+                )
 
-        # 检查新板块的可见性（学校板块需要权限）
-        # 管理员可以绕过权限检查
-        if not is_admin_user:
-            await assert_forum_visible(current_user, new_category_id, db, raise_exception=True)
-
-        # 检查新板块是否可见
-        if not new_category.is_visible:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="目标板块已隐藏",
-                headers={"X-Error-Code": "CATEGORY_HIDDEN"}
-            )
-
-        # 检查新板块是否禁止用户发帖
-        if new_category.is_admin_only:
+            # 检查新板块的可见性（学校板块需要权限）
+            # 管理员可以绕过权限检查
             if not is_admin_user:
+                await assert_forum_visible(current_user, new_category_id, db, raise_exception=True)
+
+            # 检查新板块是否可见
+            if not new_category.is_visible:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="目标板块只允许管理员发帖",
-                    headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
+                    detail="目标板块已隐藏",
+                    headers={"X-Error-Code": "CATEGORY_HIDDEN"}
                 )
+
+            # 检查新板块是否禁止用户发帖
+            if new_category.is_admin_only:
+                if not is_admin_user:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="目标板块只允许管理员发帖",
+                        headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
+                    )
 
     # 序列化 attachments（Pydantic 对象列表 → dict 列表；空列表视为清空）
     if "attachments" in update_data:
