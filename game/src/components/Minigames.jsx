@@ -998,6 +998,21 @@ export function LectureMinigame({ onComplete, onCancel, week, tierFlags = {}, on
 // ========================================
 // AI 设计 · 客户简介解码 minigame (4 步)
 // ========================================
+function DesignBriefRulesBody({ phase, brief }) {
+  return (
+    <>
+      客户给的 brief 通常含糊。你的工作是把废话翻译成 4 个明确的设计决定。<br/>
+      <br/>
+      · 4 步:解读意图 / mood / 配色 / 格式<br/>
+      · 每步 4 选项,1 正确 + 3 典型失败<br/>
+      · 满分 4/4 = 5⭐ + 25% 奖励金<br/>
+      · Phase {phase} = {phase === 1 ? '入门级' : phase === 2 ? '客户有矛盾要求' : '挑剔客户,wrong option 也 plausible'}<br/>
+      <br/>
+      <span className="opacity-60">本单 £{brief.reward}（满分 25% bonus）</span>
+    </>
+  );
+}
+
 export function DesignBriefMinigame({ onComplete, onCancel, week, seenBriefIds = [] }) {
   const brief = useMemo(() => pickDesignBrief(week || 1, seenBriefIds), [week, seenBriefIds]);
   const phase = brief.phase;
@@ -1017,6 +1032,7 @@ export function DesignBriefMinigame({ onComplete, onCancel, week, seenBriefIds =
   const [answers, setAnswers] = useState([]); // boolean[]
   const [pickedIdx, setPickedIdx] = useState(null);
   const [showWhy, setShowWhy] = useState(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   function start() { audio.click(); setStage('step'); }
 
@@ -1075,8 +1091,9 @@ export function DesignBriefMinigame({ onComplete, onCancel, week, seenBriefIds =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 animate-fadein" style={{ background: 'rgba(10, 8, 6, 0.95)' }}>
-      <div className="bg-[#1a1612] border max-w-md w-full p-4 max-h-[95vh] overflow-y-auto"
+      <div className="bg-[#1a1612] border max-w-md w-full p-4 max-h-[95vh] overflow-y-auto relative"
            style={{ borderColor: 'rgba(122,138,106,0.4)' }}>
+        <MinigameHelpButton onClick={() => { audio.click(); setRulesOpen(true); }} />
         <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#7a8a6a' }}>🎨 MINIGAME · BRIEF · Phase {phase}</div>
         <h2 className="text-lg mb-1 font-light">{brief.subject}</h2>
         <div className="text-xs opacity-60 italic mb-3" style={{ fontFamily: 'monospace' }}>解码客户 · 4 步</div>
@@ -1107,12 +1124,7 @@ export function DesignBriefMinigame({ onComplete, onCancel, week, seenBriefIds =
         {stage === 'intro' && (
           <>
             <div className="text-sm opacity-90 mb-4" style={{ lineHeight: '1.85' }}>
-              客户给的 brief 通常含糊。你的工作是把废话翻译成 4 个明确的设计决定。<br/>
-              <br/>
-              · 4 步:解读意图 / mood / 配色 / 格式<br/>
-              · 每步 4 选项,1 正确 + 3 典型失败<br/>
-              · 满分 4/4 = 5⭐ + 25% 奖励金<br/>
-              · Phase {phase} = {phase === 1 ? '入门级' : phase === 2 ? '客户有矛盾要求' : '挑剔客户,wrong option 也 plausible'}
+              <DesignBriefRulesBody phase={phase} brief={brief} />
             </div>
             <button onClick={start} className="w-full py-3 border hover:bg-current hover:text-black transition-colors tracking-[0.2em] text-sm"
                     style={{ borderColor: '#7a8a6a', color: '#7a8a6a' }}>
@@ -1182,6 +1194,14 @@ export function DesignBriefMinigame({ onComplete, onCancel, week, seenBriefIds =
             </button>
           </>
         )}
+
+        <MinigameRulesModal
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          title={`BRIEF · ${brief.subject}`}
+        >
+          <DesignBriefRulesBody phase={phase} brief={brief} />
+        </MinigameRulesModal>
       </div>
     </div>
   );
