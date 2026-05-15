@@ -199,6 +199,14 @@ Link2Ur 是技能互助/任务交易平台,刻意不做通用私聊;用户间所
 - **客户端缓存**:缩略图走 image 通道但需短期失效(避免 token 过期 → 显示但点开 404)
 - **目录隔离**:`private_files/tasks/{task_id}/chat/` 子目录便于审计与未来分流(虽然底层 PrivateFileSystem 不变)
 
+## 8.5 存储后端(本 spec 范围外)
+
+本 spec 的视频/PDF 仍走现有 `PrivateFileSystem`(Railway Volume 本地磁盘),不改存储后端。
+
+**已识别的后续优化方向**:迁移到 Cloudflare R2(0 出站带宽 + $0.015/GB-月存储,相比 Railway Volume $0.25/GB-月 + $0.10/GB 出站,粗算 ~20× 成本优势)。R2 是横向架构决策,影响所有附件场景(任务聊天 / 任务完成证据 / 服务图片等),需要独立 spec 处理:storage backend 抽象、presigned URL vs 后端代理选型、迁移灰度策略、孤儿清理、监控。
+
+**这意味着**:本 spec 的目录结构 `private_files/tasks/{task_id}/chat/` 是物理路径,R2 迁移后会变成 object key。`PrivateFileSystem.storage.upload(content, path)` 抽象层已经存在,迁移时只需替换 storage 实现,业务层不感知。
+
 ## 9. 不做的事(YAGNI)
 
 - ❌ 撤回 / 删除消息(与现有图片一致)
