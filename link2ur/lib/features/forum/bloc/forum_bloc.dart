@@ -907,8 +907,14 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         sort: requestedSort,
       );
       if (state.replySort != requestedSort) return;
+      // 重拉根 = 视图重置；顺手清子回复加载状态，确保 pull-to-refresh 后
+      // 旧的 loadedChildren/hasMoreChildren/nextChildOffset 不残留过期数据。
       emit(state.copyWith(
         replies: replies,
+        loadedChildren: const {},
+        hasMoreChildren: const {},
+        nextChildOffset: const {},
+        loadingChildrenRoots: const {},
         // 根级分页已废弃：服务器一次返回所有根（pageSize 默认 100）
         repliesHasMore: false,
         isLoadingMoreReplies: false,

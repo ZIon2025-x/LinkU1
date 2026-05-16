@@ -569,8 +569,22 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
 
                       // 使用 CustomScrollView + Sliver 替代 SingleChildScrollView + Column
                       // 评论区使用 SliverList 懒加载，避免一次性构建所有评论 widget
-                      return CustomScrollView(
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          final bloc = context.read<ForumBloc>();
+                          // 重拉根帖详情 + 重拉评论 (ForumLoadReplies 顺手清子回复缓存)
+                          bloc
+                            ..add(ForumLoadPostDetail(widget.postId))
+                            ..add(ForumLoadReplies(widget.postId));
+                          // 等 BLoC emit 完成 — 看到一个非 loading 状态即可结束动画
+                          await bloc.stream.firstWhere(
+                            (s) => s.status != ForumStatus.loading,
+                          );
+                        },
+                        child: CustomScrollView(
                         controller: _scrollController,
+                        // 让 RefreshIndicator 在空内容时也能下拉
+                        physics: const AlwaysScrollableScrollPhysics(),
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         slivers: [
@@ -723,6 +737,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                             child: SizedBox(height: 88 + keyboardInset),
                           ),
                         ],
+                        ),
                       );
                     },
                   ),
