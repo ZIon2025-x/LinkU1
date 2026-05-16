@@ -1018,13 +1018,55 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         content: event.content,
         parentReplyId: event.parentReplyId,
       );
-      emit(state.copyWith(
-        isReplying: false,
-        replies: [...state.replies, reply],
-        selectedPost: state.selectedPost?.copyWith(
-          replyCount: (state.selectedPost?.replyCount ?? 0) + 1,
-        ),
-      ));
+
+      // Task 10 重构后 state.replies 只装根；子回复要 append 到 ancestor root 的 loadedChildren
+      if (reply.parentReplyId == null) {
+        // 根回复 → append 到 state.replies
+        emit(state.copyWith(
+          isReplying: false,
+          replies: [...state.replies, reply],
+          selectedPost: state.selectedPost?.copyWith(
+            replyCount: (state.selectedPost?.replyCount ?? 0) + 1,
+          ),
+        ));
+      } else {
+        // 子回复 → append 到 ancestor root 的 loadedChildren + totalChildren++
+        final ancestorRootId = _findAncestorRootId(reply.parentReplyId!);
+        if (ancestorRootId == null) {
+          // 应当不会发生：parent 不在视野里。降级：只增 replyCount，等下次 ForumLoadReplies
+          AppLogger.warning(
+            'Reply parent id=${reply.parentReplyId} not in current view; skipping local children update',
+          );
+          emit(state.copyWith(
+            isReplying: false,
+            selectedPost: state.selectedPost?.copyWith(
+              replyCount: (state.selectedPost?.replyCount ?? 0) + 1,
+            ),
+          ));
+          return;
+        }
+        final existingLoaded =
+            state.loadedChildren[ancestorRootId] ?? const <ForumReply>[];
+        final newLoadedChildren = {
+          ...state.loadedChildren,
+          ancestorRootId: [...existingLoaded, reply],
+        };
+        // 给该 root 增 totalChildren
+        final newReplies = state.replies.map((r) {
+          if (r.id == ancestorRootId) {
+            return r.copyWith(totalChildren: r.totalChildren + 1);
+          }
+          return r;
+        }).toList();
+        emit(state.copyWith(
+          isReplying: false,
+          replies: newReplies,
+          loadedChildren: newLoadedChildren,
+          selectedPost: state.selectedPost?.copyWith(
+            replyCount: (state.selectedPost?.replyCount ?? 0) + 1,
+          ),
+        ));
+      }
     } catch (e) {
       AppLogger.error('Failed to reply post', e);
       emit(state.copyWith(
@@ -1032,6 +1074,22 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         errorMessage: e.toString(),
       ));
     }
+  }
+
+  /// 找回复所属的根评论 id. 用于 C2/C3/I1 中 BLoC 本地状态更新.
+  /// 返回 null 表示该 reply 不在当前 visible 范围里 (理论上不该发生).
+  int? _findAncestorRootId(int replyId) {
+    for (final root in state.replies) {
+      if (root.id == replyId) return root.id;
+      for (final preview in root.previewChildren) {
+        if (preview.id == replyId) return root.id;
+      }
+      final loaded = state.loadedChildren[root.id] ?? const <ForumReply>[];
+      for (final c in loaded) {
+        if (c.id == replyId) return root.id;
+      }
+    }
+    return null;
   }
 
   Future<void> _onReportPost(
