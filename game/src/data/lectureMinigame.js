@@ -78,6 +78,19 @@ export const WORD_SET = (() => {
 
 // ── 主题池(12 个,按周触发)──
 // bonusKeywords:撞到这些 ★ bonus 翻倍。bias_letters:网格生成时 weighted 让这些字母出现频率高
+
+// ============================================================
+// V2 主题池 —— 取代 LECTURE_THEMES（内容方向 pivot, spec 2026-05-16）
+// 12 主题 × 12-15 bonus 词 = ~150 ★ 词总池。Task 7 atomic swap 时替换 LECTURE_THEMES + THEME_WORDS。
+// ============================================================
+export const LECTURE_THEMES_V2 = [
+  // Batch 5 (Task 5): W1-24 themes 1-6
+  // Batch 6 (Task 6): W25-52 themes 7-12
+];
+
+// V2 bonus 词大全（去重）—— Task 7 atomic swap 时替换 THEME_WORDS
+const THEME_WORDS_V2 = [];
+
 export const LECTURE_THEMES = [
   { id: 'foucault_intro',  weeks: [1, 6],   name: 'Foucault · Power & Gaze',
     bonus: ['POWER','GAZE','PRISON','DOCILE','REGIME','BODY'],

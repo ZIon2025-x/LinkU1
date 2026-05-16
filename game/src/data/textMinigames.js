@@ -477,6 +477,23 @@ export function pickEssayPuzzles(week, seenPuzzleIndices = []) {
 // 迷你游戏：理论家概念匹配
 // ========================================
 
+// ============================================================
+// UK 留学硬核知识 Match —— 取代 THEORIST_MATCH（内容方向 pivot, spec 2026-05-16）
+// 数据结构同构 THEORIST_MATCH:
+//   { categories: [{ id, name, items: [id...] }], items: { id: { label, desc } } }
+// 18 categories × 6-8 items = ~110 items 总池。每 item 唯一归属一个 category。
+// ============================================================
+export const UK_KNOWLEDGE_MATCH = {
+  categories: [
+    // Batch 2 (Task 2): visa / nhs / council_tax / academic_integrity / banking / renting
+    // Batch 3 (Task 3): tax_wages / academic_writing / transport / campus_systems / job_hunt / saving_money
+    // Batch 4 (Task 4): degrees / grading / class_types / assessment / online_tools / uni_groupings
+  ],
+  items: {
+    // Filled in batches across Task 2 / 3 / 4
+  },
+};
+
 export const THEORIST_MATCH = {
   theorists: [
     { id: 'foucault',  name: 'Foucault',  concepts: ['discipline','biopower','panopticon','governmentality'] },
