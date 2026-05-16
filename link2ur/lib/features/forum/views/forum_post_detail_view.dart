@@ -1233,7 +1233,7 @@ class _ReplySectionHeader extends StatelessWidget {
 }
 
 /// 评论排序切换 chip:按热度/按时间
-/// sort 取值: 'hot' (热度) | 'newest' (时间倒序,即"按时间")
+/// sort 取值: 'hot' (热度) | 'time' (时间倒序,即"按时间")
 class _SortChip extends StatelessWidget {
   const _SortChip({
     required this.currentSort,
@@ -1277,10 +1277,10 @@ class _SortChip extends StatelessWidget {
                 ),
                 ListTile(
                   title: Text(context.l10n.forumSortByTime),
-                  trailing: currentSort == 'newest'
+                  trailing: currentSort == 'time'
                       ? const Icon(Icons.check, color: AppColors.primary)
                       : null,
-                  onTap: () => Navigator.pop(sheetCtx, 'newest'),
+                  onTap: () => Navigator.pop(sheetCtx, 'time'),
                 ),
               ],
             ),

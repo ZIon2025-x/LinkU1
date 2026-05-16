@@ -281,7 +281,7 @@ class ForumRepository {
   }
 
   /// 获取帖子回复（后端 Task 10 重构后只返根回复 + preview_children，按 sort 排序）
-  /// [sort] 排序方式：'hot'（默认，热度）| 'newest' | 'oldest'
+  /// [sort] 排序方式：'hot'（默认，热度）| 'time'（时间倒序）
   /// [pageSize] 单页根回复数（默认 100；后端 list 视图通常一次拉完，子回复走 getReplyChildren）
   Future<List<ForumReply>> getPostReplies(
     int postId, {

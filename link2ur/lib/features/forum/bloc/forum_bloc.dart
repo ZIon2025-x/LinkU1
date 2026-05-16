@@ -107,7 +107,7 @@ class ForumLoadReplies extends ForumEvent {
   List<Object?> get props => [postId];
 }
 
-/// 切换根评论排序方式（'hot' | 'newest' | 'oldest'）
+/// 切换根评论排序方式（'hot' | 'time'）
 /// 处理器会清空已加载的子回复缓存并重新拉根评论
 class ForumReplySortChanged extends ForumEvent {
   const ForumReplySortChanged(this.postId, this.sort);
@@ -322,7 +322,7 @@ class ForumState extends Equatable {
   final bool isLoadingMoreFeed;
 
   // ===== 帖子详情页：根评论排序 + 子评论分批 (Task 14) =====
-  /// 根评论排序：'hot'（默认）/'newest'/'oldest'
+  /// 根评论排序：'hot'（默认）/'time'
   final String replySort;
   /// 某根评论已加载的子回复（追加在 preview_children 之后）。key = root reply id
   final Map<int, List<ForumReply>> loadedChildren;
