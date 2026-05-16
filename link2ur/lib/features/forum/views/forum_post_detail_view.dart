@@ -145,11 +145,17 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       // 已在某根的 child 列表 → 等 widget 重建即可
       await Future.delayed(const Duration(milliseconds: 100));
     } else {
-      // 不在已知列表 → 可能在某根的折叠区,挨个尝试展开还有 more 的根
+      // 不在已知列表 → 可能在某根的折叠区,挨个尝试展开还有 more 的根。
+      // 限制最多展开 5 根, 避免热门帖(20+ 根都未展开)时 8s+ 无响应。
+      const int maxExpandAttempts = 5;
+      int attempts = 0;
       for (final root in state.replies) {
+        if (attempts >= maxExpandAttempts) break;
         final hasMore = state.hasMoreChildren[root.id] ??
             (root.hiddenChildrenCount > 0);
         if (hasMore && !state.loadingChildrenRoots.contains(root.id)) {
+          attempts++;
+          if (!mounted) return;
           context
               .read<ForumBloc>()
               .add(ForumLoadMoreChildren(root.id));
