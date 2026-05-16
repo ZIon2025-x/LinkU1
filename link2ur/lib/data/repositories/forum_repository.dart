@@ -261,25 +261,6 @@ class ForumRepository {
     return ForumPost.fromJson(response.data!);
   }
 
-  /// 将后端返回的嵌套回复树展平为列表（根回复在前，子回复按顺序紧跟），与 iOS 展示顺序一致
-  /// [visited] 用于检测循环引用，防止无限递归
-  static List<ForumReply> _flattenReplyTree(List<dynamic> rawList, {Set<int>? visited}) {
-    visited ??= {};
-    final result = <ForumReply>[];
-    for (final e in rawList) {
-      final map = Map<String, dynamic>.from(e as Map<String, dynamic>);
-      final reply = ForumReply.fromJson(map);
-      if (visited.contains(reply.id)) continue;
-      visited.add(reply.id);
-      result.add(reply);
-      final children = map['replies'] as List<dynamic>?;
-      if (children != null && children.isNotEmpty) {
-        result.addAll(_flattenReplyTree(children, visited: visited));
-      }
-    }
-    return result;
-  }
-
   /// 获取帖子回复（后端 Task 10 重构后只返根回复 + preview_children，按 sort 排序）
   /// [sort] 排序方式：'hot'（默认，热度）| 'time'（时间倒序）
   /// [pageSize] 单页根回复数（默认 100；后端 list 视图通常一次拉完，子回复走 getReplyChildren）
@@ -301,9 +282,10 @@ class ForumRepository {
     }
 
     final items = response.data!['replies'] as List<dynamic>? ?? [];
-    // 后端现已扁平返回根回复（每项是 ForumRootReplyOut，含 preview_children/total_children）；
-    // _flattenReplyTree 兼容旧嵌套结构，新结构下 map['replies'] 为空，等价于直接 fromJson。
-    return _flattenReplyTree(items);
+    // 后端扁平返回根回复（每项是 ForumRootReplyOut，含 preview_children/total_children），直接 fromJson 即可。
+    return items
+        .map((e) => ForumReply.fromJson(Map<String, dynamic>.from(e as Map<String, dynamic>)))
+        .toList();
   }
 
   /// 拉取某根评论的子回复分页（对应后端 Task 11 新端点）
