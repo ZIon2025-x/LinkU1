@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../design/app_spacing.dart';
 import '../router/page_transitions.dart';
 import '../utils/helpers.dart';
+import '../utils/media_saver.dart';
 
 /// 全屏图片查看器 - 类似小红书风格
 /// 参考iOS FullScreenImageView.swift
@@ -15,6 +16,7 @@ class FullScreenImageView extends StatefulWidget {
     required this.images,
     this.initialIndex = 0,
     this.onPageChanged,
+    this.allowSaveToAlbum = false,
   });
 
   /// 图片URL列表
@@ -26,17 +28,23 @@ class FullScreenImageView extends StatefulWidget {
   /// 页面切换回调
   final ValueChanged<int>? onPageChanged;
 
+  /// 是否在右上角显示三点菜单的"保存到相册"项。任务聊天调用方传 true。
+  /// 其他调用方默认 false,行为不变(向后兼容)。
+  final bool allowSaveToAlbum;
+
   /// 便捷方法 - 显示全屏图片查看器
   static void show(
     BuildContext context, {
     required List<String> images,
     int initialIndex = 0,
+    bool allowSaveToAlbum = false,
   }) {
     pushWithSwipeBack(
       context,
       FullScreenImageView(
         images: images,
         initialIndex: initialIndex,
+        allowSaveToAlbum: allowSaveToAlbum,
       ),
     );
   }
@@ -71,6 +79,31 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
     setState(() {
       _showControls = !_showControls;
     });
+  }
+
+  Future<void> _onSaveCurrent() async {
+    if (_currentIndex < 0 || _currentIndex >= widget.images.length) return;
+    final url = Helpers.getImageUrl(widget.images[_currentIndex]);
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await MediaSaver.saveImage(url);
+    if (!mounted) return;
+    switch (result) {
+      case SaveResult.success:
+        messenger.showSnackBar(const SnackBar(
+          content: Text('Saved to album'), // TODO(Task 17): context.l10n.chatSaveSuccess
+        ));
+        break;
+      case SaveResult.permissionDenied:
+        messenger.showSnackBar(const SnackBar(
+          content: Text('Permission denied'), // TODO(Task 17): context.l10n.chatSavePermissionDenied
+        ));
+        break;
+      case SaveResult.failed:
+        messenger.showSnackBar(const SnackBar(
+          content: Text('Save failed'), // TODO(Task 17): context.l10n.chatSaveFailed
+        ));
+        break;
+    }
   }
 
   @override
@@ -178,6 +211,32 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
                     ),
                   ),
                 ),
+              ),
+            ),
+
+          // 右上角"保存到相册"三点菜单（仅 allowSaveToAlbum=true 且控件可见时显示）
+          // 放在关闭按钮左侧避免重叠（关闭按钮 right: 16 + 36 宽 = 占 16~52）
+          if (widget.allowSaveToAlbum && _showControls)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 4,
+              right: 56,
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                onSelected: (v) {
+                  if (v == 'save') _onSaveCurrent();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'save',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download, size: 20),
+                        SizedBox(width: 8),
+                        Text('Save to album'), // TODO(Task 17): context.l10n.chatSaveToAlbum
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
