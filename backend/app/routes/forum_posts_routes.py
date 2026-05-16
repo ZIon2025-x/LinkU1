@@ -647,8 +647,13 @@ async def create_post(
         except Exception as e:
             logger.warning(f"Failed to move forum post files: {e}")
 
-    # 更新板块统计（仅当帖子可见时）
-    if db_post.is_deleted == False and db_post.is_visible == True:
+    # 更新板块统计（仅当帖子归属某板块且可见时）
+    # NULL category 帖不归属任何板块, 跳过统计 (spec 2026-05-15 Part 1)
+    if (
+        post.category_id is not None
+        and db_post.is_deleted == False
+        and db_post.is_visible == True
+    ):
         category.post_count += 1
         category.last_post_at = get_utc_time()
         await db.flush()
