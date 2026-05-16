@@ -2514,7 +2514,7 @@ class ForumPost(Base):
     content = Column(Text, nullable=False)  # 保留原字段用于兼容
     content_en = Column(Text, nullable=True)  # 英文内容
     content_zh = Column(Text, nullable=True)  # 中文内容
-    category_id = Column(Integer, ForeignKey("forum_categories.id", ondelete="CASCADE"), nullable=True)
+    category_id = Column(Integer, ForeignKey("forum_categories.id", ondelete="SET NULL"), nullable=True)
     author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # 改为可空，支持管理员发帖
     admin_author_id = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 管理员作者ID
     expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)  # 以达人团队身份发帖
