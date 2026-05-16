@@ -310,7 +310,8 @@ async def get_my_replies(
     reply_list = []
     for reply in replies:
         # 检查回复所属帖子所属板块是否有权限访问
-        if reply.post.category_id not in visible_category_ids:
+        # NULL category 帖子对所有用户可见 (spec 2026-05-15 Part 1)
+        if reply.post.category_id is not None and reply.post.category_id not in visible_category_ids:
             continue
 
         reply_list.append(schemas.ForumReplyOut(
@@ -393,9 +394,10 @@ async def get_my_favorites(
     for favorite in favorites:
         post = favorite.post
         # 只返回可见的帖子，且用户有权限访问的板块
+        # NULL category 帖子对所有用户可见 (spec 2026-05-15 Part 1)
         if (post.is_deleted == False and
             post.is_visible == True and
-            post.category_id in visible_category_ids):
+            (post.category_id is None or post.category_id in visible_category_ids)):
             _otype, _oid = _post_identity(post)
             _dname, _davatar = _fav_identity_map.get((_otype, _oid), ("", None))
             favorite_list.append(schemas.ForumFavoriteOut(
