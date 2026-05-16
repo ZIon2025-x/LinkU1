@@ -271,6 +271,26 @@ class ErrorLocalizer {
         return context.l10n.chatSendMessageFailed;
       case 'chat_send_image_failed':
         return context.l10n.chatSendImageFailed;
+      case 'chat_video_too_long':
+        return context.l10n.chatVideoTooLong;
+      case 'chat_video_too_large':
+        return context.l10n.chatVideoTooLarge;
+      case 'chat_video_compress_failed':
+        return context.l10n.chatVideoCompressFailed;
+      case 'chat_file_type_not_allowed':
+        return context.l10n.chatFileTypeNotAllowed;
+      case 'chat_file_too_large':
+        return context.l10n.chatFileTooLarge;
+      case 'chat_upload_failed':
+        return context.l10n.chatUploadFailed;
+      case 'chat_upload_network_offline':
+        return context.l10n.chatUploadNetworkOffline;
+      case 'chat_video_play_failed':
+        return context.l10n.chatVideoPlayFailed;
+      case 'chat_file_download_failed':
+        return context.l10n.chatFileDownloadFailed;
+      case 'chat_pdf_preview_failed':
+        return context.l10n.chatPdfPreviewFailed;
       case 'task_refund_amount_invalid':
         return context.l10n.taskRefundAmountInvalid;
       case 'task_negotiation_invalid_action':
