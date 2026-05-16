@@ -1261,6 +1261,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent>
             onTap: () => FullScreenImageView.show(
               context,
               images: urls,
+              allowSaveToAlbum: true,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.medium),
