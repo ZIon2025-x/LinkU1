@@ -136,7 +136,8 @@ async def get_replies(
             .options(
                 selectinload(models.ForumReply.author),
                 selectinload(models.ForumReply.admin_author),
-                selectinload(models.ForumReply.parent_reply),
+                selectinload(models.ForumReply.parent_reply).selectinload(models.ForumReply.author),
+                selectinload(models.ForumReply.parent_reply).selectinload(models.ForumReply.admin_author),
             )
             .order_by(models.ForumReply.parent_reply_id, models.ForumReply.created_at.asc())
         )
@@ -802,7 +803,8 @@ async def get_reply_children(
         .options(
             selectinload(models.ForumReply.author),
             selectinload(models.ForumReply.admin_author),
-            selectinload(models.ForumReply.parent_reply),
+            selectinload(models.ForumReply.parent_reply).selectinload(models.ForumReply.author),
+            selectinload(models.ForumReply.parent_reply).selectinload(models.ForumReply.admin_author),
         )
     )
     result = await db.execute(children_query)
