@@ -246,6 +246,7 @@ class _ChatContentState extends State<_ChatContent> {
               FullScreenImageView.show(
                 context,
                 images: [url],
+                allowSaveToAlbum: true,
               );
             },
           ),

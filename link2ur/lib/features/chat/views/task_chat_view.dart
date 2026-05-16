@@ -745,6 +745,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             FullScreenImageView.show(
               context,
               images: [url],
+              allowSaveToAlbum: true,
             );
           },
         );

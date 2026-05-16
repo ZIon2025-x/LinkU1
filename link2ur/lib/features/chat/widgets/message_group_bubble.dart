@@ -11,6 +11,10 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/message.dart';
 import '../../../data/repositories/common_repository.dart';
+import '../views/pdf_preview_view.dart';
+import '../views/video_player_view.dart';
+import 'file_message_bubble.dart';
+import 'video_message_bubble.dart';
 
 /// 消息气泡方向
 enum BubbleDirection { incoming, outgoing }
@@ -657,6 +661,62 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
     final isOutgoing = widget.direction == BubbleDirection.outgoing;
     final borderRadius = _getBorderRadius(widget.position, widget.direction);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // 视频消息：messageType == 'video'，渲染 VideoMessageBubble + onTap 全屏播放
+    if (widget.message.messageType == 'video') {
+      final videoAtt = widget.message.attachments.firstWhere(
+        (a) => a.attachmentType == 'video',
+        orElse: () => const MessageAttachment(),
+      );
+      final url = videoAtt.url;
+      final filename =
+          (videoAtt.meta?['original_filename'] as String?) ?? 'video.mp4';
+      return _buildInteractiveWrapper(
+        isOutgoing: isOutgoing,
+        isDark: isDark,
+        child: VideoMessageBubble(
+          message: widget.message,
+          isMine: isOutgoing,
+          onTap: (url != null && url.isNotEmpty)
+              ? () => _isSelected
+                  ? _dismiss()
+                  : VideoPlayerView.show(
+                      context,
+                      videoUrl: url,
+                      filename: filename,
+                    )
+              : null,
+        ),
+      );
+    }
+
+    // 文件消息：messageType == 'file'，渲染 FileMessageBubble + onTap PDF 预览
+    if (widget.message.messageType == 'file') {
+      final fileAtt = widget.message.attachments.firstWhere(
+        (a) => a.attachmentType == 'file',
+        orElse: () => const MessageAttachment(),
+      );
+      final url = fileAtt.url;
+      final filename =
+          (fileAtt.meta?['original_filename'] as String?) ?? 'file.pdf';
+      return _buildInteractiveWrapper(
+        isOutgoing: isOutgoing,
+        isDark: isDark,
+        child: FileMessageBubble(
+          attachment: fileAtt,
+          isMine: isOutgoing,
+          onTap: (url != null && url.isNotEmpty)
+              ? () => _isSelected
+                  ? _dismiss()
+                  : PdfPreviewView.show(
+                      context,
+                      pdfUrl: url,
+                      filename: filename,
+                    )
+              : null,
+        ),
+      );
+    }
 
     // 图片消息：含 message_type==image 或 带图片附件的消息（任务聊天后端返回 normal + attachments）
     final showAsImage = widget.message.isImage || widget.message.hasImageAttachments;
