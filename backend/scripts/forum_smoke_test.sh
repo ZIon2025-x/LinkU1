@@ -54,13 +54,14 @@ CREATE_RESP=$(curl -sS -X POST "$BASE_URL/api/forum/posts" \
     -H "Content-Type: application/json" \
     -d '{"title":"Smoke test NULL category","content":"This post has no category at all. Created by smoke test script.","category_id":null}')
 POST_ID=$(echo "$CREATE_RESP" | jq -r '.id // empty')
-CATEGORY=$(echo "$CREATE_RESP" | jq '.category')
+# 收紧检查: 必须既"有 category 字段"又"值为 null"; "字段缺失"或"非 null" 都算异常
+CATEGORY_OK=$(echo "$CREATE_RESP" | jq 'has("category") and .category == null')
 
 if [ -z "$POST_ID" ]; then
   fail "创建帖子失败: $CREATE_RESP"
 fi
-if [ "$CATEGORY" != "null" ]; then
-  fail "category 应为 null, 实际: $CATEGORY"
+if [ "$CATEGORY_OK" != "true" ]; then
+  fail "category 字段缺失或非 null: $(echo "$CREATE_RESP" | jq -c '.category // "<missing>"')"
 fi
 ok "创建 NULL category 帖 id=$POST_ID"
 
@@ -140,11 +141,15 @@ ok "我的回复包含 NULL 帖关联 reply (验 C1 修复)"
 # === 8. 收藏 NULL 帖, 验证收藏列表能看到 ===
 echo "8a. 收藏 NULL 帖..."
 # POST /api/forum/favorites with body {post_id: X} — toggle 接口
-curl -sS -X POST "$BASE_URL/api/forum/favorites" \
+# 捕获 http_code, 2xx 才算 OK; 不再用 '|| true' 静默吞错
+FAV_CODE=$(curl -sS -o /tmp/fav_resp.json -w "%{http_code}" -X POST "$BASE_URL/api/forum/favorites" \
     -H "$COOKIE_HEADER" \
     -H "Content-Type: application/json" \
-    -d "{\"post_id\":$POST_ID}" > /dev/null || true
-ok "已尝试收藏 (toggle 接口, 无视 already-favorited)"
+    -d "{\"post_id\":$POST_ID}")
+if [ "$FAV_CODE" -lt 200 ] || [ "$FAV_CODE" -ge 300 ]; then
+  fail "收藏 POST 失败: HTTP $FAV_CODE, body: $(cat /tmp/fav_resp.json 2>/dev/null)"
+fi
+ok "已收藏 (HTTP $FAV_CODE)"
 
 echo "8b. 验证 /forum/my/favorites 包含..."
 MY_FAVS_RESP=$(curl -sS "$BASE_URL/api/forum/my/favorites?page=1&page_size=50" -H "$COOKIE_HEADER")
