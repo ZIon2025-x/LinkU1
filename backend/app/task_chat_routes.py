@@ -1198,10 +1198,22 @@ from typing import Dict, Any
 class SendMessageRequest(BaseModel):
     """发送消息请求体"""
     content: str = Field(..., min_length=1, max_length=5000)
+    message_type: str = Field('normal', description="消息类型: normal/image/video/file/text")
     meta: Optional[Dict[str, Any]] = Field(None, description="JSON格式元数据")
     attachments: List[Dict[str, Any]] = Field(default_factory=list, description="附件数组")
     application_id: Optional[int] = Field(None, description="申请ID（预付费聊天频道）")
-    
+
+    @field_validator('message_type')
+    @classmethod
+    def validate_message_type(cls, v):
+        """白名单: 用户只能发 normal/image/video/file/text 几种,
+        system / admin / 其他内部类型禁止从外部传入(避免客户端伪造系统消息)。
+        """
+        allowed = {'normal', 'image', 'video', 'file', 'text'}
+        if v not in allowed:
+            raise ValueError(f"message_type 必须是 {sorted(allowed)} 之一,收到 '{v}'")
+        return v
+
     @field_validator('meta')
     @classmethod
     def validate_meta(cls, v):
@@ -1430,9 +1442,10 @@ async def send_task_message(
         
         # 创建消息
         meta_str = json.dumps(request.meta) if request.meta else None
-        
-        # 消息类型：用户只能发送 normal 消息，system 消息由服务端内部创建
-        message_type = "normal"
+
+        # 消息类型: 由客户端传入 normal/image/video/file/text(已在 schema validator 白名单校验),
+        # system 等内部类型由服务端代码直接构造 Message,不走这条路径。
+        message_type = request.message_type
         sender_id = current_user.id
         
         new_message = models.Message(

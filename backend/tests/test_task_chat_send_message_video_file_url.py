@@ -296,6 +296,164 @@ async def test_send_image_message_with_blob_id_returns_private_image_url():
 
 
 @pytest.mark.asyncio
+async def test_send_video_message_persists_message_type_video():
+    """POST 带 message_type='video' → 响应/广播/DB Message 都是 'video',
+    不再被硬编码成 'normal'(修复 SendMessageRequest schema 静默丢字段 bug)。"""
+    from app.task_chat_routes import send_task_message, SendMessageRequest
+
+    task = _make_task(task_id=20, poster_id="u_vid_p", taker_id="u_vid_t")
+    current_user = _make_user(user_id="u_vid_p", name="VidPoster")
+    db, added_objects = _build_send_db(task)
+
+    request = SendMessageRequest(
+        content="[视频]",
+        message_type='video',
+        attachments=[
+            {
+                "attachment_type": "video",
+                "blob_id": "u_vid_p_1700000000_xyz.mp4",
+                "meta": {"duration": 10},
+            },
+        ],
+    )
+
+    with patch(
+        "app.signed_url.signed_url_manager.generate_signed_url",
+        return_value="http://example.com/api/private-file?sig=fake",
+    ), patch(
+        "app.redis_cache.invalidate_task_chat_cache",
+        return_value=None,
+    ), patch(
+        "app.websocket_manager.get_ws_manager",
+    ) as mock_ws_mgr:
+        ws_mgr = MagicMock()
+        ws_mgr.send_to_user = AsyncMock(return_value=True)
+        mock_ws_mgr.return_value = ws_mgr
+
+        result = await send_task_message(
+            task_id=20,
+            request=request,
+            current_user=current_user,
+            db=db,
+        )
+
+    # 1. POST 响应里 message_type 是 'video'
+    assert result["message_type"] == "video"
+
+    # 2. 写入 DB 的 Message 对象 message_type 也是 'video'
+    message_objs = [o for o in added_objects if not hasattr(o, "attachment_type")]
+    assert len(message_objs) == 1
+    assert message_objs[0].message_type == "video"
+
+    # 3. WS 广播 payload 里 message_type 也是 'video'
+    sent_payload = ws_mgr.send_to_user.call_args.args[1]
+    assert sent_payload["message"]["message_type"] == "video"
+
+
+@pytest.mark.asyncio
+async def test_send_file_message_persists_message_type_file():
+    """POST 带 message_type='file' → 链路保持 'file'。"""
+    from app.task_chat_routes import send_task_message, SendMessageRequest
+
+    task = _make_task(task_id=21, poster_id="u_f_p", taker_id="u_f_t")
+    current_user = _make_user(user_id="u_f_p", name="FilePoster")
+    db, added_objects = _build_send_db(task)
+
+    request = SendMessageRequest(
+        content="[文件:a.pdf]",
+        message_type='file',
+        attachments=[
+            {
+                "attachment_type": "file",
+                "blob_id": "u_f_p_1700000000_a.pdf",
+                "meta": {"original_filename": "a.pdf"},
+            },
+        ],
+    )
+
+    with patch(
+        "app.signed_url.signed_url_manager.generate_signed_url",
+        return_value="http://example.com/api/private-file?sig=fake",
+    ), patch(
+        "app.redis_cache.invalidate_task_chat_cache",
+        return_value=None,
+    ), patch(
+        "app.websocket_manager.get_ws_manager",
+    ) as mock_ws_mgr:
+        ws_mgr = MagicMock()
+        ws_mgr.send_to_user = AsyncMock(return_value=True)
+        mock_ws_mgr.return_value = ws_mgr
+
+        result = await send_task_message(
+            task_id=21,
+            request=request,
+            current_user=current_user,
+            db=db,
+        )
+
+    assert result["message_type"] == "file"
+    message_objs = [o for o in added_objects if not hasattr(o, "attachment_type")]
+    assert message_objs[0].message_type == "file"
+    sent_payload = ws_mgr.send_to_user.call_args.args[1]
+    assert sent_payload["message"]["message_type"] == "file"
+
+
+@pytest.mark.asyncio
+async def test_send_message_default_message_type_is_normal():
+    """不传 message_type → 走 default 'normal',保持向后兼容。"""
+    from app.task_chat_routes import send_task_message, SendMessageRequest
+
+    task = _make_task(task_id=22, poster_id="u_n_p", taker_id="u_n_t")
+    current_user = _make_user(user_id="u_n_p", name="NormalPoster")
+    db, added_objects = _build_send_db(task)
+
+    request = SendMessageRequest(content="hi")
+    assert request.message_type == "normal"
+
+    with patch(
+        "app.redis_cache.invalidate_task_chat_cache",
+        return_value=None,
+    ), patch(
+        "app.websocket_manager.get_ws_manager",
+    ) as mock_ws_mgr:
+        ws_mgr = MagicMock()
+        ws_mgr.send_to_user = AsyncMock(return_value=True)
+        mock_ws_mgr.return_value = ws_mgr
+
+        result = await send_task_message(
+            task_id=22,
+            request=request,
+            current_user=current_user,
+            db=db,
+        )
+
+    assert result["message_type"] == "normal"
+    message_objs = [o for o in added_objects if not hasattr(o, "attachment_type")]
+    assert message_objs[0].message_type == "normal"
+
+
+def test_send_message_request_rejects_system_type():
+    """SendMessageRequest schema 必须拒绝 'system'/'admin' 等非白名单类型,
+    防止客户端伪造系统消息。"""
+    from pydantic import ValidationError
+
+    from app.task_chat_routes import SendMessageRequest
+
+    for bad in ("system", "admin", "negotiation", "price_proposal", "", "SYSTEM"):
+        with pytest.raises(ValidationError):
+            SendMessageRequest(content="x", message_type=bad)
+
+
+def test_send_message_request_accepts_whitelist_types():
+    """白名单内的几种类型必须能正常构造。"""
+    from app.task_chat_routes import SendMessageRequest
+
+    for ok in ("normal", "image", "video", "file", "text"):
+        req = SendMessageRequest(content="x", message_type=ok)
+        assert req.message_type == ok
+
+
+@pytest.mark.asyncio
 async def test_send_video_url_already_provided_not_overwritten():
     """如果客户端提供了 url(不是 blob_id), 不应被覆盖。
     虽然现在 chat media 不会走这条路径, 但 video 类型理论上允许 public URL,
