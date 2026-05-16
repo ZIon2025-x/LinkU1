@@ -67,3 +67,33 @@ def test_hot_sort_orders_by_like_count():
     src = _function_source("get_replies")
     # like_count.desc() 应当出现
     assert "like_count.desc()" in src or ("like_count" in src and "desc" in src)
+
+
+def test_get_reply_children_endpoint_exists():
+    """新 endpoint GET /replies/{root_id}/children 应存在"""
+    src = REPLIES_ROUTE.read_text(encoding='utf-8')
+    # 注解形式 @router.get("/replies/{...}/children" — 接受多种命名变体
+    import re
+    assert re.search(r'@router\.get\(\s*["\']/replies/\{[a-z_]+\}/children["\']', src), \
+        "未找到 GET /replies/{...}/children endpoint"
+
+
+def test_get_reply_children_uses_has_more():
+    src = _function_source('get_reply_children')
+    assert 'has_more' in src
+
+
+def test_get_reply_children_uses_offset_limit():
+    src = _function_source('get_reply_children')
+    assert 'offset' in src and 'limit' in src
+
+
+def test_get_reply_children_returns_404_if_not_root():
+    """child reply (parent_reply_id IS NOT NULL) 应返回 404"""
+    src = _function_source('get_reply_children')
+    assert 'parent_reply_id' in src and 'is not None' in src or 'parent_reply_id' in src and '404' in src
+
+
+def test_get_reply_children_orders_by_time_asc():
+    src = _function_source('get_reply_children')
+    assert 'created_at.asc()' in src

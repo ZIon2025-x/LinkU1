@@ -738,3 +738,118 @@ async def restore_reply(
     await db.commit()
 
     return {"id": reply.id, "is_deleted": False, "message": "回复已恢复"}
+
+
+@router.get(
+    "/replies/{reply_id}/children",
+    response_model=schemas.ForumReplyChildrenPage,
+)
+async def get_reply_children(
+    reply_id: int,
+    offset: int = Query(3, ge=0, description="跳过前 N 条已 preview 的，默认 3"),
+    limit: int = Query(5, ge=1, le=20, description="本批拉取数，默认 5"),
+    request: Request = None,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取某根评论的子回复，按时间正序，offset/limit 分页
+
+    用于详情页"展开剩余 N 条回复"按钮，按需分批拉。
+    """
+    # 1. 验证根回复存在且不是子回复
+    root_result = await db.execute(
+        select(models.ForumReply).where(
+            models.ForumReply.id == reply_id,
+            models.ForumReply.is_deleted == False,
+        )
+    )
+    root = root_result.scalar_one_or_none()
+    if not root or root.parent_reply_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="根评论不存在",
+            headers={"X-Error-Code": "ROOT_REPLY_NOT_FOUND"},
+        )
+
+    # 2. 验证 post 可见性
+    is_admin = False
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    post = await get_post_with_permissions(root.post_id, current_user, is_admin, db, current_admin)
+
+    is_author = False
+    if current_user and post.author_id == current_user.id:
+        is_author = True
+    if current_admin and post.admin_author_id == current_admin.id:
+        is_author = True
+
+    # 3. 查 children：多拉一条用来判断 has_more
+    children_query = select(models.ForumReply).where(
+        models.ForumReply.parent_reply_id == reply_id,
+        models.ForumReply.is_deleted == False,
+    )
+    if not is_admin and not is_author:
+        children_query = children_query.where(models.ForumReply.is_visible == True)
+    children_query = (
+        children_query
+        .order_by(models.ForumReply.created_at.asc())
+        .offset(offset)
+        .limit(limit + 1)
+        .options(
+            selectinload(models.ForumReply.author),
+            selectinload(models.ForumReply.admin_author),
+            selectinload(models.ForumReply.parent_reply),
+        )
+    )
+    result = await db.execute(children_query)
+    children = result.scalars().all()
+    has_more = len(children) > limit
+    children = children[:limit]
+
+    # 4. 批量点赞 + badge
+    child_ids = [c.id for c in children]
+    user_liked_replies: set = set()
+    if current_user and child_ids:
+        like_result = await db.execute(
+            select(models.ForumLike.target_id)
+            .where(
+                models.ForumLike.target_type == "reply",
+                models.ForumLike.target_id.in_(child_ids),
+                models.ForumLike.user_id == current_user.id,
+            )
+        )
+        user_liked_replies = {row[0] for row in like_result.all()}
+
+    _author_ids = list({c.author_id for c in children if c.author_id})
+    _badge_cache = await preload_badge_cache(db, _author_ids)
+
+    out_children = []
+    for c in children:
+        parent_author = None
+        if c.parent_reply_id and getattr(c, "parent_reply", None):
+            parent_author = await get_reply_author_info(
+                db, c.parent_reply, request, _badge_cache=_badge_cache
+            )
+        out_children.append(
+            schemas.ForumReplyOut(
+                id=c.id,
+                content=c.content,
+                author=await get_reply_author_info(db, c, request, _badge_cache=_badge_cache),
+                parent_reply_id=c.parent_reply_id,
+                parent_reply_author=parent_author,
+                like_count=c.like_count,
+                is_liked=c.id in user_liked_replies,
+                created_at=c.created_at,
+                updated_at=c.updated_at,
+            )
+        )
+
+    return schemas.ForumReplyChildrenPage(
+        replies=out_children,
+        has_more=has_more,
+        next_offset=offset + len(children),
+    )
