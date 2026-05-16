@@ -1216,29 +1216,78 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
   ) async {
     try {
       await _forumRepository.deleteReply(event.replyId);
-      // 展平列表中需移除该回复及其所有子回复（递归 parentReplyId 链）
-      final idsToRemove = <int>{event.replyId};
-      bool changed = true;
-      while (changed) {
-        changed = false;
-        for (final r in state.replies) {
-          if (r.parentReplyId != null &&
-              idsToRemove.contains(r.parentReplyId) &&
-              !idsToRemove.contains(r.id)) {
-            idsToRemove.add(r.id);
-            changed = true;
-          }
+
+      // Task 10 重构后子回复在 previewChildren/loadedChildren，不在 state.replies。
+      // 按根/子分支处理：
+      // - 根: 从 state.replies 移除 + 清三个 children 相关 maps
+      // - 子: 从 ancestor root 的 previewChildren/loadedChildren 移除，totalChildren--
+      final isRoot = state.replies.any((r) => r.id == event.replyId);
+
+      if (isRoot) {
+        final root = state.replies.firstWhere((r) => r.id == event.replyId);
+        final childCount = root.totalChildren; // 后端 CASCADE 删 child
+        final newReplies =
+            state.replies.where((r) => r.id != event.replyId).toList();
+        final newLoadedChildren =
+            Map<int, List<ForumReply>>.from(state.loadedChildren)
+              ..remove(event.replyId);
+        final newHasMore = Map<int, bool>.from(state.hasMoreChildren)
+          ..remove(event.replyId);
+        final newNextOffset = Map<int, int>.from(state.nextChildOffset)
+          ..remove(event.replyId);
+        final dropCount = 1 + childCount; // 根 + 所有 child
+        final newReplyCount =
+            (state.selectedPost?.replyCount ?? 0) - dropCount;
+        emit(state.copyWith(
+          replies: newReplies,
+          loadedChildren: newLoadedChildren,
+          hasMoreChildren: newHasMore,
+          nextChildOffset: newNextOffset,
+          selectedPost: state.selectedPost?.copyWith(
+            replyCount: newReplyCount > 0 ? newReplyCount : 0,
+          ),
+        ));
+      } else {
+        final ancestorRootId = _findAncestorRootId(event.replyId);
+        if (ancestorRootId == null) {
+          AppLogger.warning(
+            'Deleted reply id=${event.replyId} not in current view; skipping local state update',
+          );
+          emit(state.copyWith(
+            selectedPost: state.selectedPost?.copyWith(
+              replyCount: ((state.selectedPost?.replyCount ?? 0) - 1)
+                  .clamp(0, 1 << 30),
+            ),
+          ));
+          return;
         }
+        final newReplies = state.replies.map((r) {
+          if (r.id == ancestorRootId) {
+            return r.copyWith(
+              previewChildren: r.previewChildren
+                  .where((c) => c.id != event.replyId)
+                  .toList(),
+              totalChildren: (r.totalChildren - 1).clamp(0, 1 << 30),
+            );
+          }
+          return r;
+        }).toList();
+        final loaded =
+            state.loadedChildren[ancestorRootId] ?? const <ForumReply>[];
+        final newLoadedChildren = {
+          ...state.loadedChildren,
+          ancestorRootId:
+              loaded.where((c) => c.id != event.replyId).toList(),
+        };
+        emit(state.copyWith(
+          replies: newReplies,
+          loadedChildren: newLoadedChildren,
+          selectedPost: state.selectedPost?.copyWith(
+            replyCount: ((state.selectedPost?.replyCount ?? 0) - 1)
+                .clamp(0, 1 << 30),
+          ),
+        ));
       }
-      final updatedReplies =
-          state.replies.where((r) => !idsToRemove.contains(r.id)).toList();
-      final newCount = (state.selectedPost?.replyCount ?? 0) - idsToRemove.length;
-      emit(state.copyWith(
-        replies: updatedReplies,
-        selectedPost: state.selectedPost?.copyWith(
-          replyCount: newCount > 0 ? newCount : 0,
-        ),
-      ));
     } catch (e) {
       AppLogger.error('Failed to delete reply', e);
       emit(state.copyWith(
