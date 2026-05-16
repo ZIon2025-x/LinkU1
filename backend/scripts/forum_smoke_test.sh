@@ -15,6 +15,10 @@
 #
 # 获取 SESSION_COOKIE: 用真实账号登录 web/linktest, 从 DevTools → Application →
 # Cookies copy 完整 cookie 字符串 (包含 session + csrf token, 见后端 secure_auth).
+#
+# ⚠️ Session 是 IP-bound (backend/app/secure_auth.py:776,789). 不要在 CI runner /
+# 跟你浏览器不同 IP 的机器上跑 — 会 revoke 这个 session, 把自己挤下线。
+# 在产生 cookie 的同一台机器/网络环境跑。
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://linktest.up.railway.app}"
@@ -33,6 +37,15 @@ NC='\033[0m'
 
 ok() { echo -e "${GREEN}✓${NC} $1"; }
 fail() { echo -e "${RED}✗${NC} $1"; exit 1; }
+
+# Cleanup trap: 任何步骤失败也尝试删除 smoke 测试数据,避免污染 DB
+POST_ID=""
+cleanup() {
+  if [ -n "$POST_ID" ]; then
+    curl -sS -X DELETE "$BASE_URL/api/forum/posts/$POST_ID" -H "$COOKIE_HEADER" > /dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
 
 # === 1. 创建 NULL category 帖 ===
 echo "1. 创建 NULL category 帖..."
@@ -64,7 +77,8 @@ ok "NULL 帖在社区流可见"
 echo "3. 验证 NULL 帖不在 ?category_id=X 板块列表..."
 # 任选一个 general / skill 类型 category id
 CATS_RESP=$(curl -sS "$BASE_URL/api/forum/categories" -H "$COOKIE_HEADER")
-SOME_CAT_ID=$(echo "$CATS_RESP" | jq -r '.[] | select(.type == "general" or .type == "skill") | .id' | head -1)
+# 响应是 ForumCategoryListResponse: {categories: [...]} — 用 .categories[] 而不是 .[]
+SOME_CAT_ID=$(echo "$CATS_RESP" | jq -r '.categories[] | select(.type == "general" or .type == "skill") | .id' | head -1)
 if [ -z "$SOME_CAT_ID" ]; then
   fail "找不到可用的 general/skill category"
 fi
@@ -140,10 +154,9 @@ if [ "$FAV_FOUND" != "1" ]; then
 fi
 ok "我的收藏包含 NULL 帖 (验 C1 修复)"
 
-# === 9. 清理 ===
-echo "9. 清理测试数据..."
-curl -sS -X DELETE "$BASE_URL/api/forum/posts/$POST_ID" -H "$COOKIE_HEADER" > /dev/null || true
-ok "已删除 smoke test post $POST_ID"
+# === 9. 清理 (由 EXIT trap 处理, 任何失败也会跑) ===
+echo "9. 清理测试数据 (EXIT trap 已注册)..."
+ok "smoke test post $POST_ID 将由 trap 删除"
 
 echo ""
 echo "========================================="
