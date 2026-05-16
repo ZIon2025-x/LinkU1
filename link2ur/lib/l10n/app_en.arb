@@ -3491,6 +3491,14 @@
   },
   "chatInputHint": "Type a message...",
   "chatImageLabel": "Photo",
+  "chatPhotoLabel": "Photo",
+  "@chatPhotoLabel": {
+    "description": "Task chat toolbar 'Photo' button (image + video)"
+  },
+  "chatFileLabel": "File",
+  "@chatFileLabel": {
+    "description": "Task chat toolbar 'File' button (PDF)"
+  },
   "chatSendImageConfirmTitle": "Send image",
   "chatCameraLabel": "Camera",
   "chatTaskCompleted": "Completed",
@@ -5051,6 +5059,18 @@
   "errorLeaderboardLoadFailed": "Failed to load leaderboard",
   "errorBadgesLoadFailed": "Failed to load badges",
   "forumReplyFallbackParent": "↩ Replied to a comment",
+  "forumSortByHot": "By hotness",
+  "forumSortByTime": "By time",
+  "forumExpandMoreReplies": "Show {count} more replies",
+  "@forumExpandMoreReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forumLoadRepliesError": "Failed to load comments",
+  "forumLoadChildrenError": "Failed to load more replies",
   "expertOfficialBadge": "Official",
   "expertDashboardTitle": "Expert Centre",
   "expertDashboardManagement": "Management",

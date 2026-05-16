@@ -13397,6 +13397,18 @@ abstract class AppLocalizations {
   /// **'Photo'**
   String get chatImageLabel;
 
+  /// Task chat toolbar 'Photo' button (image + video)
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get chatPhotoLabel;
+
+  /// Task chat toolbar 'File' button (PDF)
+  ///
+  /// In en, this message translates to:
+  /// **'File'**
+  String get chatFileLabel;
+
   /// No description provided for @chatSendImageConfirmTitle.
   ///
   /// In en, this message translates to:
@@ -19828,6 +19840,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'↩ Replied to a comment'**
   String get forumReplyFallbackParent;
+
+  /// No description provided for @forumSortByHot.
+  ///
+  /// In en, this message translates to:
+  /// **'By hotness'**
+  String get forumSortByHot;
+
+  /// No description provided for @forumSortByTime.
+  ///
+  /// In en, this message translates to:
+  /// **'By time'**
+  String get forumSortByTime;
+
+  /// No description provided for @forumExpandMoreReplies.
+  ///
+  /// In en, this message translates to:
+  /// **'Show {count} more replies'**
+  String forumExpandMoreReplies(int count);
+
+  /// No description provided for @forumLoadRepliesError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load comments'**
+  String get forumLoadRepliesError;
+
+  /// No description provided for @forumLoadChildrenError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load more replies'**
+  String get forumLoadChildrenError;
 
   /// No description provided for @expertOfficialBadge.
   ///

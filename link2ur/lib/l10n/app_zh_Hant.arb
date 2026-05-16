@@ -3399,6 +3399,14 @@
   },
   "chatInputHint": "輸入訊息...",
   "chatImageLabel": "圖片",
+  "chatPhotoLabel": "相片",
+  "@chatPhotoLabel": {
+    "description": "任務聊天工具列中'相片'按鈕(圖片+視訊)"
+  },
+  "chatFileLabel": "檔案",
+  "@chatFileLabel": {
+    "description": "任務聊天工具列中'檔案'按鈕(PDF)"
+  },
   "chatSendImageConfirmTitle": "發送圖片",
   "chatCameraLabel": "拍照",
   "chatTaskCompleted": "已完成",
@@ -4721,6 +4729,18 @@
   "errorIapVerificationFailed": "驗證失敗，請聯繫客服",
   "errorIapPurchaseFailed": "購買失敗",
   "forumReplyFallbackParent": "↩ 回覆了一則留言",
+  "forumSortByHot": "按熱度",
+  "forumSortByTime": "按時間",
+  "forumExpandMoreReplies": "展開剩餘 {count} 條回覆",
+  "@forumExpandMoreReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forumLoadRepliesError": "載入評論失敗",
+  "forumLoadChildrenError": "載入更多回覆失敗",
   "expertOfficialBadge": "官方",
   "expertDashboardTitle": "達人中心",
   "expertDashboardManagement": "管理中心",

@@ -3427,6 +3427,14 @@
   },
   "chatInputHint": "输入消息...",
   "chatImageLabel": "图片",
+  "chatPhotoLabel": "照片",
+  "@chatPhotoLabel": {
+    "description": "任务聊天工具栏中'照片'按钮(图片+视频)"
+  },
+  "chatFileLabel": "文件",
+  "@chatFileLabel": {
+    "description": "任务聊天工具栏中'文件'按钮(PDF)"
+  },
   "chatSendImageConfirmTitle": "发送图片",
   "chatCameraLabel": "拍照",
   "chatTaskCompleted": "已完成",
@@ -4877,6 +4885,18 @@
   "errorLeaderboardLoadFailed": "加载排行榜失败",
   "errorBadgesLoadFailed": "加载徽章失败",
   "forumReplyFallbackParent": "↩ 回复了一条评论",
+  "forumSortByHot": "按热度",
+  "forumSortByTime": "按时间",
+  "forumExpandMoreReplies": "展开剩余 {count} 条回复",
+  "@forumExpandMoreReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forumLoadRepliesError": "加载评论失败",
+  "forumLoadChildrenError": "加载更多回复失败",
   "expertOfficialBadge": "官方",
   "expertDashboardTitle": "达人中心",
   "expertDashboardManagement": "管理中心",

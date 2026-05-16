@@ -7334,6 +7334,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatImageLabel => 'Photo';
 
   @override
+  String get chatPhotoLabel => 'Photo';
+
+  @override
+  String get chatFileLabel => 'File';
+
+  @override
   String get chatSendImageConfirmTitle => 'Send image';
 
   @override
@@ -10824,6 +10830,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forumReplyFallbackParent => '↩ Replied to a comment';
+
+  @override
+  String get forumSortByHot => 'By hotness';
+
+  @override
+  String get forumSortByTime => 'By time';
+
+  @override
+  String forumExpandMoreReplies(int count) {
+    return 'Show $count more replies';
+  }
+
+  @override
+  String get forumLoadRepliesError => 'Failed to load comments';
+
+  @override
+  String get forumLoadChildrenError => 'Failed to load more replies';
 
   @override
   String get expertOfficialBadge => 'Official';

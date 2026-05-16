@@ -7010,6 +7010,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatImageLabel => '图片';
 
   @override
+  String get chatPhotoLabel => '照片';
+
+  @override
+  String get chatFileLabel => '文件';
+
+  @override
   String get chatSendImageConfirmTitle => '发送图片';
 
   @override
@@ -10371,6 +10377,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get forumReplyFallbackParent => '↩ 回复了一条评论';
+
+  @override
+  String get forumSortByHot => '按热度';
+
+  @override
+  String get forumSortByTime => '按时间';
+
+  @override
+  String forumExpandMoreReplies(int count) {
+    return '展开剩余 $count 条回复';
+  }
+
+  @override
+  String get forumLoadRepliesError => '加载评论失败';
+
+  @override
+  String get forumLoadChildrenError => '加载更多回复失败';
 
   @override
   String get expertOfficialBadge => '官方';
@@ -20828,6 +20851,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatImageLabel => '圖片';
 
   @override
+  String get chatPhotoLabel => '相片';
+
+  @override
+  String get chatFileLabel => '檔案';
+
+  @override
   String get chatSendImageConfirmTitle => '發送圖片';
 
   @override
@@ -24189,6 +24218,23 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumReplyFallbackParent => '↩ 回覆了一則留言';
+
+  @override
+  String get forumSortByHot => '按熱度';
+
+  @override
+  String get forumSortByTime => '按時間';
+
+  @override
+  String forumExpandMoreReplies(int count) {
+    return '展開剩餘 $count 條回覆';
+  }
+
+  @override
+  String get forumLoadRepliesError => '載入評論失敗';
+
+  @override
+  String get forumLoadChildrenError => '載入更多回覆失敗';
 
   @override
   String get expertOfficialBadge => '官方';

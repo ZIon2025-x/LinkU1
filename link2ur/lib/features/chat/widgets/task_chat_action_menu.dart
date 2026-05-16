@@ -7,13 +7,13 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// 任务聊天功能菜单
-/// 参考iOS TaskChatActionMenu.swift
-/// 提供上传图片、查看任务详情、查看地址等快捷操作
+/// 提供上传照片(图片/视频)、拍照、文件(PDF)、查看任务详情、查看地址等快捷操作
 class TaskChatActionMenu extends StatelessWidget {
   const TaskChatActionMenu({
     super.key,
     required this.onImagePicker,
     required this.onCameraPick,
+    required this.onFilePicker,
     required this.onTaskDetail,
     this.onViewLocation,
     this.isExpanded = false,
@@ -21,6 +21,7 @@ class TaskChatActionMenu extends StatelessWidget {
 
   final VoidCallback onImagePicker;
   final VoidCallback onCameraPick;
+  final VoidCallback onFilePicker;
   final VoidCallback onTaskDetail;
   final VoidCallback? onViewLocation;
   final bool isExpanded;
@@ -40,6 +41,7 @@ class TaskChatActionMenu extends StatelessWidget {
       ),
       child: SingleChildScrollView(
         physics: const NeverScrollableScrollPhysics(),
+        scrollDirection: Axis.horizontal,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
@@ -49,7 +51,7 @@ class TaskChatActionMenu extends StatelessWidget {
             children: [
               _ChatActionButton(
                 icon: Icons.photo_library,
-                label: context.l10n.chatImageLabel,
+                label: context.l10n.chatPhotoLabel,
                 color: AppColors.success,
                 onTap: onImagePicker,
               ),
@@ -59,6 +61,13 @@ class TaskChatActionMenu extends StatelessWidget {
                 label: context.l10n.chatCameraLabel,
                 color: AppColors.primary,
                 onTap: onCameraPick,
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              _ChatActionButton(
+                icon: Icons.attach_file,
+                label: context.l10n.chatFileLabel,
+                color: AppColors.warning,
+                onTap: onFilePicker,
               ),
               const SizedBox(width: AppSpacing.xl),
               _ChatActionButton(
@@ -76,7 +85,6 @@ class TaskChatActionMenu extends StatelessWidget {
                   onTap: onViewLocation!,
                 ),
               ],
-              const Spacer(),
             ],
           ),
         ),

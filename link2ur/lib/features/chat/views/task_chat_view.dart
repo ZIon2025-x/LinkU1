@@ -355,6 +355,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                   isExpanded: _showActionMenu,
                   onImagePicker: _pickImage,
                   onCameraPick: _pickCameraImage,
+                  onFilePicker: () {}, // TODO(Task 10): replace with real _pickFile
                   onTaskDetail: () {
                     context.safePush('/tasks/${widget.taskId}');
                   },
