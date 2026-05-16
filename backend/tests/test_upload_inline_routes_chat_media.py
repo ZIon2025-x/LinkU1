@@ -53,7 +53,8 @@ def client(monkeypatch):
     from app import file_system as fs_mod
 
     def _fake_upload_file(content, filename, user_id, db, task_id=None,
-                          chat_id=None, content_type=None):
+                          chat_id=None, content_type=None,
+                          max_file_size_override=None):
         return {
             "success": True,
             "file_id": "fake_file_id_123",
@@ -184,3 +185,55 @@ def test_non_chat_usage_still_uses_default_10mb_limit(client: TestClient):
         files=[_file_tuple(big, "doc.txt", "text/plain")],
     )
     assert resp.status_code in (400, 413), resp.text
+
+
+# -----------------------------------------------------------------------------
+# 真实端到端: 15MB mp4 必须能通过 PrivateFileSystem 写盘 (不桩 upload_file)
+# -----------------------------------------------------------------------------
+
+def test_chat_media_accepts_15mb_mp4_real_path(tmp_path, monkeypatch):
+    """端到端验证: 15MB mp4 实际能通过 PrivateFileSystem 写盘 (不被 10MB hardcap 拒)。
+
+    这个测试**不**桩 private_file_system.upload_file,显式覆盖 file_system.py
+    的 10MB max_file_size 回归 — 在加 max_file_size_override 之前,任何
+    >10MB 视频都会被 validate_file 内部 400 拒掉。
+    """
+    from app.file_system import private_file_system
+    from app import signed_url as su_mod
+
+    # base_dir 指到 tmp_path 防止污染真实 uploads/ 目录
+    monkeypatch.setattr(private_file_system, "base_dir", tmp_path)
+
+    # signed_url_manager 仍桩,避免依赖签名密钥
+    def _fake_generate_signed_url(file_path, user_id, expiry_minutes=15,
+                                  one_time=False):
+        return f"/private-file?file={file_path}&user={user_id}&sig=fake"
+
+    monkeypatch.setattr(
+        su_mod.signed_url_manager, "generate_signed_url",
+        _fake_generate_signed_url,
+    )
+
+    app.dependency_overrides[get_current_user_secure_sync_csrf] = _fake_get_user
+    app.dependency_overrides[get_db] = _fake_get_db
+    try:
+        with TestClient(app, raise_server_exceptions=False) as c:
+            # 构造 15MB 合法 mp4 (ftyp box + payload)
+            big_mp4 = MP4_MAGIC + b"\x00" * (15 * 1024 * 1024 - len(MP4_MAGIC))
+            resp = c.post(
+                "/api/upload/file?usage=chat_media&task_id=1",
+                files=[_file_tuple(big_mp4, "video.mp4", "video/mp4")],
+            )
+            assert resp.status_code == 200, resp.text
+            body = resp.json()
+            assert body["success"] is True
+            assert body["file_id"]
+
+            # 验证文件真的落盘了 (PrivateFileSystem 按 task_id 分目录)
+            task_dir = tmp_path / "tasks" / "1"
+            saved = list(task_dir.glob(f"{body['file_id']}.*"))
+            assert len(saved) == 1, f"期望 1 个文件落盘到 {task_dir},实际: {saved}"
+            assert saved[0].stat().st_size == len(big_mp4)
+    finally:
+        app.dependency_overrides.pop(get_current_user_secure_sync_csrf, None)
+        app.dependency_overrides.pop(get_db, None)

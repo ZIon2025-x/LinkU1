@@ -594,8 +594,30 @@ async def upload_file(
                 )
 
         # 使用新的私密文件系统上传
+        # chat_media 视频/PDF 兜底 30MB(PDF 在前面的 validate_chat_pdf 已独立卡 20MB);
+        # 其他 usage 不传 override,走默认 10MB,保持向后兼容。
         from app.file_system import private_file_system
-        result = private_file_system.upload_file(content, file.filename, current_user.id, db, task_id=task_id, chat_id=chat_id, content_type=file.content_type)
+        if usage == "chat_media":
+            result = private_file_system.upload_file(
+                content,
+                file.filename,
+                current_user.id,
+                db,
+                task_id=task_id,
+                chat_id=chat_id,
+                content_type=file.content_type,
+                max_file_size_override=30 * 1024 * 1024,
+            )
+        else:
+            result = private_file_system.upload_file(
+                content,
+                file.filename,
+                current_user.id,
+                db,
+                task_id=task_id,
+                chat_id=chat_id,
+                content_type=file.content_type,
+            )
 
         # 生成签名URL（使用新的文件ID）
         from app.signed_url import signed_url_manager

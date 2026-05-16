@@ -57,8 +57,17 @@ class PrivateFileSystem:
         ext = detect_file_extension(filename=filename, content_type=content_type, content=content)
         return ext
     
-    def validate_file(self, content: bytes, filename: str, content_type: Optional[str] = None) -> None:
-        """验证文件"""
+    def validate_file(self, content: bytes, filename: str, content_type: Optional[str] = None, max_file_size_override: Optional[int] = None) -> None:
+        """验证文件
+
+        Args:
+            content: 文件字节
+            filename: 文件名
+            content_type: HTTP Content-Type(可选)
+            max_file_size_override: 当非 None 时,用它替代 self.max_file_size 做大小校验。
+                上游路由(如 chat_media 视频 30MB)需要更高上限时显式传入;
+                **既有调用方不传该参数,保持默认 10MB,完全向后兼容**。
+        """
         # 检查文件扩展名（支持从 Content-Type 或 magic bytes 检测）
         extension = self.get_file_extension(filename, content_type=content_type, content=content)
         if extension in self.dangerous_extensions:
@@ -66,12 +75,13 @@ class PrivateFileSystem:
                 status_code=400,
                 detail=f"不允许上传此类型的文件。危险文件类型: {', '.join(self.dangerous_extensions)}"
             )
-        
-        # 检查文件大小
-        if len(content) > self.max_file_size:
+
+        # 检查文件大小（支持 override）
+        max_size = max_file_size_override if max_file_size_override is not None else self.max_file_size
+        if len(content) > max_size:
             raise HTTPException(
                 status_code=400,
-                detail=f"文件过大。最大允许大小: {self.max_file_size // (1024*1024)}MB"
+                detail=f"文件过大。最大允许大小: {max_size // (1024*1024)}MB"
             )
     
     def save_file(self, content: bytes, file_id: str, extension: str, task_id: Optional[int] = None, chat_id: Optional[str] = None) -> Path:
@@ -98,11 +108,17 @@ class PrivateFileSystem:
         
         return file_path
     
-    def upload_file(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None, content_type: Optional[str] = None) -> Dict[str, Any]:
-        """上传文件，支持按任务ID或聊天ID分类"""
+    def upload_file(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None, content_type: Optional[str] = None, max_file_size_override: Optional[int] = None) -> Dict[str, Any]:
+        """上传文件，支持按任务ID或聊天ID分类
+
+        Args:
+            max_file_size_override: 当非 None 时,用它替代默认 10MB 做大小校验。
+                上游路由(如 chat_media 视频 30MB)显式传入;既有调用方不传该参数,
+                保持默认 10MB 行为不变。
+        """
         try:
-            # 验证文件（支持从 Content-Type 或 magic bytes 检测）
-            self.validate_file(content, filename, content_type=content_type)
+            # 验证文件（支持从 Content-Type 或 magic bytes 检测,并允许 size override）
+            self.validate_file(content, filename, content_type=content_type, max_file_size_override=max_file_size_override)
             
             # 生成文件ID
             file_id = self.generate_file_id(user_id, filename)
