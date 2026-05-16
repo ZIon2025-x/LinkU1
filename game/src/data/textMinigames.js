@@ -485,12 +485,65 @@ export function pickEssayPuzzles(week, seenPuzzleIndices = []) {
 // ============================================================
 export const UK_KNOWLEDGE_MATCH = {
   categories: [
-    // Batch 2 (Task 2): visa / nhs / council_tax / academic_integrity / banking / renting
+    { id: 'visa',                 name: '签证 / Visa',
+      items: ['tier4','brp','nhs_surcharge','psw','right_to_rent','biometrics'] },
+    { id: 'nhs',                  name: 'NHS 看病',
+      items: ['gp','phone_111','phone_999','ae','walk_in','prescription'] },
+    { id: 'council_tax',          name: 'Council Tax 房费',
+      items: ['exempt_cert','council_band','single_occupancy','tv_license','billing_period'] },
+    { id: 'academic_integrity',   name: '学术诚信',
+      items: ['turnitin','paraphrase','similarity_score','harvard_cite','apa_cite','mitigating_circ'] },
+    { id: 'banking',              name: '银行 / 财务',
+      items: ['sort_code','overdraft','direct_debit','standing_order','isa','contactless'] },
+    { id: 'renting',              name: '租房',
+      items: ['holding_deposit','break_clause','epc_rating','inventory','deposit_protection','guarantor'] },
     // Batch 3 (Task 3): tax_wages / academic_writing / transport / campus_systems / job_hunt / saving_money
     // Batch 4 (Task 4): degrees / grading / class_types / assessment / online_tools / uni_groupings
   ],
   items: {
-    // Filled in batches across Task 2 / 3 / 4
+    // visa
+    tier4:            { label: 'Tier 4',            desc: '学生签证（现称 Student Route）' },
+    brp:              { label: 'BRP',               desc: '生物指纹居留卡' },
+    nhs_surcharge:    { label: 'NHS Surcharge',     desc: '签证医疗附加费（学生 £776/年）' },
+    psw:              { label: 'PSW Visa',          desc: '毕业生工作签证（2 年）' },
+    right_to_rent:    { label: 'Right to Rent',     desc: '房东必须查的身份资格' },
+    biometrics:       { label: 'Biometrics',        desc: '签证生物识别采集（指纹+脸）' },
+    // nhs
+    gp:               { label: 'GP',                desc: '家庭医生（看病第一站）' },
+    phone_111:        { label: '111',               desc: '非紧急医疗咨询电话' },
+    phone_999:        { label: '999',               desc: '紧急救护车 / 火警 / 警察' },
+    ae:               { label: 'A&E',               desc: '急诊（Accident & Emergency）' },
+    walk_in:          { label: 'Walk-in Centre',    desc: '无预约门诊' },
+    prescription:     { label: 'Prescription',      desc: '处方（学生通常免费或 £9.90）' },
+    // council_tax
+    exempt_cert:      { label: 'Exempt Certificate',desc: '学生身份豁免证明' },
+    council_band:     { label: 'Council Tax Band',  desc: '房产税阶 A-H（按房屋估值）' },
+    single_occupancy: { label: 'Single Occupancy',  desc: '单人居住 25% 折扣' },
+    tv_license:       { label: 'TV License',        desc: '电视收看许可（£169.50/年）' },
+    billing_period:   { label: 'Billing Period',    desc: '账单周期（4 月起，全年 10/12 期）' },
+    // academic_integrity
+    turnitin:         { label: 'Turnitin',          desc: '论文查重系统' },
+    paraphrase:       { label: 'Paraphrase',        desc: '改写他人观点（不抄袭）' },
+    similarity_score: { label: 'Similarity Score',  desc: '查重相似率（通常 <20% 安全）' },
+    harvard_cite:     { label: 'Harvard Style',     desc: '哈佛引文格式（人文社科常用）' },
+    apa_cite:         { label: 'APA Style',         desc: 'APA 引文格式（心理 / 教育常用）' },
+    mitigating_circ:  { label: 'Mitigating Circumstances', desc: '情有可原申诉（病假 / 家庭事故）' },
+    // banking
+    sort_code:        { label: 'Sort Code',         desc: '6 位分行识别码（XX-XX-XX）' },
+    overdraft:        { label: 'Overdraft',         desc: '透支额度（学生账户常 £1000 无息）' },
+    direct_debit:     { label: 'Direct Debit',      desc: '银行代扣（账单类，金额浮动）' },
+    standing_order:   { label: 'Standing Order',    desc: '固定金额定期转账（房租类）' },
+    isa:              { label: 'ISA',               desc: '免税储蓄账户（年度额度 £20,000）' },
+    contactless:      { label: 'Contactless',       desc: '非接触支付（≤£100/单）' },
+    // renting
+    holding_deposit:  { label: 'Holding Deposit',   desc: '锁房定金（1 周房租，可退）' },
+    break_clause:     { label: 'Break Clause',      desc: '中途解约条款（通常 6 个月固定后）' },
+    epc_rating:       { label: 'EPC Rating',        desc: '房屋能效评级（A-G，越前越省电费）' },
+    inventory:        { label: 'Inventory',         desc: '入住物品清单 + 拍照记录' },
+    deposit_protection:{label: 'Deposit Protection (DPS)', desc: '押金第三方托管' },
+    guarantor:        { label: 'Guarantor',         desc: '担保人（国际生常用 Housing Hand）' },
+    // Batch 3 (Task 3) appends ~36 more here
+    // Batch 4 (Task 4) appends ~39 more here
   },
 };
 
