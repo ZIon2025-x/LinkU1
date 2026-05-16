@@ -1296,41 +1296,67 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     }
   }
 
-  /// 评论点赞 — 乐观更新：先更新 UI，后端异步；失败则回滚
+  /// 评论点赞 — 乐观更新：先更新 UI，后端异步；失败则回滚.
+  /// 子回复也支持 (Task 10 后 state.replies 只装根；子回复在 previewChildren/loadedChildren 里).
   Future<void> _onLikeReply(
     ForumLikeReply event,
     Emitter<ForumState> emit,
   ) async {
     final previousReplies = state.replies;
-    final updatedReplies = state.replies.map((r) {
-      if (r.id == event.replyId) {
-        final nowLiked = !r.isLiked;
-        return r.copyWith(
-          likeCount: r.likeCount + (nowLiked ? 1 : -1),
-          isLiked: nowLiked,
-        );
-      }
-      return r;
+    final previousLoaded = state.loadedChildren;
+
+    // 乐观更新：同时应用到 root, preview, loaded 三处
+    ForumReply applyOptimistic(ForumReply r) {
+      if (r.id != event.replyId) return r;
+      final nowLiked = !r.isLiked;
+      return r.copyWith(
+        likeCount: r.likeCount + (nowLiked ? 1 : -1),
+        isLiked: nowLiked,
+      );
+    }
+
+    final newReplies = state.replies.map((root) {
+      return applyOptimistic(root).copyWith(
+        previewChildren:
+            root.previewChildren.map(applyOptimistic).toList(),
+      );
     }).toList();
-    emit(state.copyWith(replies: updatedReplies));
+    final newLoaded = state.loadedChildren.map(
+      (rootId, list) =>
+          MapEntry(rootId, list.map(applyOptimistic).toList()),
+    );
+    emit(state.copyWith(replies: newReplies, loadedChildren: newLoaded));
 
     try {
       final result = await _forumRepository.likeReply(event.replyId);
       // 用服务器返回的真实数据校正乐观更新
-      final correctedReplies = state.replies.map((r) {
-        if (r.id == event.replyId) {
-          return r.copyWith(
-            isLiked: result.liked,
-            likeCount: result.likeCount,
-          );
-        }
-        return r;
+      ForumReply applyCorrect(ForumReply r) {
+        if (r.id != event.replyId) return r;
+        return r.copyWith(
+          isLiked: result.liked,
+          likeCount: result.likeCount,
+        );
+      }
+
+      final correctedReplies = state.replies.map((root) {
+        return applyCorrect(root).copyWith(
+          previewChildren:
+              root.previewChildren.map(applyCorrect).toList(),
+        );
       }).toList();
-      emit(state.copyWith(replies: correctedReplies));
+      final correctedLoaded = state.loadedChildren.map(
+        (rootId, list) =>
+            MapEntry(rootId, list.map(applyCorrect).toList()),
+      );
+      emit(state.copyWith(
+        replies: correctedReplies,
+        loadedChildren: correctedLoaded,
+      ));
     } catch (e) {
       AppLogger.error('Failed to like reply', e);
       emit(state.copyWith(
         replies: previousReplies,
+        loadedChildren: previousLoaded,
         errorMessage: e is AppException ? e.message : e.toString(),
       ));
     }
