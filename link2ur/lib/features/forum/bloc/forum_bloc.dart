@@ -898,11 +898,15 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     Emitter<ForumState> emit,
   ) async {
     // Task 10 重构后只拉根评论 + preview_children；子回复分批走 getReplyChildren。
+    // race protection (latest-wins)：记下开始时的 sort，回来后若 state.replySort 已切换则丢弃结果，
+    // 避免旧请求后到覆盖新结果 (spec 风险点 1)。
+    final requestedSort = state.replySort;
     try {
       final replies = await _forumRepository.getPostReplies(
         event.postId,
-        sort: state.replySort,
+        sort: requestedSort,
       );
+      if (state.replySort != requestedSort) return;
       emit(state.copyWith(
         replies: replies,
         // 根级分页已废弃：服务器一次返回所有根（pageSize 默认 100）
@@ -911,6 +915,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load replies', e);
+      if (state.replySort != requestedSort) return;
       emit(state.copyWith(
         errorMessage: 'forum_load_replies_failed',
         isLoadingMoreReplies: false,
