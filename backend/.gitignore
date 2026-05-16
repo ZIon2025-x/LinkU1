@@ -35,3 +35,6 @@ uploads/
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Runtime logs (rotated by python logging)
+logs/
