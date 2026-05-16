@@ -283,12 +283,10 @@ class ForumRepository {
   /// 获取帖子回复（后端 Task 10 重构后只返根回复 + preview_children，按 sort 排序）
   /// [sort] 排序方式：'hot'（默认，热度）| 'newest' | 'oldest'
   /// [pageSize] 单页根回复数（默认 100；后端 list 视图通常一次拉完，子回复走 getReplyChildren）
-  /// [page] 已废弃：新接口不分页（Task 14 将从 BLoC 调用方移除）；为兼容旧 BLoC 暂保留入参但不再透传给后端。
   Future<List<ForumReply>> getPostReplies(
     int postId, {
     String sort = 'hot',
     int pageSize = 100,
-    @Deprecated('Use sort + pageSize; pagination removed in Task 10') int? page,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.forumPostReplies(postId),

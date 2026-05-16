@@ -99,13 +99,34 @@ class ForumLoadPostDetail extends ForumEvent {
 }
 
 class ForumLoadReplies extends ForumEvent {
-  const ForumLoadReplies(this.postId, {this.page = 1});
+  const ForumLoadReplies(this.postId);
 
   final int postId;
-  final int page;
 
   @override
-  List<Object?> get props => [postId, page];
+  List<Object?> get props => [postId];
+}
+
+/// 切换根评论排序方式（'hot' | 'newest' | 'oldest'）
+/// 处理器会清空已加载的子回复缓存并重新拉根评论
+class ForumReplySortChanged extends ForumEvent {
+  const ForumReplySortChanged(this.postId, this.sort);
+
+  final int postId;
+  final String sort;
+
+  @override
+  List<Object?> get props => [postId, sort];
+}
+
+/// 展开/继续加载某根评论的子回复（下一批）
+class ForumLoadMoreChildren extends ForumEvent {
+  const ForumLoadMoreChildren(this.rootReplyId);
+
+  final int rootReplyId;
+
+  @override
+  List<Object?> get props => [rootReplyId];
 }
 
 class ForumCreatePost extends ForumEvent {
@@ -256,6 +277,11 @@ class ForumState extends Equatable {
     this.feedHasMore = false,
     this.feedPage = 1,
     this.isLoadingMoreFeed = false,
+    this.replySort = 'hot',
+    this.loadedChildren = const {},
+    this.hasMoreChildren = const {},
+    this.nextChildOffset = const {},
+    this.loadingChildrenRoots = const {},
   });
 
   final ForumStatus status;
@@ -295,6 +321,18 @@ class ForumState extends Equatable {
   final int feedPage;
   final bool isLoadingMoreFeed;
 
+  // ===== 帖子详情页：根评论排序 + 子评论分批 (Task 14) =====
+  /// 根评论排序：'hot'（默认）/'newest'/'oldest'
+  final String replySort;
+  /// 某根评论已加载的子回复（追加在 preview_children 之后）。key = root reply id
+  final Map<int, List<ForumReply>> loadedChildren;
+  /// 某根评论是否还有更多子回复可加载。key = root reply id
+  final Map<int, bool> hasMoreChildren;
+  /// 某根评论下一次加载的 offset。key = root reply id
+  final Map<int, int> nextChildOffset;
+  /// 当前正在加载子回复的 root id 集合（用于按钮 spinner + 防重复请求）
+  final Set<int> loadingChildrenRoots;
+
   bool get isLoading => status == ForumStatus.loading;
 
   ForumState copyWith({
@@ -331,6 +369,11 @@ class ForumState extends Equatable {
     bool? feedHasMore,
     int? feedPage,
     bool? isLoadingMoreFeed,
+    String? replySort,
+    Map<int, List<ForumReply>>? loadedChildren,
+    Map<int, bool>? hasMoreChildren,
+    Map<int, int>? nextChildOffset,
+    Set<int>? loadingChildrenRoots,
   }) {
     return ForumState(
       status: status ?? this.status,
@@ -366,6 +409,11 @@ class ForumState extends Equatable {
       feedHasMore: feedHasMore ?? this.feedHasMore,
       feedPage: feedPage ?? this.feedPage,
       isLoadingMoreFeed: isLoadingMoreFeed ?? this.isLoadingMoreFeed,
+      replySort: replySort ?? this.replySort,
+      loadedChildren: loadedChildren ?? this.loadedChildren,
+      hasMoreChildren: hasMoreChildren ?? this.hasMoreChildren,
+      nextChildOffset: nextChildOffset ?? this.nextChildOffset,
+      loadingChildrenRoots: loadingChildrenRoots ?? this.loadingChildrenRoots,
     );
   }
 
@@ -402,6 +450,11 @@ class ForumState extends Equatable {
         feedHasMore,
         feedPage,
         isLoadingMoreFeed,
+        replySort,
+        loadedChildren,
+        hasMoreChildren,
+        nextChildOffset,
+        loadingChildrenRoots,
       ];
 }
 
@@ -425,6 +478,8 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumToggleCategoryFavorite>(_onToggleCategoryFavorite);
     on<ForumLoadPostDetail>(_onLoadPostDetail);
     on<ForumLoadReplies>(_onLoadReplies);
+    on<ForumReplySortChanged>(_onReplySortChanged);
+    on<ForumLoadMoreChildren>(_onLoadMoreChildren);
     on<ForumCreatePost>(_onCreatePost);
     on<ForumReplyPost>(_onReplyPost);
     on<ForumReportPost>(_onReportPost);
@@ -842,46 +897,85 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumLoadReplies event,
     Emitter<ForumState> emit,
   ) async {
-    final page = event.page;
-    const pageSize = 20;
-
-    // 加载更多时防止重复请求
-    if (page > 1 && state.isLoadingMoreReplies) return;
-    if (page > 1 && !state.repliesHasMore) return;
-
-    if (page > 1) {
-      emit(state.copyWith(isLoadingMoreReplies: true));
-    }
-
+    // Task 10 重构后只拉根评论 + preview_children；子回复分批走 getReplyChildren。
     try {
       final replies = await _forumRepository.getPostReplies(
         event.postId,
-        page: page,
+        sort: state.replySort,
       );
-      final hasMore = replies.length >= pageSize;
-
-      if (page == 1) {
-        // 首页：替换列表
-        emit(state.copyWith(
-          replies: replies,
-          repliesPage: 1,
-          repliesHasMore: hasMore,
-          isLoadingMoreReplies: false,
-        ));
-      } else {
-        // 后续页：追加列表
-        emit(state.copyWith(
-          replies: [...state.replies, ...replies],
-          repliesPage: page,
-          repliesHasMore: hasMore,
-          isLoadingMoreReplies: false,
-        ));
-      }
+      emit(state.copyWith(
+        replies: replies,
+        // 根级分页已废弃：服务器一次返回所有根（pageSize 默认 100）
+        repliesHasMore: false,
+        isLoadingMoreReplies: false,
+      ));
     } catch (e) {
       AppLogger.error('Failed to load replies', e);
       emit(state.copyWith(
-        errorMessage: e.toString(),
+        errorMessage: 'forum_load_replies_failed',
         isLoadingMoreReplies: false,
+      ));
+    }
+  }
+
+  Future<void> _onReplySortChanged(
+    ForumReplySortChanged event,
+    Emitter<ForumState> emit,
+  ) async {
+    // 切换 sort 后清空旧的 children 缓存,重新拉根
+    if (event.sort == state.replySort) return;
+    emit(state.copyWith(
+      replySort: event.sort,
+      loadedChildren: const {},
+      hasMoreChildren: const {},
+      nextChildOffset: const {},
+      loadingChildrenRoots: const {},
+    ));
+    add(ForumLoadReplies(event.postId));
+  }
+
+  Future<void> _onLoadMoreChildren(
+    ForumLoadMoreChildren event,
+    Emitter<ForumState> emit,
+  ) async {
+    final rootId = event.rootReplyId;
+    if (state.loadingChildrenRoots.contains(rootId)) return; // 防重复
+    // 首次展开 offset 从 3 起 (跳过 preview_children 已加载的 3 条)
+    final offset = state.nextChildOffset[rootId] ?? 3;
+
+    emit(state.copyWith(
+      loadingChildrenRoots: {...state.loadingChildrenRoots, rootId},
+    ));
+
+    try {
+      // limit 用 repo 默认值 (5); 后端 Task 11 端点也允许调用方覆盖
+      final page = await _forumRepository.getReplyChildren(
+        rootId,
+        offset: offset,
+      );
+      final existing =
+          state.loadedChildren[rootId] ?? const <ForumReply>[];
+      // 去重：按 id 过滤新批次中已存在的
+      final existingIds = existing.map((r) => r.id).toSet();
+      final fresh =
+          page.replies.where((r) => !existingIds.contains(r.id)).toList();
+
+      emit(state.copyWith(
+        loadedChildren: {
+          ...state.loadedChildren,
+          rootId: [...existing, ...fresh],
+        },
+        hasMoreChildren: {...state.hasMoreChildren, rootId: page.hasMore},
+        nextChildOffset: {...state.nextChildOffset, rootId: page.nextOffset},
+        loadingChildrenRoots:
+            state.loadingChildrenRoots.where((id) => id != rootId).toSet(),
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load more children for root $rootId', e);
+      emit(state.copyWith(
+        loadingChildrenRoots:
+            state.loadingChildrenRoots.where((id) => id != rootId).toSet(),
+        errorMessage: 'forum_load_children_failed',
       ));
     }
   }
