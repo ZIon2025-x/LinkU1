@@ -9908,6 +9908,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatPdfPreviewFailed => 'PDF 预览失败';
 
   @override
+  String get chatVideoProcessing => '视频处理中…';
+
+  @override
+  String get chatFileUploading => '上传文件中…';
+
+  @override
+  String get chatSendingMedia => '正在发送…';
+
+  @override
   String get chatSaveSuccess => '已保存到相册';
 
   @override
@@ -23798,6 +23807,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatPdfPreviewFailed => 'PDF 預覽失敗';
+
+  @override
+  String get chatVideoProcessing => '影片處理中…';
+
+  @override
+  String get chatFileUploading => '上傳檔案中…';
+
+  @override
+  String get chatSendingMedia => '傳送中…';
 
   @override
   String get chatSaveSuccess => '已儲存到相簿';

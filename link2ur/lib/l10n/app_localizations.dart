@@ -18947,6 +18947,24 @@ abstract class AppLocalizations {
   /// **'PDF preview failed'**
   String get chatPdfPreviewFailed;
 
+  /// Top banner during video compression/thumbnail extraction
+  ///
+  /// In en, this message translates to:
+  /// **'Processing video…'**
+  String get chatVideoProcessing;
+
+  /// Top banner while uploading a PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading file…'**
+  String get chatFileUploading;
+
+  /// Generic top banner during media upload/send
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get chatSendingMedia;
+
   /// SnackBar message after saving image/video succeeds
   ///
   /// In en, this message translates to:

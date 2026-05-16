@@ -77,8 +77,8 @@ class ChatSendVideo extends ChatEvent {
     required this.videoDurationMs,
     required this.videoWidth,
     required this.videoHeight,
-    required this.thumbnailBytes,
-    required this.thumbnailFilename,
+    this.thumbnailBytes,
+    this.thumbnailFilename,
     this.senderId,
   });
 
@@ -87,8 +87,11 @@ class ChatSendVideo extends ChatEvent {
   final int videoDurationMs;
   final int videoWidth;
   final int videoHeight;
-  final Uint8List thumbnailBytes;
-  final String thumbnailFilename;
+
+  /// 缩略图字节(可空):抽帧失败时为 null,服务端 / 接收端 fallback 黑底播放图标。
+  /// 不传 0 字节图避免后端存空文件 → 接收端纯黑。
+  final Uint8List? thumbnailBytes;
+  final String? thumbnailFilename;
   final String? senderId;
 
   @override
@@ -636,21 +639,28 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Message? pendingMessage;
 
     try {
-      // 并行上传视频和缩略图
-      final results = await Future.wait([
+      // 并行上传视频 + (可选)缩略图。
+      // 缩略图为 null 或空时不上传,避免后端存 0 字节图导致接收端纯黑。
+      final hasThumb = event.thumbnailBytes != null &&
+          event.thumbnailBytes!.isNotEmpty &&
+          event.thumbnailFilename != null;
+      final futures = <Future<Object>>[
         _messageRepository.uploadChatVideo(
           event.videoBytes,
           event.videoFilename,
           state.taskId!,
         ),
-        _messageRepository.uploadImage(
-          event.thumbnailBytes,
-          event.thumbnailFilename,
-        ),
-      ]);
+      ];
+      if (hasThumb) {
+        futures.add(_messageRepository.uploadImage(
+          event.thumbnailBytes!,
+          event.thumbnailFilename!,
+        ));
+      }
+      final results = await Future.wait(futures);
       final videoUpload = results[0]
           as ({String url, String blobId, int size, String originalName});
-      final thumbUrl = results[1] as String;
+      final String? thumbUrl = hasThumb ? results[1] as String : null;
 
       final senderId = event.senderId?.trim();
       final canOptimistic = senderId != null && senderId.isNotEmpty;
@@ -670,31 +680,34 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         ));
       }
 
+      final attachments = <Map<String, dynamic>>[
+        {
+          'attachment_type': 'video',
+          'blob_id': videoUpload.blobId,
+          'meta': {
+            'duration': (event.videoDurationMs / 1000).round(),
+            'width': event.videoWidth,
+            'height': event.videoHeight,
+            'size': videoUpload.size,
+            'original_filename': videoUpload.originalName,
+          },
+        },
+      ];
+      if (thumbUrl != null) {
+        attachments.add({
+          'attachment_type': 'image',
+          'url': thumbUrl,
+          'meta': {
+            'role': 'thumbnail',
+            'original_filename': event.thumbnailFilename,
+          },
+        });
+      }
       final message = await _messageRepository.sendTaskChatMessage(
         state.taskId!,
         content: '[视频]',
         messageType: 'video',
-        attachments: [
-          {
-            'attachment_type': 'video',
-            'blob_id': videoUpload.blobId,
-            'meta': {
-              'duration': (event.videoDurationMs / 1000).round(),
-              'width': event.videoWidth,
-              'height': event.videoHeight,
-              'size': videoUpload.size,
-              'original_filename': videoUpload.originalName,
-            },
-          },
-          {
-            'attachment_type': 'image',
-            'url': thumbUrl,
-            'meta': {
-              'role': 'thumbnail',
-              'original_filename': event.thumbnailFilename,
-            },
-          },
-        ],
+        attachments: attachments,
       );
 
       if (canOptimistic && pendingMessage != null) {

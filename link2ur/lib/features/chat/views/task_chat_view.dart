@@ -75,6 +75,21 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   bool _showActionMenu = false;
   DateTime? _lastTypingSent;
 
+  /// 互斥 flag: 防止用户连点照片/拍照/文件 → 弹多个 picker 叠层。
+  bool _isPicking = false;
+
+  /// 视频压缩 / 大文件上传进度反馈: 显示顶部 Banner 让用户知道在处理。
+  bool _isProcessingMedia = false;
+  String _processingLabel = '';
+
+  void _setProcessing(bool processing, [String label = '']) {
+    if (!mounted) return;
+    setState(() {
+      _isProcessingMedia = processing;
+      _processingLabel = processing ? label : '';
+    });
+  }
+
   /// 任务标题用于 AppBar，加载一次
   Future<Task?>? _taskFuture;
   bool _taskFutureInitialized = false;
@@ -225,49 +240,65 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   static const int _kMaxGalleryImages = 9;
 
   Future<void> _pickImage() async {
-    final media = await _imagePicker.pickMultipleMedia(
-      imageQuality: 70,
-      maxWidth: 1200,
-      limit: _kMaxGalleryImages,
-    );
-    if (media.isEmpty || !mounted) return;
+    if (_isPicking) return;
+    _isPicking = true;
+    try {
+      final media = await _imagePicker.pickMultipleMedia(
+        imageQuality: 70,
+        maxWidth: 1200,
+        limit: _kMaxGalleryImages,
+      );
+      if (media.isEmpty || !mounted) return;
 
-    final toProcess = media.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
-    for (final file in toProcess) {
-      if (!mounted) break;
-      final mime = file.mimeType ?? '';
-      final pathLower = file.path.toLowerCase();
-      final isVideo = mime.startsWith('video/') ||
-          pathLower.endsWith('.mp4') ||
-          pathLower.endsWith('.mov') ||
-          pathLower.endsWith('.m4v');
-      if (isVideo) {
-        await _handlePickedVideo(file.path, file.name);
-      } else {
+      final toProcess =
+          media.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
+      for (final file in toProcess) {
         if (!mounted) break;
-        context.read<ChatBloc>().add(
-          ChatSendImage(
-            bytes: await file.readAsBytes(),
-            filename: file.name,
-            senderId: _currentUserId ?? StorageService.instance.getUserId(),
-          ),
-        );
+        final mime = file.mimeType ?? '';
+        final pathLower = file.path.toLowerCase();
+        final isVideo = mime.startsWith('video/') ||
+            pathLower.endsWith('.mp4') ||
+            pathLower.endsWith('.mov') ||
+            pathLower.endsWith('.m4v');
+        if (isVideo) {
+          await _handlePickedVideo(file.path, file.name);
+        } else {
+          if (!mounted) break;
+          context.read<ChatBloc>().add(
+                ChatSendImage(
+                  bytes: await file.readAsBytes(),
+                  filename: file.name,
+                  senderId: _currentUserId ?? StorageService.instance.getUserId(),
+                ),
+              );
+        }
       }
+      if (mounted) setState(() => _showActionMenu = false);
+    } finally {
+      _isPicking = false;
     }
-    if (mounted) setState(() => _showActionMenu = false);
   }
 
   /// 视频处理:读元数据 -> 时长校验 -> 压缩 -> 抽首帧 -> 派发 ChatSendVideo
   Future<void> _handlePickedVideo(String filePath, String filename) async {
     final messenger = ScaffoldMessenger.of(context);
+    _setProcessing(true, context.l10n.chatVideoProcessing);
     try {
       // 1. 读取视频元数据(时长 / 尺寸)
-      final controller = video_player.VideoPlayerController.file(File(filePath));
-      await controller.initialize();
-      final durationMs = controller.value.duration.inMilliseconds;
-      final width = controller.value.size.width.toInt();
-      final height = controller.value.size.height.toInt();
-      await controller.dispose();
+      // 用 try/finally 确保即便 initialize 抛异常 controller 也被 dispose,防 native 资源泄漏。
+      int durationMs = 0;
+      int width = 0;
+      int height = 0;
+      final controller =
+          video_player.VideoPlayerController.file(File(filePath));
+      try {
+        await controller.initialize();
+        durationMs = controller.value.duration.inMilliseconds;
+        width = controller.value.size.width.toInt();
+        height = controller.value.size.height.toInt();
+      } finally {
+        await controller.dispose();
+      }
 
       if (durationMs > 30000) {
         if (mounted) {
@@ -295,7 +326,9 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         return;
       }
 
-      // 3. 抽首帧 -> JPEG bytes
+      // 3. 抽首帧 -> JPEG bytes; 失败保持 null,**不** fallback Uint8List(0)
+      //    避免后端入库 0 字节图,接收端纯黑无法识别。
+      //    ChatSendVideo handler 已支持可空 thumbnail,attachments 动态拼。
       Uint8List? thumbBytes;
       try {
         thumbBytes = await VideoThumbnail.thumbnailData(
@@ -307,7 +340,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       } catch (e) {
         AppLogger.error('Thumbnail extraction failed', e);
       }
-      thumbBytes ??= Uint8List(0); // fallback,后端入库不会阻塞;接收端会显示纯黑底
 
       if (!mounted) return;
       // 4. 派发 ChatSendVideo
@@ -323,8 +355,10 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             videoDurationMs: durationMs,
             videoWidth: width,
             videoHeight: height,
-            thumbnailBytes: thumbBytes,
-            thumbnailFilename: '$filename.thumb.jpg',
+            thumbnailBytes:
+                (thumbBytes != null && thumbBytes.isNotEmpty) ? thumbBytes : null,
+            thumbnailFilename:
+                (thumbBytes != null && thumbBytes.isNotEmpty) ? '$filename.thumb.jpg' : null,
             senderId: _currentUserId ?? StorageService.instance.getUserId(),
           ));
     } catch (e) {
@@ -334,59 +368,75 @@ class _TaskChatContentState extends State<_TaskChatContent> {
           content: Text(context.localizeError('chat_video_compress_failed')),
         ));
       }
+    } finally {
+      _setProcessing(false);
     }
   }
 
   /// 文件按钮:选 PDF。
   Future<void> _pickFile() async {
+    if (_isPicking) return;
+    _isPicking = true;
     final messenger = ScaffoldMessenger.of(context);
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['pdf'],
-      withData: true,
-    );
-    if (result == null || result.files.isEmpty || !mounted) return;
-    final file = result.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(context.localizeError('chat_upload_failed')),
-      ));
-      return;
-    }
-    if (bytes.length > 20 * 1024 * 1024) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(context.localizeError('chat_file_too_large')),
-      ));
-      return;
-    }
-    context.read<ChatBloc>().add(ChatSendFile(
-          bytes: bytes,
-          filename: file.name,
-          contentType: 'application/pdf',
-          senderId: _currentUserId ?? StorageService.instance.getUserId(),
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(context.localizeError('chat_upload_failed')),
         ));
-    setState(() => _showActionMenu = false);
+        return;
+      }
+      if (bytes.length > 20 * 1024 * 1024) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(context.localizeError('chat_file_too_large')),
+        ));
+        return;
+      }
+      // PDF 上传由 ChatBloc 触发 → state.isSending 覆盖进度,Banner 在 build() 里
+      // 监听 isSending 显示"发送中…",不需要本地 _setProcessing 标记。
+      context.read<ChatBloc>().add(ChatSendFile(
+            bytes: bytes,
+            filename: file.name,
+            contentType: 'application/pdf',
+            senderId: _currentUserId ?? StorageService.instance.getUserId(),
+          ));
+      setState(() => _showActionMenu = false);
+    } finally {
+      _isPicking = false;
+    }
   }
 
   /// 拍照发送：拍完后弹出确认再发送
   Future<void> _pickCameraImage() async {
-    final image = await _imagePicker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 70,
-      maxWidth: 1200,
-    );
-    if (image == null || !mounted) return;
-    final confirmed = await showImageSendConfirmDialog(context, image);
-    if (confirmed == true && mounted) {
-      context.read<ChatBloc>().add(
-        ChatSendImage(
-          bytes: await image.readAsBytes(),
-          filename: image.name,
-          senderId: _currentUserId ?? StorageService.instance.getUserId(),
-        ),
+    if (_isPicking) return;
+    _isPicking = true;
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+        maxWidth: 1200,
       );
-      setState(() => _showActionMenu = false);
+      if (image == null || !mounted) return;
+      final confirmed = await showImageSendConfirmDialog(context, image);
+      if (confirmed == true && mounted) {
+        context.read<ChatBloc>().add(
+              ChatSendImage(
+                bytes: await image.readAsBytes(),
+                filename: image.name,
+                senderId: _currentUserId ?? StorageService.instance.getUserId(),
+              ),
+            );
+        setState(() => _showActionMenu = false);
+      }
+    } finally {
+      _isPicking = false;
     }
   }
 
@@ -473,6 +523,12 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             children: [
               // 任务信息卡片
               _buildTaskInfoCard(state),
+
+              // 媒体处理/发送进度 Banner
+              // - _isProcessingMedia: 视频压缩/抽帧阶段(在 bloc 派发前)
+              // - state.isSending: bloc 上传阶段(派发后)
+              if (_isProcessingMedia || state.isSending)
+                _buildMediaProgressBanner(state),
 
               // 消息列表（使用分组）
               Expanded(child: _buildGroupedMessageList(state)),
@@ -640,6 +696,38 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       default:
         return isTaskClosed ? l10n.chatTaskClosed : l10n.chatInProgress;
     }
+  }
+
+  /// 视频压缩/上传进度 Banner — 头部细条提示用户 app 在处理媒体。
+  /// 视频压缩阶段(bloc 派发前)用 _processingLabel;上传阶段(state.isSending)
+  /// 用通用文案 chatSendingMedia。
+  Widget _buildMediaProgressBanner(ChatState state) {
+    final label = _isProcessingMedia && _processingLabel.isNotEmpty
+        ? _processingLabel
+        : context.l10n.chatSendingMedia;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      color: AppColors.primary.withValues(alpha: 0.08),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 任务已关闭提示栏 - 对齐iOS closedTaskStatusBar

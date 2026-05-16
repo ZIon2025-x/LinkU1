@@ -10333,6 +10333,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPdfPreviewFailed => 'PDF preview failed';
 
   @override
+  String get chatVideoProcessing => 'Processing video…';
+
+  @override
+  String get chatFileUploading => 'Uploading file…';
+
+  @override
+  String get chatSendingMedia => 'Sending…';
+
+  @override
   String get chatSaveSuccess => 'Saved to album';
 
   @override
