@@ -42,7 +42,7 @@ async def get_replies(
     post_id: int,
     sort: str = Query("hot", regex="^(hot|time)$", description="排序方式：hot 按点赞 / time 按时间"),
     page: int = Query(1, ge=1, description="保留兼容性，当前实现不分页根评论"),
-    page_size: int = Query(100, ge=1, le=200, description="根评论上限"),
+    page_size: int = Query(100, ge=1, le=500, description="根评论上限"),
     request: Request = None,  # FastAPI injects; Optional[Request] breaks Pydantic field detection
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
