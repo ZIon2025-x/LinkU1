@@ -280,16 +280,20 @@ class ForumRepository {
     return result;
   }
 
-  /// 获取帖子回复（后端返回树形结构，展平后返回以便列表展示）
+  /// 获取帖子回复（后端 Task 10 重构后只返根回复 + preview_children，按 sort 排序）
+  /// [sort] 排序方式：'hot'（默认，热度）| 'newest' | 'oldest'
+  /// [pageSize] 单页根回复数（默认 100；后端 list 视图通常一次拉完，子回复走 getReplyChildren）
+  /// [page] 已废弃：新接口不分页（Task 14 将从 BLoC 调用方移除）；为兼容旧 BLoC 暂保留入参但不再透传给后端。
   Future<List<ForumReply>> getPostReplies(
     int postId, {
-    int page = 1,
-    int pageSize = 20,
+    String sort = 'hot',
+    int pageSize = 100,
+    @Deprecated('Use sort + pageSize; pagination removed in Task 10') int? page,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.forumPostReplies(postId),
       queryParameters: {
-        'page': page,
+        'sort': sort,
         'page_size': pageSize,
       },
     );
@@ -299,7 +303,36 @@ class ForumRepository {
     }
 
     final items = response.data!['replies'] as List<dynamic>? ?? [];
+    // 后端现已扁平返回根回复（每项是 ForumRootReplyOut，含 preview_children/total_children）；
+    // _flattenReplyTree 兼容旧嵌套结构，新结构下 map['replies'] 为空，等价于直接 fromJson。
     return _flattenReplyTree(items);
+  }
+
+  /// 拉取某根评论的子回复分页（对应后端 Task 11 新端点）
+  /// [rootReplyId] 根评论 id
+  /// [offset] 跳过前 N 条（默认 3，跳过 preview_children 已加载的）
+  /// [limit] 本批拉取数（默认 5）
+  Future<ForumReplyChildrenPage> getReplyChildren(
+    int rootReplyId, {
+    int offset = 3,
+    int limit = 5,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumReplyChildren(rootReplyId),
+      queryParameters: {
+        'offset': offset,
+        'limit': limit,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(
+        response.errorCode ?? response.message ?? '获取子回复失败',
+        code: response.errorCode,
+      );
+    }
+
+    return ForumReplyChildrenPage.fromJson(response.data!);
   }
 
   /// 回复帖子

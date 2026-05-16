@@ -448,6 +448,8 @@ class ApiEndpoints {
   static String forumPostById(int id) => '/api/forum/posts/$id';
   static String forumPostReplies(int id) => '/api/forum/posts/$id/replies';
   static String forumReplyById(int replyId) => '/api/forum/replies/$replyId';
+  static String forumReplyChildren(int rootReplyId) =>
+      '/api/forum/replies/$rootReplyId/children';
   static const String forumLikes = '/api/forum/likes';
   static const String forumFavorites = '/api/forum/favorites';
   static String forumPostLikes(int postId) =>
