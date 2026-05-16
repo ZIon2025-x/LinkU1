@@ -54,7 +54,8 @@ def client(monkeypatch):
 
     def _fake_upload_file(content, filename, user_id, db, task_id=None,
                           chat_id=None, content_type=None,
-                          max_file_size_override=None):
+                          max_file_size_override=None,
+                          subdir=None):
         return {
             "success": True,
             "file_id": "fake_file_id_123",
@@ -229,11 +230,18 @@ def test_chat_media_accepts_15mb_mp4_real_path(tmp_path, monkeypatch):
             assert body["success"] is True
             assert body["file_id"]
 
-            # 验证文件真的落盘了 (PrivateFileSystem 按 task_id 分目录)
-            task_dir = tmp_path / "tasks" / "1"
-            saved = list(task_dir.glob(f"{body['file_id']}.*"))
-            assert len(saved) == 1, f"期望 1 个文件落盘到 {task_dir},实际: {saved}"
+            # 验证文件真的落盘到 chat 子目录 (chat_media 走 subdir='chat')
+            chat_dir = tmp_path / "tasks" / "1" / "chat"
+            saved = list(chat_dir.glob(f"{body['file_id']}.*"))
+            assert len(saved) == 1, f"期望 1 个文件落盘到 {chat_dir},实际: {saved}"
             assert saved[0].stat().st_size == len(big_mp4)
+
+            # 顶层 tasks/1/ 不应该有 chat_media 文件(隔离)
+            top_saved = [
+                p for p in (tmp_path / "tasks" / "1").glob(f"{body['file_id']}.*")
+                if p.is_file()  # rglob 会包含子目录,但 glob 不会
+            ]
+            assert top_saved == [], f"chat_media 不应落顶层 task 目录: {top_saved}"
     finally:
         app.dependency_overrides.pop(get_current_user_secure_sync_csrf, None)
         app.dependency_overrides.pop(get_db, None)

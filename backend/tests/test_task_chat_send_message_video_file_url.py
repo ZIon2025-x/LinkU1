@@ -501,3 +501,133 @@ async def test_send_video_url_already_provided_not_overwritten():
     assert att["blob_id"] is None
     # 签名生成器不应被触发
     mock_signed.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Important #36: POST attachment_type 与 blob_id 后缀 mismatch 防御
+# ---------------------------------------------------------------------------
+
+def test_send_message_rejects_video_with_pdf_blob():
+    """attachment_type='video' 但 blob_id 是 .pdf → 422 拒绝。
+    防止客户端先上传 PDF 拿 blob,然后欺骗接收端为视频。"""
+    from app.task_chat_routes import send_task_message, SendMessageRequest
+    import asyncio
+
+    task = _make_task(task_id=30, poster_id="u_p", taker_id="u_t")
+    current_user = _make_user(user_id="u_p", name="P")
+    db, _ = _build_send_db(task)
+
+    request = SendMessageRequest(
+        content="[视频]",
+        message_type="video",
+        attachments=[
+            {
+                "attachment_type": "video",
+                "blob_id": "u_p_1700000000_evil.pdf",  # 故意 .pdf
+                "meta": {"duration": 10},
+            },
+        ],
+    )
+
+    async def _run():
+        with patch(
+            "app.signed_url.signed_url_manager.generate_signed_url",
+            return_value="x",
+        ), patch(
+            "app.redis_cache.invalidate_task_chat_cache",
+        ), patch(
+            "app.websocket_manager.get_ws_manager",
+        ):
+            await send_task_message(
+                task_id=30, request=request, current_user=current_user, db=db,
+            )
+
+    with pytest.raises(Exception) as exc_info:
+        asyncio.get_event_loop().run_until_complete(_run())
+    # FastAPI 把 HTTPException 转 detail,422,且 detail 含 'video' 关键字
+    assert "422" in str(exc_info.value) or "video" in str(exc_info.value).lower()
+
+
+def test_send_message_rejects_file_with_mp4_blob():
+    """attachment_type='file' 但 blob_id 是 .mp4 → 422 拒绝。"""
+    from app.task_chat_routes import send_task_message, SendMessageRequest
+    import asyncio
+
+    task = _make_task(task_id=31, poster_id="u_p", taker_id="u_t")
+    current_user = _make_user(user_id="u_p", name="P")
+    db, _ = _build_send_db(task)
+
+    request = SendMessageRequest(
+        content="[文件]",
+        message_type="file",
+        attachments=[
+            {
+                "attachment_type": "file",
+                "blob_id": "u_p_1700000000_evil.mp4",  # 故意 .mp4
+                "meta": {},
+            },
+        ],
+    )
+
+    async def _run():
+        with patch(
+            "app.signed_url.signed_url_manager.generate_signed_url",
+            return_value="x",
+        ), patch(
+            "app.redis_cache.invalidate_task_chat_cache",
+        ), patch(
+            "app.websocket_manager.get_ws_manager",
+        ):
+            await send_task_message(
+                task_id=31, request=request, current_user=current_user, db=db,
+            )
+
+    with pytest.raises(Exception) as exc_info:
+        asyncio.get_event_loop().run_until_complete(_run())
+    assert "422" in str(exc_info.value) or "file" in str(exc_info.value).lower()
+
+
+# ---------------------------------------------------------------------------
+# Important #37: WS broadcast + POST response 含 meta 字段
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_send_message_response_includes_meta():
+    """POST response + WS broadcast 必须含 'meta' 字段(GET 路径已透传,这里对齐)。"""
+    from app.task_chat_routes import send_task_message, SendMessageRequest
+
+    task = _make_task(task_id=40, poster_id="u_meta_p", taker_id="u_meta_t")
+    current_user = _make_user(user_id="u_meta_p", name="MetaP")
+    db, _ = _build_send_db(task)
+
+    request = SendMessageRequest(
+        content="hello",
+        meta={"client_msg_id": "abc-123"},
+    )
+
+    with patch(
+        "app.signed_url.signed_url_manager.generate_signed_url",
+        return_value="x",
+    ), patch(
+        "app.redis_cache.invalidate_task_chat_cache",
+    ), patch(
+        "app.websocket_manager.get_ws_manager",
+    ) as mock_ws_mgr:
+        ws_mgr = MagicMock()
+        ws_mgr.send_to_user = AsyncMock(return_value=True)
+        mock_ws_mgr.return_value = ws_mgr
+        result = await send_task_message(
+            task_id=40, request=request, current_user=current_user, db=db,
+        )
+
+    # POST response 含 meta
+    assert "meta" in result, f"POST response 必须含 meta, 实际 keys: {list(result.keys())}"
+    assert result["meta"] is not None
+    # meta 是 JSON 字符串(数据库存储格式),不是 dict
+    assert "client_msg_id" in result["meta"]
+
+    # WS broadcast payload 也含 meta
+    sent_payload = ws_mgr.send_to_user.call_args.args[1]
+    assert "meta" in sent_payload["message"], (
+        f"WS broadcast 必须含 meta, keys: {list(sent_payload['message'].keys())}"
+    )

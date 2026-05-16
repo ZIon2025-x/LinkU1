@@ -1420,7 +1420,7 @@ async def send_task_message(
                     detail="说明类消息日上限：最多20条/天"
                 )
         
-        # 验证附件（简化版，实际需要更严格的验证）
+        # 验证附件
         if request.attachments:
             for att in request.attachments:
                 if "attachment_type" not in att:
@@ -1436,6 +1436,36 @@ async def send_task_message(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail="附件必须提供 url 或 blob_id 之一，且不能同时提供"
                     )
+
+                # attachment_type 与 blob_id 后缀一致性防御:
+                # 防止客户端先上传 PDF 拿 blob_id,然后声明 attachment_type='video' 欺骗接收端。
+                # - 'video' 必须配 .mp4/.mov/.m4v blob
+                # - 'file' 必须配 .pdf blob (任务聊天目前只支持 PDF)
+                # - 'image' 走 private_image_system,blob 扩展名多样(.jpg/.png/.webp/.heic),
+                #   且历史 image 既可走 url 又可走 blob_id,松校验避免回归。
+                if has_blob_id:
+                    att_type = att["attachment_type"]
+                    blob_lower = (att["blob_id"] or "").lower()
+                    if att_type == "video":
+                        if not (blob_lower.endswith(".mp4") or
+                                blob_lower.endswith(".mov") or
+                                blob_lower.endswith(".m4v")):
+                            raise HTTPException(
+                                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail=(
+                                    f"attachment_type='video' 必须配 .mp4/.mov/.m4v blob,"
+                                    f"收到 blob_id='{att['blob_id']}'"
+                                ),
+                            )
+                    elif att_type == "file":
+                        if not blob_lower.endswith(".pdf"):
+                            raise HTTPException(
+                                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail=(
+                                    f"attachment_type='file' 必须配 .pdf blob,"
+                                    f"收到 blob_id='{att['blob_id']}'"
+                                ),
+                            )
         
         # 获取当前时间
         current_time = get_utc_time()
@@ -1626,7 +1656,11 @@ async def send_task_message(
                     "application_id": new_message.application_id,
                     "message_type": new_message.message_type,
                     "created_at": format_iso_utc(new_message.created_at) if new_message.created_at else None,
-                    "attachments": attachments_data
+                    "attachments": attachments_data,
+                    # meta JSON 字符串(系统消息含 system_action/application_id 等);
+                    # GET 路径也透传给客户端,WS push 不能漏,否则 Message.fromJson
+                    # 解析时 systemAction/systemApplicationId 全为 null。
+                    "meta": new_message.meta,
                 }
             }
             
@@ -1660,10 +1694,15 @@ async def send_task_message(
                         try:
                             # 截取消息内容（最多50个字符），图片/附件等无文本内容时使用描述性占位
                             raw_content = (new_message.content or "").strip()
+                            mtype = getattr(new_message, 'message_type', 'normal')
                             if raw_content:
                                 message_preview = raw_content[:50] + ("..." if len(raw_content) > 50 else "")
-                            elif getattr(new_message, 'message_type', 'normal') == 'image':
+                            elif mtype == 'image':
                                 message_preview = "[图片]"
+                            elif mtype == 'video':
+                                message_preview = "[视频]"
+                            elif mtype == 'file':
+                                message_preview = "[文件]"
                             else:
                                 message_preview = None  # 由 get_push_notification_text 使用兜底文案
                             send_push_notification_async_safe(
@@ -1703,9 +1742,13 @@ async def send_task_message(
             "content": new_message.content,
             "message_type": new_message.message_type or "normal",
             "task_id": new_message.task_id,
+            "application_id": new_message.application_id,
             "created_at": format_iso_utc(new_message.created_at) if new_message.created_at else None,
             "is_read": False,
-            "attachments": attachments_data
+            "attachments": attachments_data,
+            # meta JSON 字符串(GET 路径也透传给客户端,POST/WS 不能漏,
+            # 否则前端 Message.fromJson 解析 systemAction/systemApplicationId 全 null)。
+            "meta": new_message.meta,
         }
     
     except HTTPException:

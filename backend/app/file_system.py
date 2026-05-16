@@ -84,48 +84,67 @@ class PrivateFileSystem:
                 detail=f"文件过大。最大允许大小: {max_size // (1024*1024)}MB"
             )
     
-    def save_file(self, content: bytes, file_id: str, extension: str, task_id: Optional[int] = None, chat_id: Optional[str] = None) -> Path:
-        """保存文件到私有目录，按任务ID或聊天ID分类"""
+    def save_file(self, content: bytes, file_id: str, extension: str,
+                  task_id: Optional[int] = None, chat_id: Optional[str] = None,
+                  subdir: Optional[str] = None) -> Path:
+        """保存文件到私有目录，按任务ID或聊天ID分类。
+
+        Args:
+            subdir: 子目录名(可选)。例如任务聊天 chat_media 传 subdir='chat',
+                文件落到 tasks/{task_id}/chat/{file_id}.ext,
+                与"任务完成证据"等其他用途隔离,便于审计/分流。
+                既有调用方不传该参数,落到原 tasks/{task_id}/ 顶层,完全向后兼容。
+        """
         filename = f"{file_id}{extension}"
-        
+
         # 根据是否有task_id或chat_id创建子文件夹
         if task_id:
             # 任务聊天：按任务ID分类
             task_dir = self.base_dir / "tasks" / str(task_id)
+            if subdir:
+                # 进一步用 subdir 隔离不同业务用途的文件
+                task_dir = task_dir / subdir
             task_dir.mkdir(parents=True, exist_ok=True)
             file_path = task_dir / filename
         elif chat_id:
             # 客服聊天：按聊天ID分类
             chat_dir = self.base_dir / "chats" / chat_id
+            if subdir:
+                chat_dir = chat_dir / subdir
             chat_dir.mkdir(parents=True, exist_ok=True)
             file_path = chat_dir / filename
         else:
             # 没有分类信息，保存在根目录（向后兼容）
             file_path = self.base_dir / filename
-        
+
         with open(file_path, "wb") as f:
             f.write(content)
-        
+
         return file_path
     
-    def upload_file(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None, content_type: Optional[str] = None, max_file_size_override: Optional[int] = None) -> Dict[str, Any]:
-        """上传文件，支持按任务ID或聊天ID分类
+    def upload_file(self, content: bytes, filename: str, user_id: str, db: Session,
+                    task_id: Optional[int] = None, chat_id: Optional[str] = None,
+                    content_type: Optional[str] = None,
+                    max_file_size_override: Optional[int] = None,
+                    subdir: Optional[str] = None) -> Dict[str, Any]:
+        """上传文件，支持按任务ID或聊天ID分类。
 
         Args:
             max_file_size_override: 当非 None 时,用它替代默认 10MB 做大小校验。
                 上游路由(如 chat_media 视频 30MB)显式传入;既有调用方不传该参数,
                 保持默认 10MB 行为不变。
+            subdir: 子目录名(可选)。透传给 save_file,详见其 docstring。
         """
         try:
             # 验证文件（支持从 Content-Type 或 magic bytes 检测,并允许 size override）
             self.validate_file(content, filename, content_type=content_type, max_file_size_override=max_file_size_override)
-            
+
             # 生成文件ID
             file_id = self.generate_file_id(user_id, filename)
             extension = self.get_file_extension(filename, content_type=content_type, content=content)
-            
-            # 保存文件（按任务ID或聊天ID分类）
-            file_path = self.save_file(content, file_id, extension, task_id, chat_id)
+
+            # 保存文件（按任务ID或聊天ID分类,可选 subdir 隔离）
+            file_path = self.save_file(content, file_id, extension, task_id, chat_id, subdir=subdir)
             
             logger.info(f"文件上传成功: {file_id} - 用户: {user_id}, 任务: {task_id}, 聊天: {chat_id}")
             
@@ -167,42 +186,42 @@ class PrivateFileSystem:
                 # 查询任务消息
                 task_message = db.query(Message).filter(Message.id == attachment.message_id).first()
                 if task_message and task_message.task_id:
-                    # 任务聊天文件：直接定位到任务文件夹
+                    # 任务聊天文件：直接定位到任务文件夹(rglob 兼容 subdir 如 chat/)
                     task_dir = self.base_dir / "tasks" / str(task_message.task_id)
-                    # 尝试不同扩展名
-                    for ext_file in task_dir.glob(f"{file_id}.*"):
+                    # 尝试不同扩展名,递归查找以兼容 subdir(如 chat_media 落 tasks/{id}/chat/)
+                    for ext_file in task_dir.rglob(f"{file_id}.*"):
                         if ext_file.is_file():
                             file_path = ext_file
                             break
-                
+
                 # 如果没找到，查询客服消息
                 if not file_path:
                     cs_message = db.query(CustomerServiceMessage).filter(
                         CustomerServiceMessage.id == attachment.message_id
                     ).first()
                     if cs_message and cs_message.chat_id:
-                        # 客服聊天文件：直接定位到聊天文件夹
+                        # 客服聊天文件：直接定位到聊天文件夹(rglob 兼容 subdir)
                         chat_dir = self.base_dir / "chats" / cs_message.chat_id
-                        for ext_file in chat_dir.glob(f"{file_id}.*"):
+                        for ext_file in chat_dir.rglob(f"{file_id}.*"):
                             if ext_file.is_file():
                                 file_path = ext_file
                                 break
-            
+
             # 2. 如果数据库查询失败或文件不存在，回退到全局搜索（向后兼容）
             if not file_path:
-                # 先查找任务文件夹
+                # 先查找任务文件夹(rglob 递归)
                 task_dirs = list(self.base_dir.glob("tasks/*"))
                 for task_dir in task_dirs:
-                    task_files = list(task_dir.glob(f"{file_id}.*"))
+                    task_files = list(task_dir.rglob(f"{file_id}.*"))
                     if task_files:
                         file_path = task_files[0]
                         break
-                
-                # 再查找聊天文件夹
+
+                # 再查找聊天文件夹(rglob 递归)
                 if not file_path:
                     chat_dirs = list(self.base_dir.glob("chats/*"))
                     for chat_dir in chat_dirs:
-                        chat_files = list(chat_dir.glob(f"{file_id}.*"))
+                        chat_files = list(chat_dir.rglob(f"{file_id}.*"))
                         if chat_files:
                             file_path = chat_files[0]
                             break

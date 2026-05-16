@@ -97,3 +97,29 @@ def test_video_rejects_oversize():
 def test_video_accepts_at_exact_limit():
     content = _mp4_header() + b"\x00" * (MAX_CHAT_VIDEO_SIZE - 200)
     validate_chat_video(content, "video.mp4")
+
+
+# ---------------------- Brand whitelist (Minor #4 from audit) ----------------
+
+def test_video_rejects_unknown_brand():
+    """ftyp 在,但 brand 不在白名单(e.g. 'xxxx')→ 拒绝。"""
+    # size 32 + 'ftyp' + brand 'xxxx' + padding
+    content = b"\x00\x00\x00\x20ftypxxxx\x00\x00\x02\x00xxxxiso2avc1mp41" + b"\x00" * 200
+    with pytest.raises(HTTPException) as exc:
+        validate_chat_video(content, "video.mp4")
+    assert exc.value.status_code == 400
+
+
+def test_video_rejects_box_size_too_small():
+    """box size < 16 → 拒绝(防滥用 size 字段)。"""
+    # size 8(<16) + 'ftyp' + brand 'isom'(brand 合法但 size 不合法)
+    content = b"\x00\x00\x00\x08ftypisom\x00\x00\x02\x00" + b"\x00" * 200
+    with pytest.raises(HTTPException) as exc:
+        validate_chat_video(content, "video.mp4")
+    assert exc.value.status_code == 400
+
+
+def test_video_accepts_qt_brand():
+    """QuickTime brand 'qt  ' 通过(.mov 文件常见)。"""
+    content = b"\x00\x00\x00\x14ftypqt  \x00\x00\x02\x00" + b"\x00" * 200
+    validate_chat_video(content, "video.mov")

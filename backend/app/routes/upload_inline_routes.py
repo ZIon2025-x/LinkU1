@@ -596,6 +596,8 @@ async def upload_file(
         # 使用新的私密文件系统上传
         # chat_media 视频/PDF 兜底 30MB(PDF 在前面的 validate_chat_pdf 已独立卡 20MB);
         # 其他 usage 不传 override,走默认 10MB,保持向后兼容。
+        # chat_media 落 tasks/{task_id}/chat/ 子目录,与"任务完成证据"等其他用途隔离,
+        # 便于审计/分流统计(spec 8.5 节)。
         from app.file_system import private_file_system
         if usage == "chat_media":
             result = private_file_system.upload_file(
@@ -607,6 +609,7 @@ async def upload_file(
                 chat_id=chat_id,
                 content_type=file.content_type,
                 max_file_size_override=30 * 1024 * 1024,
+                subdir="chat",
             )
         else:
             result = private_file_system.upload_file(
