@@ -10,8 +10,8 @@ import {
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
-import { 
-  getForumPost, getForumReplies, createForumReply, toggleForumLike, 
+import {
+  getForumPost, getForumReplies, getReplyChildren, createForumReply, toggleForumLike,
   toggleForumFavorite, deleteForumPost, deleteForumReply,
   createForumReport, fetchCurrentUser, getPublicSystemSettings, logout,
   getForumUnreadNotificationCount
@@ -59,6 +59,12 @@ interface ForumReply {
     name: string;
     avatar?: string;
   };
+}
+
+// 根评论：列表 API 返回的项，额外带 preview_children + total_children
+interface ForumRootReply extends ForumReply {
+  preview_children?: ForumReply[];
+  total_children?: number;
 }
 
 interface ForumPost {
@@ -119,7 +125,17 @@ const ForumPostDetail: React.FC = () => {
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
   const [post, setPost] = useState<ForumPost | null>(null);
-  const [replies, setReplies] = useState<ForumReply[]>([]);
+  const [replies, setReplies] = useState<ForumRootReply[]>([]);
+  // 渐进展开：每根 root 已加载的额外子回复（不含 preview_children）
+  const [loadedChildren, setLoadedChildren] = useState<Record<number, ForumReply[]>>({});
+  // 每根 root 是否还有更多子回复未拉
+  const [hasMoreMap, setHasMoreMap] = useState<Record<number, boolean>>({});
+  // 每根 root 下次拉取的 offset；首次展开默认 3（跳过 preview）
+  const [offsetMap, setOffsetMap] = useState<Record<number, number>>({});
+  // 正在拉子回复的 rootId，避免重复点击
+  const [loadingChildren, setLoadingChildren] = useState<Record<number, boolean>>({});
+  // 排序：hot=按热度 / time=按时间（必须与后端 regex ^(hot|time)$ 对齐，别用 'newest'）
+  const [replySort, setReplySort] = useState<'hot' | 'time'>('hot');
   const [loading, setLoading] = useState(true);
   const [replyLoading, setReplyLoading] = useState(false);
   const [currentPage] = useState(1);
@@ -572,7 +588,8 @@ const ForumPostDetail: React.FC = () => {
     if (currentUser) {
       loadUnreadCount();
     }
-  }, [postId, currentPage, currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId, currentPage, currentUser, replySort]);
 
   const loadPost = async () => {
     try {
@@ -601,12 +618,68 @@ const ForumPostDetail: React.FC = () => {
     try {
       const response = await getForumReplies(Number(postId), {
         page: currentPage,
-        page_size: 50
+        page_size: 50,
+        sort: replySort,
       });
       setReplies(response.replies || []);
       setTotal(response.total || 0);
+      // 切排序 / 重新拉根评论时，清空已展开的子回复状态
+      setLoadedChildren({});
+      setHasMoreMap({});
+      setOffsetMap({});
+      setLoadingChildren({});
     } catch (error: any) {
           }
+  };
+
+  // 展开某根评论剩余子回复，分批拉取后追加
+  const handleLoadMoreChildren = async (rootId: number) => {
+    if (loadingChildren[rootId]) return;
+    setLoadingChildren((m) => ({ ...m, [rootId]: true }));
+    try {
+      const offset = offsetMap[rootId] ?? 3;
+      const page = await getReplyChildren(rootId, offset, 5);
+      setLoadedChildren((m) => ({
+        ...m,
+        [rootId]: [...(m[rootId] || []), ...(page.replies || [])],
+      }));
+      setHasMoreMap((m) => ({ ...m, [rootId]: !!page.has_more }));
+      setOffsetMap((m) => ({ ...m, [rootId]: page.next_offset }));
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setLoadingChildren((m) => ({ ...m, [rootId]: false }));
+    }
+  };
+
+  // 一次性拉完某根评论剩余所有子回复（@ 跳转时使用）
+  // 不依赖 React state 闭包，直接调 API 拉到 has_more=false
+  const expandAllChildren = async (rootId: number) => {
+    const root = replies.find((r) => r.id === rootId);
+    if (!root) return;
+    const previewCount = root.preview_children?.length ?? 0;
+    const alreadyLoaded = loadedChildren[rootId] || [];
+    let offset = offsetMap[rootId] ?? previewCount;
+    const accumulated: ForumReply[] = [...alreadyLoaded];
+    let safety = 10;
+    setLoadingChildren((m) => ({ ...m, [rootId]: true }));
+    try {
+      while (safety-- > 0) {
+        const page = await getReplyChildren(rootId, offset, 20);
+        accumulated.push(...(page.replies || []));
+        offset = page.next_offset;
+        if (!page.has_more) {
+          setHasMoreMap((m) => ({ ...m, [rootId]: false }));
+          break;
+        }
+      }
+      setLoadedChildren((m) => ({ ...m, [rootId]: accumulated }));
+      setOffsetMap((m) => ({ ...m, [rootId]: offset }));
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setLoadingChildren((m) => ({ ...m, [rootId]: false }));
+    }
   };
 
   const handleLike = async (e: React.MouseEvent) => {
@@ -663,18 +736,29 @@ const ForumPostDetail: React.FC = () => {
     try {
       const response = await toggleForumLike('reply', replyId);
       // 直接更新本地状态，避免重新加载导致页面滚动
-      setReplies(prevReplies => {
-        const updateReply = (reply: ForumReply): ForumReply => {
-          if (reply.id === replyId) {
-            return {
-              ...reply,
-              is_liked: response.liked,
-              like_count: response.like_count
-            };
-          }
-          return reply;
-        };
-        return prevReplies.map(updateReply);
+      // 注意：被点赞的回复可能在 root、root.preview_children、loadedChildren 三处之一
+      const applyLike = <T extends ForumReply>(reply: T): T => {
+        if (reply.id === replyId) {
+          return { ...reply, is_liked: response.liked, like_count: response.like_count };
+        }
+        return reply;
+      };
+      setReplies((prev) =>
+        prev.map((root) => {
+          const updatedRoot = applyLike(root);
+          const updatedPreviews = root.preview_children?.map(applyLike);
+          return {
+            ...updatedRoot,
+            preview_children: updatedPreviews ?? root.preview_children,
+          };
+        }),
+      );
+      setLoadedChildren((prev) => {
+        const next: Record<number, ForumReply[]> = {};
+        for (const [k, list] of Object.entries(prev)) {
+          next[Number(k)] = list.map(applyLike);
+        }
+        return next;
       });
     } catch (error: any) {
       message.error(getErrorMessage(error));
@@ -925,29 +1009,75 @@ const ForumPostDetail: React.FC = () => {
     setShowShareModal(false);
   };
 
-  const handleMentionClick = (parentReplyId: number | undefined) => {
+  const handleMentionClick = async (parentReplyId: number | undefined) => {
     if (!parentReplyId) return;
-    const target = document.getElementById(`reply-${parentReplyId}`);
-    if (!target) {
+    const pulseClass = styles.highlightPulse;
+    const scrollAndPulse = (el: HTMLElement) => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (pulseClass) {
+        el.classList.add(pulseClass);
+        setTimeout(() => el.classList.remove(pulseClass), 800);
+      }
+    };
+    let target = document.getElementById(`reply-${parentReplyId}`);
+    if (target) {
+      scrollAndPulse(target);
+      return;
+    }
+    // 目标不在 DOM：可能折叠在某根评论的"展开剩余"里
+    // 找出 parent 所属的 root：父回复 parent_reply_id 自己是 root，或它是某 root 的子
+    const rootContainingTarget = replies.find((r) => {
+      if (r.id === parentReplyId) return true;
+      // preview 里
+      if (r.preview_children?.some((c) => c.id === parentReplyId)) return true;
+      // 已加载的 children 里
+      if ((loadedChildren[r.id] || []).some((c) => c.id === parentReplyId)) return true;
+      return false;
+    });
+    // 没找到说明目标本来就被折叠 → 尝试根据 parent_reply_id 链路反查
+    // 简化：暴力展开"看起来还有未加载子回复的所有 root"，再 scroll
+    if (!rootContainingTarget) {
+      const rootsToExpand = replies.filter(
+        (r) =>
+          (r.total_children ?? 0) >
+          (r.preview_children?.length ?? 0) + (loadedChildren[r.id]?.length ?? 0),
+      );
+      if (rootsToExpand.length === 0) {
+        message.info(t('forum.replyTargetNotLoaded'));
+        return;
+      }
+      for (const r of rootsToExpand) {
+        await expandAllChildren(r.id);
+        // 每次展开后尝试找一下
+        target = document.getElementById(`reply-${parentReplyId}`);
+        if (target) {
+          scrollAndPulse(target);
+          return;
+        }
+      }
       message.info(t('forum.replyTargetNotLoaded'));
       return;
     }
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const pulseClass = styles.highlightPulse;
-    if (pulseClass) {
-      target.classList.add(pulseClass);
-      setTimeout(() => {
-        target.classList.remove(pulseClass);
-      }, 800);
-    }
+    // 找到了所属 root 但 DOM 没渲染 → 该 root 还没全展开
+    await expandAllChildren(rootContainingTarget.id);
+    // 等 React 渲染一帧再找
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`reply-${parentReplyId}`);
+      if (el) {
+        scrollAndPulse(el);
+      } else {
+        message.info(t('forum.replyTargetNotLoaded'));
+      }
+    });
   };
 
-  const renderReply = (reply: ForumReply) => {
+  const renderReply = (reply: ForumReply, nested: boolean = false) => {
     return (
       <div
         key={reply.id}
         id={`reply-${reply.id}`}
         className={styles.replyItem}
+        style={nested ? { marginLeft: 32, borderLeft: '2px solid #f0f0f0', paddingLeft: 12 } : undefined}
       >
         <div className={styles.replyHeader}>
           <Space wrap>
@@ -1364,12 +1494,59 @@ const ForumPostDetail: React.FC = () => {
           </div>
         </Card>
 
-        <Card title={t('forum.replies')} className={styles.repliesCard}>
+        <Card
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span>{t('forum.replies')}</span>
+              <Select
+                size="small"
+                value={replySort}
+                onChange={(v) => setReplySort(v as 'hot' | 'time')}
+                style={{ width: 110 }}
+                aria-label={t('forum.sortBy')}
+              >
+                <Option value="hot">{t('forum.replySortHot')}</Option>
+                <Option value="time">{t('forum.replySortTime')}</Option>
+              </Select>
+            </div>
+          }
+          className={styles.repliesCard}
+        >
           {replies.length === 0 ? (
             <Empty description={t('forum.noReplies')} />
           ) : (
             <div className={styles.repliesList}>
-              {replies.map((reply) => renderReply(reply))}
+              {replies.map((root) => {
+                const previews = root.preview_children || [];
+                const loaded = loadedChildren[root.id] || [];
+                const totalChildren = root.total_children ?? 0;
+                const shownChildCount = previews.length + loaded.length;
+                const hiddenCount = Math.max(0, totalChildren - shownChildCount);
+                // 三态：未触发过 (undefined) → 用 hiddenCount 推断；已点击过 → 用 hasMoreMap
+                const hasMore = hasMoreMap[root.id] ?? hiddenCount > 0;
+                const isLoading = !!loadingChildren[root.id];
+                return (
+                  <div key={root.id}>
+                    {renderReply(root)}
+                    {previews.map((c) => renderReply(c, true))}
+                    {loaded.map((c) => renderReply(c, true))}
+                    {hasMore && (
+                      <div style={{ marginLeft: 32, paddingLeft: 12, marginTop: 4, marginBottom: 8 }}>
+                        <Button
+                          type="link"
+                          size="small"
+                          loading={isLoading}
+                          onClick={() => handleLoadMoreChildren(root.id)}
+                        >
+                          {hiddenCount > 0
+                            ? t('forum.expandRemainingReplies', { count: hiddenCount })
+                            : t('forum.loadMoreReplies')}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </Card>

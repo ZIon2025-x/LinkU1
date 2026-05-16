@@ -2359,12 +2359,31 @@ export const incrementPostViewCount = async (postId: number) => {
 };
 
 // 回复相关
+// 注意: 后端 2026-05-16 重构 — 只返根评论 + 每根 preview_children (前 3) + total_children;
+// 子回复用 getReplyChildren() 渐进展开. sort 取值必须是 'hot' | 'time' (后端 regex ^(hot|time)$).
 export const getForumReplies = async (postId: number, params?: {
   page?: number;
   page_size?: number;
+  sort?: 'hot' | 'time';
 }) => {
   const res = await api.get(`/api/forum/posts/${postId}/replies`, { params });
   return res.data;
+};
+
+// 拉某根评论的子回复 (展开剩余按钮调用) — offset 默认 3 跳过 preview, limit 默认 5
+export const getReplyChildren = async (
+  rootReplyId: number,
+  offset: number = 3,
+  limit: number = 5,
+) => {
+  const res = await api.get(`/api/forum/replies/${rootReplyId}/children`, {
+    params: { offset, limit },
+  });
+  return res.data as {
+    replies: any[];
+    has_more: boolean;
+    next_offset: number;
+  };
 };
 
 export const createForumReply = async (postId: number, data: {
