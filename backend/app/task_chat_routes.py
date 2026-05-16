@@ -1464,10 +1464,58 @@ async def send_task_message(
                     created_at=current_time
                 )
                 db.add(new_attachment)
+
+                # 计算 url 字段:
+                # - image 类型且有 blob_id → 走 private_image_system 生成可访问 URL(任务聊天图片走签名)
+                # - video / file 类型且有 blob_id → 走 signed_url_manager 生成 15min 签名 URL
+                # - 其他情况(public image URL 等)→ 沿用 attachment 已存的 url
+                # 注意: 只填响应/广播 dict 的 url, 不写回 new_attachment.url, 保留 DB XOR 约束。
+                resolved_url = new_attachment.url
+                if not resolved_url and new_attachment.blob_id:
+                    if new_attachment.attachment_type == "image":
+                        # 图片走 private-image 系统(与 GET 路径对齐)
+                        try:
+                            from app.image_system import private_image_system
+                            participants_for_url = []
+                            if task.poster_id:
+                                participants_for_url.append(str(task.poster_id))
+                            if task.taker_id:
+                                tid = str(task.taker_id)
+                                if tid not in participants_for_url:
+                                    participants_for_url.append(tid)
+                            sender_id_str = str(current_user.id)
+                            if sender_id_str not in participants_for_url:
+                                participants_for_url.append(sender_id_str)
+                            resolved_url = private_image_system.generate_image_url(
+                                new_attachment.blob_id,
+                                sender_id_str,
+                                participants_for_url,
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                "POST: failed to generate private-image URL for blob_id=%s: %s",
+                                new_attachment.blob_id, e,
+                            )
+                    elif new_attachment.attachment_type in ("video", "file"):
+                        try:
+                            from app.signed_url import signed_url_manager
+                            resolved_url = signed_url_manager.generate_signed_url(
+                                file_path=f"files/{new_attachment.blob_id}",
+                                user_id=str(current_user.id),
+                                expiry_minutes=15,
+                                one_time=False,
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                "POST: failed to generate signed URL for %s blob_id=%s: %s",
+                                new_attachment.attachment_type,
+                                new_attachment.blob_id, e,
+                            )
+
                 attachments_data.append({
                     "id": new_attachment.id,
                     "attachment_type": new_attachment.attachment_type,
-                    "url": new_attachment.url,
+                    "url": resolved_url,
                     "blob_id": new_attachment.blob_id,
                     "meta": json.loads(attachment_meta) if attachment_meta else {}
                 })
