@@ -1038,11 +1038,11 @@ async def update_post(
 
     # 如果板块改变或可见性改变，更新统计
     if "category_id" in update_data or "is_visible" in update_data:
-        # 更新旧板块统计
-        if old_category_id:
+        # 更新旧板块统计（NULL category 帖不归属任何板块, 无需更新）
+        if old_category_id is not None:
             await update_category_stats(old_category_id, db)
-        # 更新新板块统计
-        if db_post.category_id:
+        # 更新新板块统计（NULL category 帖不归属任何板块, 无需更新）
+        if db_post.category_id is not None:
             await update_category_stats(db_post.category_id, db)
 
     await db.commit()
