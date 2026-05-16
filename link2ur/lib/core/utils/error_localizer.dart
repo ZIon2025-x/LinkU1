@@ -351,6 +351,10 @@ class ErrorLocalizer {
         return context.l10n.errorTaskQuoteAcceptFailed;
       case 'forum_create_post_failed':
         return context.l10n.errorForumCreatePostFailed;
+      case 'forum_load_replies_failed':
+        return context.l10n.forumLoadRepliesError;
+      case 'forum_load_children_failed':
+        return context.l10n.forumLoadChildrenError;
       case 'activity_load_failed':
         return context.l10n.errorActivityLoadFailed;
       case 'activity_load_more_failed':

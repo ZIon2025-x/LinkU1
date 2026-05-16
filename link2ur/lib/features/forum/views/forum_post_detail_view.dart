@@ -79,9 +79,100 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
     });
   }
 
-  void _pruneReplyKeys(List<ForumReply> replies) {
-    final liveIds = replies.map((r) => r.id).toSet();
+  void _pruneReplyKeys(ForumState state) {
+    // 收集所有"在树里"的 id (root + preview_children + loadedChildren)
+    final liveIds = <int>{};
+    for (final root in state.replies) {
+      liveIds.add(root.id);
+      for (final c in root.previewChildren) {
+        liveIds.add(c.id);
+      }
+      final loaded = state.loadedChildren[root.id];
+      if (loaded != null) {
+        for (final c in loaded) {
+          liveIds.add(c.id);
+        }
+      }
+    }
     _replyKeys.removeWhere((id, _) => !liveIds.contains(id));
+  }
+
+  /// 跳转到某条 reply (通常由 @ 引用块触发):
+  /// 1. 若 target 已在已渲染列表 → 直接滚动 + 高亮
+  /// 2. 若 target 是某根的 child 但还在折叠区 → 先 dispatch LoadMoreChildren,
+  ///    等一帧让 widget 树更新后再滚动 + 高亮
+  /// 3. 找不到 → 仅触发高亮(stream listener 命中即生效)
+  Future<void> _handleMentionTap(int targetReplyId) async {
+    // 立刻尝试滚动一次:已渲染则会命中
+    final key = _replyKeys[targetReplyId];
+    if (key?.currentContext != null) {
+      await Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        alignment: 0.2,
+      );
+      _highlightStream.add(targetReplyId);
+      return;
+    }
+
+    // 未渲染 → 在 state 里搜 target 是不是某个根 (root) 自己,
+    // 或者已经在 preview/loadedChildren 里(理论上 key 会命中,但 widget 还没构建时也可能漏)
+    final state = context.read<ForumBloc>().state;
+    int? ancestorRootId;
+    bool targetIsRoot = false;
+    for (final root in state.replies) {
+      if (root.id == targetReplyId) {
+        targetIsRoot = true;
+        break;
+      }
+      if (root.previewChildren.any((c) => c.id == targetReplyId)) {
+        ancestorRootId = root.id; // 已渲染,但 key 还没建好 → 等一帧
+        break;
+      }
+      final loaded = state.loadedChildren[root.id];
+      if (loaded != null && loaded.any((c) => c.id == targetReplyId)) {
+        ancestorRootId = root.id;
+        break;
+      }
+    }
+
+    if (targetIsRoot) {
+      // root 已经在 widget 树里,key 应该有 — 等一帧再试
+      await Future.delayed(const Duration(milliseconds: 100));
+    } else if (ancestorRootId != null) {
+      // 已在某根的 child 列表 → 等 widget 重建即可
+      await Future.delayed(const Duration(milliseconds: 100));
+    } else {
+      // 不在已知列表 → 可能在某根的折叠区,挨个尝试展开还有 more 的根
+      for (final root in state.replies) {
+        final hasMore = state.hasMoreChildren[root.id] ??
+            (root.hiddenChildrenCount > 0);
+        if (hasMore && !state.loadingChildrenRoots.contains(root.id)) {
+          context
+              .read<ForumBloc>()
+              .add(ForumLoadMoreChildren(root.id));
+          await Future.delayed(const Duration(milliseconds: 400));
+          if (!mounted) return;
+          if (_replyKeys[targetReplyId]?.currentContext != null) {
+            break; // 找到了,停止继续展开
+          }
+        }
+      }
+    }
+
+    if (!mounted) return;
+    final newKey = _replyKeys[targetReplyId];
+    if (newKey?.currentContext != null) {
+      await Scrollable.ensureVisible(
+        newKey!.currentContext!,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        alignment: 0.2,
+      );
+    }
+    // 兜底:广播高亮(已挂载的 _ReplyCard listener 命中即生效)
+    _highlightStream.add(targetReplyId);
   }
 
   void _showReportDialog(BuildContext context) async {
@@ -138,7 +229,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     !curr.isReplying &&
                     curr.replies.length > prev.replies.length,
                 listener: (context, state) {
-                  _pruneReplyKeys(state.replies);
+                  _pruneReplyKeys(state);
                   _replyController.clear();
                   _clearReplyTo();
                 },
@@ -147,7 +238,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 listenWhen: (prev, curr) =>
                     curr.replies.length < prev.replies.length,
                 listener: (context, state) {
-                  _pruneReplyKeys(state.replies);
+                  _pruneReplyKeys(state);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(context.l10n.forumReplyDeleted)),
                   );
@@ -442,7 +533,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     buildWhen: (previous, current) =>
                         previous.status != current.status ||
                         previous.selectedPost != current.selectedPost ||
-                        previous.replies != current.replies,
+                        previous.replies != current.replies ||
+                        previous.replySort != current.replySort ||
+                        previous.loadedChildren != current.loadedChildren ||
+                        previous.hasMoreChildren != current.hasMoreChildren ||
+                        previous.loadingChildrenRoots !=
+                            current.loadingChildrenRoots,
                     builder: (context, state) {
                       if (state.status == ForumStatus.loading &&
                           state.selectedPost == null) {
@@ -532,11 +628,18 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                             ),
                           ),
 
-                          // 评论区标题
+                          // 评论区标题 (含排序 chip)
                           SliverToBoxAdapter(
                             child: _ReplySectionHeader(
                               replyCount: state.replies.length,
                               isDark: isDark,
+                              currentSort: state.replySort,
+                              onSortChanged: (newSort) {
+                                context.read<ForumBloc>().add(
+                                      ForumReplySortChanged(
+                                          widget.postId, newSort),
+                                    );
+                              },
                             ),
                           ),
 
@@ -586,28 +689,30 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                       .withValues(alpha: 0.3),
                                 ),
                                 itemBuilder: (context, index) {
-                                  final reply = state.replies[index];
-                                  final key = _replyKeys.putIfAbsent(
-                                      reply.id, () => GlobalKey());
-                                  final parentReply =
-                                      reply.parentReplyId != null
-                                          ? state.replies
-                                              .where((r) =>
-                                                  r.id == reply.parentReplyId)
-                                              .firstOrNull
-                                          : null;
-                                  return _ReplyCard(
-                                    key: key,
-                                    reply: reply,
-                                    parentReply: parentReply,
+                                  final root = state.replies[index];
+                                  return _RootReplyGroup(
+                                    key: ValueKey('root_${root.id}'),
+                                    root: root,
+                                    loadedChildren:
+                                        state.loadedChildren[root.id] ??
+                                            const <ForumReply>[],
+                                    hasMore: state.hasMoreChildren[root.id] ??
+                                        (root.hiddenChildrenCount > 0),
+                                    isLoading:
+                                        state.loadingChildrenRoots.contains(
+                                            root.id),
                                     isDark: isDark,
                                     postId: widget.postId,
+                                    replyKeys: _replyKeys,
                                     onReplyTo: _setReplyTo,
                                     scrollController: _scrollController,
-                                    replyKeys: _replyKeys,
-                                    onHighlightTarget: (id) =>
-                                        _highlightStream.add(id),
                                     highlightStream: _highlightStream.stream,
+                                    onMentionTap: _handleMentionTap,
+                                    onLoadMoreChildren: () {
+                                      context.read<ForumBloc>().add(
+                                            ForumLoadMoreChildren(root.id),
+                                          );
+                                    },
                                   );
                                 },
                               ),
@@ -1075,10 +1180,14 @@ class _ReplySectionHeader extends StatelessWidget {
   const _ReplySectionHeader({
     required this.replyCount,
     required this.isDark,
+    required this.currentSort,
+    required this.onSortChanged,
   });
 
   final int replyCount;
   final bool isDark;
+  final String currentSort;
+  final ValueChanged<String> onSortChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1111,8 +1220,225 @@ class _ReplySectionHeader extends StatelessWidget {
               ),
             ),
           ),
+          const Spacer(),
+          _SortChip(
+            currentSort: currentSort,
+            isDark: isDark,
+            onChanged: onSortChanged,
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// 评论排序切换 chip:按热度/按时间
+/// sort 取值: 'hot' (热度) | 'newest' (时间倒序,即"按时间")
+class _SortChip extends StatelessWidget {
+  const _SortChip({
+    required this.currentSort,
+    required this.isDark,
+    required this.onChanged,
+  });
+
+  final String currentSort;
+  final bool isDark;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isHot = currentSort == 'hot';
+    final label = isHot
+        ? context.l10n.forumSortByHot
+        : context.l10n.forumSortByTime;
+    final borderColor = (isDark
+            ? AppColors.separatorDark
+            : AppColors.separatorLight)
+        .withValues(alpha: 0.6);
+    final textColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: () async {
+        final newSort = await showModalBottomSheet<String>(
+          context: context,
+          builder: (sheetCtx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: Text(context.l10n.forumSortByHot),
+                  trailing: currentSort == 'hot'
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
+                  onTap: () => Navigator.pop(sheetCtx, 'hot'),
+                ),
+                ListTile(
+                  title: Text(context.l10n.forumSortByTime),
+                  trailing: currentSort == 'newest'
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
+                  onTap: () => Navigator.pop(sheetCtx, 'newest'),
+                ),
+              ],
+            ),
+          ),
+        );
+        if (newSort != null && newSort != currentSort) {
+          onChanged(newSort);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: textColor),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.expand_more, size: 14, color: textColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 根评论分组 (root + preview_children + loaded_children + 展开按钮) ====================
+
+class _RootReplyGroup extends StatelessWidget {
+  const _RootReplyGroup({
+    super.key,
+    required this.root,
+    required this.loadedChildren,
+    required this.hasMore,
+    required this.isLoading,
+    required this.isDark,
+    required this.postId,
+    required this.replyKeys,
+    required this.onReplyTo,
+    required this.scrollController,
+    required this.highlightStream,
+    required this.onMentionTap,
+    required this.onLoadMoreChildren,
+  });
+
+  final ForumReply root;
+  final List<ForumReply> loadedChildren;
+  final bool hasMore;
+  final bool isLoading;
+  final bool isDark;
+  final int postId;
+  final Map<int, GlobalKey> replyKeys;
+  final void Function(int replyId, String authorName) onReplyTo;
+  final ScrollController scrollController;
+  final Stream<int> highlightStream;
+  final Future<void> Function(int targetReplyId) onMentionTap;
+  final VoidCallback onLoadMoreChildren;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayChildren = [...root.previewChildren, ...loadedChildren];
+    final remaining = root.totalChildren - displayChildren.length;
+    final showExpand = hasMore || remaining > 0;
+
+    // 解析 child 的 parentReply (用于渲染 quote block):
+    // - parentReplyId == root.id → parent 就是 root 自己
+    // - 否则在已渲染兄弟节点里找
+    ForumReply? resolveParent(ForumReply child) {
+      if (child.parentReplyId == null) return null;
+      if (child.parentReplyId == root.id) return root;
+      for (final sibling in displayChildren) {
+        if (sibling.id == child.parentReplyId) return sibling;
+      }
+      return null;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 根评论
+        _ReplyCard(
+          key: replyKeys.putIfAbsent(root.id, () => GlobalKey()),
+          reply: root,
+          isDark: isDark,
+          postId: postId,
+          onReplyTo: onReplyTo,
+          scrollController: scrollController,
+          replyKeys: replyKeys,
+          highlightStream: highlightStream,
+          onMentionTap: onMentionTap,
+        ),
+        // 子回复 (preview + loaded),带左侧缩进
+        for (final child in displayChildren)
+          Padding(
+            padding: const EdgeInsets.only(left: 42),
+            child: _ReplyCard(
+              key: replyKeys.putIfAbsent(child.id, () => GlobalKey()),
+              reply: child,
+              parentReply: resolveParent(child),
+              isDark: isDark,
+              postId: postId,
+              onReplyTo: onReplyTo,
+              scrollController: scrollController,
+              replyKeys: replyKeys,
+              highlightStream: highlightStream,
+              onMentionTap: onMentionTap,
+            ),
+          ),
+        // 展开剩余 N 条按钮
+        if (showExpand)
+          Padding(
+            padding: const EdgeInsets.only(left: 42, top: 4, bottom: 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: isLoading ? null : onLoadMoreChildren,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 18,
+                      height: 1,
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(width: 6),
+                    if (isLoading)
+                      const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                      )
+                    else
+                      Text(
+                        context.l10n.forumExpandMoreReplies(
+                            remaining > 0 ? remaining : 1),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    const SizedBox(width: 4),
+                    if (!isLoading)
+                      const Icon(Icons.expand_more,
+                          size: 14, color: AppColors.primary),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1129,8 +1455,8 @@ class _ReplyCard extends StatefulWidget {
     this.parentReply,
     this.scrollController,
     this.replyKeys,
-    this.onHighlightTarget,
     this.highlightStream,
+    this.onMentionTap,
   });
 
   final ForumReply reply;
@@ -1140,8 +1466,11 @@ class _ReplyCard extends StatefulWidget {
   final ForumReply? parentReply;
   final ScrollController? scrollController;
   final Map<int, GlobalKey>? replyKeys;
-  final void Function(int replyId)? onHighlightTarget;
   final Stream<int>? highlightStream;
+
+  /// 新增:`@xxx` 引用块点击 → 跳转到 parent (兼容折叠情况,自动展开)
+  /// 没传时回退到旧逻辑(仅尝试 ensureVisible)
+  final Future<void> Function(int targetReplyId)? onMentionTap;
 
   @override
   State<_ReplyCard> createState() => _ReplyCardState();
@@ -1236,6 +1565,12 @@ class _ReplyCardState extends State<_ReplyCard> {
                       parentReply: parentReply,
                       isDark: isDark,
                       onTap: () {
+                        // 优先用新的 onMentionTap(兼容折叠区自动展开),否则回退到旧逻辑
+                        final handler = widget.onMentionTap;
+                        if (handler != null) {
+                          handler(parentReply.id);
+                          return;
+                        }
                         final key = replyKeys?[parentReply.id];
                         if (key?.currentContext != null) {
                           Scrollable.ensureVisible(
@@ -1244,7 +1579,6 @@ class _ReplyCardState extends State<_ReplyCard> {
                             curve: Curves.easeOut,
                             alignment: 0.2,
                           );
-                          widget.onHighlightTarget?.call(parentReply.id);
                         }
                       },
                     ),
