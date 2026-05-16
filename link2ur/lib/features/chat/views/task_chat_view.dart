@@ -1,9 +1,17 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_compress/video_compress.dart';
+import 'package:video_player/video_player.dart' as video_player;
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/design/app_spacing.dart';
@@ -211,28 +219,154 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   }
 
 
-  /// 相册选图：使用系统多选界面，用户在相册内勾选后点「完成」确认，支持多选
+  /// 相册选媒体:支持图片或视频多选(image_picker 1.x 的 pickMultipleMedia)。
+  /// - 选中图片:走原图片发送流程(每张图独立 ChatSendImage)
+  /// - 选中视频:走 ChatSendVideo(前端压缩 + 抽帧后并行上传)
   static const int _kMaxGalleryImages = 9;
 
   Future<void> _pickImage() async {
-    final images = await _imagePicker.pickMultiImage(
+    final media = await _imagePicker.pickMultipleMedia(
       imageQuality: 70,
       maxWidth: 1200,
       limit: _kMaxGalleryImages,
     );
-    if (images.isEmpty || !mounted) return;
-    final toSend = images.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
-    for (final file in toSend) {
+    if (media.isEmpty || !mounted) return;
+
+    final toProcess = media.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
+    for (final file in toProcess) {
       if (!mounted) break;
-      context.read<ChatBloc>().add(
-        ChatSendImage(
-          bytes: await file.readAsBytes(),
-          filename: file.name,
-          senderId: _currentUserId ?? StorageService.instance.getUserId(),
-        ),
-      );
+      final mime = file.mimeType ?? '';
+      final pathLower = file.path.toLowerCase();
+      final isVideo = mime.startsWith('video/') ||
+          pathLower.endsWith('.mp4') ||
+          pathLower.endsWith('.mov') ||
+          pathLower.endsWith('.m4v');
+      if (isVideo) {
+        await _handlePickedVideo(file.path, file.name);
+      } else {
+        if (!mounted) break;
+        context.read<ChatBloc>().add(
+          ChatSendImage(
+            bytes: await file.readAsBytes(),
+            filename: file.name,
+            senderId: _currentUserId ?? StorageService.instance.getUserId(),
+          ),
+        );
+      }
     }
     if (mounted) setState(() => _showActionMenu = false);
+  }
+
+  /// 视频处理:读元数据 -> 时长校验 -> 压缩 -> 抽首帧 -> 派发 ChatSendVideo
+  Future<void> _handlePickedVideo(String filePath, String filename) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      // 1. 读取视频元数据(时长 / 尺寸)
+      final controller = video_player.VideoPlayerController.file(File(filePath));
+      await controller.initialize();
+      final durationMs = controller.value.duration.inMilliseconds;
+      final width = controller.value.size.width.toInt();
+      final height = controller.value.size.height.toInt();
+      await controller.dispose();
+
+      if (durationMs > 30000) {
+        if (mounted) {
+          messenger.showSnackBar(SnackBar(
+            content: Text(context.localizeError('chat_video_too_long')),
+          ));
+        }
+        return;
+      }
+
+      // 2. 压缩到 1080p(VideoCompress 内部 medium quality)
+      final compressed = await VideoCompress.compressVideo(
+        filePath,
+        quality: VideoQuality.MediumQuality,
+        includeAudio: true,
+      );
+      final compressedPath = compressed?.path ?? filePath;
+      final compressedBytes = await File(compressedPath).readAsBytes();
+      if (compressedBytes.length > 30 * 1024 * 1024) {
+        if (mounted) {
+          messenger.showSnackBar(SnackBar(
+            content: Text(context.localizeError('chat_video_too_large')),
+          ));
+        }
+        return;
+      }
+
+      // 3. 抽首帧 -> JPEG bytes
+      Uint8List? thumbBytes;
+      try {
+        thumbBytes = await VideoThumbnail.thumbnailData(
+          video: compressedPath,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 540,
+          quality: 70,
+        );
+      } catch (e) {
+        AppLogger.error('Thumbnail extraction failed', e);
+      }
+      thumbBytes ??= Uint8List(0); // fallback,后端入库不会阻塞;接收端会显示纯黑底
+
+      if (!mounted) return;
+      // 4. 派发 ChatSendVideo
+      final lower = filename.toLowerCase();
+      final outFilename = lower.endsWith('.mp4') ||
+              lower.endsWith('.mov') ||
+              lower.endsWith('.m4v')
+          ? filename
+          : '$filename.mp4';
+      context.read<ChatBloc>().add(ChatSendVideo(
+            videoBytes: compressedBytes,
+            videoFilename: outFilename,
+            videoDurationMs: durationMs,
+            videoWidth: width,
+            videoHeight: height,
+            thumbnailBytes: thumbBytes,
+            thumbnailFilename: '$filename.thumb.jpg',
+            senderId: _currentUserId ?? StorageService.instance.getUserId(),
+          ));
+    } catch (e) {
+      AppLogger.error('Video pick failed', e);
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(context.localizeError('chat_video_compress_failed')),
+        ));
+      }
+    }
+  }
+
+  /// 文件按钮:选 PDF。
+  Future<void> _pickFile() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty || !mounted) return;
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(context.localizeError('chat_upload_failed')),
+      ));
+      return;
+    }
+    if (bytes.length > 20 * 1024 * 1024) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(context.localizeError('chat_file_too_large')),
+      ));
+      return;
+    }
+    context.read<ChatBloc>().add(ChatSendFile(
+          bytes: bytes,
+          filename: file.name,
+          contentType: 'application/pdf',
+          senderId: _currentUserId ?? StorageService.instance.getUserId(),
+        ));
+    setState(() => _showActionMenu = false);
   }
 
   /// 拍照发送：拍完后弹出确认再发送
@@ -355,7 +489,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                   isExpanded: _showActionMenu,
                   onImagePicker: _pickImage,
                   onCameraPick: _pickCameraImage,
-                  onFilePicker: () {}, // TODO(Task 10): replace with real _pickFile
+                  onFilePicker: _pickFile,
                   onTaskDetail: () {
                     context.safePush('/tasks/${widget.taskId}');
                   },
