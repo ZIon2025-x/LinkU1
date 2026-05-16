@@ -64,6 +64,10 @@ class StorageKeys {
   /// 最后一次位置上传时间 (ISO8601)
   static const String lastLocationUpload = 'last_location_upload';
 
+  // ==================== 论坛偏好 ====================
+  /// 论坛帖子详情页根回复排序 ('hot' | 'newest')
+  static const String forumReplySort = 'forum_reply_sort';
+
   // ==================== Hive Box名称 ====================
   /// 缓存Box
   static const String cacheBox = 'cache_box';

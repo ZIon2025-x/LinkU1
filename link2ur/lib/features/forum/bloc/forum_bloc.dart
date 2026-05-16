@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stream_transform/stream_transform.dart';
@@ -6,6 +8,7 @@ import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/feed_item.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../data/services/storage_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/app_exception.dart';
 
@@ -942,6 +945,13 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       nextChildOffset: const {},
       loadingChildrenRoots: const {},
     ));
+    // 持久化用户偏好,下次进任何帖详情页直接套用。
+    // 异常吞掉 (e.g. 测试环境 StorageService 未初始化),不影响主流程。
+    unawaited(
+      StorageService.instance.setForumReplySort(event.sort).catchError((e) {
+        AppLogger.warning('Failed to persist forum reply sort: $e');
+      }),
+    );
     add(ForumLoadReplies(event.postId));
   }
 

@@ -27,6 +27,7 @@ import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../data/services/storage_service.dart';
 import '../../../data/models/forum.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/forum_bloc.dart';
@@ -213,11 +214,21 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => ForumBloc(
-        forumRepository: context.read<ForumRepository>(),
-      )
-        ..add(ForumLoadPostDetail(widget.postId))
-        ..add(ForumLoadReplies(widget.postId)),
+      create: (context) {
+        final bloc = ForumBloc(
+          forumRepository: context.read<ForumRepository>(),
+        )..add(ForumLoadPostDetail(widget.postId));
+        // 读取持久化的排序偏好。默认 'hot' 与 ForumState 默认值一致;
+        // 不同值则走 ReplySortChanged (内部会先切 sort 再 dispatch LoadReplies)。
+        final savedSort =
+            StorageService.instance.getForumReplySort() ?? 'hot';
+        if (savedSort != 'hot') {
+          bloc.add(ForumReplySortChanged(widget.postId, savedSort));
+        } else {
+          bloc.add(ForumLoadReplies(widget.postId));
+        }
+        return bloc;
+      },
       child: Builder(
         builder: (context) {
           // context 此处才能拿到本页的 ForumBloc，AppBar 的分享/编辑/删除等依赖 selectedPost

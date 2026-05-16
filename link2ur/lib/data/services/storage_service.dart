@@ -332,6 +332,18 @@ class StorageService {
     await _prefs.remove(_keySelectedExpertId);
   }
 
+  // ==================== 论坛偏好 ====================
+
+  /// 获取论坛帖子详情页根回复排序偏好 ('hot' | 'newest')，未设置返回 null
+  String? getForumReplySort() {
+    return _prefs.getString(StorageKeys.forumReplySort);
+  }
+
+  /// 保存论坛帖子详情页根回复排序偏好
+  Future<void> setForumReplySort(String sort) async {
+    await _prefs.setString(StorageKeys.forumReplySort, sort);
+  }
+
   // ==================== 搜索历史 ====================
 
   /// 获取搜索历史
