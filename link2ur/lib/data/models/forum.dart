@@ -552,6 +552,8 @@ class ForumReply extends Equatable {
     this.isLiked = false,
     this.createdAt,
     this.updatedAt,
+    this.previewChildren = const [],
+    this.totalChildren = 0,
   });
 
   final int id;
@@ -565,13 +567,23 @@ class ForumReply extends Equatable {
   final bool isLiked;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final List<ForumReply> previewChildren;
+  final int totalChildren;
 
   /// 是否是子回复
   bool get isSubReply => parentReplyId != null;
 
+  /// 是否是根回复
+  bool get isRoot => parentReplyId == null;
+
+  /// 未展示的子回复数量 (totalChildren - preview 已加载数量)
+  int get hiddenChildrenCount => totalChildren - previewChildren.length;
+
   ForumReply copyWith({
     int? likeCount,
     bool? isLiked,
+    List<ForumReply>? previewChildren,
+    int? totalChildren,
   }) {
     return ForumReply(
       id: id,
@@ -585,6 +597,8 @@ class ForumReply extends Equatable {
       isLiked: isLiked ?? this.isLiked,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      previewChildren: previewChildren ?? this.previewChildren,
+      totalChildren: totalChildren ?? this.totalChildren,
     );
   }
 
@@ -610,12 +624,25 @@ class ForumReply extends Equatable {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString())
           : null,
+      previewChildren: (json['preview_children'] as List?)
+              ?.map((e) => ForumReply.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      totalChildren: (json['total_children'] as int?) ?? 0,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, postId, content, createdAt, likeCount, isLiked];
+  List<Object?> get props => [
+        id,
+        postId,
+        content,
+        createdAt,
+        likeCount,
+        isLiked,
+        previewChildren,
+        totalChildren,
+      ];
 }
 
 /// 论坛帖子列表响应
@@ -691,4 +718,30 @@ class CreatePostRequest {
       if (officialTaskId != null) 'official_task_id': officialTaskId,
     };
   }
+}
+
+/// `GET /api/forum/replies/{root_id}/children` 响应模型
+class ForumReplyChildrenPage extends Equatable {
+  const ForumReplyChildrenPage({
+    required this.replies,
+    required this.hasMore,
+    required this.nextOffset,
+  });
+
+  final List<ForumReply> replies;
+  final bool hasMore;
+  final int nextOffset;
+
+  factory ForumReplyChildrenPage.fromJson(Map<String, dynamic> json) {
+    return ForumReplyChildrenPage(
+      replies: (json['replies'] as List)
+          .map((e) => ForumReply.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasMore: json['has_more'] as bool? ?? false,
+      nextOffset: json['next_offset'] as int? ?? 0,
+    );
+  }
+
+  @override
+  List<Object?> get props => [replies, hasMore, nextOffset];
 }
