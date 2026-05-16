@@ -137,7 +137,7 @@ void main() {
     blocTest<ForumBloc, ForumState>(
       '切换 sort -> 清空 children 缓存 -> 触发 ForumLoadReplies 用新 sort 拉根',
       build: () {
-        when(() => repo.getPostReplies(1, sort: 'newest'))
+        when(() => repo.getPostReplies(1, sort: 'time'))
             .thenAnswer((_) async => [_reply(1)]);
         return ForumBloc(forumRepository: repo);
       },
@@ -149,11 +149,11 @@ void main() {
         hasMoreChildren: const {10: true},
         nextChildOffset: const {10: 5},
       ),
-      act: (bloc) => bloc.add(const ForumReplySortChanged(1, 'newest')),
+      act: (bloc) => bloc.add(const ForumReplySortChanged(1, 'time')),
       expect: () => [
         // 1. 清空 children + 切 sort
         isA<ForumState>()
-            .having((s) => s.replySort, 'replySort', 'newest')
+            .having((s) => s.replySort, 'replySort', 'time')
             .having((s) => s.loadedChildren, 'loadedChildren', isEmpty)
             .having((s) => s.hasMoreChildren, 'hasMoreChildren', isEmpty)
             .having((s) => s.nextChildOffset, 'nextChildOffset', isEmpty),
@@ -163,7 +163,7 @@ void main() {
             .having((s) => s.replies.first.id, 'first reply id', 1),
       ],
       verify: (_) {
-        verify(() => repo.getPostReplies(1, sort: 'newest')).called(1);
+        verify(() => repo.getPostReplies(1, sort: 'time')).called(1);
       },
     );
 
