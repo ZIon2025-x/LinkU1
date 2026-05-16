@@ -9878,6 +9878,57 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSendImageFailed => '图片发送失败';
 
   @override
+  String get chatVideoTooLong => '视频不能超过 30 秒';
+
+  @override
+  String get chatVideoTooLarge => '视频文件过大(最大 30MB)';
+
+  @override
+  String get chatVideoCompressFailed => '视频压缩失败,请重试';
+
+  @override
+  String get chatFileTypeNotAllowed => '只支持 PDF 文件';
+
+  @override
+  String get chatFileTooLarge => '文件过大(最大 20MB)';
+
+  @override
+  String get chatUploadFailed => '上传失败,请重试';
+
+  @override
+  String get chatUploadNetworkOffline => '网络未连接';
+
+  @override
+  String get chatVideoPlayFailed => '视频播放失败';
+
+  @override
+  String get chatFileDownloadFailed => '文件下载失败';
+
+  @override
+  String get chatPdfPreviewFailed => 'PDF 预览失败';
+
+  @override
+  String get chatSaveSuccess => '已保存到相册';
+
+  @override
+  String get chatSaveFailed => '保存失败';
+
+  @override
+  String get chatSavePermissionDenied => '需要相册权限,请到设置开启';
+
+  @override
+  String get chatSaveToAlbum => '保存到相册';
+
+  @override
+  String get chatPdfOpenWithOther => '用其他应用打开';
+
+  @override
+  String get chatPdfShareOrSave => '分享 / 保存';
+
+  @override
+  String get commonOpenSettings => '去设置';
+
+  @override
   String get taskRefundAmountInvalid => '退款金额必须大于0且不超过任务报酬';
 
   @override
@@ -23717,6 +23768,57 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatSendImageFailed => '圖片傳送失敗';
+
+  @override
+  String get chatVideoTooLong => '影片不能超過 30 秒';
+
+  @override
+  String get chatVideoTooLarge => '影片檔案過大(最大 30MB)';
+
+  @override
+  String get chatVideoCompressFailed => '影片壓縮失敗,請重試';
+
+  @override
+  String get chatFileTypeNotAllowed => '只支援 PDF 檔案';
+
+  @override
+  String get chatFileTooLarge => '檔案過大(最大 20MB)';
+
+  @override
+  String get chatUploadFailed => '上傳失敗,請重試';
+
+  @override
+  String get chatUploadNetworkOffline => '網路未連線';
+
+  @override
+  String get chatVideoPlayFailed => '影片播放失敗';
+
+  @override
+  String get chatFileDownloadFailed => '檔案下載失敗';
+
+  @override
+  String get chatPdfPreviewFailed => 'PDF 預覽失敗';
+
+  @override
+  String get chatSaveSuccess => '已儲存到相簿';
+
+  @override
+  String get chatSaveFailed => '儲存失敗';
+
+  @override
+  String get chatSavePermissionDenied => '需要相簿權限,請到設定開啟';
+
+  @override
+  String get chatSaveToAlbum => '儲存到相簿';
+
+  @override
+  String get chatPdfOpenWithOther => '用其他應用程式開啟';
+
+  @override
+  String get chatPdfShareOrSave => '分享 / 儲存';
+
+  @override
+  String get commonOpenSettings => '前往設定';
 
   @override
   String get taskRefundAmountInvalid => '退款金額必須大於0且不超過任務報酬';

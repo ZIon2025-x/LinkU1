@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/media_saver.dart';
 
@@ -109,25 +110,23 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'open',
                 child: Row(
                   children: [
-                    Icon(Icons.open_in_new, size: 20),
-                    SizedBox(width: 8),
-                    // TODO(Task 17): switch to context.l10n.chatPdfOpenWithOther
-                    Text('Open with another app'),
+                    const Icon(Icons.open_in_new, size: 20),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.chatPdfOpenWithOther),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'share',
                 child: Row(
                   children: [
-                    Icon(Icons.ios_share, size: 20),
-                    SizedBox(width: 8),
-                    // TODO(Task 17): switch to context.l10n.chatPdfShareOrSave
-                    Text('Share / Save'),
+                    const Icon(Icons.ios_share, size: 20),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.chatPdfShareOrSave),
                   ],
                 ),
               ),

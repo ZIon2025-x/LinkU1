@@ -18887,6 +18887,108 @@ abstract class AppLocalizations {
   /// **'Failed to send image'**
   String get chatSendImageFailed;
 
+  /// Prompt when selected video exceeds 30 second limit
+  ///
+  /// In en, this message translates to:
+  /// **'Video must be 30 seconds or less'**
+  String get chatVideoTooLong;
+
+  /// Prompt when video still exceeds 30MB after compression
+  ///
+  /// In en, this message translates to:
+  /// **'Video file is too large (max 30MB)'**
+  String get chatVideoTooLarge;
+
+  /// Prompt when client video compression throws
+  ///
+  /// In en, this message translates to:
+  /// **'Video compression failed, please try again'**
+  String get chatVideoCompressFailed;
+
+  /// Prompt when selected file is not PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Only PDF files are supported'**
+  String get chatFileTypeNotAllowed;
+
+  /// Prompt when PDF exceeds 20MB
+  ///
+  /// In en, this message translates to:
+  /// **'File is too large (max 20MB)'**
+  String get chatFileTooLarge;
+
+  /// Generic upload failure prompt for network/timeout
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed, please try again'**
+  String get chatUploadFailed;
+
+  /// Prompt when no network detected before upload
+  ///
+  /// In en, this message translates to:
+  /// **'No network connection'**
+  String get chatUploadNetworkOffline;
+
+  /// Prompt when video player initialization fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to play video'**
+  String get chatVideoPlayFailed;
+
+  /// Prompt when PDF download/open fails
+  ///
+  /// In en, this message translates to:
+  /// **'File download failed'**
+  String get chatFileDownloadFailed;
+
+  /// Shown when PDF rendering fails
+  ///
+  /// In en, this message translates to:
+  /// **'PDF preview failed'**
+  String get chatPdfPreviewFailed;
+
+  /// SnackBar message after saving image/video succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to album'**
+  String get chatSaveSuccess;
+
+  /// Prompt when saving to album fails
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed'**
+  String get chatSaveFailed;
+
+  /// Prompt when album write permission is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Album permission required, please open in Settings'**
+  String get chatSavePermissionDenied;
+
+  /// Label for save-to-album item in three-dot menu
+  ///
+  /// In en, this message translates to:
+  /// **'Save to album'**
+  String get chatSaveToAlbum;
+
+  /// Open-with-another-app item in PDF preview menu
+  ///
+  /// In en, this message translates to:
+  /// **'Open with another app'**
+  String get chatPdfOpenWithOther;
+
+  /// Share-or-save item in PDF preview menu
+  ///
+  /// In en, this message translates to:
+  /// **'Share / Save'**
+  String get chatPdfShareOrSave;
+
+  /// Button label that takes user to system Settings when permission denied
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get commonOpenSettings;
+
   /// No description provided for @taskRefundAmountInvalid.
   ///
   /// In en, this message translates to:

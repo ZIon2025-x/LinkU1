@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/media_saver.dart';
 
@@ -85,30 +86,26 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
       if (!mounted) return;
       switch (result) {
         case SaveResult.success:
-          // TODO(Task 17): switch to context.l10n.chatSaveSuccess
           messenger.showSnackBar(
-            const SnackBar(content: Text('Saved to album')),
+            SnackBar(content: Text(context.l10n.chatSaveSuccess)),
           );
           break;
         case SaveResult.permissionDenied:
-          // TODO(Task 17): switch to context.l10n.chatSavePermissionDenied
           messenger.showSnackBar(
-            const SnackBar(content: Text('Permission denied')),
+            SnackBar(content: Text(context.l10n.chatSavePermissionDenied)),
           );
           break;
         case SaveResult.failed:
-          // TODO(Task 17): switch to context.l10n.chatSaveFailed
           messenger.showSnackBar(
-            const SnackBar(content: Text('Save failed')),
+            SnackBar(content: Text(context.l10n.chatSaveFailed)),
           );
           break;
       }
     } catch (e) {
       AppLogger.error('Save video failed', e);
       if (mounted) {
-        // TODO(Task 17): switch to context.l10n.chatSaveFailed
         messenger.showSnackBar(
-          const SnackBar(content: Text('Save failed')),
+          SnackBar(content: Text(context.l10n.chatSaveFailed)),
         );
       }
     }
@@ -128,14 +125,13 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
               if (v == 'save') _onSaveToAlbum();
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'save',
                 child: Row(
                   children: [
-                    Icon(Icons.download, size: 20),
-                    SizedBox(width: 8),
-                    // TODO(Task 17): switch to context.l10n.chatSaveToAlbum
-                    Text('Save to album'),
+                    const Icon(Icons.download, size: 20),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.chatSaveToAlbum),
                   ],
                 ),
               ),

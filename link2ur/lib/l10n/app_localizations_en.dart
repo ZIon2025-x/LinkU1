@@ -10302,6 +10302,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSendImageFailed => 'Failed to send image';
 
   @override
+  String get chatVideoTooLong => 'Video must be 30 seconds or less';
+
+  @override
+  String get chatVideoTooLarge => 'Video file is too large (max 30MB)';
+
+  @override
+  String get chatVideoCompressFailed =>
+      'Video compression failed, please try again';
+
+  @override
+  String get chatFileTypeNotAllowed => 'Only PDF files are supported';
+
+  @override
+  String get chatFileTooLarge => 'File is too large (max 20MB)';
+
+  @override
+  String get chatUploadFailed => 'Upload failed, please try again';
+
+  @override
+  String get chatUploadNetworkOffline => 'No network connection';
+
+  @override
+  String get chatVideoPlayFailed => 'Failed to play video';
+
+  @override
+  String get chatFileDownloadFailed => 'File download failed';
+
+  @override
+  String get chatPdfPreviewFailed => 'PDF preview failed';
+
+  @override
+  String get chatSaveSuccess => 'Saved to album';
+
+  @override
+  String get chatSaveFailed => 'Save failed';
+
+  @override
+  String get chatSavePermissionDenied =>
+      'Album permission required, please open in Settings';
+
+  @override
+  String get chatSaveToAlbum => 'Save to album';
+
+  @override
+  String get chatPdfOpenWithOther => 'Open with another app';
+
+  @override
+  String get chatPdfShareOrSave => 'Share / Save';
+
+  @override
+  String get commonOpenSettings => 'Open Settings';
+
+  @override
   String get taskRefundAmountInvalid =>
       'Refund amount must be greater than 0 and not exceed the task reward';
 

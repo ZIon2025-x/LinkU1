@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../design/app_spacing.dart';
 import '../router/page_transitions.dart';
 import '../utils/helpers.dart';
+import '../utils/l10n_extension.dart';
 import '../utils/media_saver.dart';
 
 /// 全屏图片查看器 - 类似小红书风格
@@ -89,18 +90,18 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
     if (!mounted) return;
     switch (result) {
       case SaveResult.success:
-        messenger.showSnackBar(const SnackBar(
-          content: Text('Saved to album'), // TODO(Task 17): context.l10n.chatSaveSuccess
+        messenger.showSnackBar(SnackBar(
+          content: Text(context.l10n.chatSaveSuccess),
         ));
         break;
       case SaveResult.permissionDenied:
-        messenger.showSnackBar(const SnackBar(
-          content: Text('Permission denied'), // TODO(Task 17): context.l10n.chatSavePermissionDenied
+        messenger.showSnackBar(SnackBar(
+          content: Text(context.l10n.chatSavePermissionDenied),
         ));
         break;
       case SaveResult.failed:
-        messenger.showSnackBar(const SnackBar(
-          content: Text('Save failed'), // TODO(Task 17): context.l10n.chatSaveFailed
+        messenger.showSnackBar(SnackBar(
+          content: Text(context.l10n.chatSaveFailed),
         ));
         break;
     }
@@ -226,13 +227,13 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
                   if (v == 'save') _onSaveCurrent();
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'save',
                     child: Row(
                       children: [
-                        Icon(Icons.download, size: 20),
-                        SizedBox(width: 8),
-                        Text('Save to album'), // TODO(Task 17): context.l10n.chatSaveToAlbum
+                        const Icon(Icons.download, size: 20),
+                        const SizedBox(width: 8),
+                        Text(context.l10n.chatSaveToAlbum),
                       ],
                     ),
                   ),
