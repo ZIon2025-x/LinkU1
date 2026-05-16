@@ -190,32 +190,39 @@ async def get_replies(
     _badge_cache = await preload_badge_cache(db, list(set(all_author_ids)))
 
     # === 5. 构建输出 ===
-    async def to_reply_out(reply: models.ForumReply) -> schemas.ForumReplyOut:
+    async def _resolve_reply_fields(reply: models.ForumReply) -> dict:
+        """返回构造 ForumReplyOut / ForumRootReplyOut 所需的 base fields dict.
+
+        拆开是为了让 root 评论可以一次直接构造 ForumRootReplyOut
+        (避免 model_dump → 二次 Pydantic 校验)。
+        """
         parent_author = None
         if reply.parent_reply_id and getattr(reply, "parent_reply", None):
             parent_author = await get_reply_author_info(
                 db, reply.parent_reply, request, _badge_cache=_badge_cache
             )
-        return schemas.ForumReplyOut(
-            id=reply.id,
-            content=reply.content,
-            author=await get_reply_author_info(db, reply, request, _badge_cache=_badge_cache),
-            parent_reply_id=reply.parent_reply_id,
-            parent_reply_author=parent_author,
-            like_count=reply.like_count,
-            is_liked=reply.id in user_liked_replies,
-            created_at=reply.created_at,
-            updated_at=reply.updated_at,
-        )
+        return {
+            "id": reply.id,
+            "content": reply.content,
+            "author": await get_reply_author_info(db, reply, request, _badge_cache=_badge_cache),
+            "parent_reply_id": reply.parent_reply_id,
+            "parent_reply_author": parent_author,
+            "like_count": reply.like_count,
+            "is_liked": reply.id in user_liked_replies,
+            "created_at": reply.created_at,
+            "updated_at": reply.updated_at,
+        }
 
     out_replies: List[schemas.ForumRootReplyOut] = []
     for root in root_replies:
         previews = preview_map.get(root.id, [])
-        preview_outs = [await to_reply_out(c) for c in previews]
-        root_dict = (await to_reply_out(root)).model_dump()
+        preview_outs = [
+            schemas.ForumReplyOut(**await _resolve_reply_fields(c)) for c in previews
+        ]
+        root_fields = await _resolve_reply_fields(root)
         out_replies.append(
             schemas.ForumRootReplyOut(
-                **root_dict,
+                **root_fields,
                 preview_children=preview_outs,
                 total_children=total_children_map.get(root.id, 0),
             )
