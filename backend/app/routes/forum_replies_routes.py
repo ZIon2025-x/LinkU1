@@ -3,7 +3,7 @@
 
 All helpers remain in app.forum_routes; this module imports them as needed.
 """
-from typing import Optional
+from typing import Dict, List, Optional
 from datetime import datetime, timezone, timedelta
 import logging
 
@@ -40,12 +40,17 @@ router = APIRouter()
 @measure_api_performance("get_forum_replies")
 async def get_replies(
     post_id: int,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    sort: str = Query("hot", regex="^(hot|time)$", description="排序方式：hot 按点赞 / time 按时间"),
+    page: int = Query(1, ge=1, description="保留兼容性，当前实现不分页根评论"),
+    page_size: int = Query(100, ge=1, le=200, description="根评论上限"),
     request: Request = None,  # FastAPI injects; Optional[Request] breaks Pydantic field detection
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取回复列表"""
+    """获取帖子回复列表
+
+    重构后只返根评论 + 每根 preview 前 3 条子回复 + total_children 计数。
+    子回复分批通过 GET /api/forum/replies/{root_id}/children 拉取。
+    """
     # 尝试获取当前用户（可选）
     current_user = None
     try:
@@ -65,126 +70,162 @@ async def get_replies(
     # 验证帖子存在且可见
     post = await get_post_with_permissions(post_id, current_user, is_admin, db, current_admin)
 
-    # 构建查询：只获取可见回复
-    query = select(models.ForumReply).where(
-        models.ForumReply.post_id == post_id,
-        models.ForumReply.is_deleted == False
-    )
-
-    # 如果不是管理员且不是作者，过滤隐藏的回复
-    # 检查是否是作者（普通用户或管理员）
+    # 判定是否作者（决定是否能看 is_visible=False 的回复）
     is_author = False
     if current_user and post.author_id == current_user.id:
         is_author = True
     if current_admin and post.admin_author_id == current_admin.id:
         is_author = True
 
+    # === 1. 查根评论 ===
+    root_query = select(models.ForumReply).where(
+        models.ForumReply.post_id == post_id,
+        models.ForumReply.parent_reply_id.is_(None),
+        models.ForumReply.is_deleted == False,
+    )
     if not is_admin and not is_author:
-        query = query.where(models.ForumReply.is_visible == True)
+        root_query = root_query.where(models.ForumReply.is_visible == True)
 
-    query = query.order_by(models.ForumReply.created_at.asc())
+    if sort == "hot":
+        root_query = root_query.order_by(
+            models.ForumReply.like_count.desc(),
+            models.ForumReply.created_at.desc(),
+        )
+    else:
+        root_query = root_query.order_by(models.ForumReply.created_at.asc())
 
-    # 获取总数
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
+    # 总根评论数
+    total_root_result = await db.execute(
+        select(func.count()).select_from(root_query.subquery())
+    )
+    total_root = total_root_result.scalar() or 0
 
-    # 帖子详情页需要完整回复树，避免「回复别人的回复」因分页被截断不显示。
-    # 一次拉取最多 500 条回复并构建完整树，不再按页 offset。
-    max_replies = min(500, max(page_size, 100))
-    query = query.limit(max_replies)
-
-    # 加载关联数据
-    query = query.options(
+    root_query = root_query.limit(page_size).options(
         selectinload(models.ForumReply.author),
         selectinload(models.ForumReply.admin_author),
-        selectinload(models.ForumReply.parent_reply),
-        selectinload(models.ForumReply.child_replies)
     )
+    root_result = await db.execute(root_query)
+    root_replies = root_result.scalars().all()
+    root_ids = [r.id for r in root_replies]
 
-    result = await db.execute(query)
-    replies = result.scalars().all()
+    # === 2. 每根的前 3 条子回复（窗口函数）===
+    preview_map: Dict[int, List[models.ForumReply]] = {}
+    if root_ids:
+        rn = func.row_number().over(
+            partition_by=models.ForumReply.parent_reply_id,
+            order_by=models.ForumReply.created_at.asc(),
+        ).label("rn")
 
-    # 构建嵌套回复结构
-    def build_reply_tree(replies_list):
-        """构建回复树结构"""
-        reply_dict = {}
-        root_replies = []
+        child_filters = [
+            models.ForumReply.parent_reply_id.in_(root_ids),
+            models.ForumReply.is_deleted == False,
+        ]
+        if not is_admin and not is_author:
+            child_filters.append(models.ForumReply.is_visible == True)
 
-        # 第一遍：创建所有回复的字典
-        for reply in replies_list:
-            reply_dict[reply.id] = {
-                "reply": reply,
-                "children": []
-            }
+        subq = (
+            select(models.ForumReply.id, rn)
+            .where(*child_filters)
+            .subquery()
+        )
 
-        # 第二遍：构建树结构
-        for reply in replies_list:
-            reply_data = reply_dict[reply.id]
-            if reply.parent_reply_id:
-                if reply.parent_reply_id in reply_dict:
-                    reply_dict[reply.parent_reply_id]["children"].append(reply_data)
-            else:
-                root_replies.append(reply_data)
+        preview_query = (
+            select(models.ForumReply)
+            .join(subq, models.ForumReply.id == subq.c.id)
+            .where(subq.c.rn <= 3)
+            .options(
+                selectinload(models.ForumReply.author),
+                selectinload(models.ForumReply.admin_author),
+                selectinload(models.ForumReply.parent_reply),
+            )
+            .order_by(models.ForumReply.parent_reply_id, models.ForumReply.created_at.asc())
+        )
+        preview_result = await db.execute(preview_query)
+        for child in preview_result.scalars().all():
+            preview_map.setdefault(child.parent_reply_id, []).append(child)
 
-        return root_replies
+    # === 3. 每根的 total_children 计数 ===
+    total_children_map: Dict[int, int] = {}
+    if root_ids:
+        count_filters = [
+            models.ForumReply.parent_reply_id.in_(root_ids),
+            models.ForumReply.is_deleted == False,
+        ]
+        if not is_admin and not is_author:
+            count_filters.append(models.ForumReply.is_visible == True)
 
-    reply_tree = build_reply_tree(replies)
+        count_result = await db.execute(
+            select(
+                models.ForumReply.parent_reply_id,
+                func.count(models.ForumReply.id),
+            )
+            .where(*count_filters)
+            .group_by(models.ForumReply.parent_reply_id)
+        )
+        for parent_id, count in count_result.all():
+            total_children_map[parent_id] = count
 
-    # 转换为输出格式（先批量查询所有点赞状态）
-    reply_ids = [r.id for r in replies]
-    user_liked_replies = set()
-    if current_user and reply_ids:
+    # === 4. 批量查询点赞状态 ===
+    all_reply_ids = list(root_ids)
+    for previews in preview_map.values():
+        all_reply_ids.extend(p.id for p in previews)
+
+    user_liked_replies: set = set()
+    if current_user and all_reply_ids:
         like_result = await db.execute(
             select(models.ForumLike.target_id)
             .where(
                 models.ForumLike.target_type == "reply",
-                models.ForumLike.target_id.in_(reply_ids),
-                models.ForumLike.user_id == current_user.id
+                models.ForumLike.target_id.in_(all_reply_ids),
+                models.ForumLike.user_id == current_user.id,
             )
         )
         user_liked_replies = {row[0] for row in like_result.all()}
 
-    # 预加载所有回复作者的勋章缓存
-    _reply_author_ids = list({r.author_id for r in replies if r.author_id})
-    _badge_cache = await preload_badge_cache(db, _reply_author_ids)
+    # 预加载所有 author 勋章
+    all_author_ids = list({r.author_id for r in root_replies if r.author_id})
+    for previews in preview_map.values():
+        all_author_ids.extend(p.author_id for p in previews if p.author_id)
+    _badge_cache = await preload_badge_cache(db, list(set(all_author_ids)))
 
-    async def convert_reply(reply_data, liked_set):
-        """递归转换回复为扁平 ForumReplyOut 列表（self + 所有子孙）"""
-        reply = reply_data["reply"]
-        is_liked = reply.id in liked_set
+    # === 5. 构建输出 ===
+    async def to_reply_out(reply: models.ForumReply) -> schemas.ForumReplyOut:
         parent_author = None
         if reply.parent_reply_id and getattr(reply, "parent_reply", None):
-            parent_author = await get_reply_author_info(db, reply.parent_reply, request, _badge_cache=_badge_cache)
-
-        reply_out = schemas.ForumReplyOut(
+            parent_author = await get_reply_author_info(
+                db, reply.parent_reply, request, _badge_cache=_badge_cache
+            )
+        return schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
             author=await get_reply_author_info(db, reply, request, _badge_cache=_badge_cache),
             parent_reply_id=reply.parent_reply_id,
             parent_reply_author=parent_author,
             like_count=reply.like_count,
-            is_liked=is_liked,
+            is_liked=reply.id in user_liked_replies,
             created_at=reply.created_at,
             updated_at=reply.updated_at,
         )
 
-        # 扁平化模型：返回 [self] + 所有子孙的扁平列表
-        result = [reply_out]
-        for child_data in reply_data["children"]:
-            result.extend(await convert_reply(child_data, liked_set))
-        return result
+    out_replies: List[schemas.ForumRootReplyOut] = []
+    for root in root_replies:
+        previews = preview_map.get(root.id, [])
+        preview_outs = [await to_reply_out(c) for c in previews]
+        root_dict = (await to_reply_out(root)).model_dump()
+        out_replies.append(
+            schemas.ForumRootReplyOut(
+                **root_dict,
+                preview_children=preview_outs,
+                total_children=total_children_map.get(root.id, 0),
+            )
+        )
 
-    reply_list = []
-    for item in reply_tree:
-        reply_list.extend(await convert_reply(item, user_liked_replies))
-
-    return {
-        "replies": reply_list,
-        "total": total,
-        "page": 1,
-        "page_size": len(replies),
-    }
+    return schemas.ForumReplyListResponse(
+        replies=out_replies,
+        total=total_root,
+        page=1,
+        page_size=len(out_replies),
+    )
 
 
 @router.post("/posts/{post_id}/replies", response_model=schemas.ForumReplyOut)
