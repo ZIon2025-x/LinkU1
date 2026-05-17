@@ -1274,6 +1274,7 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     try:
         for _round in range(max_rounds):
             # Token 上限保护
+            # total_input_tokens tracks effective (cache-adjusted) tokens — see _step_llm累加
             if ctx.total_input_tokens >= max_loop_input_tokens:
                 logger.warning("AI loop input token limit reached (%d/%d) for user %s",
                                ctx.total_input_tokens, max_loop_input_tokens, ctx.user.id)
