@@ -23,7 +23,6 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/publisher_identity.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -217,6 +216,105 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
     );
   }
 
+  /// 紧凑 AppBar 的 三点更多 入口 — 把原 favorite / share / edit / delete / report 都收进 bottom sheet
+  void _showMoreActions(BuildContext context) {
+    final forumBloc = context.read<ForumBloc>();
+    final post = forumBloc.state.selectedPost;
+    if (post == null) return;
+    final currentUserId = context.read<AuthBloc>().state.user?.id;
+    final isAuthor =
+        currentUserId != null && post.authorId.toString() == currentUserId;
+    final locale = Localizations.localeOf(context);
+    final l10n = context.l10n;
+    final errorColor = Theme.of(context).colorScheme.error;
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  post.isFavorited ? Icons.star : Icons.star_border,
+                  color: post.isFavorited ? AppColors.gold : null,
+                ),
+                title: Text(l10n.forumFavorite),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  requireAuth(context, () {
+                    AppHaptics.selection();
+                    forumBloc.add(ForumFavoritePost(widget.postId));
+                  });
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Share'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  AppHaptics.selection();
+                  final shareTitle = post.displayTitle(locale);
+                  final contentForDesc =
+                      post.displayContent(locale) ?? post.content;
+                  final rawDesc = Helpers.normalizeContentNewlines(
+                    contentForDesc
+                            ?.replaceAll(RegExp(r'<[^>]*>'), '')
+                            .trim() ??
+                        '',
+                  );
+                  final description = rawDesc.length > 200
+                      ? '${rawDesc.substring(0, 200)}...'
+                      : rawDesc;
+                  final imageUrl =
+                      post.images.isNotEmpty ? post.images.first : null;
+                  ShareUtil.share(
+                    title: shareTitle,
+                    description: description,
+                    url: ShareUtil.forumPostUrl(widget.postId),
+                    imageUrl: imageUrl,
+                  );
+                },
+              ),
+              if (isAuthor) ...[
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: Text(l10n.commonEdit),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    context.push('/forum/posts/${post.id}/edit', extra: {
+                      'post': post,
+                      'bloc': forumBloc,
+                    });
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.delete_outline, color: errorColor),
+                  title: Text(l10n.commonDelete,
+                      style: TextStyle(color: errorColor)),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _showDeletePostDialog(context);
+                  },
+                ),
+              ],
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: Text(l10n.commonReport),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _showReportDialog(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -286,260 +384,38 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               resizeToAvoidBottomInset: true,
               backgroundColor:
                   AppColors.backgroundFor(Theme.of(context).brightness),
-              appBar: AppBar(
-                titleSpacing: 0,
-                title: BlocBuilder<ForumBloc, ForumState>(
+              appBar: PreferredSize(
+                preferredSize: const Size.fromHeight(52),
+                child: BlocBuilder<ForumBloc, ForumState>(
                   buildWhen: (prev, curr) =>
                       prev.selectedPost != curr.selectedPost,
                   builder: (context, state) {
                     final post = state.selectedPost;
-                    if (post == null) return Text(context.l10n.forumPostDetail);
-                    // 管理员发帖跳 /about（goToUserProfile 的 isAdmin 语义），PublisherIdentity
-                    // 当前不支持 isAdmin 路由，因此管理员帖保留旧实现；其他发布者（个人 / 达人团队）统一走新组件
-                    final isAdminPost = post.author?.isAdmin ?? false;
-                    final timeText = Text(
-                      _PostHeader.formatTime(context, post.createdAt),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
-                      ),
-                    );
-                    if (isAdminPost) {
-                      return Semantics(
-                        button: true,
-                        label: 'View author profile',
-                        child: GestureDetector(
-                          onTap: () {
-                            final userId = post.author?.id ?? post.authorId;
-                            if (userId.isNotEmpty) {
-                              context.goToUserProfile(userId, isAdmin: true);
-                            }
-                          },
-                          child: Row(
-                            children: [
-                              AvatarView(
-                                imageUrl: post.author?.avatar,
-                                name: post.author?.name,
-                                size: 32,
-                                isAnonymous: post.author == null,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            post.author?.name ??
-                                                context.l10n.forumUserFallback(
-                                                    post.authorId),
-                                            style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w600),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (post.author?.displayedBadge !=
-                                            null) ...[
-                                          const SizedBox(width: 4),
-                                          InlineBadgeTag(
-                                              badge:
-                                                  post.author!.displayedBadge!),
-                                        ],
-                                      ],
-                                    ),
-                                    timeText,
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    if (post == null) {
+                      return AppBar(
+                        title: Text(context.l10n.forumPostDetail),
                       );
                     }
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: PublisherIdentity(
-                                      ownerType: post.ownerType,
-                                      ownerId:
-                                          (post.ownerId?.isNotEmpty ?? false)
-                                              ? post.ownerId
-                                              : post.author?.id,
-                                      displayName: post.displayName,
-                                      displayAvatar: post.displayAvatar,
-                                      fallbackName: post.author?.name ??
-                                          context.l10n
-                                              .forumUserFallback(post.authorId),
-                                      fallbackAvatar: post.author?.avatar,
-                                      isAnonymous: post.author == null,
-                                      nameStyle: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      subtitle: timeText,
-                                    ),
-                                  ),
-                                  if (post.author?.displayedBadge != null) ...[
-                                    const SizedBox(width: 4),
-                                    InlineBadgeTag(
-                                        badge: post.author!.displayedBadge!),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    return _DetailCompactAppBar(
+                      post: post,
+                      isFollowing: false, // TODO: 接入 follow_repository, 当前 placeholder
+                      onTapAuthor: () {
+                        final userId = post.author?.id ?? post.authorId;
+                        if (userId.isNotEmpty) {
+                          context.goToUserProfile(
+                            userId,
+                            isAdmin: post.author?.isAdmin ?? false,
+                          );
+                        }
+                      },
+                      onToggleFollow: () =>
+                          ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('关注功能待接入')),
+                      ),
+                      onMore: () => _showMoreActions(context),
                     );
                   },
                 ),
-                actions: [
-                  // 收藏 + 分享 + 更多：用 BlocBuilder 包裹，帖子加载后/收藏切换时重建，顶部栏才能显示星标
-                  BlocBuilder<ForumBloc, ForumState>(
-                    buildWhen: (prev, curr) =>
-                        prev.selectedPost != curr.selectedPost,
-                    builder: (context, state) {
-                      final post = state.selectedPost;
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (post != null)
-                            IconButton(
-                              icon: Icon(
-                                post.isFavorited
-                                    ? Icons.star
-                                    : Icons.star_border,
-                                color: post.isFavorited ? AppColors.gold : null,
-                              ),
-                              onPressed: () => requireAuth(context, () {
-                                AppHaptics.selection();
-                                context
-                                    .read<ForumBloc>()
-                                    .add(ForumFavoritePost(widget.postId));
-                              }),
-                              tooltip: context.l10n.forumFavorite,
-                            ),
-                          IconButton(
-                            icon: const Icon(Icons.share_outlined),
-                            tooltip: 'Share',
-                            onPressed: () {
-                              AppHaptics.selection();
-                              final p = state.selectedPost;
-                              final locale = Localizations.localeOf(context);
-                              final shareTitle = p != null
-                                  ? p.displayTitle(locale)
-                                  : context.l10n.forumPostDetail;
-                              final contentForDesc = p != null
-                                  ? (p.displayContent(locale) ?? p.content)
-                                  : null;
-                              final rawDesc = Helpers.normalizeContentNewlines(
-                                contentForDesc
-                                        ?.replaceAll(RegExp(r'<[^>]*>'), '')
-                                        .trim() ??
-                                    '',
-                              );
-                              final description = rawDesc.length > 200
-                                  ? '${rawDesc.substring(0, 200)}...'
-                                  : rawDesc;
-                              final imageUrl = p?.images.isNotEmpty == true
-                                  ? p!.images.first
-                                  : null;
-                              ShareUtil.share(
-                                title: shareTitle,
-                                description: description,
-                                url: ShareUtil.forumPostUrl(widget.postId),
-                                imageUrl: imageUrl,
-                              );
-                            },
-                          ),
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert),
-                            onSelected: (value) {
-                              if (value == 'report') {
-                                _showReportDialog(context);
-                              } else if (value == 'edit') {
-                                final forumBloc = context.read<ForumBloc>();
-                                final post = forumBloc.state.selectedPost;
-                                if (post != null) {
-                                  context.push('/forum/posts/${post.id}/edit',
-                                      extra: {
-                                        'post': post,
-                                        'bloc': forumBloc,
-                                      });
-                                }
-                              } else if (value == 'delete') {
-                                _showDeletePostDialog(context);
-                              }
-                            },
-                            itemBuilder: (context) {
-                              final currentUserId =
-                                  context.read<AuthBloc>().state.user?.id;
-                              final post =
-                                  context.read<ForumBloc>().state.selectedPost;
-                              final isAuthor = currentUserId != null &&
-                                  post != null &&
-                                  post.authorId.toString() == currentUserId;
-                              final errorColor =
-                                  Theme.of(context).colorScheme.error;
-                              return [
-                                if (isAuthor) ...[
-                                  PopupMenuItem<String>(
-                                    value: 'edit',
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.edit_outlined,
-                                            size: 20),
-                                        AppSpacing.hSm,
-                                        Text(context.l10n.commonEdit),
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem<String>(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete_outline,
-                                            size: 20, color: errorColor),
-                                        AppSpacing.hSm,
-                                        Text(context.l10n.commonDelete,
-                                            style:
-                                                TextStyle(color: errorColor)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                                PopupMenuItem<String>(
-                                  value: 'report',
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.flag_outlined, size: 20),
-                                      AppSpacing.hSm,
-                                      Text(context.l10n.commonReport),
-                                    ],
-                                  ),
-                                ),
-                              ];
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
               ),
               body: Align(
                 alignment: Alignment.topCenter,
@@ -960,19 +836,6 @@ class _PostHeader extends StatelessWidget {
   const _PostHeader({required this.post, required this.isDark});
   final ForumPost post;
   final bool isDark;
-
-  static String formatTime(BuildContext context, DateTime? time) {
-    if (time == null) return '';
-    final now = DateTime.now();
-    final difference = now.difference(time);
-    if (difference.inDays > 0)
-      return context.l10n.timeDaysAgo(difference.inDays);
-    if (difference.inHours > 0)
-      return context.l10n.timeHoursAgo(difference.inHours);
-    if (difference.inMinutes > 0)
-      return context.l10n.timeMinutesAgo(difference.inMinutes);
-    return context.l10n.timeJustNow;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -2250,6 +2113,177 @@ class _ReplyQuoteBlock extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// C1: 紧凑顶部 AppBar (返回 + 30 px 圆头像作者卡 + 关注 pill + 三点更多)
+// ─────────────────────────────────────────────────────────────
+
+class _DetailCompactAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const _DetailCompactAppBar({
+    required this.post,
+    required this.isFollowing,
+    required this.onTapAuthor,
+    required this.onToggleFollow,
+    required this.onMore,
+  });
+
+  final ForumPost post;
+  final bool isFollowing;
+  final VoidCallback onTapAuthor;
+  final VoidCallback onToggleFollow;
+  final VoidCallback onMore;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(52);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final author = post.author;
+    final displayName = post.displayName?.isNotEmpty == true
+        ? post.displayName!
+        : (author?.name ?? '匿名');
+    final displayAvatar = post.displayAvatar?.isNotEmpty == true
+        ? post.displayAvatar
+        : author?.avatar;
+    final hasAuthorId =
+        (author?.id.isNotEmpty ?? false) || post.authorId.isNotEmpty;
+    return AppBar(
+      backgroundColor: AppColors.backgroundFor(
+        isDark ? Brightness.dark : Brightness.light,
+      ),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      titleSpacing: 0,
+      title: InkWell(
+        onTap: onTapAuthor,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              ClipOval(
+                child: SizedBox(
+                  width: 30,
+                  height: 30,
+                  child:
+                      (displayAvatar != null && displayAvatar.isNotEmpty)
+                          ? AsyncImageView(
+                              imageUrl: displayAvatar,
+                              width: 30,
+                              height: 30,
+                              errorWidget:
+                                  _GradientAvatarFallback(name: displayName),
+                            )
+                          : _GradientAvatarFallback(name: displayName),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (author?.displayedBadge != null) ...[
+                const SizedBox(width: 4),
+                InlineBadgeTag(badge: author!.displayedBadge!),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        if (hasAuthorId) ...[
+          _FollowPill(isFollowing: isFollowing, onTap: onToggleFollow),
+          const SizedBox(width: 4),
+        ],
+        IconButton(
+          icon: const Icon(Icons.more_horiz, size: 20),
+          onPressed: onMore,
+        ),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
+}
+
+class _FollowPill extends StatelessWidget {
+  const _FollowPill({required this.isFollowing, required this.onTap});
+  final bool isFollowing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: isFollowing ? AppColors.primary : Colors.transparent,
+            border: Border.all(color: AppColors.primary, width: 1.5),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            isFollowing ? '已关注' : '+ 关注',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isFollowing ? Colors.white : AppColors.primary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 渐变占位头像 — 同一 name 永远同一渐变色，供 C1/C2/C6/C8 复用
+class _GradientAvatarFallback extends StatelessWidget {
+  const _GradientAvatarFallback({required this.name});
+  final String name;
+
+  /// 4 套渐变,按 name hash 选 1 套保证同一作者颜色稳定
+  static const _gradients = <List<Color>>[
+    [Color(0xFF7359F2), Color(0xFFA18BFF)], // 紫
+    [Color(0xFFFF8033), Color(0xFFFFB84D)], // 橙
+    [Color(0xFF26BF73), Color(0xFF5FD89A)], // 绿
+    [Color(0xFFFF4D80), Color(0xFFFF8AAB)], // 粉
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final idx = name.isEmpty ? 0 : name.codeUnitAt(0) % _gradients.length;
+    final colors = _gradients[idx];
+    final initial = name.isEmpty ? '?' : name[0];
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
