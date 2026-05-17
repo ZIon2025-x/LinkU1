@@ -26,7 +26,7 @@
 
 | Operation | File | Responsibility |
 |---|---|---|
-| Create | `backend/migrations/220_make_forum_post_category_optional.sql` | DDL: ALTER COLUMN nullable |
+| Create | `backend/migrations/234_make_forum_post_category_optional.sql` | DDL: ALTER COLUMN nullable |
 | Modify | `backend/app/models.py:2517` | `ForumPost.category_id` nullable=True |
 | Modify | `backend/app/schemas.py:3894, 3998, 4037` | `ForumPostBase.category_id` Optional; `ForumPostOut.category` Optional |
 | Modify | `backend/app/routes/forum_posts_routes.py:498-540, ~820` | create / update 路由跳过 NULL category check |
@@ -63,7 +63,7 @@
 ### Task 1: Migration + ForumPost 模型可空
 
 **Files:**
-- Create: `backend/migrations/220_make_forum_post_category_optional.sql`
+- Create: `backend/migrations/234_make_forum_post_category_optional.sql`
 - Modify: `backend/app/models.py:2517`
 
 - [ ] **Step 1: 创建 migration 文件**
@@ -71,7 +71,7 @@
 文件内容：
 
 ```sql
--- Migration 220: make forum_posts.category_id nullable
+-- Migration 234: make forum_posts.category_id nullable
 -- Background: 板块从必选改为可选话题（spec 2026-05-15-forum-category-optional-design.md）
 -- 必须先在 staging DB 跑完，再 push backend 代码
 
@@ -87,7 +87,7 @@ COMMIT;
 获取 staging DB 连接 URL（通常在 Railway dashboard）。运行：
 
 ```bash
-psql "$LINKTEST_DATABASE_URL" -f backend/migrations/220_make_forum_post_category_optional.sql
+psql "$LINKTEST_DATABASE_URL" -f backend/migrations/234_make_forum_post_category_optional.sql
 ```
 
 预期输出：`BEGIN`, `ALTER TABLE`, `COMMIT`。
@@ -121,9 +121,9 @@ cd backend && python -c "from app.models import ForumPost; print(ForumPost.__tab
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/migrations/220_make_forum_post_category_optional.sql backend/app/models.py
+git add backend/migrations/234_make_forum_post_category_optional.sql backend/app/models.py
 git commit -m "$(cat <<'EOF'
-feat(forum): migration 220 让 forum_posts.category_id 可空
+feat(forum): migration 234 让 forum_posts.category_id 可空
 
 板块从必选改为可选话题的第一步（spec 2026-05-15）。
 
@@ -203,7 +203,7 @@ cd backend && python -c "from app.schemas import ForumPostBase, ForumPostOut, Fo
 git add backend/app/schemas.py
 git commit -m "feat(forum): schemas 把 category_id/category 改可选
 
-承接 migration 220，让 Pydantic 层接受 null。
+承接 migration 234，让 Pydantic 层接受 null。
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -2297,7 +2297,7 @@ cd frontend && npm run build
 git push origin main
 ```
 
-⚠️ Push 前确认 **prod DB 也已经运行 migration 220**（不只是 staging）：
+⚠️ Push 前确认 **prod DB 也已经运行 migration 234**（不只是 staging）：
 
 ```bash
 psql "$PROD_DATABASE_URL" -c "\d forum_posts" | grep "category_id"
