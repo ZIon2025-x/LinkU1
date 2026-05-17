@@ -79,8 +79,6 @@ class AnthropicProvider:
         self, model: str, messages: list[dict], system: str,
         tools: list[dict] | None, max_tokens: int,
     ) -> LLMResponse:
-        from app.config import Config
-
         kwargs: dict[str, Any] = self._build_chat_kwargs(
             model=model, messages=messages, system=system,
             tools=tools, max_tokens=max_tokens,
@@ -89,6 +87,7 @@ class AnthropicProvider:
 
         try:
             resp = await self._client.messages.create(**kwargs)
+        # str(e) includes the error body; fragile if Anthropic changes error format
         except anthropic.BadRequestError as e:
             if Config.AI_ANTHROPIC_CACHE_ENABLED and "cache_control" in str(e):
                 logger.warning(
