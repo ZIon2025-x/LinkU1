@@ -14,7 +14,6 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
-import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/link_search_dialog.dart';
 import '../../../core/utils/forum_permission_helper.dart';
@@ -22,6 +21,7 @@ import '../../../data/repositories/discovery_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/forum_bloc.dart';
+import '../widgets/topic_chip.dart';
 import '../../../data/models/forum.dart';
 
 /// 创建帖子页
@@ -336,6 +336,81 @@ class _CreatePostViewState extends State<CreatePostView> {
     );
   }
 
+  Widget _sectionLabel(BuildContext context, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+      ),
+    );
+  }
+
+  Widget _buildTopicChipForCurrentState(ForumState state) {
+    if (_selectedCategoryId == null) return const SizedBox.shrink();
+    final cat = state.categories.firstWhere(
+      (c) => c.id == _selectedCategoryId,
+      orElse: () => ForumCategory(id: _selectedCategoryId!, name: ''),
+    );
+    final label = cat.displayName(Localizations.localeOf(context));
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TopicChip(
+        label: label.isEmpty ? context.l10n.forumSelectCategory : label,
+        emoji: cat.icon,
+        locked: widget.lockCategory,
+        onRemove: widget.lockCategory
+            ? null
+            : () => setState(() => _selectedCategoryId = null),
+      ),
+    );
+  }
+
+  String? _lockedReasonForCurrentFlow(BuildContext context) {
+    if (_isOfficialTaskFlow) return context.l10n.forumTopicLockedOfficialTask;
+    // 通用兜底; 后续按入口类型 (达人/admin/校园) 细分
+    return context.l10n.forumTopicLockedAdmin;
+  }
+
+  Future<void> _showTopicPicker(
+      BuildContext context, List<ForumCategory> allCategories) async {
+    final currentUser = context.read<AuthBloc>().state.user;
+    final postable =
+        ForumPermissionHelper.filterPostableCategories(allCategories, currentUser);
+    final result = await showModalBottomSheet<int?>(
+      context: context,
+      builder: (sheetCtx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.clear),
+              title: Text(context.l10n.commonCancel),
+              onTap: () => Navigator.pop(sheetCtx, -1), // sentinel = clear
+            ),
+            const Divider(height: 1),
+            for (final cat in postable)
+              ListTile(
+                leading: cat.icon != null && cat.icon!.isNotEmpty
+                    ? Text(cat.icon!, style: const TextStyle(fontSize: 18))
+                    : null,
+                title: Text(cat.displayName(Localizations.localeOf(context))),
+                trailing: _selectedCategoryId == cat.id ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(sheetCtx, cat.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _selectedCategoryId = result == -1 ? null : result;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -372,7 +447,6 @@ class _CreatePostViewState extends State<CreatePostView> {
             }
         },
         builder: (context, state) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
           final isBusy =
               state.isCreatingPost == true || _isUploading == true;
 
@@ -414,272 +488,180 @@ class _CreatePostViewState extends State<CreatePostView> {
               }
             },
             child: Scaffold(
-            backgroundColor:
-                AppColors.backgroundFor(Theme.of(context).brightness),
-            appBar: _CreateAppBar(
-              isBusy: isBusy,
-              onPublish: () => _submit(context),
-            ),
-            body: ListView(
-              padding: AppSpacing.allMd,
-              children: [
-                if (_hasDraft)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: AppRadius.allMedium,
-                      border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.edit_note, size: 18, color: AppColors.primary),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            context.l10n.forumDraftBannerText,
-                            style: const TextStyle(fontSize: 13),
-                          ),
+              backgroundColor:
+                  AppColors.backgroundFor(Theme.of(context).brightness),
+              appBar: _CreateAppBar(
+                isBusy: isBusy,
+                onPublish: () => _submit(context),
+              ),
+              body: SafeArea(
+                bottom: false,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+                  children: [
+                    // 草稿恢复 banner
+                    if (_hasDraft) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: AppRadius.allMedium,
+                          border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3)),
                         ),
-                        TextButton(
-                          onPressed: () => _clearDraft().then((_) {
-                            if (mounted) setState(() => _hasDraft = false);
-                          }),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: Size.zero,
-                          ),
-                          child: Text(context.l10n.commonDiscard, style: const TextStyle(fontSize: 13)),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_note,
+                                size: 18, color: AppColors.primary),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                context.l10n.forumDraftBannerText,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => _clearDraft().then((_) {
+                                if (mounted) setState(() => _hasDraft = false);
+                              }),
+                              style: TextButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: Size.zero,
+                              ),
+                              child: Text(context.l10n.commonDiscard,
+                                  style: const TextStyle(fontSize: 13)),
+                            ),
+                            FilledButton(
+                              onPressed: _restoreDraft,
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                minimumSize: Size.zero,
+                                textStyle: const TextStyle(fontSize: 13),
+                              ),
+                              child: Text(context.l10n.forumDraftRestore),
+                            ),
+                          ],
                         ),
-                        FilledButton(
-                          onPressed: _restoreDraft,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            minimumSize: Size.zero,
-                            textStyle: const TextStyle(fontSize: 13),
-                          ),
-                          child: Text(context.l10n.forumDraftRestore),
-                        ),
-                      ],
-                    ),
-                  ),
-                // 分类选择（过滤掉仅管理员可发帖的板块）
-                if (state.categories.isNotEmpty) ...[
-                  Builder(builder: (context) {
-                    // 锁死模式：分类由上游强制，渲染只读展示，跳过权限过滤/重置逻辑
-                    if (widget.lockCategory && _selectedCategoryId != null) {
-                      final locked = state.categories.firstWhere(
-                        (c) => c.id == _selectedCategoryId,
-                        orElse: () => ForumCategory(
-                          id: _selectedCategoryId!,
-                          name: '',
-                        ),
-                      );
-                      final label = locked.displayName(
-                          Localizations.localeOf(context));
-                      final isDark =
-                          Theme.of(context).brightness == Brightness.dark;
-                      return Container(
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // 官方任务关联 banner
+                    if (_isOfficialTaskFlow) ...[
+                      Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 14),
+                            horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.04)
-                              : Colors.black.withValues(alpha: 0.03),
+                          color: AppColors.primaryLight.withValues(alpha: 0.1),
                           borderRadius: AppRadius.allSmall,
                           border: Border.all(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.forum_outlined, size: 18),
-                            const SizedBox(width: 10),
+                            const Icon(Icons.flag_rounded,
+                                size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                label.isNotEmpty
-                                    ? label
-                                    : context.l10n.forumSelectCategory,
+                                context.l10n.officialTaskLinked(
+                                  widget.officialTaskTitle ?? '',
+                                ),
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ),
-                            Icon(
-                              Icons.lock_outline,
-                              size: 16,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
-                            ),
                           ],
                         ),
-                      );
-                    }
-
-                    final currentUser =
-                        context.read<AuthBloc>().state.user;
-                    final postableCategories =
-                        ForumPermissionHelper.filterPostableCategories(
-                            state.categories, currentUser);
-                    // 如果当前选中的分类不在可发帖列表中，重置
-                    if (_selectedCategoryId != null &&
-                        !postableCategories
-                            .any((c) => c.id == _selectedCategoryId)) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          setState(() => _selectedCategoryId = null);
-                        }
-                      });
-                    }
-                    return AppSelectField<int>(
-                      key: ValueKey(_selectedCategoryId),
-                      value: _selectedCategoryId,
-                      hint: context.l10n.forumAddTopicOptional,
-                      sheetTitle: context.l10n.forumAddTopicOptional,
-                      prefixIcon: Icons.forum_outlined,
-                      options: postableCategories.map((category) {
-                        return SelectOption(
-                          value: category.id,
-                          label: category.displayName(Localizations.localeOf(context)),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedCategoryId = value);
-                      },
-                    );
-                  }),
-                  AppSpacing.vMd,
-                ],
-                // Official task linked banner
-              if (_isOfficialTaskFlow) ...[
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight.withValues(alpha: 0.1),
-                    borderRadius: AppRadius.allSmall,
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.flag_rounded,
-                          size: 16, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          context.l10n.officialTaskLinked(
-                            widget.officialTaskTitle ?? '',
-                          ),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.primary,
-                          ),
-                        ),
                       ),
+                      const SizedBox(height: 12),
                     ],
-                  ),
-                ),
-              ],
-                // 标题
-                _TitleField(controller: _titleController),
-                const SizedBox(height: 8),
-                // 内容
-                _ContentField(controller: _contentController),
-                AppSpacing.vMd,
-                // 图片（选填，最多 5 张）
-                Text(
-                  '${context.l10n.forumCreatePostImages}（${context.l10n.commonImageCount(_selectedImages.length, _kMaxImages)}）',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-                AppSpacing.vSm,
-                _ImageThumbGrid4(
-                  images: _selectedImages,
-                  maxImages: _kMaxImages,
-                  onRemove: _removeImage,
-                  onAdd: _pickImages,
-                ),
-                AppSpacing.vMd,
-                // 文件附件（选填，最多 1 个）
-                Text(
-                  context.l10n.forumFileAttachmentCount('${_selectedFiles.length}', '$_kMaxFiles'),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-                AppSpacing.vSm,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final entry in _selectedFiles.asMap().entries)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: _FilePdfCard(
-                          file: entry.value,
-                          onRemove: () => _removeFile(entry.key),
-                        ),
+
+                    // 话题 chip (选中或锁定时显示)
+                    if (_selectedCategoryId != null) ...[
+                      _buildTopicChipForCurrentState(state),
+                      const SizedBox(height: 18),
+                    ],
+
+                    // 标题
+                    _TitleField(controller: _titleController),
+                    const SizedBox(height: 8),
+                    // 内容 + 字数计数器
+                    _ContentField(controller: _contentController),
+                    const SizedBox(height: 18),
+
+                    // 图片 section (有图片时)
+                    if (_selectedImages.isNotEmpty) ...[
+                      _sectionLabel(
+                          context, '图片 ${_selectedImages.length}/$_kMaxImages'),
+                      const SizedBox(height: 6),
+                      _ImageThumbGrid4(
+                        images: _selectedImages,
+                        maxImages: _kMaxImages,
+                        onRemove: _removeImage,
+                        onAdd: _pickImages,
                       ),
-                    if (_selectedFiles.length < _kMaxFiles)
-                      _AddFileTile(onTap: _pickFiles),
+                      const SizedBox(height: 18),
+                    ],
+
+                    // 文件 section
+                    if (_selectedFiles.isNotEmpty) ...[
+                      _sectionLabel(context,
+                          '附件 ${_selectedFiles.length}/$_kMaxFiles · 最大 ${_kMaxFileSizeMB}MB'),
+                      const SizedBox(height: 6),
+                      for (final entry in _selectedFiles.asMap().entries)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _FilePdfCard(
+                            file: entry.value,
+                            onRemove: () => _removeFile(entry.key),
+                          ),
+                        ),
+                      const SizedBox(height: 18),
+                    ],
+
+                    // 关联内容 section
+                    if (_linkedName != null && _linkedName!.isNotEmpty) ...[
+                      _sectionLabel(context, context.l10n.publishRelatedContent),
+                      const SizedBox(height: 6),
+                      _LinkedChip(
+                        itemType: _linkedItemType ?? '',
+                        itemName: _linkedName!,
+                        onRemove: _clearLinked,
+                      ),
+                      const SizedBox(height: 18),
+                    ],
+
+                    if (_isUploading) ...[
+                      const SizedBox(height: 8),
+                      const Center(child: CircularProgressIndicator()),
+                    ],
                   ],
                 ),
-                AppSpacing.vMd,
-                // 关联内容（选填）
-                Text(
-                  context.l10n.publishRelatedContent,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-                AppSpacing.vSm,
-                if (_linkedName != null && _linkedName!.isNotEmpty)
-                  _LinkedChip(
-                    itemType: _linkedItemType ?? '',
-                    itemName: _linkedName!,
-                    onRemove: _clearLinked,
-                  )
-                else
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: _showLinkSearchDialog,
-                      icon: const Icon(Icons.add_link, size: 20),
-                      label: Text(context.l10n.publishSearchAndLink),
-                    ),
-                  ),
-                if (_isUploading) ...[
-                  AppSpacing.vMd,
-                  const Center(child: CircularProgressIndicator()),
-                ],
-              ],
+              ),
+              bottomNavigationBar: _BottomComposerToolbar(
+                imageCount: _selectedImages.length,
+                fileCount: _selectedFiles.length,
+                linkedCount:
+                    (_linkedName != null && _linkedName!.isNotEmpty) ? 1 : 0,
+                topicCount: _selectedCategoryId != null ? 1 : 0,
+                lockedReason: widget.lockCategory
+                    ? _lockedReasonForCurrentFlow(context)
+                    : null,
+                onTapImage: _pickImages,
+                onTapFile: _pickFiles,
+                onTapLink: _showLinkSearchDialog,
+                onTapTopic: () => _showTopicPicker(context, state.categories),
+              ),
             ),
-          ),
           );
         },
       ),
@@ -1186,49 +1168,6 @@ class _FilePdfCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 添加文件按钮 (虚线感蓝色 tile)
-class _AddFileTile extends StatelessWidget {
-  const _AddFileTile({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.allSmall,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.04),
-            border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.35),
-            ),
-            borderRadius: AppRadius.allSmall,
-          ),
-          child: Column(
-            children: [
-              const Icon(Icons.upload_file, size: 26, color: AppColors.primary),
-              const SizedBox(height: 4),
-              Text(
-                context.l10n.forumFileAddFile,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
