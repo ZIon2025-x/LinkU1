@@ -1,16 +1,22 @@
 import 'dart:io';
 
-import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:pod_player/pod_player.dart';
 
 import '../../../core/router/page_transitions.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/media_saver.dart';
 
-/// 全屏视频播放器 - chewie 包装 video_player
-/// 右上角三点菜单提供"保存到相册"功能
+/// 全屏视频播放器 — pod_player (Instagram Reels 风格,实时 scrub).
+///
+/// 右上角三点菜单提供"保存到相册"功能.
+///
+/// 实现策略: 先 MediaSaver.downloadToTemp 把签名 URL 下载到本地,然后用
+/// PlayVideoFrom.file 播本地文件 — 绕开 AVPlayer 对 HTTP Range 的挑剔
+/// (linktest backend FileResponse 不返 206 Partial Content),同时也避免
+/// 15min 签名 URL 在播放中途过期.
 class VideoPlayerView extends StatefulWidget {
   const VideoPlayerView({
     super.key,
@@ -38,8 +44,7 @@ class VideoPlayerView extends StatefulWidget {
 }
 
 class _VideoPlayerViewState extends State<VideoPlayerView> {
-  VideoPlayerController? _videoController;
-  ChewieController? _chewieController;
+  PodPlayerController? _controller;
   String? _initError;
   int _retryCount = 0;
 
@@ -50,38 +55,31 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
   }
 
   Future<void> _init() async {
-    // 清理上一轮 controller(retry 时不可漏)
-    _chewieController?.dispose(); // ChewieController.dispose() 是 sync void
-    await _videoController?.dispose(); // VideoPlayerController.dispose() 是 async
-    _chewieController = null;
-    _videoController = null;
-    if (mounted) setState(() => _initError = null);
+    // 清理上一轮 controller (retry 时不可漏)
     try {
-      // 先下载到 app 临时目录,再用 file:// 播本地 — 绕开 AVPlayer 对 HTTP Range /
-      // streaming 的挑剔(linktest 签名 URL HTTP 拿不动 Range partial → AVPlayer
-      // "Failed to load")。30MB 视频 4G 几秒下载,体验仍可接受。
+      _controller?.dispose();
+    } catch (_) {}
+    _controller = null;
+    if (mounted) setState(() => _initError = null);
+
+    try {
+      // 先下载到 app 临时目录,再用 file:// 播本地 —
+      // 绕开 AVPlayer 对 HTTP Range 的挑剔,同时避免 15min 签名 URL 中途过期.
       final localPath =
           await MediaSaver.downloadToTemp(widget.videoUrl, widget.filename);
-      _videoController = VideoPlayerController.file(File(localPath));
-      await _videoController!.initialize();
-      _chewieController = ChewieController(
-        videoPlayerController: _videoController!,
-        autoPlay: true,
-        // 整页就是全屏,不需要 chewie 二次全屏
-        allowFullScreen: false,
-        // 强制 Material 风格 controls — iOS 默认的 CupertinoControls 拖进度条时
-        // 不实时 seek 画面(松手才 seek),Material 风格 onChanged 实时 seekTo,
-        // 跟微信/抖音/IG 的"拖到哪看到哪"一致。用户体验优先于 native 风格。
-        customControls: const MaterialControls(),
+
+      _controller = PodPlayerController(
+        playVideoFrom: PlayVideoFrom.file(File(localPath)),
+        // autoPlay 默认 true, isLooping 默认 false — 用默认配置即可
       );
+      await _controller!.initialise();
       _retryCount = 0; // 成功后清零,允许后续无限重试
       if (mounted) setState(() {});
     } catch (e) {
-      AppLogger.error('Video init failed (retry=$_retryCount) url=${widget.videoUrl}', e);
+      AppLogger.error(
+          'Video init failed (retry=$_retryCount) url=${widget.videoUrl}', e);
       if (mounted) {
-        // 临时诊断:显示 URL + raw error,便于定位 PlatformException 具体内容
-        setState(() => _initError =
-            'chat_video_play_failed\n\nURL: ${widget.videoUrl}\n\nError: $e');
+        setState(() => _initError = 'chat_video_play_failed');
       }
     }
   }
@@ -93,19 +91,19 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
 
   @override
   void dispose() {
-    _chewieController?.dispose();
-    _videoController?.dispose();
+    try {
+      _controller?.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
   Future<void> _onSaveToAlbum() async {
     final messenger = ScaffoldMessenger.of(context);
-
     try {
-      final localPath = await MediaSaver.downloadToTemp(
-        widget.videoUrl,
-        widget.filename,
-      );
+      // 视频已经下载到本地 (在 _init 阶段),直接复用本地路径保存到相册.
+      // 但 pod_player 没暴露内部 path,所以重新下载一次 (Dio 缓存可能命中).
+      final localPath =
+          await MediaSaver.downloadToTemp(widget.videoUrl, widget.filename);
       final result = await MediaSaver.saveVideo(localPath);
       if (!mounted) return;
       switch (result) {
@@ -168,13 +166,10 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 临时诊断: SelectableText 让用户可复制 URL + error 内容
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: SelectableText(
-                      _initError ?? '',
-                      style: const TextStyle(color: Colors.white, fontSize: 11),
-                    ),
+                  Text(
+                    context.localizeError(_initError),
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   TextButton.icon(
@@ -199,9 +194,18 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
                     ),
                 ],
               )
-            : (_chewieController != null
-                ? Chewie(controller: _chewieController!)
-                : const CircularProgressIndicator()),
+            : (_controller != null
+                ? PodVideoPlayer(
+                    controller: _controller!,
+                    podProgressBarConfig: const PodProgressBarConfig(
+                      // 拖动时实时更新画面 (pod_player 默认行为,与 Instagram/IG Reels 一致)
+                      circleHandlerColor: Colors.white,
+                      playingBarColor: Colors.white,
+                      bufferedBarColor: Color(0x55FFFFFF),
+                      backgroundColor: Color(0x33FFFFFF),
+                    ),
+                  )
+                : const CircularProgressIndicator(color: Colors.white)),
       ),
     );
   }
