@@ -366,6 +366,11 @@ class Config:
     AI_RATE_LIMIT_RPM = int(os.getenv("AI_RATE_LIMIT_RPM", "10"))         # 每分钟请求数
     AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "100"))  # 每用户每天请求数
     AI_DAILY_TOKEN_BUDGET = int(os.getenv("AI_DAILY_TOKEN_BUDGET", "50000"))  # 每用户每天 token 预算
+
+    # Anthropic prompt caching 开关 (system + tools 用 cache_control: ephemeral)
+    # 默认 true; 出错自动回退到 raw str system + raw tools 重试一次
+    AI_ANTHROPIC_CACHE_ENABLED = os.getenv("AI_ANTHROPIC_CACHE_ENABLED", "true").lower() == "true"
+
     AI_SESSION_TTL_HOURS = int(os.getenv("AI_SESSION_TTL_HOURS", "24"))
     # FAQ 缓存 TTL（秒）
     AI_FAQ_CACHE_TTL = int(os.getenv("AI_FAQ_CACHE_TTL", "3600"))  # 1 小时

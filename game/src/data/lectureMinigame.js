@@ -49,26 +49,6 @@ const RAW_WORDS = [
   'across','action','active','agency','agreed','almost','always','animal','anyone','anyway','around','attack','attend','author','autumn','avenue','badger','barely','basket','battle','beauty','became','became','before','behave','behind','belong','better','beyond','bishop','bitter','blamed','blanks','blasts','blooms','blouse','bodies','border','bottle','bottom','bought','bounce','bridge','bright','brings','broken','bronze','brother','budget','butter','button','camera','cancel','cancer','candid','candle','cannot','canopy','canvas','carbon','career','carpet','castle','catchy','cattle','caused','caught','center','centre','chance','change','charge','cheese','choose','chosen','church','circle','circus','clause','climax','clinch','clinic','closer','closet','cloudy','coffee','column','combat','coming','common','commit','condom','consul','convey','copied','corner','corona','cosmic','cotton','county','course','cousin','create','credit','crisis','crisis','custom','damage','danger','dancer','dating','deadly','dealer','debate','decade','decent','decide','define','demand','desert','design','desire','detail','detect','device','devote','dialog','dinner','direct','dismay','divide','doctor','dollar','domain','donate','donkey','double','dragon','drains','drawer','dreams','driven','driver','during','easily','editor','eflect','effort','elders','eleven','employ','enable','energy','enough','ensure','entire','entity','equity','escape','ethnic','europe','eveing','every','exact','except','excess','excite','excuse','expand','expert','export','extend','extent','fabric','facing','factor','failed','fairly','fallen','family','famous','farmer','father','fellow','female','fierce','figure','filing','filthy','finger','finish','flight','flower','follow','forces','forest','forget','formal','format','former','foster','fought','found','fourth','french','friend','frozen','fungus','future','garage','garden','gather','gender','gentle','german','global','golden','gospel','gossip','govern','grader','grades','grader','grades','grandma','grass','grates','greasy','great','greatest','greedy','green','greeted','grieve','grippe','grisly','grocer','groove','ground','growing','growth','guilty','habits','hammer','handed','handle','happen','hardly','harmed','having','health','heated','heavy','height','helped','helping','herald','heroic','hidden','higher','hippie','history','hockey','holder','homely','hotbed','hotter','humble','hungry','hunter','hybrid','hyphen','imaged','impact','income','indeed','indoor','induce','infect','infirm','inform','inject','injury','inland','inmate','insect','insert','inside','intend','intent','invest','invite','island','isms','itself','jacket','jargon','jersey','joiner','judges','jungle','junior','keenly','kernel','keyed','kicked','kidney','killed','kilted','kindle','kindly','kinged','kingly','kissed','knight','kosher','laden','ladies','lagoon','lambda','lament','larger','lately','latent','latest','laughs','launch','lawful','lawyer','leader','league','leaped','leaped','leaved','leaves','legacy','legend','length','lesion','lessen','lesser','lesson','letter','levied','liable','liaise','libel','libido','lifted','lights','likely','linear','linger','liquid','listed','listen','little','living','locate','locked','locker','log','logic','longer','looked','losing','luxury','madame','madman','magnet','mainly','makers','making','malice','mammal','manage','manner','mantel','manual','marble','margin','marine','marked','market','marred','martyr','master','mating','matter','mature','maxim','meadow','meant','meekly','meetly','member','memoir','memory','mental','merger','metals','method','metric','middle','miller','mining','minute','mirror','misery','module','modify','molten','moment','monkey','months','moping','morale','morgue','mortal','mosaic','mosque','mostly','mother','motion','motive','moving','mucous','muffin','murder','muscle','museum','musics','myself','mystic','nailed','nation','native','nature','nearby','nearly','nephew','nested','nestle','newest','nicely','nickel','ninety','nobody','noises','normal','nosier','notice','notion','novena','number','nurses','object','obtain','occupy','occurs','octant','offend','offers','office','offset','online','origin','others','outdid','outfit','outlet','output','outset','outwit','oxygen','packed','packet','paddle','painted','palace','panels','papers','parent','parked','partly','passed','people','planet','please','poetry','points','police','policy','polish','public','pulled','purple','pursue','rabbit','random','rarely','rather','reader','really','reason','rebels','recall','recent','record','reduce','region','relate','relief','remain','remote','remove','rental','repair','repeat','report','rescue','resort','result','retain','retire','return','reveal','review','reward','rhythm','rifle','rising','rocket','romans','rotten','rubber','sacred','safety','salary','sample','saturn','savage','saying','schema','scheme','school','search','season','second','secret','sector','secure','seeing','select','seller','senate','senior','sensed','sensor','seriya','serial','series','sermon','served','server','settle','seventy','severe','shadow','shaped','shared','sharer','shifty','shiner','shorts','should','shower','shrink','signal','signed','silent','silver','simple','simply','sincere','single','sister','six','sixth','sleeve','slight','slowly','smiled','smooth','social','soften','solely','solemn','solid','solved','sooner','sortable','source','speech','spirit','splash','spoken','sponge','spread','spring','square','stable','staffs','stairs','stamp','stands','starts','statue','status','stayed','steady','sticky','stints','stitch','stocks','stones','stored','storms','strain','strand','stream','street','stress','strict','strike','string','strong','struck','struggle','studio','sudden','suffer','sugar','summer','superb','supper','supply','suppose','surely','survey','sutter','symbol','system','tablet','talent','target','taught','tavern','techno','tender','tennis','thanks','theory','thirty','though','thread','threat','thrive','throat','throne','thrown','throws','thrust','timely','timer','tissue','titled','toilet','tomato','topple','toward','travel','treaty','tribal','tribes','tricky','trophy','tropic','trying','turkey','twenty','typing','unable','unique','united','unless','unlike','update','upheld','useful','usable','useful','vacuum','valley','vanity','vendor','versed','versus','vessel','victim','victor','viewed','violet','virtue','virgin','vision','visual','vivian','voiced','volume','voters','voting','voyage','wagers','wailed','walked','walker','wallet','wander','warmly','warmed','warned','warped','wasted','watery','waving','weaken','wealth','weapon','weekly','weighs','wholly','widely','wisdom','within','witty','wonder','wooden','worked','worker','wrench','writer','yearly','yellow','yields','yogurt','zealot','zigzag','zipped','zombie',
 ];
 
-// Add explicit theme keywords so they're always recognized
-const THEME_WORDS = [
-  // Theorist names
-  'FOUCAULT','BOURDIEU','BUTLER','SAID','HALL','SPIVAK',
-  // Foucault
-  'POWER','GAZE','PRISON','DISCIPLINE','PANOPTICON','SURVEILLANCE','BIOPOWER','DOCILE','SUBJECT','REGIME',
-  // Bourdieu
-  'HABITUS','CAPITAL','FIELD','DOXA','TASTE','CLASS','SYMBOLIC','PRACTICE','REPRODUCE','DOMINATE',
-  // Said
-  'ORIENT','ORIENTALISM','EXOTIC','OTHER','EMPIRE','COLONIAL','DISCOURSE','HEGEMONY','IMPERIAL','BINARY',
-  // Butler
-  'GENDER','PERFORM','PERFORMATIVE','IDENTITY','QUEER','TROUBLE','BODY','NORM','MELANCHOLY','REPETITION',
-  // Hall
-  'ENCODE','DECODE','RACE','REPRESENTATION','DIASPORA','POPULAR','CULTURE','BRITISH','HYBRID',
-  // Spivak
-  'SUBALTERN','SPEAK','LISTEN','TRANSLATION','POSTCOLONIAL','MARGIN','SILENCE','VOICE','STRATEGIC',
-  // 学术常用
-  'THEORY','THEORIST','ARGUMENT','ESSAY','READING','LECTURE','TUTORIAL','MOODLE','PAPER','CITATION',
-];
-
 export const WORD_SET = (() => {
   const s = new Set();
   RAW_WORDS.forEach(w => s.add(w.toUpperCase()));
@@ -83,7 +63,7 @@ export const WORD_SET = (() => {
 // V2 主题池 —— 取代 LECTURE_THEMES（内容方向 pivot, spec 2026-05-16）
 // 12 主题 × 12-15 bonus 词 = ~150 ★ 词总池。Task 7 atomic swap 时替换 LECTURE_THEMES + THEME_WORDS。
 // ============================================================
-export const LECTURE_THEMES_V2 = [
+export const LECTURE_THEMES = [
   // Batch 5 (Task 5): W1-24 themes 1-6
   { id: 'academic_nouns',    weeks: [1, 4],    name: '学术名词 · Academic Nouns',
     bonus: ['METHOD','THESIS','EVIDENCE','CONCEPT','THEORY','REVIEW','ANALYSIS','ARGUMENT','FRAMEWORK','HYPOTHESIS','FINDING','CONCLUSION','PERSPECTIVE','APPROACH','CRITIQUE'],
@@ -124,7 +104,7 @@ export const LECTURE_THEMES_V2 = [
 ];
 
 // V2 bonus 词大全（去重）—— Task 7 atomic swap 时替换 THEME_WORDS
-const THEME_WORDS_V2 = [
+const THEME_WORDS = [
   // Batch 5 (Task 5) — themes 1-6
   'METHOD','THESIS','EVIDENCE','CONCEPT','THEORY','REVIEW','ANALYSIS','ARGUMENT','FRAMEWORK','HYPOTHESIS','FINDING','CONCLUSION','PERSPECTIVE','APPROACH','CRITIQUE',
   'ARGUE','REFUTE','ASSERT','IMPLY','INFER','ANALYSE','EXAMINE','EVALUATE','ELABORATE','ADDRESS','COMPARE','CONTRAST',
@@ -140,44 +120,6 @@ const THEME_WORDS_V2 = [
   'NOTWITHSTANDING','ALBEIT','HEREBY','INASMUCH','WHEREBY','THEREOF','HENCEFORTH','INSOFAR','BESIDES','ASIDE','RATHER','SAVE',
 ];
 
-export const LECTURE_THEMES = [
-  { id: 'foucault_intro',  weeks: [1, 6],   name: 'Foucault · Power & Gaze',
-    bonus: ['POWER','GAZE','PRISON','DOCILE','REGIME','BODY'],
-    bias: 'POWERGAZECONTROL' },
-  { id: 'foucault_deep',   weeks: [7, 10],  name: 'Foucault · Discipline',
-    bonus: ['DISCIPLINE','PANOPTICON','SURVEILLANCE','BIOPOWER','SUBJECT'],
-    bias: 'DISCIPLINESURVEY' },
-  { id: 'bourdieu_intro',  weeks: [11, 14], name: 'Bourdieu · Habitus',
-    bonus: ['HABITUS','CAPITAL','FIELD','TASTE','CLASS'],
-    bias: 'HABITUSCAPITALCLASS' },
-  { id: 'bourdieu_deep',   weeks: [15, 18], name: 'Bourdieu · Cultural Capital',
-    bonus: ['CAPITAL','SYMBOLIC','PRACTICE','REPRODUCE','DOMINATE','DOXA'],
-    bias: 'SYMBOLICCAPITAL' },
-  { id: 'said_intro',      weeks: [19, 22], name: 'Said · Orientalism',
-    bonus: ['ORIENT','ORIENTALISM','OTHER','EMPIRE','COLONIAL','EXOTIC'],
-    bias: 'ORIENTCOLONIAL' },
-  { id: 'said_deep',       weeks: [23, 26], name: 'Said · Hegemony',
-    bonus: ['DISCOURSE','HEGEMONY','IMPERIAL','BINARY','OTHER'],
-    bias: 'HEGEMONYDISCOURSE' },
-  { id: 'butler_intro',    weeks: [27, 30], name: 'Butler · Performativity',
-    bonus: ['GENDER','PERFORM','PERFORMATIVE','IDENTITY','BODY','NORM'],
-    bias: 'GENDERPERFORM' },
-  { id: 'butler_deep',     weeks: [31, 34], name: 'Butler · Gender Trouble',
-    bonus: ['QUEER','TROUBLE','MELANCHOLY','REPETITION','NORM'],
-    bias: 'QUEERTROUBLENORM' },
-  { id: 'hall_intro',      weeks: [35, 38], name: 'Hall · Cultural Studies',
-    bonus: ['ENCODE','DECODE','RACE','REPRESENTATION','POPULAR','HYBRID'],
-    bias: 'ENCODEDECODERACE' },
-  { id: 'hall_deep',       weeks: [39, 42], name: 'Hall · Diaspora & Identity',
-    bonus: ['DIASPORA','IDENTITY','BRITISH','CULTURE','HYBRID'],
-    bias: 'DIASPORAIDENTITY' },
-  { id: 'spivak_intro',    weeks: [43, 47], name: 'Spivak · Subaltern',
-    bonus: ['SUBALTERN','SPEAK','LISTEN','TRANSLATION','SILENCE','VOICE'],
-    bias: 'SUBALTERNSPEAK' },
-  { id: 'spivak_deep',     weeks: [48, 52], name: 'Spivak · Postcolonial',
-    bonus: ['POSTCOLONIAL','MARGIN','STRATEGIC','OTHER','VOICE'],
-    bias: 'POSTCOLONIALMARGIN' },
-];
 
 export function pickLectureTheme(week) {
   return LECTURE_THEMES.find(t => week >= t.weeks[0] && week <= t.weeks[1]) || LECTURE_THEMES[0];

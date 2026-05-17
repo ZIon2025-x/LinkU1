@@ -584,10 +584,10 @@ export function EssayMinigame({ onComplete, onCancel, week }) {
 function MatchRulesBody({ totalConcepts }) {
   return (
     <>
-      期末复习。你列了一张表想搞清谁说了什么。<br/>
+      期末复习。你列了一张表想搞清楚这些留学常识到底属于哪类。<br/>
       <br/>
-      · 把 {totalConcepts} 个概念匹配到对应的理论家<br/>
-      · 步骤：先点一个概念 → 再点理论家<br/>
+      · 把 {totalConcepts} 个知识点匹配到对应的类别<br/>
+      · 步骤：先点一个知识点 → 再点类别<br/>
       · 全部匹配完看评分，对越多 academic 越高<br/>
       · 5/6+ 还有 belonging 加成
     </>
@@ -652,8 +652,8 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
       <div className="bg-[#1a1612] border border-blue-300/40 max-w-md w-full max-h-[90vh] overflow-y-auto p-5 relative">
         <MinigameHelpButton onClick={() => { audio.click(); setRulesOpen(true); }} />
         <div className="text-xs tracking-[0.3em] mb-1" style={{ fontFamily: 'monospace', color: '#a0a0c8' }}>🎴 MINIGAME</div>
-        <h2 className="text-xl mb-1 font-light">理论家与概念</h2>
-        <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>把概念匹配到对的人</div>
+        <h2 className="text-xl mb-1 font-light">留学知识匹配</h2>
+        <div className="text-xs opacity-60 italic mb-4" style={{ fontFamily: 'monospace' }}>把这些留学硬核知识分组配对</div>
 
         {phase === 'intro' && (
           <>
@@ -674,7 +674,7 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
         {phase === 'play' && (
           <>
             <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>
-              {selectedConcept ? '选一个理论家 →' : '选一个概念 →'}
+              {selectedConcept ? '选一个类别 →' : '选一个知识点 →'}
             </div>
 
             {/* 概念区 */}
@@ -698,7 +698,7 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
 
             {/* 理论家区 */}
             <div className="border-t border-current/20 pt-3">
-              <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>理论家</div>
+              <div className="text-xs opacity-60 mb-2" style={{ fontFamily: 'monospace' }}>类别</div>
               <div className="grid grid-cols-2 gap-2">
                 {visibleTheorists.map(t => {
                   const matchedToThis = Object.entries(matched).filter(([_, tid]) => tid === t.id).map(([cid]) => cid);
@@ -754,7 +754,7 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
         <MinigameRulesModal
           open={rulesOpen}
           onClose={() => setRulesOpen(false)}
-          title="MATCH · 理论家与概念"
+          title="MATCH · 留学知识匹配"
         >
           <MatchRulesBody totalConcepts={round.length} />
         </MinigameRulesModal>
@@ -769,7 +769,7 @@ export function MatchMinigame({ onComplete, onCancel, week }) {
 function LectureRulesBody({ dirInfo, totalTime, theme, week }) {
   return (
     <>
-      Whitmore 在黑板上写理论。你的笔记本上是一团字母。<br/>
+      Whitmore 讲 lecture，你想把听到的关键词抓住。笔记本上是一团字母。<br/>
       <br/>
       <span style={{ color: '#d4b070' }}>· 本周可连：<strong>{dirInfo.label}</strong>（{dirInfo.desc}）</span><br/>
       · 点击相邻字母连成英文单词<br/>

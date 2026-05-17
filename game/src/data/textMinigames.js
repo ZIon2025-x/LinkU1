@@ -483,7 +483,7 @@ export function pickEssayPuzzles(week, seenPuzzleIndices = []) {
 //   { categories: [{ id, name, items: [id...] }], items: { id: { label, desc } } }
 // 18 categories × 6-8 items = ~110 items 总池。每 item 唯一归属一个 category。
 // ============================================================
-export const UK_KNOWLEDGE_MATCH = {
+export const THEORIST_MATCH = {
   categories: [
     { id: 'visa',                 name: '签证 / Visa',
       items: ['tier4','brp','nhs_surcharge','psw','right_to_rent','biometrics'] },
@@ -654,77 +654,10 @@ export const UK_KNOWLEDGE_MATCH = {
   },
 };
 
-export const THEORIST_MATCH = {
-  theorists: [
-    { id: 'foucault',  name: 'Foucault',  concepts: ['discipline','biopower','panopticon','governmentality'] },
-    { id: 'bourdieu',  name: 'Bourdieu',  concepts: ['habitus','cultural_capital','field','symbolic_violence'] },
-    { id: 'butler',    name: 'Butler',    concepts: ['performativity','gender_trouble','precarity'] },
-    { id: 'said',      name: 'Said',      concepts: ['orientalism','imaginative_geography'] },
-    { id: 'hall',      name: 'Hall',      concepts: ['encoding_decoding','articulation','new_ethnicities'] },
-    { id: 'spivak',    name: 'Spivak',    concepts: ['subaltern','strategic_essentialism'] },
-    { id: 'bhabha',    name: 'Bhabha',    concepts: ['hybridity','third_space','mimicry'] },
-    { id: 'derrida',   name: 'Derrida',   concepts: ['différance','deconstruction','trace'] },
-    { id: 'gramsci',   name: 'Gramsci',   concepts: ['hegemony','organic_intellectual','war_of_position'] },
-    { id: 'marx',      name: 'Marx',      concepts: ['alienation','commodity_fetishism','base_superstructure'] },
-    { id: 'weber',     name: 'Weber',     concepts: ['iron_cage','protestant_ethic','rationalisation'] },
-    { id: 'durkheim',  name: 'Durkheim',  concepts: ['anomie','collective_conscience','solidarity'] },
-  ],
-  concepts: {
-    // Foucault
-    discipline:           { label: 'Discipline', desc: '规训' },
-    biopower:             { label: 'Biopower', desc: '生命权力' },
-    panopticon:           { label: 'Panopticon', desc: '全景监狱' },
-    governmentality:      { label: 'Governmentality', desc: '治理术' },
-    // Bourdieu
-    habitus:              { label: 'Habitus', desc: '惯习' },
-    cultural_capital:     { label: 'Cultural Capital', desc: '文化资本' },
-    field:                { label: 'Field', desc: '场域' },
-    symbolic_violence:    { label: 'Symbolic Violence', desc: '象征暴力' },
-    // Butler
-    performativity:       { label: 'Performativity', desc: '操演性' },
-    gender_trouble:       { label: 'Gender Trouble', desc: '性别麻烦' },
-    precarity:            { label: 'Precarity', desc: '不稳定生命' },
-    // Said
-    orientalism:          { label: 'Orientalism', desc: '东方主义' },
-    imaginative_geography:{ label: 'Imaginative Geography', desc: '想象的地理' },
-    // Hall
-    encoding_decoding:    { label: 'Encoding/Decoding', desc: '编码 / 解码' },
-    articulation:         { label: 'Articulation', desc: '接合' },
-    new_ethnicities:      { label: 'New Ethnicities', desc: '新族裔性' },
-    // Spivak
-    subaltern:            { label: 'Subaltern', desc: '从属阶级' },
-    strategic_essentialism:{label: 'Strategic Essentialism', desc: '策略本质主义' },
-    // Bhabha
-    hybridity:            { label: 'Hybridity', desc: '混杂性' },
-    third_space:          { label: 'Third Space', desc: '第三空间' },
-    mimicry:              { label: 'Mimicry', desc: '模仿' },
-    // Derrida
-    différance:           { label: 'Différance', desc: '延异' },
-    deconstruction:       { label: 'Deconstruction', desc: '解构' },
-    trace:                { label: 'Trace', desc: '痕迹' },
-    // Gramsci
-    hegemony:             { label: 'Hegemony', desc: '霸权' },
-    organic_intellectual: { label: 'Organic Intellectual', desc: '有机知识分子' },
-    war_of_position:      { label: 'War of Position', desc: '阵地战' },
-    // Marx
-    alienation:           { label: 'Alienation', desc: '异化' },
-    commodity_fetishism:  { label: 'Commodity Fetishism', desc: '商品拜物教' },
-    base_superstructure:  { label: 'Base / Superstructure', desc: '经济基础 / 上层建筑' },
-    // Weber
-    iron_cage:            { label: 'Iron Cage', desc: '铁笼' },
-    protestant_ethic:     { label: 'Protestant Ethic', desc: '新教伦理' },
-    rationalisation:      { label: 'Rationalisation', desc: '理性化' },
-    // Durkheim
-    anomie:               { label: 'Anomie', desc: '失范' },
-    collective_conscience:{ label: 'Collective Conscience', desc: '集体意识' },
-    solidarity:           { label: 'Solidarity', desc: '团结' },
-  },
-};
-
 /**
- * 按周抽 match round。phase 1 (W2-15) 抽 4 个 theorists + 6 个 concepts。
- * phase 2 (W16-30) 抽 6 + 9 个 concepts。phase 3 (W30+) 抽 8 + 12 个 concepts。
- * 当周关键 theorist 必含(Foucault W2-10,Bourdieu W11-18,Said W19-26 等)。
+ * 按周抽 match round。phase 1 (W2-15): 4 类 + 6 items;
+ * phase 2 (W16-30): 6 类 + 9 items; phase 3 (W30+): 8 类 + 12 items。
+ * spotlight 每 ~3 周轮换，一年覆盖 18 类。
  */
 export function pickMatchRound(week) {
   let phase, theoristCount, conceptCount;
@@ -732,42 +665,33 @@ export function pickMatchRound(week) {
   else if (week <= 30) { phase = 2; theoristCount = 6; conceptCount = 9; }
   else { phase = 3; theoristCount = 8; conceptCount = 12; }
 
-  // 必含当周课程对应 theorist (跟 lecture 主题一致)
-  let mustInclude;
-  if (week <= 10) mustInclude = 'foucault';
-  else if (week <= 18) mustInclude = 'bourdieu';
-  else if (week <= 26) mustInclude = 'said';
-  else if (week <= 34) mustInclude = 'butler';
-  else if (week <= 42) mustInclude = 'hall';
-  else mustInclude = 'spivak';
+  // spotlight 每 3 周轮换 18 类
+  const SPOTLIGHT = [
+    [3,  'visa'], [6,  'nhs'], [9,  'academic_integrity'], [12, 'banking'],
+    [15, 'renting'], [18, 'tax_wages'], [21, 'academic_writing'], [24, 'transport'],
+    [27, 'campus_systems'], [30, 'job_hunt'], [33, 'degrees'], [36, 'grading'],
+    [39, 'class_types'], [42, 'assessment'], [45, 'online_tools'], [48, 'uni_groupings'],
+    [51, 'council_tax'], [Infinity, 'saving_money'],
+  ];
+  const mustInclude = SPOTLIGHT.find(([upper]) => week <= upper)[1];
 
-  const allTheorists = THEORIST_MATCH.theorists;
-  const mustT = allTheorists.find(t => t.id === mustInclude);
-  const others = allTheorists.filter(t => t.id !== mustInclude).sort(() => Math.random() - 0.5);
-  const theorists = [mustT, ...others.slice(0, theoristCount - 1)];
+  const allCategories = THEORIST_MATCH.categories;
+  const mustC = allCategories.find(c => c.id === mustInclude);
+  const others = allCategories.filter(c => c.id !== mustInclude).sort(() => Math.random() - 0.5);
+  const categories = [mustC, ...others.slice(0, theoristCount - 1)];
 
-  // 概念池:从选出的 theorists 各取 1-2 个 + 填满到 conceptCount
+  // item pool: 从选出的 categories 各取 1-2 个 + 填满到 conceptCount
   const conceptIds = [];
-  theorists.forEach(t => {
-    const tConcepts = [...t.concepts].sort(() => Math.random() - 0.5);
-    conceptIds.push(tConcepts[0]);  // 每个 theorist 至少 1
-    if (conceptIds.length < conceptCount && tConcepts[1]) {
-      conceptIds.push(tConcepts[1]);
-    }
+  categories.forEach(c => {
+    const picks = c.items.slice().sort(() => Math.random() - 0.5).slice(0, 2);
+    conceptIds.push(...picks);
   });
-  // 不够补到 conceptCount
-  if (conceptIds.length < conceptCount) {
-    theorists.forEach(t => {
-      t.concepts.forEach(cid => {
-        if (!conceptIds.includes(cid) && conceptIds.length < conceptCount) {
-          conceptIds.push(cid);
-        }
-      });
-    });
+  while (conceptIds.length < conceptCount) {
+    const allItems = categories.flatMap(c => c.items);
+    const candidate = allItems[Math.floor(Math.random() * allItems.length)];
+    if (!conceptIds.includes(candidate)) conceptIds.push(candidate);
   }
-  return {
-    phase,
-    theorists,
-    concepts: conceptIds.sort(() => Math.random() - 0.5).slice(0, conceptCount),
-  };
+  while (conceptIds.length > conceptCount) conceptIds.pop();
+
+  return { phase, theorists: categories, concepts: conceptIds };
 }

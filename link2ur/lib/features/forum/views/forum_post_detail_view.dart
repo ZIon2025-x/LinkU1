@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -1187,49 +1188,39 @@ class _RootReplyGroup extends StatelessWidget {
     final remaining = root.totalChildren - displayChildren.length;
     final showExpand = hasMore || remaining > 0;
 
-    // 解析 child 的 parentReply (用于渲染 quote block):
-    // - parentReplyId == root.id → parent 就是 root 自己
-    // - 否则在已渲染兄弟节点里找
-    ForumReply? resolveParent(ForumReply child) {
-      if (child.parentReplyId == null) return null;
-      if (child.parentReplyId == root.id) return root;
-      for (final sibling in displayChildren) {
-        if (sibling.id == child.parentReplyId) return sibling;
-      }
-      return null;
-    }
+    // C6: _CommentItem 直接读取 reply.parentReplyAuthor 渲染 "@xxx" 前缀,
+    // 不再需要从兄弟节点解析 parentReply 来构建 quote block。
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 根评论
-        _ReplyCard(
+        // 根评论 (C6 视觉重做 — _CommentItem)
+        _CommentItem(
           key: replyKeys.putIfAbsent(root.id, () => GlobalKey()),
           reply: root,
-          isDark: isDark,
-          postId: postId,
-          onReplyTo: onReplyTo,
-          scrollController: scrollController,
-          replyKeys: replyKeys,
+          isNested: false,
+          onLike: () => context.read<ForumBloc>().add(ForumLikeReply(root.id)),
+          onReply: () => onReplyTo(
+            root.id,
+            root.author?.name ?? root.authorId.toString(),
+          ),
+          onMentionTap: (id) => onMentionTap(id),
           highlightStream: highlightStream,
-          onMentionTap: onMentionTap,
         ),
         // 子回复 (preview + loaded),带左侧缩进
         for (final child in displayChildren)
-          Padding(
-            padding: const EdgeInsets.only(left: 42),
-            child: _ReplyCard(
-              key: replyKeys.putIfAbsent(child.id, () => GlobalKey()),
-              reply: child,
-              parentReply: resolveParent(child),
-              isDark: isDark,
-              postId: postId,
-              onReplyTo: onReplyTo,
-              scrollController: scrollController,
-              replyKeys: replyKeys,
-              highlightStream: highlightStream,
-              onMentionTap: onMentionTap,
+          _CommentItem(
+            key: replyKeys.putIfAbsent(child.id, () => GlobalKey()),
+            reply: child,
+            isNested: true,
+            onLike: () =>
+                context.read<ForumBloc>().add(ForumLikeReply(child.id)),
+            onReply: () => onReplyTo(
+              child.id,
+              child.author?.name ?? child.authorId.toString(),
             ),
+            onMentionTap: (id) => onMentionTap(id),
+            highlightStream: highlightStream,
           ),
         // 展开剩余 N 条按钮
         if (showExpand)
@@ -2618,5 +2609,263 @@ class _EngageBtn extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ==================== C6: _CommentItem (mockup .comment / .comment.nested) ====================
+
+/// 评论项视觉重做 (mockup `.comment`):
+/// - 36x36 头像 (子回复 28x28),圆形,渐变 fallback (按 author name hash 选 4 套渐变之一,见 [_GradientAvatarFallback])
+/// - 名字 13px / 600,内容 14px / line-height 1.55
+/// - footer: 时间 · ❤️ count · 回复 (12px 灰字)
+/// - 子回复 (isNested) 左缩进 46px,头像缩小到 28x28
+/// - parentReplyAuthor 存在时,正文前插入 `@xxx ` 主色蓝可点击 (跳到引用源)
+/// - 收到 highlightStream id == reply.id 时,触发 800ms 黄色脉冲背景高亮
+class _CommentItem extends StatefulWidget {
+  const _CommentItem({
+    super.key,
+    required this.reply,
+    required this.isNested,
+    required this.onLike,
+    required this.onReply,
+    required this.onMentionTap,
+    this.highlightStream,
+  });
+
+  final ForumReply reply;
+  final bool isNested;
+  final VoidCallback onLike;
+  final VoidCallback onReply;
+  final void Function(int targetReplyId)? onMentionTap;
+  final Stream<int>? highlightStream;
+
+  @override
+  State<_CommentItem> createState() => _CommentItemState();
+}
+
+class _CommentItemState extends State<_CommentItem> {
+  bool _isPulsing = false;
+  StreamSubscription<int>? _highlightSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _highlightSub = widget.highlightStream?.listen((id) {
+      if (id == widget.reply.id && mounted) {
+        setState(() => _isPulsing = true);
+        Future.delayed(const Duration(milliseconds: 1600), () {
+          if (mounted) setState(() => _isPulsing = false);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _highlightSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final r = widget.reply;
+    final avatarSize = widget.isNested ? 28.0 : 36.0;
+    final authorName = r.author?.name ?? r.authorId;
+    final hasAvatarUrl =
+        r.author?.avatar != null && r.author!.avatar!.isNotEmpty;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: _isPulsing
+            ? const Color(0xFFFFDD57).withValues(alpha: 0.35)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: EdgeInsets.only(
+        left: widget.isNested ? 46 : 0,
+        right: widget.isNested ? 4 : 0,
+        top: 6,
+        bottom: 6,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipOval(
+            child: SizedBox(
+              width: avatarSize,
+              height: avatarSize,
+              child: hasAvatarUrl
+                  ? AsyncImageView(
+                      imageUrl: r.author!.avatar!,
+                      width: avatarSize,
+                      height: avatarSize,
+                      errorWidget: _GradientAvatarFallback(name: authorName),
+                    )
+                  : _GradientAvatarFallback(name: authorName),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 名字行
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        authorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
+                      ),
+                    ),
+                    if (r.author?.displayedBadge != null) ...[
+                      const SizedBox(width: 4),
+                      InlineBadgeTag(badge: r.author!.displayedBadge!),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                _ReplyContent(reply: r, onMentionTap: widget.onMentionTap),
+                const SizedBox(height: 4),
+                // footer 行: 时间 · ❤️ count · 回复
+                Row(
+                  children: [
+                    Text(
+                      _formatRelativeTime(context, r.createdAt),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    InkWell(
+                      onTap: () =>
+                          requireAuth(context, () => widget.onLike()),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 2, vertical: 1),
+                        child: Row(
+                          children: [
+                            Icon(
+                              r.isLiked
+                                  ? Icons.favorite
+                                  : Icons.favorite_outline,
+                              size: 13,
+                              color: r.isLiked
+                                  ? AppColors.accentPink
+                                  : (isDark
+                                      ? AppColors.textTertiaryDark
+                                      : AppColors.textTertiaryLight),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${r.likeCount}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: r.isLiked
+                                    ? AppColors.accentPink
+                                    : (isDark
+                                        ? AppColors.textTertiaryDark
+                                        : AppColors.textTertiaryLight),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    InkWell(
+                      onTap: widget.onReply,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 2, vertical: 1),
+                        child: Text(
+                          context.l10n.forumReply,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatRelativeTime(BuildContext context, DateTime? t) {
+    if (t == null) return '';
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 1) return context.l10n.timeJustNow;
+    if (diff.inHours < 1) return context.l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return context.l10n.timeHoursAgo(diff.inHours);
+    return context.l10n.timeDaysAgo(diff.inDays);
+  }
+}
+
+/// _CommentItem 正文片段 — 有 parentReplyAuthor 时前置 `@xxx ` 蓝色可点击
+class _ReplyContent extends StatelessWidget {
+  const _ReplyContent({required this.reply, this.onMentionTap});
+  final ForumReply reply;
+  final void Function(int targetReplyId)? onMentionTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final normalized = Helpers.normalizeContentNewlines(reply.content);
+    final bodyStyle = TextStyle(
+      fontSize: 14,
+      height: 1.55,
+      color: isDark
+          ? AppColors.textPrimaryDark
+          : AppColors.textPrimaryLight,
+    );
+
+    if (reply.parentReplyAuthor != null) {
+      return RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: '@${reply.parentReplyAuthor!.name} ',
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.55,
+                fontWeight: FontWeight.w500,
+                color: AppColors.primary,
+              ),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () {
+                  final pid = reply.parentReplyId;
+                  if (pid != null) onMentionTap?.call(pid);
+                },
+            ),
+            TextSpan(text: normalized, style: bodyStyle),
+          ],
+        ),
+      );
+    }
+    return Text(normalized, style: bodyStyle);
   }
 }
