@@ -279,6 +279,19 @@ class PrivateFileSystem:
                 '.rar': 'application/x-rar-compressed',
                 '.txt': 'text/plain',
                 '.csv': 'text/csv',
+                # 视频(任务聊天附件) — Content-Type 必须设对,否则 iOS AVPlayer /
+                # Android ExoPlayer / 浏览器 video tag 都会拒绝当视频处理
+                '.mp4': 'video/mp4',
+                '.mov': 'video/quicktime',
+                '.m4v': 'video/x-m4v',
+                # 图片(部分场景走 PrivateFileSystem 而非 PrivateImageSystem)
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp',
+                '.heic': 'image/heic',
+                '.heif': 'image/heif',
             }
             media_type = mime_types.get(extension, 'application/octet-stream')
             
