@@ -26,7 +26,6 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/utils/share_util.dart';
-import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../data/models/forum.dart';
@@ -695,184 +694,269 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
   Widget _buildBottomReplyBar(BuildContext context) {
     return BlocBuilder<ForumBloc, ForumState>(
       buildWhen: (previous, current) =>
-          previous.selectedPost != current.selectedPost ||
           previous.isReplying != current.isReplying,
       builder: (context, state) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final post = state.selectedPost;
+        final authUser = context.read<AuthBloc>().state.user;
         final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-        // 使用半透明容器替代 BackdropFilter，减少输入区域重绘开销
-        // 键盘弹起时用 viewInsets.bottom 顶起整条回复栏，避免输入框被遮挡
+        // 键盘弹起时用 viewInsets.bottom 顶起整条回复栏,避免输入框被遮挡
         return Padding(
           padding: EdgeInsets.only(bottom: bottomInset),
-          child: Container(
-            decoration: BoxDecoration(
-              color: (isDark
-                      ? AppColors.cardBackgroundDark
-                      : AppColors.cardBackgroundLight)
-                  .withValues(alpha: 0.85),
-              border: Border(
-                top: BorderSide(
-                  color: (isDark
-                          ? AppColors.separatorDark
-                          : AppColors.separatorLight)
-                      .withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, vertical: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 回复目标提示条
-                    if (_replyToName != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md, vertical: 6),
-                        color: AppColors.primary.withValues(alpha: 0.05),
-                        child: Row(
-                          children: [
-                            Text(
-                              '${context.l10n.forumReplyTo} @$_replyToName',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const Spacer(),
-                            Semantics(
-                              button: true,
-                              label: 'Clear reply',
-                              child: GestureDetector(
-                                onTap: _clearReplyTo,
-                                child: const Icon(Icons.close,
-                                    size: 16,
-                                    color: AppColors.textTertiaryLight),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    Row(
-                      children: [
-                        // 点赞按钮 — 带粒子爆炸动画
-                        if (post != null) ...[
-                          AnimatedLikeButton(
-                            isLiked: post.isLiked,
-                            size: 22,
-                            likedColor: AppColors.accentPink,
-                            onTap: () => requireAuth(context, () {
-                              context
-                                  .read<ForumBloc>()
-                                  .add(ForumLikePost(widget.postId));
-                            }),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
-
-                        // 回复输入框
-                        Expanded(
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.08)
-                                  : AppColors.skeletonBase,
-                              borderRadius: BorderRadius.circular(22),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _replyController,
-                                    focusNode: _replyFocusNode,
-                                    enabled: !state.isReplying,
-                                    style: const TextStyle(fontSize: 15),
-                                    decoration: InputDecoration(
-                                      hintText: _replyToName != null
-                                          ? '${context.l10n.forumReplyTo} @$_replyToName'
-                                          : context.l10n.forumWriteComment,
-                                      hintStyle: const TextStyle(fontSize: 15),
-                                      border: InputBorder.none,
-                                      contentPadding: AppSpacing.horizontalMd,
-                                    ),
-                                  ),
-                                ),
-                                // 发送按钮
-                                ValueListenableBuilder<TextEditingValue>(
-                                  valueListenable: _replyController,
-                                  builder: (context, value, child) {
-                                    if (value.text.trim().isEmpty)
-                                      return const SizedBox.shrink();
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: Semantics(
-                                        button: true,
-                                        label: 'Send reply',
-                                        child: GestureDetector(
-                                          onTap: state.isReplying
-                                              ? null
-                                              : () => requireAuth(context, () {
-                                                    AppHaptics.selection();
-                                                    context
-                                                        .read<ForumBloc>()
-                                                        .add(
-                                                          ForumReplyPost(
-                                                            postId:
-                                                                widget.postId,
-                                                            content:
-                                                                _replyController
-                                                                    .text
-                                                                    .trim(),
-                                                            parentReplyId:
-                                                                _replyToId,
-                                                          ),
-                                                        );
-                                                    // 输入框在回复成功后再清空（由 BlocListener 监听 replies 增加后执行）
-                                                  }),
-                                          child: Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primary
-                                                  .withValues(alpha: 0.1),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: state.isReplying
-                                                ? const Padding(
-                                                    padding: AppSpacing.allSm,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                            strokeWidth: 2),
-                                                  )
-                                                : const Icon(
-                                                    Icons.send,
-                                                    size: 18,
-                                                    color: AppColors.primary,
-                                                  ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+          child: _BottomCommentInput(
+            controller: _replyController,
+            focusNode: _replyFocusNode,
+            isSending: state.isReplying,
+            replyingToName: _replyToName,
+            onCancelReply: _clearReplyTo,
+            currentUserName: authUser?.name ?? '',
+            currentUserAvatar: authUser?.avatar,
+            hintText: _replyToName != null
+                ? '${context.l10n.forumReplyTo} @$_replyToName'
+                : context.l10n.forumWriteComment,
+            replyingToLabel: _replyToName != null
+                ? '${context.l10n.forumReplyTo} @$_replyToName'
+                : null,
+            onSubmit: () => requireAuth(context, () {
+              AppHaptics.selection();
+              context.read<ForumBloc>().add(
+                    ForumReplyPost(
+                      postId: widget.postId,
+                      content: _replyController.text.trim(),
+                      parentReplyId: _replyToId,
                     ),
-                  ],
-                ),
-              ),
-            ),
+                  );
+              // 输入框在回复成功后再清空(由 BlocListener 监听 replies 增加后执行)
+            }),
           ),
         );
       },
+    );
+  }
+}
+
+/// C8: 底部评论输入条 — 对标 mockup `.comment-input`
+/// - 圆头像 (32) + 圆角灰底输入条 + 右侧发送按钮 (32 圆形)
+/// - 顶部 1px 分割线 + 半透明背景, SafeArea 防底部齐
+/// - 文字非空时发送按钮变亮蓝,空时变浅蓝并禁用
+/// - 回复某人时输入条上方显示 "回复 @xxx" + 取消按钮
+class _BottomCommentInput extends StatefulWidget {
+  const _BottomCommentInput({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmit,
+    required this.replyingToName,
+    required this.onCancelReply,
+    required this.currentUserName,
+    required this.currentUserAvatar,
+    required this.hintText,
+    required this.replyingToLabel,
+    required this.isSending,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onSubmit;
+
+  /// null = 普通模式, 非 null = @ 回复某人
+  final String? replyingToName;
+  final VoidCallback onCancelReply;
+  final String currentUserName;
+  final String? currentUserAvatar;
+  final String hintText;
+  final String? replyingToLabel;
+  final bool isSending;
+
+  @override
+  State<_BottomCommentInput> createState() => _BottomCommentInputState();
+}
+
+class _BottomCommentInputState extends State<_BottomCommentInput> {
+  bool get _canSubmit =>
+      !widget.isSending && widget.controller.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant _BottomCommentInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onChange);
+      widget.controller.addListener(_onChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChange);
+    super.dispose();
+  }
+
+  void _onChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = (isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight)
+        .withValues(alpha: 0.85);
+    final divider = (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+        .withValues(alpha: 0.3);
+    final inputBg = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.04);
+    final secondaryColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border(top: BorderSide(color: divider)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // "回复 @xxx" 提示条
+              if (widget.replyingToLabel != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.replyingToLabel!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Semantics(
+                        button: true,
+                        label: 'Clear reply',
+                        child: GestureDetector(
+                          onTap: widget.onCancelReply,
+                          child: Icon(
+                            Icons.close,
+                            size: 16,
+                            color: secondaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // 圆形头像 (32x32)
+                  ClipOval(
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: (widget.currentUserAvatar != null &&
+                              widget.currentUserAvatar!.isNotEmpty)
+                          ? AsyncImageView(
+                              imageUrl: widget.currentUserAvatar,
+                              width: 32,
+                              height: 32,
+                              errorWidget: _GradientAvatarFallback(
+                                  name: widget.currentUserName),
+                            )
+                          : _GradientAvatarFallback(
+                              name: widget.currentUserName),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // 圆角灰底输入条
+                  Expanded(
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 36),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: inputBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: TextField(
+                        controller: widget.controller,
+                        focusNode: widget.focusNode,
+                        enabled: !widget.isSending,
+                        decoration: InputDecoration(
+                          hintText: widget.hintText,
+                          hintStyle: TextStyle(
+                            color: isDark
+                                ? AppColors.textPlaceholderDark
+                                : AppColors.textPlaceholderLight,
+                            fontSize: 13,
+                          ),
+                          isCollapsed: true,
+                          border: InputBorder.none,
+                        ),
+                        style: const TextStyle(fontSize: 13),
+                        maxLines: 5,
+                        minLines: 1,
+                        textInputAction: TextInputAction.newline,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // 右侧发送按钮 (32 圆形)
+                  Semantics(
+                    button: true,
+                    label: 'Send reply',
+                    enabled: _canSubmit,
+                    child: GestureDetector(
+                      onTap: _canSubmit ? widget.onSubmit : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: _canSubmit
+                              ? AppColors.primary
+                              : AppColors.primary.withValues(alpha: 0.35),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: widget.isSending
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.send,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
