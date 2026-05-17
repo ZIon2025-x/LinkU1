@@ -14,6 +14,7 @@ import 'core/config/app_config.dart';
 import 'core/utils/app_version.dart';
 import 'core/utils/crash_reporter.dart';
 import 'core/utils/logger.dart';
+import 'core/utils/media_saver.dart';
 import 'core/utils/network_monitor.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
@@ -82,6 +83,9 @@ void main() {
 
       // 网络监测：非阻塞初始化，不影响启动速度
       NetworkMonitor.instance.initialize();
+
+      // 任务聊天媒体临时文件清理(>7天的下载/分享缓存),非阻塞,失败不影响启动
+      MediaSaver.pruneTempOldFiles();
 
       // 配置全局 ImageCache 大小：扩大缓存以减少重复解码
       // 本应用有大量图片列表（首页、论坛、跳蚤市场等），需要足够缓存支撑回滑

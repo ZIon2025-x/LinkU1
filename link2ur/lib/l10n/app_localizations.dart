@@ -147,7 +147,7 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get commonClose;
 
-  /// No description provided for @commonRetry.
+  /// Generic 'Retry' button (video/PDF load failures, etc.)
   ///
   /// In en, this message translates to:
   /// **'Retry'**
@@ -18964,6 +18964,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sending…'**
   String get chatSendingMedia;
+
+  /// Shown after repeated retry failures (15-min signed URL expiry)
+  ///
+  /// In en, this message translates to:
+  /// **'Link may have expired. Pull to refresh the chat and try again.'**
+  String get chatMediaUrlExpiredHint;
 
   /// SnackBar message after saving image/video succeeds
   ///

@@ -40,6 +40,7 @@ class PdfPreviewView extends StatefulWidget {
 class _PdfPreviewViewState extends State<PdfPreviewView> {
   String? _localPath;
   String? _error;
+  int _retryCount = 0;
 
   @override
   void initState() {
@@ -48,13 +49,24 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
   }
 
   Future<void> _download() async {
+    if (mounted) setState(() => _error = null);
     try {
       final path = await MediaSaver.downloadToTemp(widget.pdfUrl, widget.filename);
-      if (mounted) setState(() => _localPath = path);
+      if (mounted) {
+        setState(() {
+          _localPath = path;
+          _retryCount = 0; // 成功清零
+        });
+      }
     } catch (e) {
-      AppLogger.error('PDF download failed', e);
+      AppLogger.error('PDF download failed (retry=$_retryCount)', e);
       if (mounted) setState(() => _error = 'chat_file_download_failed');
     }
+  }
+
+  Future<void> _onRetry() async {
+    _retryCount++;
+    await _download();
   }
 
   Future<void> _openWithOther() async {
@@ -80,15 +92,41 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
 
   Future<void> _shareOrSave() async {
     if (_localPath == null) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      await SharePlus.instance.share(
+      final result = await SharePlus.instance.share(
         ShareParams(
           files: [XFile(_localPath!, mimeType: 'application/pdf')],
           subject: widget.filename,
         ),
       );
+      if (!mounted) return;
+      // 根据 ShareResult.status 决定反馈:
+      // - success: 用户选了某个 target(存到文件/Drive/邮件等)— 给绿色 SnackBar
+      // - dismissed: 用户在 sheet 里取消 — 不打扰
+      // - unavailable: 当前系统没有可用 sharing target — 提示
+      switch (result.status) {
+        case ShareResultStatus.success:
+          messenger.showSnackBar(SnackBar(
+            content: Text(context.l10n.chatSaveSuccess),
+          ));
+          break;
+        case ShareResultStatus.dismissed:
+          // 用户主动取消, 不弹 SnackBar 减少打扰
+          break;
+        case ShareResultStatus.unavailable:
+          messenger.showSnackBar(SnackBar(
+            content: Text(context.l10n.chatSaveFailed),
+          ));
+          break;
+      }
     } catch (e) {
       AppLogger.error('Share PDF failed', e);
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(context.l10n.chatSaveFailed),
+        ));
+      }
     }
   }
 
@@ -135,13 +173,41 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
         ],
       ),
       body: _error != null
-          ? Center(child: Text(context.localizeError(_error)))
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.localizeError(_error),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: _onRetry,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(context.l10n.commonRetry),
+                  ),
+                  if (_retryCount >= 2)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        context.l10n.chatMediaUrlExpiredHint,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
+              ),
+            )
           : _localPath == null
               ? const Center(child: CircularProgressIndicator())
               : PDFView(
                   filePath: _localPath!,
                   onError: (e) {
-                    AppLogger.error('PDF render error', e);
+                    AppLogger.error('PDF render error (retry=$_retryCount)', e);
                     if (mounted) setState(() => _error = 'chat_pdf_preview_failed');
                   },
                 ),

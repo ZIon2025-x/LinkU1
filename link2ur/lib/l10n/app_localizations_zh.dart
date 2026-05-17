@@ -9917,6 +9917,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSendingMedia => '正在发送…';
 
   @override
+  String get chatMediaUrlExpiredHint => '链接可能已过期,请返回聊天页下拉刷新后再试';
+
+  @override
   String get chatSaveSuccess => '已保存到相册';
 
   @override
@@ -23816,6 +23819,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatSendingMedia => '傳送中…';
+
+  @override
+  String get chatMediaUrlExpiredHint => '連結可能已過期,請返回聊天頁下拉重新整理後再試';
 
   @override
   String get chatSaveSuccess => '已儲存到相簿';

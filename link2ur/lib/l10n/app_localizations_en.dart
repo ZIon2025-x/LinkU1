@@ -10342,6 +10342,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSendingMedia => 'Sending…';
 
   @override
+  String get chatMediaUrlExpiredHint =>
+      'Link may have expired. Pull to refresh the chat and try again.';
+
+  @override
   String get chatSaveSuccess => 'Saved to album';
 
   @override

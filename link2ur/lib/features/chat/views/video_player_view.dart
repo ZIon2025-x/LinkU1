@@ -40,6 +40,7 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   String? _initError;
+  int _retryCount = 0;
 
   @override
   void initState() {
@@ -48,6 +49,12 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
   }
 
   Future<void> _init() async {
+    // 清理上一轮 controller(retry 时不可漏)
+    _chewieController?.dispose(); // ChewieController.dispose() 是 sync void
+    await _videoController?.dispose(); // VideoPlayerController.dispose() 是 async
+    _chewieController = null;
+    _videoController = null;
+    if (mounted) setState(() => _initError = null);
     try {
       _videoController =
           VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
@@ -58,13 +65,19 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
         // 整页就是全屏,不需要 chewie 二次全屏
         allowFullScreen: false,
       );
+      _retryCount = 0; // 成功后清零,允许后续无限重试
       if (mounted) setState(() {});
     } catch (e) {
-      AppLogger.error('Video init failed', e);
+      AppLogger.error('Video init failed (retry=$_retryCount)', e);
       if (mounted) {
         setState(() => _initError = 'chat_video_play_failed');
       }
     }
+  }
+
+  Future<void> _onRetry() async {
+    _retryCount++;
+    await _init();
   }
 
   @override
@@ -141,9 +154,36 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
       ),
       body: Center(
         child: _initError != null
-            ? Text(
-                context.localizeError(_initError),
-                style: const TextStyle(color: Colors.white),
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.localizeError(_initError),
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: _onRetry,
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    label: Text(
+                      context.l10n.commonRetry,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  if (_retryCount >= 2)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        context.l10n.chatMediaUrlExpiredHint,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
               )
             : (_chewieController != null
                 ? Chewie(controller: _chewieController!)

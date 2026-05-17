@@ -45,17 +45,38 @@ class VideoMessageBubble extends StatelessWidget {
     return '';
   }
 
+  /// 视频实际宽高比(video.meta.width/height),fallback 9:16 竖屏(手机录像)。
+  double get _aspectRatio {
+    final w = _videoAtt?.meta?['width'];
+    final h = _videoAtt?.meta?['height'];
+    if (w is num && h is num && w > 0 && h > 0) {
+      return w / h;
+    }
+    return 9 / 16; // 默认竖屏
+  }
+
   @override
   Widget build(BuildContext context) {
     final thumbUrl = _thumbAtt?.url;
+
+    // 自适应:气泡宽度 = min(屏宽 * 0.55, 240) 让 iPhone SE / iPad 都合理;
+    // 高度按视频实际比例算,横屏视频不会被强拉成竖屏(避免黑边或变形)。
+    // 比例上下限:0.5(高瘦) ~ 1.78(16:9 横屏),超出按 1.0 (方形) 退避。
+    final screenW = MediaQuery.of(context).size.width;
+    final width = (screenW * 0.55).clamp(160.0, 240.0);
+    final aspect = _aspectRatio.clamp(0.5, 1.78);
+    final height = width / aspect;
+    // 高度上限避免横屏视频在窄屏被算得超长 / 竖屏视频太高
+    final clampedHeight = height.clamp(140.0, 320.0);
+
     return InkWell(
       onTap: onTap,
       borderRadius: AppRadius.allMedium,
       child: ClipRRect(
         borderRadius: AppRadius.allMedium,
         child: SizedBox(
-          width: 200,
-          height: 280,
+          width: width,
+          height: clampedHeight,
           child: Stack(
             fit: StackFit.expand,
             children: [
