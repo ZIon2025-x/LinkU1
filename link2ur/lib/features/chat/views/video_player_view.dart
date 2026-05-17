@@ -1,9 +1,10 @@
+import 'dart:io';
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/router/page_transitions.dart';
-import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/media_saver.dart';
@@ -56,8 +57,12 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
     _videoController = null;
     if (mounted) setState(() => _initError = null);
     try {
-      _videoController =
-          VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+      // 先下载到 app 临时目录,再用 file:// 播本地 — 绕开 AVPlayer 对 HTTP Range /
+      // streaming 的挑剔(linktest 签名 URL HTTP 拿不动 Range partial → AVPlayer
+      // "Failed to load")。30MB 视频 4G 几秒下载,体验仍可接受。
+      final localPath =
+          await MediaSaver.downloadToTemp(widget.videoUrl, widget.filename);
+      _videoController = VideoPlayerController.file(File(localPath));
       await _videoController!.initialize();
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
