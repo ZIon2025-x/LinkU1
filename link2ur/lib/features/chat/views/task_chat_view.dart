@@ -367,12 +367,15 @@ class _TaskChatContentState extends State<_TaskChatContent> {
 
       if (!mounted) return;
       // 4. 派发 ChatSendVideo
-      final lower = filename.toLowerCase();
-      final outFilename = lower.endsWith('.mp4') ||
-              lower.endsWith('.mov') ||
-              lower.endsWith('.m4v')
-          ? filename
-          : '$filename.mp4';
+      // outFilename **必须反映 compressedBytes 实际容器格式**(mp4),不能用原始 .mov 文件名,
+      // 否则 backend 落盘扩展名 .mov + Content-Type video/quicktime,但内容是 mp4 容器 →
+      // iOS AVPlayer/Android ExoPlayer mime 与实际格式不匹配 → 拒绝播放。
+      // video_compress 在 iOS/Android 都用 mp4 容器输出(AVAssetExportSession / MediaMuxer),
+      // 无论原始是 .mov/.m4v 都安全用 .mp4 扩展名。
+      final baseName = filename.contains('.')
+          ? filename.substring(0, filename.lastIndexOf('.'))
+          : filename;
+      final outFilename = '$baseName.mp4';
       context.read<ChatBloc>().add(ChatSendVideo(
             videoBytes: compressedBytes,
             videoFilename: outFilename,
