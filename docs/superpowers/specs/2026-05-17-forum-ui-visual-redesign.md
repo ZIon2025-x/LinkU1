@@ -40,13 +40,13 @@
 |---|---|---|
 | `_CreateAppBar` | 现有 AppBar | 渐变蓝发布药丸（gradient `[primary, primaryLight]`），sticky 顶部，亮度自适应 |
 | `_DraftBanner` | **沿用现有** | 视觉小调：加 icon + 时间副标题，已是 spec 内容 |
-| `_TopicChip` | 替换大分类卡 | 小药丸：emoji + 名 + ×；**仅选中时渲染**；未选则不显示，由底部工具栏的 `话题` 按钮触发 picker |
+| `_TopicChip` | 替换大分类卡 | 小药丸：emoji + 名 + ×；**仅选中或锁定时渲染**；普通模式未选则不显示；**锁定模式**显示 emoji + 板块名 + 🔒（替代 ×，无 onTap）；普通模式未选 → 由底部工具栏 `话题` 按钮触发 picker |
 | `_TitleField` | 现有 TextField | 大字号、粗体、无边框、`textInputAction: next` |
 | `_ContentField` | 现有 TextField | 大书写区（`minLines: 10`），无边框，字数计数器右下角 |
 | `_ImageThumbGrid4` | 现有 Wrap+ImageRemoveButton | 4 列 1:1 网格，第一张带"封面"徽章，其余带顺序号；dashed 加号位（最多 5） |
 | `_FilePdfCard` | 现有 file card | PDF 红渐变图标（`#F24D4D → #FF7A7A`）+ 名 + 大小 + 上传进度条 + 圆形 × 按钮 |
 | `_LinkedChip` | 现有 OutlinedButton/Chip | 紫色渐变（`#7359F2 → #A18BFF`）+ 类型标签 + 名字（≤1 行 ellipsis）+ × |
-| `_BottomComposerToolbar` | **全新** | sticky 底部，4 键横排：图片绿 / 附件红 / 关联紫 / 话题蓝，每键带角标 count，半透明 blur 背景 |
+| `_BottomComposerToolbar` | **全新** | sticky 底部，4 键横排：图片绿 / 附件红 / 关联紫 / 话题蓝，每键带角标 count，半透明 blur 背景。**lockCategory 模式下"话题"键置灰 + 锁图标小角标**，点击弹 SnackBar 解释为什么锁定；其余 3 键正常工作 |
 
 ### 详情页（`forum_post_detail_view.dart`）
 
@@ -81,7 +81,10 @@
 
 - ForumBloc events / state / repository / endpoint：零改动
 - 现有交互全部保留：@ 跳转 + highlightStream、展开剩余 N 条、排序切换、点赞乐观更新、删除级联、举报、编辑、官方任务关联、达人板块锁定、admin 公告锁定
-- `lockCategory == true` 路径行为不变：发帖页锁定话题展示，UI 用现有方式（read-only chip + 锁图标），不渲染底部工具栏的"话题"按钮（已锁定无需切换）
+- `lockCategory == true` 路径行为不变（仍然锁定话题不可改），但**UI 走完全一致的布局**：
+  - 顶部话题区显示 `_TopicChip` 的**锁定变体**（emoji + 板块名 + 🔒 锁图标替代 ×，无 onTap）
+  - 底部工具栏**保留全部 4 个按钮**，但"话题"键置灰（半透明 + 锁图标小角标），点击弹 SnackBar 提示"本场景下话题已锁定" + 简短原因
+  - 其余 3 个按钮（图片/附件/关联）正常工作
 
 ## 错误/边界处理
 
@@ -128,7 +131,7 @@
 
 1. **现有 view 大文件改动面广**：`forum_post_detail_view.dart` 当前 ~1900 行，本次重做大量行；diff review 困难。**对策**：细粒度 commit，每个 widget 替换独立 commit
 2. **暗色模式 mockup 没画**：颜色判断只能凭对设计系统的理解。**对策**：每个 widget 实施完成立刻 flutter run -d web-server 浅+深两 mode 截图自检
-3. **官方任务 / 达人板块 / admin 公告锁定模式**：mockup 没画这些场景。**对策**：保留现有锁定 widget 不动，只重做非锁定路径
+3. **官方任务 / 达人板块 / admin 公告锁定模式**：mockup 没画这些场景。**对策**：走完全一致的新 UI 布局，锁定状态用 chip 上的 🔒 + 底部工具栏话题键置灰传达；SnackBar 文案准备 4 套（达人板块/官方任务/admin 公告/校园板块）
 4. **骨架屏组件可能不齐**：`core/widgets/skeleton_*` 现状未审。**对策**：实施时如缺则按 mockup body 主结构现写一个 skeleton（接受为本 spec 的一部分）
 
 ## 验收标准
