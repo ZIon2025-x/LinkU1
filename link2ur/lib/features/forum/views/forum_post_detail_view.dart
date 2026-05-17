@@ -213,7 +213,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         alignment: 0.2,
       );
     }
-    // 兜底:广播高亮(已挂载的 _ReplyCard listener 命中即生效)
+    // 兜底:广播高亮(已挂载的 _CommentItem listener 命中即生效)
     _highlightStream.add(targetReplyId);
   }
 
@@ -1194,18 +1194,29 @@ class _RootReplyGroup extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 根评论 (C6 视觉重做 — _CommentItem)
-        _CommentItem(
-          key: replyKeys.putIfAbsent(root.id, () => GlobalKey()),
-          reply: root,
-          isNested: false,
-          onLike: () => context.read<ForumBloc>().add(ForumLikeReply(root.id)),
-          onReply: () => onReplyTo(
-            root.id,
-            root.author?.name ?? root.authorId.toString(),
-          ),
-          onMentionTap: (id) => onMentionTap(id),
-          highlightStream: highlightStream,
+        // 根评论 (C6 视觉重做 — _CommentItem) + 右上角 reply count chip (C7)
+        Stack(
+          children: [
+            _CommentItem(
+              key: replyKeys.putIfAbsent(root.id, () => GlobalKey()),
+              reply: root,
+              isNested: false,
+              onLike: () =>
+                  context.read<ForumBloc>().add(ForumLikeReply(root.id)),
+              onReply: () => onReplyTo(
+                root.id,
+                root.author?.name ?? root.authorId.toString(),
+              ),
+              onMentionTap: (id) => onMentionTap(id),
+              highlightStream: highlightStream,
+            ),
+            if (root.totalChildren > 0)
+              Positioned(
+                top: 8,
+                right: 0,
+                child: _ReplyCountChip(count: root.totalChildren),
+              ),
+          ],
         ),
         // 子回复 (preview + loaded),带左侧缩进
         for (final child in displayChildren)
@@ -1222,16 +1233,15 @@ class _RootReplyGroup extends StatelessWidget {
             onMentionTap: (id) => onMentionTap(id),
             highlightStream: highlightStream,
           ),
-        // 展开剩余 N 条按钮
+        // 展开剩余 N 条按钮 (C7: 18px 短线 + 蓝字, 对齐 mockup .show-more-replies)
         if (showExpand)
           Padding(
-            padding: const EdgeInsets.only(left: 42, top: 4, bottom: 8),
+            padding: const EdgeInsets.only(left: 46, top: 4, bottom: 4),
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: isLoading ? null : onLoadMoreChildren,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 6, vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1257,10 +1267,6 @@ class _RootReplyGroup extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    const SizedBox(width: 4),
-                    if (!isLoading)
-                      const Icon(Icons.expand_more,
-                          size: 14, color: AppColors.primary),
                   ],
                 ),
               ),
@@ -1271,379 +1277,6 @@ class _RootReplyGroup extends StatelessWidget {
   }
 }
 
-// ==================== 评论卡片 ====================
-
-class _ReplyCard extends StatefulWidget {
-  const _ReplyCard({
-    super.key,
-    required this.reply,
-    required this.isDark,
-    required this.postId,
-    required this.onReplyTo,
-    this.parentReply,
-    this.scrollController,
-    this.replyKeys,
-    this.highlightStream,
-    this.onMentionTap,
-  });
-
-  final ForumReply reply;
-  final bool isDark;
-  final int postId;
-  final void Function(int replyId, String authorName) onReplyTo;
-  final ForumReply? parentReply;
-  final ScrollController? scrollController;
-  final Map<int, GlobalKey>? replyKeys;
-  final Stream<int>? highlightStream;
-
-  /// 新增:`@xxx` 引用块点击 → 跳转到 parent (兼容折叠情况,自动展开)
-  /// 没传时回退到旧逻辑(仅尝试 ensureVisible)
-  final Future<void> Function(int targetReplyId)? onMentionTap;
-
-  @override
-  State<_ReplyCard> createState() => _ReplyCardState();
-}
-
-class _ReplyCardState extends State<_ReplyCard> {
-  StreamSubscription<int>? _highlightSub;
-  bool _highlight = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _highlightSub = widget.highlightStream?.listen((id) {
-      if (id == widget.reply.id && mounted) {
-        setState(() => _highlight = true);
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) setState(() => _highlight = false);
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _highlightSub?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final reply = widget.reply;
-    final isDark = widget.isDark;
-    final postId = widget.postId;
-    final onReplyTo = widget.onReplyTo;
-    final parentReply = widget.parentReply;
-    final replyKeys = widget.replyKeys;
-    final isSubReply = reply.isSubReply;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: _highlight
-            ? Colors.yellow.withValues(alpha: 0.3)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 头像 — 点击跳转个人主页（优先使用 author.id 与后端一致，避免 authorId 与 author 不一致时跳错人）
-            Semantics(
-              button: true,
-              label: 'View user profile',
-              child: GestureDetector(
-                onTap: () {
-                  final userId = reply.author?.id ?? reply.authorId;
-                  if (userId.isEmpty) return;
-                  context.goToUserProfile(userId,
-                      isAdmin: reply.author?.isAdmin ?? false);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 2,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: AvatarView(
-                    imageUrl: reply.author?.avatar,
-                    name: reply.author?.name,
-                    size: isSubReply ? 28 : 32,
-                    isAnonymous: reply.author == null,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Quote block for nested replies
-                  if (parentReply != null) ...[
-                    _ReplyQuoteBlock(
-                      parentReply: parentReply,
-                      isDark: isDark,
-                      onTap: () {
-                        // 优先用新的 onMentionTap(兼容折叠区自动展开),否则回退到旧逻辑
-                        final handler = widget.onMentionTap;
-                        if (handler != null) {
-                          handler(parentReply.id);
-                          return;
-                        }
-                        final key = replyKeys?[parentReply.id];
-                        if (key?.currentContext != null) {
-                          Scrollable.ensureVisible(
-                            key!.currentContext!,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOut,
-                            alignment: 0.2,
-                          );
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 6),
-                  ] else if (reply.isSubReply) ...[
-                    Text(
-                      context.l10n.forumReplyFallbackParent,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                  ],
-                  // 作者行
-                  Row(
-                    children: [
-                      Semantics(
-                        button: true,
-                        label: 'View author',
-                        child: GestureDetector(
-                          onTap: () {
-                            final userId = reply.author?.id ?? reply.authorId;
-                            if (userId.isEmpty) return;
-                            context.goToUserProfile(userId,
-                                isAdmin: reply.author?.isAdmin ?? false);
-                          },
-                          child: Text(
-                            reply.author?.name ??
-                                context.l10n.forumUserFallback(reply.authorId),
-                            style: TextStyle(
-                              fontSize: isSubReply ? 13 : 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimaryLight,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (reply.author?.displayedBadge != null) ...[
-                        const SizedBox(width: 4),
-                        InlineBadgeTag(badge: reply.author!.displayedBadge!),
-                      ],
-                      const Spacer(),
-                      Text(
-                        _formatTime(context, reply.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                      // 点赞回复（评论有点赞功能，点击调用后端并更新状态）
-                      AppSpacing.hSm,
-                      Tooltip(
-                        message: context.l10n.forumLikeReply,
-                        child: Semantics(
-                          button: true,
-                          label: 'Like reply',
-                          child: GestureDetector(
-                            onTap: () => requireAuth(context, () {
-                              AppHaptics.selection();
-                              context
-                                  .read<ForumBloc>()
-                                  .add(ForumLikeReply(reply.id));
-                            }),
-                            behavior: HitTestBehavior.opaque,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.sm,
-                                  vertical: AppSpacing.xs),
-                              decoration: BoxDecoration(
-                                color: reply.isLiked
-                                    ? AppColors.accentPink
-                                        .withValues(alpha: 0.1)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    reply.isLiked
-                                        ? Icons.thumb_up
-                                        : Icons.thumb_up_outlined,
-                                    size: 12,
-                                    color: reply.isLiked
-                                        ? AppColors.accentPink
-                                        : (isDark
-                                            ? AppColors.textTertiaryDark
-                                            : AppColors.textTertiaryLight),
-                                  ),
-                                  if (reply.likeCount > 0) ...[
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '${reply.likeCount}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: reply.isLiked
-                                            ? AppColors.accentPink
-                                            : (isDark
-                                                ? AppColors.textTertiaryDark
-                                                : AppColors.textTertiaryLight),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-                  // 内容（支持后端返回的字面量 \n 换行），可框选复制
-                  Padding(
-                    padding: const EdgeInsets.only(right: 42),
-                    child: SelectableText(
-                      Helpers.normalizeContentNewlines(reply.content),
-                      contextMenuBuilder: systemContextMenuBuilder,
-                      style: (isSubReply
-                              ? AppTypography.footnote
-                              : AppTypography.subheadline)
-                          .copyWith(
-                        fontSize: isSubReply ? 14 : null,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Semantics(
-                        button: true,
-                        label: 'Reply',
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            AppHaptics.selection();
-                            onReplyTo(
-                              reply.id,
-                              reply.author?.name ?? reply.authorId.toString(),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                context.l10n.forumReply,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Builder(builder: (ctx) {
-                        final currentUserId =
-                            ctx.read<AuthBloc>().state.user?.id;
-                        final isAuthor = currentUserId != null &&
-                            reply.authorId.toString() == currentUserId;
-                        if (!isAuthor) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(left: AppSpacing.sm),
-                          child: Semantics(
-                            button: true,
-                            label: 'Delete reply',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                AdaptiveDialogs.showConfirmDialog(
-                                  context: ctx,
-                                  title: ctx.l10n.commonDelete,
-                                  content: ctx.l10n.forumDeleteReplyConfirm,
-                                  confirmText: ctx.l10n.commonDelete,
-                                  cancelText: ctx.l10n.commonCancel,
-                                  isDestructive: true,
-                                  onConfirm: () {
-                                    ctx.read<ForumBloc>().add(ForumDeleteReply(
-                                        reply.id,
-                                        postId: postId));
-                                  },
-                                );
-                              },
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Icon(Icons.delete_outline,
-                                    size: 16,
-                                    color: Theme.of(ctx).colorScheme.error),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatTime(BuildContext context, DateTime? time) {
-    if (time == null) return '';
-    final now = DateTime.now();
-    final difference = now.difference(time);
-    if (difference.inDays > 0)
-      return context.l10n.timeDaysAgo(difference.inDays);
-    if (difference.inHours > 0)
-      return context.l10n.timeHoursAgo(difference.inHours);
-    if (difference.inMinutes > 0)
-      return context.l10n.timeMinutesAgo(difference.inMinutes);
-    return context.l10n.timeJustNow;
-  }
-}
 
 // ==================== 帖子图片轮播 ====================
 // 顶部全宽图片容器，左右滑动切换，带页码指示器，点击全屏查看
@@ -2092,84 +1725,6 @@ class _LinkedItemCard extends StatelessWidget {
       default:
         return Icons.dashboard;
     }
-  }
-}
-
-class _ReplyQuoteBlock extends StatelessWidget {
-  const _ReplyQuoteBlock({
-    required this.parentReply,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  final ForumReply parentReply;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final authorName = parentReply.author?.name ?? parentReply.authorId;
-    final content = parentReply.content;
-    final bgColor = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
-    final borderColor = isDark
-        ? AppColors.textTertiaryDark.withValues(alpha: 0.4)
-        : AppColors.textTertiaryLight.withValues(alpha: 0.4);
-    final textColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-
-    return Semantics(
-      button: true,
-      label: 'Jump to parent',
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(6),
-            border: Border(
-              left: BorderSide(color: borderColor, width: 2.5),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      '↩ $authorName',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (parentReply.author?.displayedBadge != null) ...[
-                    const SizedBox(width: 4),
-                    InlineBadgeTag(badge: parentReply.author!.displayedBadge!),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                Helpers.normalizeContentNewlines(content),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: textColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -2867,5 +2422,46 @@ class _ReplyContent extends StatelessWidget {
       );
     }
     return Text(normalized, style: bodyStyle);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// C7: _ReplyCountChip — mockup `.reply-count-tag`
+// 浅蓝底 + 蓝字 + 内嵌 chat 图标 + 圆角药丸,挂在根评论右上角 (totalChildren > 0)
+// ─────────────────────────────────────────────────────────────
+
+class _ReplyCountChip extends StatelessWidget {
+  const _ReplyCountChip({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.chat_bubble_outline,
+            size: 10,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$count 条回复',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
