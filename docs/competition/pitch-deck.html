@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Link²Ur · AI Native Pitch Deck</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --bg-0:#070a14;
+    --bg-1:#0d1322;
+    --bg-2:#161f36;
+    --fg-0:#f5f7ff;
+    --fg-1:#c8cee0;
+    --fg-2:#8b93a8;
+    --accent:#5b8cff;
+    --accent-2:#7c5cff;
+    --accent-3:#ff6dc7;
+    --good:#34d399;
+    --warn:#fbbf24;
+    --plan:#94a3b8;
+    --formula:#22d3ee;
+    --card:#1a2238cc;
+    --border:#2a3553;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;background:var(--bg-0);color:var(--fg-0);font-family:"Segoe UI","PingFang SC","Hiragino Sans","Microsoft YaHei",sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+  /* Slide container */
+  .deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+  .slide{position:absolute;inset:0;padding:5vh 7vw;display:flex;flex-direction:column;justify-content:center;opacity:0;transform:translateX(40px);transition:opacity .35s ease, transform .35s ease;pointer-events:none;overflow-y:auto}
+  .slide.active{opacity:1;transform:translateX(0);pointer-events:auto}
+
+  /* Background motif */
+  .slide::before{
+    content:"";position:absolute;inset:0;z-index:-1;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, #5b8cff22, transparent 60%),
+      radial-gradient(ellipse 70% 60% at 90% 90%, #7c5cff22, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 50%, #ff6dc711, transparent 70%),
+      linear-gradient(160deg, var(--bg-0), var(--bg-1) 60%, var(--bg-2) 100%);
+  }
+
+  /* Typography */
+  h1{font-size:clamp(2.2rem, 5vw, 4.5rem);font-weight:800;line-height:1.05;letter-spacing:-1px;margin-bottom:1.5rem;background:linear-gradient(90deg, var(--fg-0), var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  h2{font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:700;line-height:1.15;margin-bottom:1.2rem;color:var(--fg-0)}
+  h2 .num{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:.55em;padding:.18em .55em;border-radius:.5em;margin-right:.5em;vertical-align:middle;font-weight:600;letter-spacing:.05em}
+  h3{font-size:1.3rem;font-weight:600;color:var(--fg-0);margin:.6em 0}
+  p, li{font-size:clamp(.92rem, 1.3vw, 1.1rem);line-height:1.55;color:var(--fg-1)}
+  .tag{display:inline-block;font-size:.72rem;font-weight:600;padding:.2em .7em;border-radius:999px;letter-spacing:.05em;margin-right:.4em;vertical-align:middle}
+  .tag-live{background:#34d39933;color:var(--good);border:1px solid #34d39955}
+  .tag-dev{background:#fbbf2433;color:var(--warn);border:1px solid #fbbf2455}
+  .tag-plan{background:#94a3b833;color:var(--plan);border:1px solid #94a3b855}
+
+  /* Cover slide */
+  .cover{text-align:center;align-items:center}
+  .cover .logo{font-size:clamp(3rem, 9vw, 7rem);font-weight:900;background:linear-gradient(135deg,#5b8cff,#7c5cff,#ff6dc7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.5rem;letter-spacing:-3px;animation:glow 3s ease-in-out infinite alternate}
+  @keyframes glow{from{filter:drop-shadow(0 0 20px #5b8cff44)}to{filter:drop-shadow(0 0 35px #ff6dc788)}}
+  .cover .tagline{font-size:clamp(1.1rem,2.2vw,1.7rem);color:var(--fg-0);margin-bottom:.8rem;font-weight:600}
+  .cover .subtag{font-size:.9rem;color:var(--fg-2);letter-spacing:.4em;text-transform:uppercase;margin-bottom:2rem}
+  .cover .meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;font-size:.95rem;color:var(--fg-2)}
+  .cover .meta strong{color:var(--fg-1);font-weight:600}
+
+  /* Generic grid card */
+  .grid{display:grid;gap:1.1rem;margin-top:1rem}
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .grid-4{grid-template-columns:repeat(4,1fr)}
+  .grid-5{grid-template-columns:repeat(5,1fr)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1.4rem;backdrop-filter:blur(8px);transition:transform .25s ease, border-color .25s ease}
+  .card:hover{transform:translateY(-3px);border-color:var(--accent)}
+  .card .icon{font-size:1.8rem;margin-bottom:.4rem;display:block}
+  .card h3{font-size:1.1rem;margin-bottom:.3rem;color:var(--fg-0)}
+  .card p{font-size:.9rem;color:var(--fg-2);line-height:1.5}
+
+  /* Pain points list */
+  .pain{display:flex;flex-direction:column;gap:.8rem;margin-top:1rem}
+  .pain-item{display:flex;gap:1rem;align-items:flex-start;padding:1rem 1.2rem;background:var(--card);border:1px solid var(--border);border-radius:14px;border-left:3px solid var(--accent)}
+  .pain-item .num{font-size:1.5rem;font-weight:800;color:var(--accent);min-width:2.5rem;line-height:1}
+  .pain-item .body{flex:1}
+  .pain-item h3{font-size:1.05rem;margin:0 0 .3rem 0}
+  .pain-item p{font-size:.9rem;margin:0;color:var(--fg-2)}
+
+  /* Highlight box */
+  .hl{padding:1.1rem 1.4rem;border-radius:14px;background:linear-gradient(135deg,#5b8cff22,#7c5cff22);border:1px solid var(--accent);margin-top:1rem;font-size:1.05rem;color:var(--fg-0)}
+  .hl strong{color:var(--accent)}
+  .hl-pink{background:linear-gradient(135deg,#ff6dc722,#7c5cff22);border-color:var(--accent-3)}
+  .hl-pink strong{color:var(--accent-3)}
+
+  /* Formula block */
+  .formula{
+    background:linear-gradient(135deg,#0a1530,#1a2a4a);
+    border:1px solid var(--formula);
+    border-radius:12px;
+    padding:1.2rem 1.5rem;
+    margin:1rem 0;
+    font-family:"JetBrains Mono","Fira Code","Cascadia Code",Consolas,monospace;
+    box-shadow:0 0 30px #22d3ee22;
+    position:relative;
+  }
+  .formula::before{
+    content:"FORMULA";
+    position:absolute;
+    top:-.7rem;
+    left:1rem;
+    background:var(--bg-1);
+    padding:0 .6rem;
+    font-size:.7rem;
+    letter-spacing:.2em;
+    color:var(--formula);
+    font-family:inherit;
+    font-weight:700;
+  }
+  .formula .eq{
+    font-size:clamp(1.3rem,2.2vw,1.9rem);
+    color:var(--formula);
+    text-align:center;
+    margin:.6rem 0;
+    text-shadow:0 0 12px #22d3ee66;
+  }
+  .formula .legend{font-size:.85rem;color:var(--fg-2);margin-top:.4rem;line-height:1.6}
+  .formula .legend code{color:var(--formula);background:#22d3ee18;padding:.05em .35em;border-radius:.25em;font-size:.95em}
+
+  /* Tables */
+  .tbl{width:100%;border-collapse:collapse;margin-top:1rem;font-size:.9rem}
+  .tbl th, .tbl td{padding:.7rem .9rem;text-align:left;border-bottom:1px solid var(--border);color:var(--fg-1)}
+  .tbl th{color:var(--fg-0);font-weight:600;background:#0e1424}
+  .tbl tr:hover td{background:#5b8cff11}
+  .tbl .em{color:var(--accent);font-weight:600}
+  .tbl .em2{color:var(--formula);font-weight:600}
+
+  /* Status badges */
+  .status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1rem}
+  .status-col h3{font-size:1.05rem;margin-bottom:.7rem;padding-bottom:.4rem;border-bottom:2px solid var(--border)}
+  .status-col.live h3{border-color:var(--good);color:var(--good)}
+  .status-col.dev h3{border-color:var(--warn);color:var(--warn)}
+  .status-col.plan h3{border-color:var(--plan);color:var(--plan)}
+  .status-col ul{list-style:none;padding:0}
+  .status-col li{padding:.35rem 0;font-size:.9rem;color:var(--fg-1);border-bottom:1px dashed var(--border)}
+  .status-col li:last-child{border-bottom:none}
+
+  /* Big numbers row */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1.3rem}
+  .stat{text-align:center;padding:1.3rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:14px}
+  .stat .v{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+  .stat .l{font-size:.85rem;color:var(--fg-2);margin-top:.5rem}
+
+  /* Roadmap */
+  .roadmap{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1.3rem;position:relative}
+  .roadmap::before{content:"";position:absolute;top:1.5rem;left:5%;right:5%;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent-2),var(--accent-3),transparent);z-index:0}
+  .road-step{position:relative;z-index:1;text-align:center;padding-top:3.5rem}
+  .road-step .dot{position:absolute;top:.6rem;left:50%;transform:translateX(-50%);width:1.8rem;height:1.8rem;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#fff;border:3px solid var(--bg-0)}
+  .road-step h3{font-size:1rem;margin-bottom:.3rem}
+  .road-step p{font-size:.83rem;color:var(--fg-2)}
+
+  /* Funding use bars */
+  .bars{margin-top:1.3rem}
+  .bar{display:flex;align-items:center;gap:.8rem;margin-bottom:.65rem}
+  .bar .label{min-width:9rem;font-size:.92rem;color:var(--fg-1)}
+  .bar .track{flex:1;height:1.5rem;background:#0e1424;border-radius:8px;overflow:hidden;border:1px solid var(--border);position:relative}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:8px}
+  .bar .pct{min-width:3rem;text-align:right;font-weight:600;color:var(--fg-0);font-size:.92rem}
+
+  /* Cost compression bar chart */
+  .cost-chart{display:flex;align-items:flex-end;justify-content:center;gap:2rem;margin-top:1.5rem;height:280px;padding:0 2rem}
+  .cost-bar-group{flex:1;max-width:130px;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+  .cost-bar-group .label-top{font-size:.9rem;color:var(--fg-2);margin-bottom:.4rem;font-weight:600}
+  .cost-bar-wrapper{display:flex;align-items:flex-end;gap:.5rem;justify-content:center;height:200px}
+  .cost-bar{width:38px;border-radius:6px 6px 0 0;position:relative;display:flex;align-items:flex-end;justify-content:center;color:#fff;font-size:.75rem;font-weight:700;padding-bottom:.3rem}
+  .cost-bar.trad{background:linear-gradient(180deg,#475569,#334155);height:100%}
+  .cost-bar.ai{background:linear-gradient(180deg,var(--accent),var(--accent-2));box-shadow:0 0 15px #5b8cff66}
+  .cost-bar-group .axis{font-size:.78rem;color:var(--fg-2);margin-top:.6rem}
+  .cost-bar-group .legend-row{display:flex;justify-content:center;gap:.5rem;font-size:.7rem;color:var(--fg-2);margin-top:.3rem}
+
+  /* Long-tail curve (SVG container) */
+  .longtail-wrap{margin-top:1rem;text-align:center}
+  .longtail-wrap svg{max-width:100%;height:auto}
+  .longtail-caption{font-size:.85rem;color:var(--fg-2);margin-top:.5rem;text-align:center}
+
+  /* Vision quote */
+  .quote{font-size:clamp(1.2rem,2.4vw,1.8rem);line-height:1.5;text-align:center;padding:2rem;color:var(--fg-0);font-weight:600;background:linear-gradient(135deg,#5b8cff11,#7c5cff11,#ff6dc711);border-radius:20px;border:1px solid var(--border);margin:1.5rem 0}
+  .quote .accent{color:var(--accent)}
+  .quote .accent2{color:var(--accent-3)}
+
+  /* Controls */
+  .controls{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.7rem;background:var(--card);border:1px solid var(--border);padding:.45rem .7rem;border-radius:999px;backdrop-filter:blur(12px);z-index:100;font-size:.83rem;color:var(--fg-1)}
+  .controls button{background:transparent;border:none;color:var(--fg-1);cursor:pointer;font-size:1rem;padding:.3rem .55rem;border-radius:8px;transition:background .2s}
+  .controls button:hover{background:#5b8cff33;color:var(--fg-0)}
+  .controls .counter{font-variant-numeric:tabular-nums}
+  .controls .sep{color:var(--fg-2);opacity:.5}
+
+  /* Language toggle */
+  .lang-toggle{position:fixed;top:1.2rem;right:1.2rem;z-index:100;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:.3rem;backdrop-filter:blur(12px);display:flex;gap:.2rem}
+  .lang-toggle button{background:transparent;border:none;color:var(--fg-2);padding:.32rem .85rem;border-radius:999px;cursor:pointer;font-size:.83rem;font-weight:600;transition:all .2s}
+  .lang-toggle button.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
+
+  /* Progress bar */
+  .progress{position:fixed;top:0;left:0;right:0;height:3px;background:#0e1424;z-index:99}
+  .progress .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2),var(--accent-3));transition:width .35s ease;box-shadow:0 0 10px #7c5cff88}
+
+  /* Slide-number footer */
+  .slide-footer{position:absolute;bottom:1rem;left:7vw;font-size:.78rem;color:var(--fg-2);letter-spacing:.15em}
+
+  /* Hide untranslated */
+  [data-lang="zh"], [data-lang="en"]{display:none}
+  html[lang="zh-CN"] [data-lang="zh"]{display:block}
+  html[lang="zh-CN"] [data-lang="zh"].inline{display:inline}
+  html[lang="en"] [data-lang="en"]{display:block}
+  html[lang="en"] [data-lang="en"].inline{display:inline}
+
+  /* Responsive */
+  @media (max-width: 880px){
+    .grid-3,.grid-4,.grid-5,.stats,.roadmap,.status-grid{grid-template-columns:1fr 1fr}
+    .grid-2{grid-template-columns:1fr}
+    .slide{padding:4vh 5vw}
+    .cost-chart{height:200px;padding:0;gap:1rem}
+    .cost-bar{width:24px}
+    .cost-bar-wrapper{height:140px}
+  }
+</style>
+</head>
+<body>
+<div class="progress"><div class="fill" id="progressFill"></div></div>
+
+<div class="lang-toggle" role="group" aria-label="Language">
+  <button id="langZh" class="active">中文</button>
+  <button id="langEn">English</button>
+</div>
+
+<div class="deck">
+
+  <!-- ====== Slide 1: Cover ====== -->
+  <section class="slide cover active" data-slide="1">
+    <div class="logo">Link²Ur</div>
+    <div class="tagline" data-lang="zh">链接需求与超级个体的 AI Native 平台</div>
+    <div class="tagline" data-lang="en">The AI Native Platform Linking Demand to Super-Individuals</div>
+    <div class="subtag">RELEASE EVERY UNIQUE PERSON · SERVE EVERY LONG-TAIL NEED</div>
+    <div class="meta">
+      <span data-lang="zh"><strong>运营主体：</strong>LINK2UR LTD（英国）</span>
+      <span data-lang="en"><strong>Entity:</strong> LINK2UR LTD (United Kingdom)</span>
+      <span data-lang="zh"><strong>阶段：</strong>App 已上线 · Pre-A</span>
+      <span data-lang="en"><strong>Stage:</strong> App live on iOS + Android · Pre-A</span>
+      <span><strong>v2.0 · 2026.05</strong></span>
+    </div>
+  </section>
+
+  <!-- ====== Slide 2: Vision / One-liner ====== -->
+  <section class="slide" data-slide="2">
+    <h2 data-lang="zh"><span class="num">01</span>我们在做什么</h2>
+    <h2 data-lang="en"><span class="num">01</span>What We Do</h2>
+    <div class="quote">
+      <span data-lang="zh"><strong class="accent">Link²Ur</strong> 是一个 <strong class="accent">AI Native</strong> 平台 ——<br/>把<strong class="accent2">独一无二的需求</strong>与<strong class="accent2">独一无二的人</strong>精准撮合在一起。</span>
+      <span data-lang="en"><strong class="accent">Link²Ur</strong> is an <strong class="accent">AI Native</strong> platform —<br/>connecting <strong class="accent2">unique demand</strong> to <strong class="accent2">unique people</strong>.</span>
+    </div>
+    <div class="grid grid-3" style="margin-top:1.5rem">
+      <div class="card">
+        <span class="icon">🌌</span>
+        <h3 data-lang="zh">愿景</h3><h3 data-lang="en">Vision</h3>
+        <p data-lang="zh">让 AI 释放每一个独特的人 · 让每一份小众需求都被承接</p>
+        <p data-lang="en">Let AI release every unique person · let every long-tail need be heard</p>
+      </div>
+      <div class="card">
+        <span class="icon">🧬</span>
+        <h3 data-lang="zh">物种</h3><h3 data-lang="en">New Species</h3>
+        <p data-lang="zh">不是 marketplace，不是工具，是<strong style="color:var(--accent)">超级个体经济基础设施</strong></p>
+        <p data-lang="en">Not a marketplace. Not a tool. <strong style="color:var(--accent)">Super-individual economy infrastructure.</strong></p>
+      </div>
+      <div class="card">
+        <span class="icon">🚀</span>
+        <h3 data-lang="zh">时代</h3><h3 data-lang="en">Era</h3>
+        <p data-lang="zh">2026-2028 是 AI Native 范式转移的窗口期</p>
+        <p data-lang="en">2026-2028 is the AI Native paradigm shift window</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== Slide 3: The Problem ====== -->
+  <section class="slide" data-slide="3">
+    <h2 data-lang="zh"><span class="num">02</span>工业化时代漏掉了 80% 的世界</h2>
+    <h2 data-lang="en"><span class="num">02</span>The Industrial Era Left 80% of the World Behind</h2>
+    <div class="hl-pink hl">
+      <span data-lang="zh">过去 200 年的铁律：<strong>"小需求 = 没有商业价值"</strong>。<br/>不是因为需求不存在，而是因为服务成本远高于其能产生的收入。</span>
+      <span data-lang="en">200 years of iron law: <strong>"Small demand = no business value."</strong><br/>Not because the demand doesn't exist, but because serving cost outweighs revenue.</span>
+    </div>
+    <div class="pain" style="margin-top:1.2rem">
+      <div class="pain-item">
+        <span class="num">①</span>
+        <div class="body">
+          <h3 data-lang="zh">长尾需求被忽视</h3>
+          <h3 data-lang="en">Long-tail demand ignored</h3>
+          <p data-lang="zh">独特、小众、个性化需求 → 永远只能将就标准化的大众产品</p>
+          <p data-lang="en">Unique, niche, personalised needs → forced to settle for mass-market</p>
+        </div>
+      </div>
+      <div class="pain-item">
+        <span class="num">②</span>
+        <div class="body">
+          <h3 data-lang="zh">个人独特性无法变现</h3>
+          <h3 data-lang="en">Individual uniqueness cannot be monetised</h3>
+          <p data-lang="zh">每个人都有独特的技能、兴趣、视角 → 找不到能欣赏并付费的小圈子</p>
+          <p data-lang="en">Everyone has unique skills, interests, perspectives → no audience that values & pays</p>
+        </div>
+      </div>
+      <div class="pain-item">
+        <span class="num">③</span>
+        <div class="body">
+          <h3 data-lang="zh">小生意没有基础设施</h3>
+          <h3 data-lang="en">Small businesses have no infrastructure</h3>
+          <p data-lang="zh">微信群 / 朋友圈 / 小红书评论区 → 无搜索、无评分、无保障、无支付</p>
+          <p data-lang="en">WeChat groups / Moments / Xiaohongshu comments → no search, no rating, no protection</p>
+        </div>
+      </div>
+    </div>
+    <div class="hl" style="margin-top:1.2rem">
+      <span data-lang="zh">💡 <strong>关键洞察</strong>：每一个被忽视的长尾需求 = 一个本可以变成生意的机会 = 一个本可以被激活的超级个体</span>
+      <span data-lang="en">💡 <strong>Key insight</strong>: every ignored long-tail demand = a missed business opportunity = an un-activated super-individual</span>
+    </div>
+  </section>
+
+  <!-- ====== Slide 4: The Math — Formula 1 ====== -->
+  <section class="slide" data-slide="4">
+    <h2 data-lang="zh"><span class="num">03</span>用数学解释 · 公式 1：业务可行性方程</h2>
+    <h2 data-lang="en"><span class="num">03</span>The Math — Formula 1: Business Viability Equation</h2>
+    <p data-lang="zh" style="font-size:1.05rem">任何业务能否成立，取决于这个最朴素的公式：</p>
+    <p data-lang="en" style="font-size:1.05rem">Whether any business can stand depends on this simple identity:</p>
+    <div class="formula">
+      <div class="eq">N* = F / (P − V)</div>
+      <div class="legend">
+        <code>N*</code> <span data-lang="zh">= 盈亏平衡所需客户数</span><span data-lang="en">= break-even customer count</span> &nbsp;|&nbsp;
+        <code>F</code> <span data-lang="zh">= 固定成本（开发+获客+定制+运营）</span><span data-lang="en">= fixed cost (dev + acq + cust + ops)</span> &nbsp;|&nbsp;
+        <code>P − V</code> <span data-lang="zh">= 单位毛利</span><span data-lang="en">= unit margin</span>
+      </div>
+    </div>
+    <h3 style="margin-top:1.2rem" data-lang="zh">工业化时代的现实：</h3>
+    <h3 style="margin-top:1.2rem" data-lang="en">Industrial-era reality:</h3>
+    <table class="tbl">
+      <thead><tr>
+        <th data-lang="zh">业务类型</th><th data-lang="en">Business Type</th>
+        <th>F</th><th>P − V</th><th>N*</th>
+      </tr></thead>
+      <tbody>
+        <tr><td data-lang="zh">小众课程平台</td><td data-lang="en">Niche course platform</td><td>£500k</td><td>£50</td><td class="em">10,000 人</td></tr>
+        <tr><td data-lang="zh">垂直社群 App</td><td data-lang="en">Vertical community app</td><td>£300k</td><td>£10</td><td class="em">30,000 人</td></tr>
+        <tr><td data-lang="zh">个性化定制服务</td><td data-lang="en">Personalised service</td><td>£200k</td><td>£80</td><td class="em">2,500 人</td></tr>
+      </tbody>
+    </table>
+    <div class="hl" style="margin-top:1.2rem">
+      <span data-lang="zh">⚠️ <strong>推论</strong>：任何目标客群 &lt; 数千人的业务，在工业化时代不可行。<br/>这就是为什么 99% 的小众需求被直接忽视。</span>
+      <span data-lang="en">⚠️ <strong>Implication</strong>: any business serving under thousands of users was industrial-era unviable.<br/>That's why 99% of niche demands were ignored.</span>
+    </div>
+  </section>
+
+  <!-- ====== Slide 5: The Math — Formula 2 & Cost Chart ====== -->
+  <section class="slide" data-slide="5">
+    <h2 data-lang="zh"><span class="num">04</span>公式 2：AI 时代固定成本压缩函数</h2>
+    <h2 data-lang="en"><span class="num">04</span>Formula 2: AI Era Fixed-Cost Compression</h2>
+    <div class="formula">
+      <div class="eq" style="font-size:clamp(1rem,1.6vw,1.4rem)">F<sub>AI</sub> = F<sub>trad</sub> × (1 − α<sub>dev</sub>)(1 − α<sub>acq</sub>)(1 − α<sub>cust</sub>)(1 − α<sub>ops</sub>)</div>
+      <div class="legend">
+        <span data-lang="zh">AI 同时压缩四类成本，每一类压缩 10-100×，<strong style="color:var(--formula)">乘积放大效应让总成本压缩 1,000× - 1,000,000×</strong></span>
+        <span data-lang="en">AI compresses four cost categories simultaneously, each by 10-100×. <strong style="color:var(--formula)">Multiplicative effect: total fixed cost down 1,000× – 1,000,000×</strong></span>
+      </div>
+    </div>
+    <div class="cost-chart">
+      <div class="cost-bar-group">
+        <div class="label-top" data-lang="zh">开发</div>
+        <div class="label-top" data-lang="en">Dev</div>
+        <div class="cost-bar-wrapper">
+          <div class="cost-bar trad" style="height:100%">100</div>
+          <div class="cost-bar ai" style="height:5%">5</div>
+        </div>
+        <div class="axis" data-lang="zh">↓ 30-100×</div>
+        <div class="axis" data-lang="en">↓ 30-100×</div>
+      </div>
+      <div class="cost-bar-group">
+        <div class="label-top" data-lang="zh">获客</div>
+        <div class="label-top" data-lang="en">Acq</div>
+        <div class="cost-bar-wrapper">
+          <div class="cost-bar trad" style="height:100%">100</div>
+          <div class="cost-bar ai" style="height:10%">10</div>
+        </div>
+        <div class="axis" data-lang="zh">↓ 10-100×</div>
+        <div class="axis" data-lang="en">↓ 10-100×</div>
+      </div>
+      <div class="cost-bar-group">
+        <div class="label-top" data-lang="zh">定制</div>
+        <div class="label-top" data-lang="en">Cust</div>
+        <div class="cost-bar-wrapper">
+          <div class="cost-bar trad" style="height:100%">100</div>
+          <div class="cost-bar ai" style="height:2%">2</div>
+        </div>
+        <div class="axis" data-lang="zh">↓ 50-500×</div>
+        <div class="axis" data-lang="en">↓ 50-500×</div>
+      </div>
+      <div class="cost-bar-group">
+        <div class="label-top" data-lang="zh">运营</div>
+        <div class="label-top" data-lang="en">Ops</div>
+        <div class="cost-bar-wrapper">
+          <div class="cost-bar trad" style="height:100%">100</div>
+          <div class="cost-bar ai" style="height:20%">20</div>
+        </div>
+        <div class="axis" data-lang="zh">↓ 3-10×</div>
+        <div class="axis" data-lang="en">↓ 3-10×</div>
+      </div>
+      <div class="cost-bar-group">
+        <div class="label-top" data-lang="zh">总计</div>
+        <div class="label-top" data-lang="en">Total</div>
+        <div class="cost-bar-wrapper">
+          <div class="cost-bar trad" style="height:100%">100</div>
+          <div class="cost-bar ai" style="height:2%">2</div>
+        </div>
+        <div class="axis" style="color:var(--accent);font-weight:700" data-lang="zh">↓ ~46×</div>
+        <div class="axis" style="color:var(--accent);font-weight:700" data-lang="en">↓ ~46×</div>
+      </div>
+    </div>
+    <p style="margin-top:.5rem;text-align:center;font-size:.85rem;color:var(--fg-2)" data-lang="zh">深色 = 工业化时代基准 100% · 蓝色 = AI Native 时代保守估计</p>
+    <p style="margin-top:.5rem;text-align:center;font-size:.85rem;color:var(--fg-2)" data-lang="en">Dark bars = Industrial era baseline (100%) · Blue bars = AI Native conservative estimate</p>
+  </section>
+
+  <!-- ====== Slide 6: The Math — Formula 3 + long tail curve ====== -->
+  <section class="slide" data-slide="6">
+    <h2 data-lang="zh"><span class="num">05</span>公式 3：长尾激活倍率</h2>
+    <h2 data-lang="en"><span class="num">05</span>Formula 3: Long-Tail Activation Multiplier</h2>
+    <div class="formula">
+      <div class="eq">N*<sub>trad</sub> / N*<sub>AI</sub> ≈ 46×</div>
+      <div class="legend">
+        <span data-lang="zh">当 F 压缩到 ~2%，<strong style="color:var(--formula)">盈亏临界 N* 同步下降 46 倍</strong>。<br/>以前要 10,000 人才能立项的业务，现在 220 人就能成立。</span>
+        <span data-lang="en">When F shrinks to ~2%, <strong style="color:var(--formula)">break-even N* drops 46×</strong>.<br/>A business that needed 10,000 users now launches with 220.</span>
+      </div>
+    </div>
+    <div class="longtail-wrap">
+      <svg viewBox="0 0 800 280" xmlns="http://www.w3.org/2000/svg">
+        <!-- Axes -->
+        <line x1="60" y1="240" x2="760" y2="240" stroke="#475569" stroke-width="1.5"/>
+        <line x1="60" y1="240" x2="60" y2="30" stroke="#475569" stroke-width="1.5"/>
+        <!-- Long-tail curve -->
+        <path d="M 60 50 Q 100 50 130 80 Q 180 120 240 170 Q 320 215 420 230 Q 560 238 760 240"
+              fill="none" stroke="url(#curveGrad)" stroke-width="3.5"/>
+        <!-- Industrial activation zone (head only) -->
+        <path d="M 60 50 Q 100 50 130 80 Q 180 120 240 170 L 240 240 L 60 240 Z"
+              fill="#5b8cff22" stroke="none"/>
+        <!-- AI native activation zone (head + most of tail) -->
+        <path d="M 240 170 Q 320 215 420 230 Q 560 238 720 240 L 720 240 L 240 240 Z"
+              fill="#ff6dc733" stroke="none"/>
+        <!-- N*_trad line -->
+        <line x1="240" y1="30" x2="240" y2="240" stroke="#fbbf24" stroke-width="2" stroke-dasharray="6,4"/>
+        <text x="245" y="50" fill="#fbbf24" font-size="14" font-weight="700">N*_trad</text>
+        <text x="245" y="68" fill="#fbbf24" font-size="11" data-lang-svg="zh">工业化盈亏线</text>
+        <text x="245" y="68" fill="#fbbf24" font-size="11" data-lang-svg="en" style="display:none">Industrial break-even</text>
+        <!-- N*_AI line -->
+        <line x1="720" y1="30" x2="720" y2="240" stroke="#22d3ee" stroke-width="2" stroke-dasharray="6,4"/>
+        <text x="640" y="50" fill="#22d3ee" font-size="14" font-weight="700">N*_AI</text>
+        <text x="600" y="68" fill="#22d3ee" font-size="11" data-lang-svg="zh">AI 时代盈亏线 (↓ 46×)</text>
+        <text x="600" y="68" fill="#22d3ee" font-size="11" data-lang-svg="en" style="display:none">AI-era break-even (↓ 46×)</text>
+        <!-- Labels -->
+        <text x="140" y="200" fill="#5b8cff" font-size="13" font-weight="700" data-lang-svg="zh">工业化能服务</text>
+        <text x="120" y="200" fill="#5b8cff" font-size="13" font-weight="700" data-lang-svg="en" style="display:none">Industrial-served</text>
+        <text x="400" y="200" fill="#ff6dc7" font-size="13" font-weight="700" data-lang-svg="zh">AI 时代新激活的长尾市场</text>
+        <text x="380" y="200" fill="#ff6dc7" font-size="13" font-weight="700" data-lang-svg="en" style="display:none">AI-era newly activated long-tail</text>
+        <!-- Axis labels -->
+        <text x="400" y="270" fill="#8b93a8" font-size="12" text-anchor="middle" data-lang-svg="zh">需求种类（从主流到长尾） →</text>
+        <text x="400" y="270" fill="#8b93a8" font-size="12" text-anchor="middle" data-lang-svg="en" style="display:none">Demand variety (mass → long tail) →</text>
+        <text x="40" y="135" fill="#8b93a8" font-size="12" text-anchor="middle" transform="rotate(-90 40 135)" data-lang-svg="zh">需求频次</text>
+        <text x="40" y="135" fill="#8b93a8" font-size="12" text-anchor="middle" transform="rotate(-90 40 135)" data-lang-svg="en" style="display:none">Frequency</text>
+        <defs>
+          <linearGradient id="curveGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#5b8cff"/>
+            <stop offset="0.5" stop-color="#7c5cff"/>
+            <stop offset="1" stop-color="#ff6dc7"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="longtail-caption">
+        <span data-lang="zh">长尾分布曲线 · 黄色虚线左侧 = 工业化能服务 · 粉色阴影 = AI 时代新激活的长尾 (46×)</span>
+        <span data-lang="en">Long-tail distribution · left of yellow line = industrial-served · pink shade = AI-era newly activated (46×)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== Slide 7: Formula 4 + 5 ====== -->
+  <section class="slide" data-slide="7">
+    <h2 data-lang="zh"><span class="num">06</span>公式 4 & 5 · 超级个体生产力 + 平台撮合复杂度</h2>
+    <h2 data-lang="en"><span class="num">06</span>Formula 4 & 5 · Super-Individual Productivity + Matching Complexity</h2>
+    <div class="grid grid-2">
+      <div>
+        <div class="formula">
+          <div class="eq" style="font-size:clamp(.95rem,1.5vw,1.3rem)">P<sub>super</sub> = P<sub>human</sub> × β<sub>AI</sub> × γ<sub>plat</sub> × δ<sub>reach</sub></div>
+          <div class="legend">
+            <span data-lang="zh">个人生产力 × AI 加成 × 平台基础设施 × 长尾受众触达</span>
+            <span data-lang="en">Individual × AI multiplier × Platform × Reach</span>
+          </div>
+        </div>
+        <table class="tbl">
+          <thead><tr>
+            <th data-lang="zh">场景</th><th data-lang="en">Scenario</th>
+            <th data-lang="zh">倍数</th><th data-lang="en">Multiplier</th>
+          </tr></thead>
+          <tbody>
+            <tr><td data-lang="zh">保守估计</td><td data-lang="en">Conservative</td><td class="em2">100×</td></tr>
+            <tr><td data-lang="zh">中性估计</td><td data-lang="en">Base case</td><td class="em2">10,000×</td></tr>
+            <tr><td data-lang="zh">激进估计</td><td data-lang="en">Aggressive</td><td class="em2">500,000×</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:.85rem;color:var(--fg-2);margin-top:.6rem" data-lang="zh">↑ 这就是为什么"一人公司估值千万"开始成为现实</p>
+        <p style="font-size:.85rem;color:var(--fg-2);margin-top:.6rem" data-lang="en">↑ Why "one-person companies worth $10M" is becoming reality</p>
+      </div>
+      <div>
+        <div class="formula">
+          <div class="eq" style="font-size:clamp(.95rem,1.5vw,1.3rem)">O(N²) &nbsp;→&nbsp; O(N log N)</div>
+          <div class="legend">
+            <span data-lang="zh">传统 marketplace 撮合复杂度 → AI native 通过 embedding + ANN 检索实现</span>
+            <span data-lang="en">Traditional matching complexity → AI native via embedding + ANN search</span>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <h3 data-lang="zh">⚙️ 工程意义</h3>
+          <h3 data-lang="en">⚙️ Engineering Meaning</h3>
+          <p data-lang="zh">百万 × 百万 双边长尾撮合，在工业化时代算不动，AI native 平台首次工程可行</p>
+          <p data-lang="en">Million × million two-sided long-tail matching — infeasible industrially, AI-native makes it workable</p>
+          <p style="margin-top:.5rem;font-size:.85rem;color:var(--accent)">HNSW · IVF-PQ · 毫秒级 Top-K</p>
+        </div>
+      </div>
+    </div>
+    <div class="hl" style="margin-top:1.2rem">
+      <span data-lang="zh">🎯 <strong>五个公式合在一起讲了一个故事</strong>：当 F → 0，长尾经济在数学上、工程上、生产力上、撮合上同时成立。</span>
+      <span data-lang="en">🎯 <strong>The five formulas tell one story</strong>: when F → 0, the long-tail economy becomes viable mathematically, computationally, productively and algorithmically — simultaneously.</span>
+    </div>
+    <p style="margin-top:.6rem;font-size:.78rem;color:var(--fg-2);text-align:right;font-style:italic">
+      <span data-lang="zh">📌 落地状态：撮合层 v1（score-based）已上线 · v2（embedding + ANN）核心架构已设计，本轮融资完成发布</span>
+      <span data-lang="en">📌 Status: matching v1 (score-based) LIVE · v2 (embedding + ANN) architecture designed, launching with this round</span>
+    </p>
+  </section>
+
+  <!-- ====== Slide 8: The Solution / Super-individuals ====== -->
+  <section class="slide" data-slide="8">
+    <h2 data-lang="zh"><span class="num">07</span>解决方案 · 超级个体经济基础设施</h2>
+    <h2 data-lang="en"><span class="num">07</span>Solution — Super-Individual Economy Infrastructure</h2>
+    <div class="quote">
+      <span data-lang="zh"><strong class="accent">超级个体</strong> = <strong class="accent2">AI 加持的、能用自己独特性变现的个人</strong>。<br/>不是少数精英 · 是未来每一个人。</span>
+      <span data-lang="en"><strong class="accent">Super-individual</strong> = <strong class="accent2">an AI-augmented person monetising their uniqueness</strong>.<br/>Not a few elites — future everyone.</span>
+    </div>
+    <div class="grid grid-4">
+      <div class="card">
+        <span class="icon">👩‍🍳</span>
+        <h3 data-lang="zh">伦敦华人主妇</h3><h3 data-lang="en">London diaspora housewife</h3>
+        <p data-lang="zh">AI 帮她把中餐手艺包装成订阅 meal kit · 服务 30 户华人家庭 · 月入 £2,000</p>
+        <p data-lang="en">AI packages her cooking into subscription meal kits · serves 30 households · £2k/mo</p>
+      </div>
+      <div class="card">
+        <span class="icon">👴</span>
+        <h3 data-lang="zh">退休华人医生</h3><h3 data-lang="en">Retired diaspora doctor</h3>
+        <p data-lang="zh">AI 帮他做养生小课 · 服务 200 名新移民 · 月入 £3,000</p>
+        <p data-lang="en">AI builds bilingual wellness courses · 200 new immigrants · £3k/mo</p>
+      </div>
+      <div class="card">
+        <span class="icon">🎮</span>
+        <h3 data-lang="zh">独立游戏开发者</h3><h3 data-lang="en">Indie game dev</h3>
+        <p data-lang="zh">AI 把复盘做成行业洞察 · 服务 500 名独立开发者 · 月入 £4,000</p>
+        <p data-lang="en">AI converts post-mortems into industry insights · 500 devs · £4k/mo</p>
+      </div>
+      <div class="card">
+        <span class="icon">🎓</span>
+        <h3 data-lang="zh">资深留学生</h3><h3 data-lang="en">Senior UK student</h3>
+        <p data-lang="zh">AI 把申请医学院经验做成 1:1 mentor 套餐 · 服务 50 名准留学生 · 月入 £5,000</p>
+        <p data-lang="en">AI packages med-school application into 1:1 mentor packs · 50 applicants · £5k/mo</p>
+      </div>
+    </div>
+    <div class="hl-pink hl" style="margin-top:1.2rem">
+      <span data-lang="zh">💎 <strong>共同特征</strong>：客群 &lt; 1,000，工业化时代被忽略；AI 时代，每一个都是 Link²Ur 的目标超级个体。</span>
+      <span data-lang="en">💎 <strong>Common trait</strong>: audience under 1,000 — invisible in the industrial era. In the AI era, every one is a Link²Ur target.</span>
+    </div>
+  </section>
+
+  <!-- ====== Slide 9: Product Architecture ====== -->
+  <section class="slide" data-slide="9">
+    <h2 data-lang="zh"><span class="num">08</span>产品架构 · AI Native 三层模型</h2>
+    <h2 data-lang="en"><span class="num">08</span>Product — AI Native 3-Tier Architecture</h2>
+    <div class="grid grid-3" style="margin-top:1rem">
+      <div class="card" style="border-color:var(--accent-3)">
+        <span class="tag tag-live">应用层 · App Tier</span>
+        <h3 style="margin-top:.6rem" data-lang="zh">场景化交易闭环</h3>
+        <h3 style="margin-top:.6rem" data-lang="en">Scenario-bound trade loops</h3>
+        <p data-lang="zh">任务 · 服务 · 活动 · 二手 · 社区<br/><strong style="color:var(--accent-3)">冷启动验证池：海外华人圈</strong></p>
+        <p data-lang="en">Tasks · Services · Events · Flea · Community<br/><strong style="color:var(--accent-3)">Cold-start pool: UK diaspora</strong></p>
+      </div>
+      <div class="card" style="border-color:var(--formula);box-shadow:0 0 20px #22d3ee33">
+        <span class="tag" style="background:#22d3ee33;color:var(--formula);border:1px solid var(--formula)" data-lang="zh">核心 · AI Native 撮合层</span>
+        <span class="tag" style="background:#22d3ee33;color:var(--formula);border:1px solid var(--formula)" data-lang="en">CORE · AI Native Matching</span>
+        <h3 style="margin-top:.6rem" data-lang="zh">需求 × 供给 双边撮合</h3>
+        <h3 style="margin-top:.6rem" data-lang="en">Two-Sided Matching</h3>
+        <p data-lang="zh">需求理解 · 超级个体画像 · 长尾匹配 · AI 定价 · AI Agent</p>
+        <p data-lang="en">Demand · Profile · Long-tail match · Pricing · Agent</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-live">基础设施层 · Infra</span>
+        <h3 style="margin-top:.6rem" data-lang="zh">交易闭环底座</h3>
+        <h3 style="margin-top:.6rem" data-lang="en">Trade Loop Foundation</h3>
+        <p data-lang="zh">IM · 钱包 · Stripe 担保 · 信用 · 三语 · 合规</p>
+        <p data-lang="en">IM · Wallet · Stripe Escrow · Trust · Trilingual · Compliance</p>
+      </div>
+    </div>
+    <h3 style="margin-top:1.5rem;font-size:1.15rem" data-lang="zh">⚙️ AI Native 核心能力（按真实状态）</h3>
+    <h3 style="margin-top:1.5rem;font-size:1.15rem" data-lang="en">⚙️ AI Native Core Capabilities (Real Status)</h3>
+    <table class="tbl" style="margin-top:.5rem">
+      <thead><tr>
+        <th data-lang="zh">AI 能力</th><th data-lang="en">AI Capability</th>
+        <th data-lang="zh">状态</th><th data-lang="en">Status</th>
+        <th data-lang="zh">用途</th><th data-lang="en">Purpose</th>
+      </tr></thead>
+      <tbody>
+        <tr><td data-lang="zh">需求理解 Pipeline</td><td data-lang="en">Demand Understanding</td><td><span class="tag tag-live">已上线 / LIVE</span></td><td data-lang="zh">自然语言 → 结构化任务 + tag</td><td data-lang="en">NL → structured task + tags</td></tr>
+        <tr><td data-lang="zh">推荐 / 撮合 v1（score-based）</td><td data-lang="en">Recommendation v1 (score-based)</td><td><span class="tag tag-live">已上线 / LIVE</span></td><td data-lang="zh">HybridEngine 多 scorer 加权</td><td data-lang="en">HybridEngine multi-scorer weighted</td></tr>
+        <tr style="background:#22d3ee11"><td data-lang="zh"><strong style="color:var(--formula)">AI Native 撮合 v2（embedding + ANN）</strong></td><td data-lang="en"><strong style="color:var(--formula)">AI Native Match v2 (embedding + ANN)</strong></td><td><span class="tag tag-dev">本轮融资完成 / THIS ROUND</span></td><td data-lang="zh">pgvector · O(N²)→O(N log N)</td><td data-lang="en">pgvector · O(N²)→O(N log N)</td></tr>
+        <tr><td data-lang="zh">AI 自动翻译</td><td data-lang="en">AI Translation</td><td><span class="tag tag-live">已上线 / LIVE</span></td><td data-lang="zh">简繁英三语 + 跨语言匹配</td><td data-lang="en">Trilingual + cross-lang match</td></tr>
+        <tr><td data-lang="zh">AI 客服 Agent</td><td data-lang="en">AI Customer Support Agent</td><td><span class="tag tag-live">已上线 / LIVE</span></td><td data-lang="zh">GLM + Claude 分级调度，完整 pipeline</td><td data-lang="en">GLM + Claude tiered, full pipeline</td></tr>
+        <tr style="background:#22d3ee11"><td data-lang="zh"><strong style="color:var(--formula)">超级个体 AI 画像 onboarding</strong></td><td data-lang="en"><strong style="color:var(--formula)">Super-Individual AI Profiling</strong></td><td><span class="tag tag-dev">本轮融资完成 / THIS ROUND</span></td><td data-lang="zh">5 分钟 AI 对话 → 可搜索供给档案</td><td data-lang="en">5-min AI chat → searchable profile</td></tr>
+        <tr><td data-lang="zh">AI 定价建议引擎</td><td data-lang="en">AI Pricing Engine</td><td><span class="tag tag-dev">开发中 / IN DEV</span></td><td data-lang="zh">基于历史成交 + 同类对比</td><td data-lang="en">History + comparables</td></tr>
+        <tr><td data-lang="zh">超级个体 AI Agent（代谈/代报价）</td><td data-lang="en">Super-Individual AI Agent</td><td><span class="tag tag-plan">规划中 / PLANNED</span></td><td data-lang="zh">24h 自动处理初期咨询</td><td data-lang="en">24h auto-consult</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ====== Slide 10: Market Size ====== -->
+  <section class="slide" data-slide="10">
+    <h2 data-lang="zh"><span class="num">09</span>市场规模 · 长尾激活后的新版图</h2>
+    <h2 data-lang="en"><span class="num">09</span>Market Size — The New Map After Long-Tail Activation</h2>
+    <div class="stats">
+      <div class="stat"><div class="v">$5T</div><div class="l" data-lang="zh">AI 时代新激活长尾服务（46× 倍率）</div><div class="l" data-lang="en">AI-era newly activated long-tail services</div></div>
+      <div class="stat"><div class="v">$1.5T</div><div class="l" data-lang="zh">全球创作者经济 2030 预测</div><div class="l" data-lang="en">Global creator economy 2030 forecast</div></div>
+      <div class="stat"><div class="v">$400B</div><div class="l" data-lang="zh">全球 C2C 技能交易市场</div><div class="l" data-lang="en">Global C2C skill marketplace</div></div>
+      <div class="stat"><div class="v">£13.4B</div><div class="l" data-lang="zh">海外华人冷启动池 TAM</div><div class="l" data-lang="en">Diaspora cold-start pool TAM</div></div>
+    </div>
+    <h3 style="margin-top:1.5rem;font-size:1.15rem" data-lang="zh">📐 应用公式 3 推算 · 长尾激活后的全球市场</h3>
+    <h3 style="margin-top:1.5rem;font-size:1.15rem" data-lang="en">📐 Applying Formula 3 · Global Market After Long-Tail Activation</h3>
+    <table class="tbl">
+      <thead><tr>
+        <th data-lang="zh">维度</th><th data-lang="en">Dimension</th>
+        <th data-lang="zh">工业化时代</th><th data-lang="en">Industrial era</th>
+        <th data-lang="zh">AI 时代（46× 倍率）</th><th data-lang="en">AI era (46×)</th>
+      </tr></thead>
+      <tbody>
+        <tr><td data-lang="zh">全球长尾服务市场</td><td data-lang="en">Global long-tail services</td><td>~$0.1T</td><td class="em2">~$5T</td></tr>
+        <tr><td data-lang="zh">全球创作者经济</td><td data-lang="en">Creator economy</td><td>$250B (2024)</td><td class="em2">$1.5T (2030 预测)</td></tr>
+        <tr><td data-lang="zh">全球 C2C 技能交易</td><td data-lang="en">C2C skill market</td><td>$40B</td><td class="em2">$400B</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:1rem;font-size:.85rem;color:var(--fg-2)" data-lang="zh">数据来源：Goldman Sachs Creator Economy 2024、Statista Gig Economy 2025、McKinsey Future of Work 2024、UK HESA</p>
+    <p style="margin-top:1rem;font-size:.85rem;color:var(--fg-2)" data-lang="en">Sources: Goldman Sachs Creator Economy 2024, Statista Gig Economy 2025, McKinsey Future of Work 2024, UK HESA</p>
+  </section>
+
+  <!-- ====== Slide 11: Business Model ====== -->
+  <section class="slide" data-slide="11">
+    <h2 data-lang="zh"><span class="num">10</span>商业模式 · 三条增长曲线</h2>
+    <h2 data-lang="en"><span class="num">10</span>Business Model — Three Revenue Curves</h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <h3 data-lang="zh">① AI 撮合佣金 <span class="tag tag-live">已上线</span></h3>
+        <h3 data-lang="en">① AI Matching Commission <span class="tag tag-live">LIVE</span></h3>
+        <p data-lang="zh">服务 <strong style="color:var(--accent)">8%</strong> · 活动 <strong style="color:var(--accent)">6%</strong> · 二手 <strong style="color:var(--accent)">0%</strong></p>
+        <p data-lang="en">Services <strong style="color:var(--accent)">8%</strong> · Events <strong style="color:var(--accent)">6%</strong> · Flea <strong style="color:var(--accent)">0%</strong></p>
+        <p style="margin-top:.4rem;font-size:.82rem;color:var(--fg-2)" data-lang="zh">业内最低区间（美团 15-25% / Fiverr 20%）</p>
+        <p style="margin-top:.4rem;font-size:.82rem;color:var(--fg-2)" data-lang="en">Lowest in industry (Meituan 15-25% / Fiverr 20%)</p>
+      </div>
+      <div class="card">
+        <h3 data-lang="zh">② 超级个体订阅 <span class="tag tag-dev">开发中</span></h3>
+        <h3 data-lang="en">② Super-Individual Sub <span class="tag tag-dev">IN DEV</span></h3>
+        <p data-lang="zh">基础 £9.99/月 · 专业 £29.99/月 · 团队 £99/月<br/>含 AI agent 配额 + 优先曝光</p>
+        <p data-lang="en">Basic £9.99 · Pro £29.99 · Team £99 / mo<br/>AI agent quota + priority slots</p>
+      </div>
+      <div class="card">
+        <h3 data-lang="zh">③ AI 增值服务 <span class="tag tag-plan">规划中</span></h3>
+        <h3 data-lang="en">③ AI Value-Added <span class="tag tag-plan">PLANNED</span></h3>
+        <p data-lang="zh">AI agent token 包 · AI 营销工具 · AI 交付辅助 · 企业 API</p>
+        <p data-lang="en">AI agent tokens · AI marketing · AI delivery · Enterprise API</p>
+      </div>
+    </div>
+    <h3 style="margin-top:1.2rem;font-size:1.1rem" data-lang="zh">📊 单位经济提升 · AI Native 不只是新故事，是真实效率</h3>
+    <h3 style="margin-top:1.2rem;font-size:1.1rem" data-lang="en">📊 Unit Economics Lift — Real Efficiency, Not Just Narrative</h3>
+    <table class="tbl">
+      <thead><tr>
+        <th data-lang="zh">指标</th><th data-lang="en">Metric</th>
+        <th data-lang="zh">工业化基准</th><th data-lang="en">Industrial Baseline</th>
+        <th data-lang="zh">Link²Ur AI Native</th><th data-lang="en">Link²Ur AI Native</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>ARPU / mo</td><td>ARPU / mo</td><td>£2.94</td><td class="em2">£4.41 (1.5×)</td></tr>
+        <tr><td>CAC</td><td>CAC</td><td>£5-8</td><td class="em2">£2-5 (2-3×↓)</td></tr>
+        <tr><td>LTV / CAC</td><td>LTV / CAC</td><td>4-7×</td><td class="em2">10-26×</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ====== Slide 12: Competition ====== -->
+  <section class="slide" data-slide="12">
+    <h2 data-lang="zh"><span class="num">11</span>竞争格局 · 我们在"新物种空间"</h2>
+    <h2 data-lang="en"><span class="num">11</span>Competition — We Live in the "New Species Space"</h2>
+    <table class="tbl">
+      <thead><tr>
+        <th data-lang="zh">类型</th><th data-lang="en">Type</th>
+        <th data-lang="zh">代表</th><th data-lang="en">Examples</th>
+        <th data-lang="zh">缺什么</th><th data-lang="en">What's Missing</th>
+      </tr></thead>
+      <tbody>
+        <tr><td data-lang="zh">传统本地服务</td><td data-lang="en">Traditional local services</td><td>Meituan · TaskRabbit · Bark</td><td data-lang="zh">不解决长尾 · 不 AI native</td><td data-lang="en">No long-tail · not AI native</td></tr>
+        <tr><td data-lang="zh">传统 marketplace</td><td data-lang="en">Traditional marketplace</td><td>Fiverr · Upwork · Etsy</td><td data-lang="zh">类目搜索而非 AI 撮合</td><td data-lang="en">Category search, not AI match</td></tr>
+        <tr><td>AI 工具公司</td><td>AI tool companies</td><td>ChatGPT · Claude · Midjourney</td><td data-lang="zh">不撮合 · 无交易闭环</td><td data-lang="en">No matching · no transaction loop</td></tr>
+        <tr><td data-lang="zh">创作者经济</td><td data-lang="en">Creator economy</td><td>Substack · Patreon · Gumroad</td><td data-lang="zh">单向输出 · 无双边撮合</td><td data-lang="en">One-way · no two-sided match</td></tr>
+        <tr><td data-lang="zh">超级个体 SaaS</td><td data-lang="en">Super-individual SaaS</td><td>Notion · Cal.com · Stripe</td><td data-lang="zh">不撮合 · 不解决获客</td><td data-lang="en">No matching · no acquisition</td></tr>
+        <tr><td>AI Agent 平台</td><td>AI agent platforms</td><td>OpenAI GPT Store · MCP</td><td data-lang="zh">纯 AI · 无人类交付保障</td><td data-lang="en">Pure AI · no human delivery</td></tr>
+        <tr><td data-lang="zh">华人微信群 / Facebook Group</td><td data-lang="en">WeChat / Facebook groups</td><td data-lang="zh">学校群 · 妈妈群</td><td data-lang="en">School / mom groups</td><td data-lang="zh">散乱 · 无 AI · 无保障</td><td data-lang="en">Chaos · no AI · no safety</td></tr>
+        <tr style="background:#7c5cff22"><td style="color:var(--accent-3);font-weight:700">Link²Ur</td><td style="color:var(--accent-3);font-weight:700">Link²Ur</td><td colspan="2" style="color:var(--fg-0);font-weight:600" data-lang="zh">AI Native × 双边长尾撮合 × 完整交易闭环 × 超级个体释放</td><td colspan="2" style="color:var(--fg-0);font-weight:600" data-lang="en">AI Native × 2-sided long-tail × full loop × super-individual release</td></tr>
+      </tbody>
+    </table>
+    <div class="hl-pink hl" style="margin-top:1.2rem">
+      <span data-lang="zh">🏰 <strong>护城河</strong>：双边长尾密度 + AI 数据飞轮 + 行业垂直 fine-tune 模型 + 超级个体生态锁定</span>
+      <span data-lang="en">🏰 <strong>Moat</strong>: 2-sided long-tail density · AI data flywheel · vertical fine-tuned models · super-individual ecosystem lock-in</span>
+    </div>
+  </section>
+
+  <!-- ====== Slide 13: Traction / Real Status ====== -->
+  <section class="slide" data-slide="13">
+    <h2 data-lang="zh"><span class="num">12</span>项目进展 · 真实阶段标注</h2>
+    <h2 data-lang="en"><span class="num">12</span>Traction — Real Stage Disclosure</h2>
+    <p style="margin-bottom:.5rem" data-lang="zh">"不是 PPT 创业，App 已经在跑" —— 以下按真实开发状态分类：</p>
+    <p style="margin-bottom:.5rem" data-lang="en">"Not a deck-only company — the app is already running." Below is the real status:</p>
+    <div class="status-grid">
+      <div class="status-col live">
+        <h3>✓ <span data-lang="zh">已上线 / LIVE</span><span data-lang="en">LIVE</span></h3>
+        <ul>
+          <li data-lang="zh">Flutter iOS + Android 双端</li><li data-lang="en">Flutter iOS + Android</li>
+          <li data-lang="zh">五大场景（任务/服务/活动/二手/社区）</li><li data-lang="en">All five scenarios</li>
+          <li data-lang="zh">Stripe Connect 担保支付</li><li data-lang="en">Stripe Connect escrow</li>
+          <li data-lang="zh">即时通讯（反滥用约束）</li><li data-lang="en">IM (anti-abuse constrained)</li>
+          <li data-lang="zh">钱包 + 优惠券 + 积分</li><li data-lang="en">Wallet + Coupons + Points</li>
+          <li data-lang="zh">推荐 v1（HybridEngine score-based）</li><li data-lang="en">Recommendation v1 (HybridEngine)</li>
+          <li data-lang="zh">AI 客服 Agent（完整 pipeline）</li><li data-lang="en">AI customer-support agent (full pipeline)</li>
+          <li data-lang="zh">AI 草稿 + 简繁英三语 + AI 自动翻译</li><li data-lang="en">AI draft + Trilingual + AI translation</li>
+          <li data-lang="zh">学生认证 / 商家认证</li><li data-lang="en">Student / business verification</li>
+        </ul>
+      </div>
+      <div class="status-col dev">
+        <h3>⚙ <span data-lang="zh">开发中 · 本轮融资完成</span><span data-lang="en">IN DEV · THIS ROUND</span></h3>
+        <ul>
+          <li style="color:var(--formula);font-weight:600" data-lang="zh">★ AI Native 撮合 v2（pgvector + ANN）</li><li style="color:var(--formula);font-weight:600" data-lang="en">★ AI Native match v2 (pgvector + ANN)</li>
+          <li style="color:var(--formula);font-weight:600" data-lang="zh">★ 超级个体 AI 画像 onboarding</li><li style="color:var(--formula);font-weight:600" data-lang="en">★ Super-individual AI profiling</li>
+          <li data-lang="zh">AI 定价建议引擎</li><li data-lang="en">AI pricing engine</li>
+          <li data-lang="zh">超级个体经营 Dashboard</li><li data-lang="en">Super-individual dashboard</li>
+          <li data-lang="zh">VIP 订阅端到端闭环</li><li data-lang="en">VIP subscription end-to-end</li>
+          <li data-lang="zh">活动 / 拼单完整闭环</li><li data-lang="en">Events / group-buy full loop</li>
+        </ul>
+      </div>
+      <div class="status-col plan">
+        <h3>○ <span data-lang="zh">规划中 / PLANNED</span><span data-lang="en">PLANNED</span></h3>
+        <ul>
+          <li data-lang="zh">超级个体 AI Agent（代谈/代报价）</li><li data-lang="en">Super-individual AI agent</li>
+          <li data-lang="zh">AI 交付辅助（生成课件/报告/设计）</li><li data-lang="en">AI delivery assist</li>
+          <li data-lang="zh">AI 营销内容引擎</li><li data-lang="en">AI marketing engine</li>
+          <li data-lang="zh">企业级撮合 API（B2B）</li><li data-lang="en">Enterprise matching API</li>
+          <li data-lang="zh">跨境多币种结算</li><li data-lang="en">Cross-border multi-currency</li>
+          <li data-lang="zh">全球长尾市场扩张</li><li data-lang="en">Global long-tail expansion</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== Slide 14: Roadmap ====== -->
+  <section class="slide" data-slide="14">
+    <h2 data-lang="zh"><span class="num">13</span>路线图 · 24 个月 → 5 年</h2>
+    <h2 data-lang="en"><span class="num">13</span>Roadmap — 24 Months → 5 Years</h2>
+    <div class="roadmap">
+      <div class="road-step">
+        <div class="dot">①</div>
+        <h3 data-lang="zh">种子期 · 已完成</h3><h3 data-lang="en">Seed · Done</h3>
+        <p data-lang="zh">App 上线 · 冷启动验证池</p>
+        <p data-lang="en">App live · validation pool</p>
+      </div>
+      <div class="road-step">
+        <div class="dot">②</div>
+        <h3 data-lang="zh">AI Native 化 · 0-12mo</h3><h3 data-lang="en">AI Native · 0-12mo</h3>
+        <p data-lang="zh">AI 全套上线 · 500 超级个体</p>
+        <p data-lang="en">Full AI stack · 500 super-individuals</p>
+      </div>
+      <div class="road-step">
+        <div class="dot">③</div>
+        <h3 data-lang="zh">跨语言扩展 · 12-24mo</h3><h3 data-lang="en">Cross-lang · 12-24mo</h3>
+        <p data-lang="zh">英语长尾 · 10万 MAU · A 轮</p>
+        <p data-lang="en">English long-tail · 100k MAU · Series A</p>
+      </div>
+      <div class="road-step">
+        <div class="dot">④</div>
+        <h3 data-lang="zh">全球基础设施 · 24-60mo</h3><h3 data-lang="en">Global Infra · 24-60mo</h3>
+        <p data-lang="zh">北美 · 开放 API · 500万 MAU</p>
+        <p data-lang="en">North America · Open API · 5M MAU</p>
+      </div>
+    </div>
+    <div class="hl-pink hl" style="margin-top:2rem">
+      <span data-lang="zh">🎯 <strong>5 年目标</strong>：全球超级个体经济基础设施 · £10 亿 GMV · 500 万 MAU</span>
+      <span data-lang="en">🎯 <strong>5-Year Goal</strong>: Global super-individual economy infrastructure · £1B GMV · 5M MAU</span>
+    </div>
+  </section>
+
+  <!-- ====== Slide 15: Team ====== -->
+  <section class="slide" data-slide="15">
+    <h2 data-lang="zh"><span class="num">14</span>团队 · 自己就是超级个体</h2>
+    <h2 data-lang="en"><span class="num">14</span>Team — We Are Super-Individuals Ourselves</h2>
+    <div class="grid grid-4">
+      <div class="card">
+        <span class="icon">👨‍💻</span>
+        <h3 data-lang="zh">创始人 / CEO</h3><h3 data-lang="en">Founder / CEO</h3>
+        <p data-lang="zh">AI 时代叙事 · 海外社区运营 · 产品战略</p>
+        <p data-lang="en">AI-era narrative · diaspora ops · product</p>
+      </div>
+      <div class="card">
+        <span class="icon">🛠️</span>
+        <h3>CTO</h3>
+        <p data-lang="zh">Flutter / FastAPI / GLM + Claude 调度</p>
+        <p data-lang="en">Flutter / FastAPI / GLM + Claude routing</p>
+      </div>
+      <div class="card">
+        <span class="icon">📈</span>
+        <h3 data-lang="zh">运营 / COO</h3><h3 data-lang="en">COO</h3>
+        <p data-lang="zh">超级个体 BD · 校园冷启动</p>
+        <p data-lang="en">Super-individual BD · campus cold-start</p>
+      </div>
+      <div class="card">
+        <span class="icon">📣</span>
+        <h3 data-lang="zh">增长 / CMO</h3><h3 data-lang="en">CMO</h3>
+        <p data-lang="zh">AI 内容引擎 · KOL · 社区裂变</p>
+        <p data-lang="en">AI content engine · KOL · virality</p>
+      </div>
+    </div>
+    <h3 style="margin-top:1.5rem;font-size:1.15rem" data-lang="zh">💪 工程证明 · 小团队交付大厂级 AI Native 产品</h3>
+    <h3 style="margin-top:1.5rem;font-size:1.15rem" data-lang="en">💪 Engineering Proof — Lean Team, Big-Platform AI Native Product</h3>
+    <div class="grid grid-4">
+      <div class="card" style="padding:.9rem 1.1rem">
+        <h3 style="font-size:.95rem" data-lang="zh">后端</h3><h3 style="font-size:.95rem" data-lang="en">Backend</h3>
+        <p style="font-size:.82rem">FastAPI · PostgreSQL · Redis · Celery · Railway</p>
+      </div>
+      <div class="card" style="padding:.9rem 1.1rem">
+        <h3 style="font-size:.95rem" data-lang="zh">移动端</h3><h3 style="font-size:.95rem" data-lang="en">Mobile</h3>
+        <p style="font-size:.82rem">Flutter · BLoC · Clean Architecture</p>
+      </div>
+      <div class="card" style="padding:.9rem 1.1rem;border-color:var(--formula)">
+        <h3 style="font-size:.95rem;color:var(--formula)">AI Engineering</h3>
+        <p style="font-size:.82rem">GLM-4.7-FlashX + Claude Sonnet 4.5 <span data-lang="zh">分级调度</span><span data-lang="en">tiered routing</span> · <span data-lang="zh">embedding 撮合</span><span data-lang="en">embedding matching</span></p>
+      </div>
+      <div class="card" style="padding:.9rem 1.1rem">
+        <h3 style="font-size:.95rem" data-lang="zh">合规</h3><h3 style="font-size:.95rem" data-lang="en">Compliance</h3>
+        <p style="font-size:.82rem">Stripe Escrow · GDPR · <span data-lang="zh">三套独立鉴权</span><span data-lang="en">3 auth systems</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== Slide 16: The Ask ====== -->
+  <section class="slide" data-slide="16">
+    <h2 data-lang="zh"><span class="num">15</span>融资计划 · The Ask</h2>
+    <h2 data-lang="en"><span class="num">15</span>The Ask — Funding Plan</h2>
+    <div class="grid grid-2">
+      <div>
+        <div class="hl" style="margin-top:0">
+          <p style="font-size:1.2rem;margin-bottom:.3rem" data-lang="zh">本轮 <strong>Pre-A</strong> 拟融资</p>
+          <p style="font-size:1.2rem;margin-bottom:.3rem" data-lang="en"><strong>Pre-A</strong> Round Ask</p>
+          <p style="font-size:2.8rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent-2),var(--accent-3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1">£300k – £500k</p>
+          <p style="font-size:.95rem;color:var(--fg-2);margin-top:.4rem" data-lang="zh">10-15% 股权 · 18-24 个月跑道</p>
+          <p style="font-size:.95rem;color:var(--fg-2);margin-top:.4rem" data-lang="en">10-15% equity · 18-24 month runway</p>
+        </div>
+        <h3 style="margin-top:1.2rem;font-size:1.1rem" data-lang="zh">🎯 期望投资人</h3>
+        <h3 style="margin-top:1.2rem;font-size:1.1rem" data-lang="en">🎯 Target Investors</h3>
+        <p style="font-size:.92rem" data-lang="zh">早期天使 · AI Native 主题基金 · 海外华人 LP · 战略投资人</p>
+        <p style="font-size:.92rem" data-lang="en">Early angels · AI native funds · diaspora LPs · strategic investors</p>
+        <h3 style="margin-top:1rem;font-size:1.1rem" data-lang="zh">📈 24 个月里程碑</h3>
+        <h3 style="margin-top:1rem;font-size:1.1rem" data-lang="en">📈 24-Month Milestone</h3>
+        <p style="font-size:.92rem" data-lang="zh">10 万 MAU · 5,000 超级个体 · £100 万月 GMV · 进入 A 轮</p>
+        <p style="font-size:.92rem" data-lang="en">100k MAU · 5,000 super-individuals · £1M monthly GMV · ready for Series A</p>
+      </div>
+      <div>
+        <h3 style="margin-bottom:.6rem" data-lang="zh">💰 资金用途</h3>
+        <h3 style="margin-bottom:.6rem" data-lang="en">💰 Use of Funds</h3>
+        <div class="bars">
+          <div class="bar"><div class="label" data-lang="zh">AI Native 化改造</div><div class="label" data-lang="en">AI Native build-out</div><div class="track"><div class="fill" style="width:35%;background:linear-gradient(90deg,var(--formula),var(--accent))"></div></div><div class="pct">35%</div></div>
+          <div class="bar"><div class="label" data-lang="zh">市场获客</div><div class="label" data-lang="en">Marketing</div><div class="track"><div class="fill" style="width:30%"></div></div><div class="pct">30%</div></div>
+          <div class="bar"><div class="label" data-lang="zh">团队扩张</div><div class="label" data-lang="en">Team</div><div class="track"><div class="fill" style="width:20%"></div></div><div class="pct">20%</div></div>
+          <div class="bar"><div class="label" data-lang="zh">合规法务</div><div class="label" data-lang="en">Compliance</div><div class="track"><div class="fill" style="width:8%"></div></div><div class="pct">8%</div></div>
+          <div class="bar"><div class="label" data-lang="zh">办公与其他</div><div class="label" data-lang="en">Office & misc</div><div class="track"><div class="fill" style="width:7%"></div></div><div class="pct">7%</div></div>
+        </div>
+        <h3 style="margin-top:1.2rem;font-size:1.05rem" data-lang="zh">🔮 退出路径</h3>
+        <h3 style="margin-top:1.2rem;font-size:1.05rem" data-lang="en">🔮 Exit Paths</h3>
+        <p style="font-size:.88rem" data-lang="zh">A 轮 → B 轮 → IPO · 战略收购（字节海外 / Anthropic / Stripe / Meituan 海外）· 长期独立分红</p>
+        <p style="font-size:.88rem" data-lang="en">A → B → IPO · strategic acquisition · independent + dividends</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== Slide 17: Closing ====== -->
+  <section class="slide cover" data-slide="17">
+    <div class="logo">Link²Ur</div>
+    <div class="quote" style="margin-top:1.5rem">
+      <span data-lang="zh">让每一份<strong class="accent">独特性</strong>都被看见<br/>让每一份<strong class="accent2">小众需求</strong>都被承接</span>
+      <span data-lang="en">Let every <strong class="accent">uniqueness</strong> be seen<br/>Let every <strong class="accent2">niche need</strong> be heard</span>
+    </div>
+    <h2 style="font-size:1.6rem;background:none;-webkit-text-fill-color:var(--fg-0);text-align:center;margin-top:1rem" data-lang="zh">谢谢观看 · 期待与您共建 AI Native 时代</h2>
+    <h2 style="font-size:1.6rem;background:none;-webkit-text-fill-color:var(--fg-0);text-align:center;margin-top:1rem" data-lang="en">Thank You · Let's Build the AI Native Era Together</h2>
+    <div style="height:1.5rem"></div>
+    <div class="grid grid-3" style="max-width:900px;margin:0 auto;width:100%">
+      <div class="card" style="text-align:center">
+        <span class="icon">📧</span>
+        <h3 data-lang="zh">邮箱</h3><h3 data-lang="en">Email</h3>
+        <p>info@link2ur.com</p>
+      </div>
+      <div class="card" style="text-align:center">
+        <span class="icon">📱</span>
+        <h3 data-lang="zh">App</h3><h3 data-lang="en">App</h3>
+        <p data-lang="zh">搜索 "Link2Ur"</p>
+        <p data-lang="en">Search "Link2Ur"</p>
+      </div>
+      <div class="card" style="text-align:center">
+        <span class="icon">🌐</span>
+        <h3 data-lang="zh">官网</h3><h3 data-lang="en">Web</h3>
+        <p>link2ur.com</p>
+      </div>
+    </div>
+    <p style="margin-top:2rem;font-size:.85rem;color:var(--fg-2);text-align:center">LINK2UR LTD · United Kingdom · 2026</p>
+  </section>
+
+</div>
+
+<div class="controls" role="navigation">
+  <button id="prev" title="Prev (←)">←</button>
+  <span class="counter"><span id="curr">1</span><span class="sep"> / </span><span id="total">17</span></span>
+  <button id="next" title="Next (→ / Space)">→</button>
+  <span class="sep">|</span>
+  <span style="font-size:.78rem;color:var(--fg-2)">← → / Space</span>
+</div>
+
+<script>
+(function(){
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let idx = 0;
+  const curr = document.getElementById('curr');
+  const totalEl = document.getElementById('total');
+  const progressFill = document.getElementById('progressFill');
+  totalEl.textContent = total;
+
+  function go(i){
+    idx = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('active', k === idx));
+    curr.textContent = idx + 1;
+    progressFill.style.width = ((idx + 1) / total * 100) + '%';
+    slides[idx].scrollTop = 0;
+  }
+
+  document.getElementById('prev').addEventListener('click', () => go(idx - 1));
+  document.getElementById('next').addEventListener('click', () => go(idx + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(idx - 1); }
+    else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(idx + 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(total - 1); }
+  });
+
+  // Swipe support
+  let touchX = null;
+  document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) go(dx < 0 ? idx + 1 : idx - 1);
+    touchX = null;
+  }, {passive:true});
+
+  // Language toggle
+  const zhBtn = document.getElementById('langZh');
+  const enBtn = document.getElementById('langEn');
+  function setLang(lang){
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    zhBtn.classList.toggle('active', lang === 'zh');
+    enBtn.classList.toggle('active', lang === 'en');
+    document.querySelectorAll('[data-lang]').forEach(el => {
+      if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.parentElement.classList.contains('legend')) {
+        el.classList.add('inline');
+      }
+    });
+    // SVG text language toggle
+    document.querySelectorAll('[data-lang-svg]').forEach(el => {
+      el.style.display = el.getAttribute('data-lang-svg') === lang ? '' : 'none';
+    });
+  }
+  zhBtn.addEventListener('click', () => setLang('zh'));
+  enBtn.addEventListener('click', () => setLang('en'));
+
+  setLang('zh');
+  go(0);
+})();
+</script>
+</body>
+</html>
