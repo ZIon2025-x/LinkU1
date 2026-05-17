@@ -327,10 +327,13 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         return;
       }
 
-      // 2. 压缩到 1080p(VideoCompress 内部 medium quality)
+      // 2. 压缩到 720p(VideoCompress Res1280x720Quality)
+      // 之前用 MediumQuality 输出 ~480p 太糊 (用户实测反馈);
+      // 720p 在 30s 上限下大致 5-15MB 体积可控且清晰度可接受。
+      // 1080p 体积大概率超 30MB 上限,经常被拒。
       final compressed = await VideoCompress.compressVideo(
         filePath,
-        quality: VideoQuality.MediumQuality,
+        quality: VideoQuality.Res1280x720Quality,
         includeAudio: true,
       );
       // 用户取消压缩 → VideoCompress 返回 null/失败,Banner 已被 _cancelVideoCompression
