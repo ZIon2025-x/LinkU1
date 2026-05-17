@@ -630,7 +630,21 @@ class _CreatePostViewState extends State<CreatePostView> {
                   ),
                 ),
                 AppSpacing.vSm,
-                _buildFilePicker(isDark),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final entry in _selectedFiles.asMap().entries)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: _FilePdfCard(
+                          file: entry.value,
+                          onRemove: () => _removeFile(entry.key),
+                        ),
+                      ),
+                    if (_selectedFiles.length < _kMaxFiles)
+                      _AddFileTile(onTap: _pickFiles),
+                  ],
+                ),
                 AppSpacing.vMd,
                 // 关联内容（选填）
                 Text(
@@ -656,142 +670,6 @@ class _CreatePostViewState extends State<CreatePostView> {
         },
       ),
     );
-  }
-
-  Widget _buildFilePicker(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ..._selectedFiles.asMap().entries.map((entry) {
-          final file = entry.value;
-          final sizeKb = (file.size / 1024).toStringAsFixed(1);
-          return Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : AppColors.backgroundLight,
-              borderRadius: AppRadius.allSmall,
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : AppColors.textTertiaryLight.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _fileIcon(file.extension ?? ''),
-                  size: 28,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        file.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                        ),
-                      ),
-                      Text(
-                        '$sizeKb KB',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Semantics(
-                  button: true,
-                  label: 'Remove file',
-                  child: GestureDetector(
-                    onTap: () => _removeFile(entry.key),
-                    child: const Icon(Icons.close, size: 20, color: AppColors.error),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-        if (_selectedFiles.length < _kMaxFiles)
-          Semantics(
-            button: true,
-            label: context.l10n.forumFileAddFile,
-            child: GestureDetector(
-              onTap: _pickFiles,
-              child: Container(
-                width: double.infinity,
-                padding: AppSpacing.verticalMd,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : AppColors.backgroundLight,
-                  borderRadius: AppRadius.allSmall,
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : AppColors.textTertiaryLight.withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.upload_file,
-                      size: 28,
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                    ),
-                    AppSpacing.vXs,
-                    Text(
-                      context.l10n.forumFileAddFile,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  IconData _fileIcon(String ext) {
-    switch (ext.toLowerCase()) {
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'doc':
-      case 'docx':
-        return Icons.description;
-      case 'xls':
-      case 'xlsx':
-        return Icons.table_chart;
-      case 'ppt':
-      case 'pptx':
-        return Icons.slideshow;
-      default:
-        return Icons.insert_drive_file;
-    }
   }
 
   Widget _buildLinkedChip(bool isDark) {
@@ -1187,6 +1065,182 @@ class _AddImageTile extends StatelessWidget {
                 context.l10n.forumCreatePostAddImage,
                 style: const TextStyle(
                   fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// PDF/文件附件卡片
+/// 视觉: 44x44 红渐变方块 (#F24D4D → #FF7A7A) + "PDF" 白字,
+///        文件名 + 大小 / 进度文案 + 3px 蓝色进度条,
+///        26x26 红色 × 圆按钮。
+class _FilePdfCard extends StatelessWidget {
+  const _FilePdfCard({
+    required this.file,
+    required this.onRemove,
+  });
+
+  final PlatformFile file;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sizeKb = (file.size / 1024).toStringAsFixed(1);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+        borderRadius: AppRadius.allMedium,
+        border: Border.all(
+          color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+            spreadRadius: -3,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFF24D4D), Color(0xFFFF7A7A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(11),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFF24D4D).withValues(alpha: 0.35),
+                  offset: const Offset(0, 4),
+                  blurRadius: 10,
+                  spreadRadius: -2,
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: const Text(
+              'PDF',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  file.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  // 客户端选好文件即视为"已就绪",真实上传发生在 publish 时
+                  // (整体进度由外层 _isUploading 决定),这里只展示文件元数据。
+                  '$sizeKb KB · 已就绪',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: 1.0,
+                    minHeight: 3,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Semantics(
+            button: true,
+            label: 'Remove file',
+            child: InkWell(
+              onTap: onRemove,
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.close, size: 14, color: AppColors.error),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 添加文件按钮 (虚线感蓝色 tile)
+class _AddFileTile extends StatelessWidget {
+  const _AddFileTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.allSmall,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.04),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.35),
+            ),
+            borderRadius: AppRadius.allSmall,
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.upload_file, size: 26, color: AppColors.primary),
+              const SizedBox(height: 4),
+              Text(
+                context.l10n.forumFileAddFile,
+                style: const TextStyle(
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.primary,
                 ),
