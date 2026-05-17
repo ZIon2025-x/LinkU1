@@ -350,6 +350,20 @@ class _CreatePostViewState extends State<CreatePostView> {
 
   Widget _buildTopicChipForCurrentState(ForumState state) {
     if (_selectedCategoryId == null) return const SizedBox.shrink();
+
+    // 自动清除 _selectedCategoryId 当用户无权发到该板块 (规避 _submit 时被后端拒)
+    // lockCategory 模式跳过 (锁定的 id 是上游强制的, 不应清空)
+    if (!widget.lockCategory) {
+      final currentUser = context.read<AuthBloc>().state.user;
+      final postable = ForumPermissionHelper.filterPostableCategories(
+          state.categories, currentUser);
+      if (!postable.any((c) => c.id == _selectedCategoryId)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _selectedCategoryId = null);
+        });
+      }
+    }
+
     final cat = state.categories.firstWhere(
       (c) => c.id == _selectedCategoryId,
       orElse: () => ForumCategory(id: _selectedCategoryId!, name: ''),
@@ -601,7 +615,10 @@ class _CreatePostViewState extends State<CreatePostView> {
                     // 图片 section (有图片时)
                     if (_selectedImages.isNotEmpty) ...[
                       _sectionLabel(
-                          context, '图片 ${_selectedImages.length}/$_kMaxImages'),
+                        context,
+                        '${context.l10n.forumCreatePostImages} '
+                        '${context.l10n.commonImageCount(_selectedImages.length, _kMaxImages)}',
+                      ),
                       const SizedBox(height: 6),
                       _ImageThumbGrid4(
                         images: _selectedImages,
@@ -614,8 +631,11 @@ class _CreatePostViewState extends State<CreatePostView> {
 
                     // 文件 section
                     if (_selectedFiles.isNotEmpty) ...[
-                      _sectionLabel(context,
-                          '附件 ${_selectedFiles.length}/$_kMaxFiles · 最大 ${_kMaxFileSizeMB}MB'),
+                      _sectionLabel(
+                        context,
+                        context.l10n.forumFileAttachmentCount(
+                            '${_selectedFiles.length}', '$_kMaxFiles'),
+                      ),
                       const SizedBox(height: 6),
                       for (final entry in _selectedFiles.asMap().entries)
                         Padding(
