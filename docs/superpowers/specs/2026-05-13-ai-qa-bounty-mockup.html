@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>AI 限时问答 · UI/UX Mockup</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f7f8fa; color: #111827; line-height: 1.5; }
+
+/* ============ 主布局 ============ */
+.page { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+aside { background: #fff; border-right: 1px solid #e5e7eb; padding: 24px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.brand { font-size: 16px; font-weight: 600; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+.brand small { display: block; font-weight: 400; font-size: 11px; color: #9ca3af; margin-top: 4px; }
+.nav-group { margin-bottom: 20px; }
+.nav-group h4 { font-size: 10px; text-transform: uppercase; color: #6b7280; letter-spacing: 0.1em; margin-bottom: 8px; padding-left: 8px; }
+.nav-group a { display: block; padding: 6px 12px; color: #374151; text-decoration: none; font-size: 13px; border-radius: 6px; }
+.nav-group a:hover { background: #f3f4f6; color: #007aff; }
+main { padding: 32px 40px 80px; max-width: 1500px; }
+.intro { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #e5e7eb; }
+.intro h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.intro p { color: #6b7280; font-size: 14px; margin-bottom: 6px; }
+.intro .legend { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+
+.section { margin-bottom: 60px; scroll-margin-top: 20px; }
+.section-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+.section-meta { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+.tag { display: inline-block; padding: 1px 6px; font-size: 10px; border-radius: 4px; margin-left: 8px; vertical-align: middle; font-weight: 600; letter-spacing: 0.05em; }
+.tag-p0 { background: #dbeafe; color: #1e40af; }
+.tag-p1 { background: #fef3c7; color: #92400e; }
+.tag-p2 { background: #fce7f3; color: #9d174d; }
+.tag-p3 { background: #e9d5ff; color: #6b21a8; }
+
+/* ============ Phone frame ============ */
+.phone { width: 390px; height: 800px; border: 12px solid #1f2937; border-radius: 40px; box-shadow: 0 16px 50px rgba(0,0,0,0.18); background: #f2f2f7; overflow: hidden; position: relative; }
+.phone .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 24px; background: #1f2937; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; z-index: 100; }
+.phone-screen { height: 100%; overflow-y: auto; padding-bottom: 84px; }
+.phone-screen::-webkit-scrollbar { display: none; }
+.status-bar { display: flex; justify-content: space-between; padding: 14px 28px 4px; font-size: 13px; font-weight: 600; }
+.tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 84px; background: rgba(255,255,255,0.96); backdrop-filter: blur(20px); border-top: 0.5px solid #e5e7eb; display: flex; align-items: flex-start; padding-top: 8px; }
+.tab-item { flex: 1; text-align: center; font-size: 10px; color: #9ca3af; }
+.tab-item.active { color: #007aff; }
+.tab-item .icon { font-size: 22px; display: block; margin-bottom: 2px; }
+
+/* ============ Browser frame ============ */
+.browser { width: 1140px; max-width: 100%; border: 1px solid #d1d5db; border-radius: 10px; overflow: hidden; box-shadow: 0 16px 50px rgba(0,0,0,0.12); background: #fff; }
+.browser-chrome { height: 36px; background: #ececec; display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid #d1d5db; }
+.browser-chrome .dot { width: 12px; height: 12px; border-radius: 50%; }
+.browser-chrome .dot.r { background: #ff5f57; }
+.browser-chrome .dot.y { background: #febc2e; }
+.browser-chrome .dot.g { background: #28c840; }
+.browser-chrome .url { flex: 1; background: #fff; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 12px; font-size: 11px; color: #6b7280; margin-left: 16px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+/* ============ Mobile UI components ============ */
+.app-bar { background: rgba(255,255,255,0.95); padding: 8px 16px 8px; display: flex; align-items: center; gap: 8px; border-bottom: 0.5px solid #e5e7eb; height: 44px; }
+.app-bar .back { color: #007aff; font-size: 17px; cursor: pointer; }
+.app-bar .title { font-size: 17px; font-weight: 600; flex: 1; text-align: center; }
+.app-bar .right { color: #007aff; font-size: 15px; cursor: pointer; }
+
+.section-card { background: #fff; border-radius: 12px; margin: 10px 12px; padding: 0; overflow: hidden; }
+.section-card.no-pad { padding: 0; }
+.section-card-padded { background: #fff; border-radius: 12px; margin: 10px 12px; padding: 16px; }
+.list-row { padding: 12px 16px; border-bottom: 0.5px solid #e5e7eb; display: flex; align-items: center; }
+.list-row:last-child { border-bottom: none; }
+.section-header-text { padding: 16px 20px 6px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+
+.badge-cash { display: inline-block; padding: 3px 10px; background: linear-gradient(135deg, #ffd700, #ffaa00); color: #553c00; font-size: 11px; font-weight: 700; border-radius: 999px; }
+.badge-points { display: inline-block; padding: 3px 10px; background: #e0e7ff; color: #3730a3; font-size: 11px; font-weight: 600; border-radius: 999px; }
+.badge-ai { display: inline-block; padding: 3px 8px; background: #f3f4f6; color: #6b7280; font-size: 10px; font-weight: 500; border-radius: 4px; }
+.badge-canceled { display: inline-block; padding: 3px 8px; background: #fee2e2; color: #991b1b; font-size: 11px; font-weight: 600; border-radius: 4px; }
+.badge-live { display: inline-block; padding: 3px 8px; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 600; border-radius: 4px; }
+.badge-live::before { content: '●'; margin-right: 4px; }
+
+.btn-primary { background: #007aff; color: #fff; border: none; padding: 14px 16px; border-radius: 12px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer; }
+.btn-secondary { background: #f2f2f7; color: #007aff; border: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+
+.app-tabs { display: flex; background: #fff; padding: 0 16px; border-bottom: 0.5px solid #e5e7eb; }
+.app-tabs .tab { flex: 1; padding: 12px 0; text-align: center; font-size: 14px; color: #6b7280; cursor: pointer; }
+.app-tabs .tab.active { color: #007aff; font-weight: 600; border-bottom: 2px solid #007aff; }
+
+.qa-item { background: #fff; border-radius: 12px; margin: 8px 12px; padding: 14px 16px; cursor: pointer; }
+.qa-item .qa-title { font-size: 16px; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
+.qa-item .qa-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.qa-item .qa-stats { font-size: 12px; color: #6b7280; display: flex; gap: 12px; }
+.qa-item .qa-deadline { color: #dc2626; font-weight: 600; }
+
+/* 发现流 · 双列 Masonry 瀑布流（对应 SliverMasonryGrid.count crossAxisCount=2） */
+.feed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px 8px; }
+.feed-col { display: flex; flex-direction: column; gap: 8px; }
+.feed-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.feed-img { width: 100%; }
+.feed-body { padding: 8px 10px 10px; }
+.feed-tag { display: inline-block; background: #e0e7ff; color: #3730a3; font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; margin-bottom: 4px; }
+.feed-tag.tag-svc { background: #fce7f3; color: #9d174d; }
+.feed-tag.tag-flea { background: #d1fae5; color: #065f46; }
+.feed-title { font-size: 13px; font-weight: 600; line-height: 1.35; color: #1f2937; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.feed-meta { font-size: 11px; color: #9ca3af; }
+
+/* AI 限时问答专用卡片（在 masonry 里 stand out） */
+.feed-card-aiqa { border: 1.5px solid #ffd700; box-shadow: 0 1px 6px rgba(255,215,0,0.25); position: relative; }
+.feed-aiqa-hero { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); padding: 16px 10px 12px; text-align: center; position: relative; overflow: hidden; }
+.feed-aiqa-hero::before { content: ''; position: absolute; top: -20px; right: -20px; width: 60px; height: 60px; background: rgba(255,255,255,0.15); border-radius: 50%; }
+.feed-aiqa-hero::after { content: ''; position: absolute; bottom: -10px; left: -10px; width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+.feed-aiqa-hero .aiqa-pre { font-size: 9px; color: #553c00; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; position: relative; z-index: 1; }
+.feed-aiqa-hero .aiqa-cash { font-size: 32px; font-weight: 800; color: #553c00; line-height: 1; margin-top: 4px; position: relative; z-index: 1; }
+.feed-aiqa-hero .aiqa-cash-sub { font-size: 10px; color: #553c00; font-weight: 600; opacity: 0.85; margin-top: 2px; position: relative; z-index: 1; }
+.feed-aiqa-meta { font-size: 11px; color: #dc2626; font-weight: 600; }
+
+/* answer cards */
+.answer-card { background: #fff; border-radius: 12px; margin: 8px 12px; padding: 14px; border: 1px solid #f0f0f0; position: relative; }
+.answer-card.rank-1 { border: 2px solid #ffd700; box-shadow: 0 0 0 1px rgba(255,215,0,0.15); }
+.answer-card.rank-2, .answer-card.rank-3 { border: 2px solid #ffe082; }
+.answer-card.deleted { opacity: 0.6; background: #fafafa; border-style: dashed; }
+.answer-card.mine { border-left: 3px solid #007aff; }
+.answer-rank-badge { position: absolute; top: -8px; left: 12px; background: #ffd700; color: #5c3c00; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; }
+.answer-rank-badge.r2 { background: #d4d4d8; color: #18181b; }
+.answer-rank-badge.r3 { background: #fdba74; color: #7c2d12; }
+.answer-mine-badge { position: absolute; top: -8px; right: 12px; background: #007aff; color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+.answer-author { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; margin-top: 4px; }
+.answer-author .avatar { width: 28px; height: 28px; border-radius: 50%; background: #c7d2fe; color: #1e40af; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+.answer-author .name { font-size: 13px; font-weight: 600; }
+.answer-author .meta { font-size: 11px; color: #9ca3af; margin-left: auto; }
+.answer-content { font-size: 14px; line-height: 1.55; color: #374151; }
+.answer-images { display: flex; gap: 4px; margin-top: 8px; }
+.answer-images .img { width: 60px; height: 60px; background: #e5e7eb; border-radius: 6px; }
+.answer-footer { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6; font-size: 11px; color: #9ca3af; }
+.reward-tag { color: #ff8033; font-weight: 600; font-size: 12px; }
+.ai-warning-tag { background: #f3f4f6; color: #6b7280; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+.ai-warning-tag::before { content: '⚠ '; }
+
+/* state banners */
+.banner-canceled { background: #fee2e2; border-left: 4px solid #ef4444; padding: 12px 16px; margin: 8px 12px; border-radius: 8px; font-size: 13px; color: #991b1b; }
+.banner-canceled strong { display: block; margin-bottom: 4px; font-size: 14px; }
+.banner-settled { background: #d1fae5; border-left: 4px solid #10b981; padding: 12px 16px; margin: 8px 12px; border-radius: 8px; font-size: 13px; color: #065f46; }
+
+/* QA hero panel (in detail page) */
+.qa-hero { background: #fff; padding: 18px 16px; border-radius: 0 0 16px 16px; }
+.qa-hero .topic-tag { display: inline-block; background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin-bottom: 8px; }
+.qa-hero .title { font-size: 19px; font-weight: 600; line-height: 1.4; margin-bottom: 10px; }
+.qa-hero .author { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 12px; color: #6b7280; }
+.qa-hero .author .avatar { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #007aff, #409cff); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+
+.pool-strip { display: flex; background: linear-gradient(135deg, #fff8e1, #fffbeb); border: 1px solid #ffd700; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.pool-strip .col { flex: 1; text-align: center; }
+.pool-strip .col + .col { border-left: 1px solid #fde68a; }
+.pool-strip .label { font-size: 10px; color: #92400e; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+.pool-strip .value { font-size: 18px; font-weight: 700; color: #553c00; }
+.pool-strip .value-sm { font-size: 14px; font-weight: 700; color: #b45309; }
+
+/* form */
+.form-field { margin: 12px 16px; }
+.form-field label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px; padding-left: 4px; }
+.form-field input, .form-field textarea { width: 100%; background: #fff; border: none; border-radius: 10px; padding: 12px 14px; font-size: 15px; font-family: inherit; resize: none; }
+.form-field textarea { min-height: 220px; }
+.form-field .locked { background: #f3f4f6; color: #6b7280; }
+.form-field .hint { font-size: 11px; color: #9ca3af; padding: 4px 4px 0; }
+.image-upload { display: flex; gap: 8px; margin: 8px 16px; }
+.image-upload .slot { width: 64px; height: 64px; border: 1.5px dashed #d1d5db; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 22px; }
+.image-upload .slot.filled { background: #e5e7eb; border-style: solid; color: transparent; }
+
+/* leaderboard */
+.lb-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 0.5px solid #f3f4f6; gap: 12px; }
+.lb-rank { font-size: 16px; font-weight: 700; width: 28px; text-align: center; color: #6b7280; }
+.lb-rank.r1 { color: #ffd700; font-size: 22px; }
+.lb-rank.r2 { color: #c0c0c0; font-size: 20px; }
+.lb-rank.r3 { color: #cd7f32; font-size: 18px; }
+.lb-info { flex: 1; }
+.lb-name { font-size: 14px; font-weight: 600; }
+.lb-stats { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.lb-amount { font-size: 14px; font-weight: 700; color: #ff8033; }
+
+/* ============ Admin web components ============ */
+.admin-page { display: flex; min-height: 700px; background: #f7f8fa; }
+.admin-sidebar { width: 220px; background: #1e293b; color: #cbd5e1; padding: 20px 0; flex-shrink: 0; }
+.admin-sidebar .brand-line { font-size: 14px; font-weight: 600; padding: 0 20px 16px; color: #fff; border-bottom: 1px solid #334155; margin-bottom: 16px; }
+.admin-sidebar h3 { font-size: 10px; text-transform: uppercase; padding: 12px 20px 6px; color: #94a3b8; letter-spacing: 0.1em; }
+.admin-sidebar a { display: block; padding: 8px 20px; color: #cbd5e1; text-decoration: none; font-size: 13px; border-left: 3px solid transparent; }
+.admin-sidebar a:hover { background: #334155; }
+.admin-sidebar a.active { background: #334155; color: #fff; border-left-color: #007aff; }
+.admin-main { flex: 1; padding: 24px 32px; overflow: hidden; }
+.admin-main .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.admin-main h2 { font-size: 22px; font-weight: 600; }
+.breadcrumb { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+
+.btn-admin { padding: 8px 16px; font-size: 13px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-weight: 500; }
+.btn-admin.primary { background: #007aff; color: #fff; border-color: #007aff; }
+.btn-admin.primary:hover { background: #0066d6; }
+.btn-admin.danger { background: #ef4444; color: #fff; border-color: #ef4444; }
+.btn-admin.warn { background: #fff; color: #b45309; border-color: #fbbf24; }
+.btn-admin.sm { padding: 4px 10px; font-size: 12px; }
+
+table.admin { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); font-size: 13px; }
+table.admin th { background: #f9fafb; padding: 10px 12px; text-align: left; font-weight: 600; color: #374151; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; }
+table.admin td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+table.admin tr:hover { background: #f9fafb; }
+table.admin tr.high-risk { background: #fff5f5; }
+table.admin tr.high-risk:hover { background: #ffeded; }
+table.admin tr.high-risk td:first-child { border-left: 3px solid #ef4444; }
+table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.status-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+.status-published { background: #dbeafe; color: #1e40af; }
+.status-scoring { background: #fef3c7; color: #92400e; }
+.status-scored { background: #ddd6fe; color: #5b21b6; }
+.status-settled { background: #d1fae5; color: #065f46; }
+.status-canceled { background: #fee2e2; color: #991b1b; }
+.status-draft { background: #f3f4f6; color: #4b5563; }
+.status-closed { background: #e0e7ff; color: #4338ca; }
+.status-empty { background: #f3f4f6; color: #6b7280; }
+.status-failed { background: #fecaca; color: #7f1d1d; }
+
+.risk-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.risk-high { background: #fee2e2; color: #991b1b; }
+.risk-mid { background: #fef3c7; color: #92400e; }
+.risk-low { background: #d1fae5; color: #065f46; }
+
+.ai-gen-pill { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.ai-gen-high { background: #fee2e2; color: #991b1b; }
+.ai-gen-medium { background: #fef3c7; color: #92400e; }
+.ai-gen-low { background: #d1fae5; color: #065f46; }
+
+.score-input { width: 56px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; text-align: center; }
+.cash-budget { font-weight: 700; color: #ff8033; font-size: 13px; }
+
+.checkbox { width: 14px; height: 14px; }
+
+.card-admin { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card-admin h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-row { margin-bottom: 14px; }
+.form-row label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px; font-weight: 500; }
+.form-row input, .form-row textarea, .form-row select { width: 100%; padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.form-row textarea { min-height: 80px; resize: vertical; }
+.form-row .help { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+
+.banner-info { background: #eff6ff; border: 1px solid #bfdbfe; border-left: 3px solid #007aff; padding: 12px 14px; border-radius: 6px; font-size: 13px; color: #1e40af; margin-bottom: 16px; }
+.banner-warn { background: #fffbeb; border: 1px solid #fde68a; border-left: 3px solid #f59e0b; padding: 12px 14px; border-radius: 6px; font-size: 13px; color: #78350f; margin-bottom: 16px; }
+.banner-warn strong { display: block; margin-bottom: 4px; }
+.banner-success { background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 3px solid #10b981; padding: 12px 14px; border-radius: 6px; font-size: 13px; color: #065f46; margin-bottom: 16px; }
+
+.pool-summary { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px 16px; display: flex; gap: 24px; align-items: center; margin-bottom: 16px; }
+.pool-summary .label { font-size: 11px; text-transform: uppercase; color: #92400e; letter-spacing: 0.05em; }
+.pool-summary .value { font-size: 18px; font-weight: 700; color: #553c00; }
+.pool-summary .value-warn { color: #dc2626; }
+
+/* mockup arrangement */
+.mockup-row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.mockup-caption { background: #fff; border-radius: 8px; padding: 16px 20px; border: 1px solid #e5e7eb; max-width: 320px; flex-shrink: 0; }
+.mockup-caption h4 { font-size: 13px; color: #007aff; margin-bottom: 8px; font-weight: 600; }
+.mockup-caption ul { padding-left: 18px; font-size: 13px; line-height: 1.7; color: #4b5563; }
+.mockup-caption li { margin-bottom: 4px; }
+.mockup-caption code { background: #f3f4f6; padding: 1px 4px; font-size: 11px; border-radius: 3px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+<div class="page">
+<aside>
+<div class="brand">AI 限时问答 · Mockup<small>2026-05-13 spec 配套</small></div>
+
+<div class="nav-group">
+  <h4>用户面 (Flutter)</h4>
+  <a href="#m1">M1 · 首页入口卡片</a>
+  <a href="#m2">M2 · 列表页</a>
+  <a href="#m3">M3 · 详情 · 答题中</a>
+  <a href="#m4">M4 · 详情 · 已撤稿</a>
+  <a href="#m5">M5 · 详情 · 已结算</a>
+  <a href="#m6">M6 · 答题表单</a>
+  <a href="#m7">M7 · 答主累计榜</a>
+</div>
+
+<div class="nav-group">
+  <h4>Admin Web</h4>
+  <a href="#a1">A1 · 周期配置</a>
+  <a href="#a2">A2 · 候选题待审</a>
+  <a href="#a3">A3 · 草稿管理</a>
+  <a href="#a4">A4 · 题目列表</a>
+  <a href="#a5">A5 · 评分终审</a>
+</div>
+
+<div class="nav-group">
+  <h4>说明</h4>
+  <a href="#legend">配色 / Tag 图例</a>
+</div>
+</aside>
+
+<main>
+<div class="intro">
+  <h1>AI 限时问答 · UI/UX Mockup</h1>
+  <p>配套 spec：<code>docs/superpowers/specs/2026-05-13-ai-qa-bounty-design.md</code></p>
+  <p>左侧导航跳转每个 mockup。每屏右侧有"设计要点"卡片，标注哪些来自哪一节决策。</p>
+  <div class="legend">
+    <span class="tag tag-p0">P0 MVP</span>
+    <span class="tag tag-p1">P1</span>
+    <span class="tag tag-p2">P2</span>
+    <span class="tag tag-p3">P3+</span>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- M1 · 首页入口卡片 -->
+<!-- ============================================================ -->
+<section class="section" id="m1">
+  <h2 class="section-title">M1 · 首页入口卡片<span class="tag tag-p2">P2</span></h2>
+  <p class="section-meta">两个入口位置：① "发现更多" discovery feed 卡片 · ② "官方活动" 区列表项。两者用同一份数据但视觉差异。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span style="width:40px"></span>
+          <div class="title">首页</div>
+          <span class="right">🔍</span>
+        </div>
+
+        <div class="section-header-text">发现更多</div>
+
+        <!-- 双列 Masonry 瀑布流 (SliverMasonryGrid.count) -->
+        <div class="feed-grid">
+          <!-- 左列 -->
+          <div class="feed-col">
+            <!-- 普通帖子卡 (forum_post) -->
+            <div class="feed-card">
+              <div class="feed-img" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);height:160px"></div>
+              <div class="feed-body">
+                <div class="feed-tag">论坛 · 海外华人</div>
+                <div class="feed-title">伦敦租房真的好坑，分享一下我的踩坑经验...</div>
+                <div class="feed-meta">小Anna · 12 赞</div>
+              </div>
+            </div>
+
+            <!-- AI 限时问答特殊卡（金色调 stand out） -->
+            <div class="feed-card feed-card-aiqa">
+              <div class="feed-aiqa-hero">
+                <div class="aiqa-pre">🤖 AI 限时问答 #12</div>
+                <div class="aiqa-cash">£10</div>
+                <div class="aiqa-cash-sub">现金奖池</div>
+              </div>
+              <div class="feed-body">
+                <div class="feed-title">在伦敦 Zone 2 找合租室友，怎么避坑？</div>
+                <div class="feed-aiqa-meta">⏱ 3天4小时 · 23人答</div>
+              </div>
+            </div>
+
+            <!-- 商品卡 (product) -->
+            <div class="feed-card">
+              <div class="feed-img" style="background:linear-gradient(135deg,#34d399,#10b981);height:140px"></div>
+              <div class="feed-body">
+                <div class="feed-tag tag-flea">闲鱼</div>
+                <div class="feed-title">8.5 成新 Dyson V10 出，伦敦 Zone 2 面交</div>
+                <div class="feed-meta" style="color:#ff8033;font-weight:600">£180</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右列 -->
+          <div class="feed-col">
+            <!-- 服务卡 (service) -->
+            <div class="feed-card">
+              <div class="feed-img" style="background:linear-gradient(135deg,#facc15,#f59e0b);height:200px"></div>
+              <div class="feed-body">
+                <div class="feed-tag tag-svc">服务</div>
+                <div class="feed-title">陪诊服务 · 持医院通行证 · 中英双语</div>
+                <div class="feed-meta">陪诊小姐姐 · ★ 4.9 (28)</div>
+              </div>
+            </div>
+
+            <!-- 普通帖子卡 -->
+            <div class="feed-card">
+              <div class="feed-img" style="background:linear-gradient(135deg,#f87171,#ef4444);height:170px"></div>
+              <div class="feed-body">
+                <div class="feed-tag">论坛 · 学习交流</div>
+                <div class="feed-title">第一次去 GP 注册，全过程记录</div>
+                <div class="feed-meta">Lily_LDN · 5 赞</div>
+              </div>
+            </div>
+
+            <!-- 普通帖子卡 -->
+            <div class="feed-card">
+              <div class="feed-img" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);height:130px"></div>
+              <div class="feed-body">
+                <div class="feed-tag">论坛 · 二手</div>
+                <div class="feed-title">求收 IELTS 备考资料</div>
+                <div class="feed-meta">Marvin · 3 评论</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header-text" style="margin-top:8px">官方活动</div>
+
+        <!-- AI 限时问答 in 官方活动 list item -->
+        <div class="qa-item">
+          <div class="qa-meta">
+            <span class="badge-cash">£10 现金</span>
+            <span class="badge-points">+5 积分</span>
+            <span class="badge-live">进行中</span>
+          </div>
+          <div class="qa-title">在伦敦 Zone 2 找合租室友，怎么避坑？</div>
+          <div class="qa-stats">
+            <span>🤖 AI 出题</span>
+            <span>📝 已 23 人作答</span>
+            <span class="qa-deadline">⏱ 3 天 4 小时后截止</span>
+          </div>
+        </div>
+
+        <!-- OfficialTask 同区 -->
+        <div class="qa-item">
+          <div class="qa-meta">
+            <span class="badge-points">+50 积分</span>
+            <span style="background:#e0e7ff;color:#3730a3;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500">新手任务</span>
+          </div>
+          <div class="qa-title">完成首次实名认证</div>
+          <div class="qa-stats">
+            <span>🎁 平台官方</span>
+            <span>👥 12.3k 完成</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="tabbar">
+        <div class="tab-item active"><span class="icon">🏠</span>首页</div>
+        <div class="tab-item"><span class="icon">💬</span>社区</div>
+        <div class="tab-item"><span class="icon">✉</span>消息</div>
+        <div class="tab-item"><span class="icon">👤</span>我的</div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li><strong>瀑布流融入而非横条</strong>：发现流是 <code>SliverMasonryGrid.count(crossAxisCount=2)</code> 双列竖式，AI 限时问答卡片<strong>跟其他帖子/服务/闲鱼卡同列宽</strong>，不破坏瀑布流节奏</li>
+        <li><strong>金色 hero 替代图位</strong>：普通卡片顶部是图（4:3 比例），AI 限时问答顶部是金色渐变 hero 显示 £10 大数字 — 视觉上一眼就 stand out</li>
+        <li><strong>金色边框 + 阴影</strong>：1.5px 金边 + 浅金阴影，进一步强调"现金 + 奖励"语义</li>
+        <li><strong>题面 2 行 ellipsis</strong>：跟普通卡片一致的截断规则</li>
+        <li><strong>底部红色倒计时</strong>替代普通卡的"赞数/价格"，强调紧迫感</li>
+        <li>下方"官方活动"区是 list 形式（非瀑布流），跟"新手任务" OfficialTask 同区共存，靠 badge 颜色区分（金色 £ vs 紫色积分）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M2 · 列表页 -->
+<!-- ============================================================ -->
+<section class="section" id="m2">
+  <h2 class="section-title">M2 · 列表页<span class="tag tag-p2">P2</span></h2>
+  <p class="section-meta">/ai-qa 页面。当期 + 历史两个 tab。当期通常 1 道题（cycle 周期决定），历史按时间倒序。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span class="back">‹ 返回</span>
+          <div class="title">AI 限时问答</div>
+          <span class="right">🏆</span>
+        </div>
+
+        <div class="app-tabs">
+          <div class="tab active">当期</div>
+          <div class="tab">历史</div>
+        </div>
+
+        <!-- 当期 -->
+        <div class="qa-item" style="margin-top:12px">
+          <div class="qa-meta">
+            <span class="badge-cash">£10 现金</span>
+            <span class="badge-points">+5 积分</span>
+            <span class="badge-live">进行中</span>
+          </div>
+          <div class="qa-title">在伦敦 Zone 2 找合租室友，怎么避坑？</div>
+          <div class="qa-stats">
+            <span>📝 23 人作答</span>
+            <span class="qa-deadline">⏱ 3天 4小时</span>
+          </div>
+        </div>
+
+        <div class="section-header-text" style="margin-top:16px">最近结束的几期</div>
+
+        <!-- 历史 settled -->
+        <div class="qa-item">
+          <div class="qa-meta">
+            <span style="background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500">已结算</span>
+            <span style="font-size:11px;color:#9ca3af">第 11 期 · 2026-05-06</span>
+          </div>
+          <div class="qa-title">第一次找陪诊有什么注意事项？</div>
+          <div class="qa-stats">
+            <span>📝 47 人作答</span>
+            <span>🏆 25 人中奖</span>
+            <span style="color:#ff8033;font-weight:600">£10 已发完</span>
+          </div>
+        </div>
+
+        <div class="qa-item">
+          <div class="qa-meta">
+            <span style="background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500">已结算</span>
+            <span style="font-size:11px;color:#9ca3af">第 10 期 · 2026-04-29</span>
+          </div>
+          <div class="qa-title">留学生怎么省钱寄国内包裹？</div>
+          <div class="qa-stats">
+            <span>📝 31 人作答</span>
+            <span>🏆 16 人中奖</span>
+            <span style="color:#ff8033;font-weight:600">£10 已发完</span>
+          </div>
+        </div>
+
+        <!-- 历史 canceled -->
+        <div class="qa-item" style="opacity:0.7">
+          <div class="qa-meta">
+            <span class="badge-canceled">已取消</span>
+            <span style="font-size:11px;color:#9ca3af">第 9 期 · 2026-04-22</span>
+          </div>
+          <div class="qa-title">关于英国签证最新政策的看法</div>
+          <div class="qa-stats">
+            <span>📝 8 人作答</span>
+            <span style="color:#dc2626">❌ admin 撤稿</span>
+          </div>
+        </div>
+
+        <!-- 历史 closed_empty -->
+        <div class="qa-item" style="opacity:0.7">
+          <div class="qa-meta">
+            <span style="background:#f3f4f6;color:#6b7280;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500">无人作答</span>
+            <span style="font-size:11px;color:#9ca3af">第 8 期 · 2026-04-15</span>
+          </div>
+          <div class="qa-title">如何在英国办理国际驾照换本</div>
+          <div class="qa-stats"><span>📝 0 人作答</span></div>
+        </div>
+
+      </div>
+      <div class="tabbar">
+        <div class="tab-item"><span class="icon">🏠</span>首页</div>
+        <div class="tab-item"><span class="icon">💬</span>社区</div>
+        <div class="tab-item"><span class="icon">✉</span>消息</div>
+        <div class="tab-item"><span class="icon">👤</span>我的</div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li>右上角 🏆 入口直达 <code>/ai-qa/leaderboard</code>（M7）</li>
+        <li>历史区按状态显示不同视觉：<code>settled</code> / <code>canceled</code> / <code>closed_empty</code> 一眼可分</li>
+        <li><code>canceled</code> 和 <code>closed_empty</code> 整体透明度降到 70%——次要信息</li>
+        <li>未提供"按状态过滤"——因为列表通常很短（每周 1 期），筛选 YAGNI</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M3 · 详情 · 答题中 -->
+<!-- ============================================================ -->
+<section class="section" id="m3">
+  <h2 class="section-title">M3 · 详情页 · published（答题中）<span class="tag tag-p0">P0</span></h2>
+  <p class="section-meta">用户进入题目，看到题面、奖金池、倒计时、答案列表。当前用户已答的话答案高亮"你的回答"。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span class="back">‹</span>
+          <div class="title">AI 限时问答 · 第 12 期</div>
+          <span class="right">⚙</span>
+        </div>
+
+        <!-- Hero -->
+        <div class="qa-hero">
+          <span class="topic-tag">🏠 海外华人生活</span>
+          <div class="title">在伦敦 Zone 2 找合租室友，怎么避坑？</div>
+          <div class="author">
+            <span class="avatar">🤖</span>
+            <span>由 AI 出题 · 平台官方活动</span>
+          </div>
+
+          <div class="pool-strip">
+            <div class="col">
+              <div class="label">奖金池</div>
+              <div class="value">£10.00</div>
+            </div>
+            <div class="col">
+              <div class="label">倒计时</div>
+              <div class="value-sm" style="color:#dc2626">3天 4:32</div>
+            </div>
+            <div class="col">
+              <div class="label">已作答</div>
+              <div class="value-sm">23 人</div>
+            </div>
+          </div>
+
+          <div style="background:#f9fafb;border-radius:8px;padding:10px 12px;font-size:12px;color:#6b7280;line-height:1.5">
+            💡 答题前 1 小时锁定编辑 · 截止后 AI 评分 + 人工复审 · 中奖 £ 现金到钱包，全员 +5 积分
+          </div>
+
+          <button class="btn-primary" style="margin-top:14px">✍ 我来答（截止前可编辑）</button>
+        </div>
+
+        <div class="section-header-text">23 个答案 · 按热度排序</div>
+
+        <!-- 当前用户的答案 -->
+        <div class="answer-card mine">
+          <span class="answer-mine-badge">你的回答</span>
+          <div class="answer-author" style="margin-top:8px">
+            <span class="avatar">小</span>
+            <span class="name">小明</span>
+            <span class="meta">2 小时前</span>
+          </div>
+          <div class="answer-content">第一是看房一定要去现场，照片可能修过；第二注意 council tax 跟 bills 是不是 included；第三签合同前要看 deposit 是不是托管在 DPS / TDS / MyDeposits 三个之一……</div>
+          <div class="answer-images">
+            <div class="img"></div><div class="img"></div>
+          </div>
+          <div class="answer-footer">
+            <span style="color:#9ca3af">截止前可编辑 →</span>
+          </div>
+        </div>
+
+        <!-- 其他人答案 -->
+        <div class="answer-card">
+          <div class="answer-author">
+            <span class="avatar" style="background:#fce7f3;color:#9d174d">L</span>
+            <span class="name">Lily_LDN</span>
+            <span class="meta">5 小时前</span>
+          </div>
+          <div class="answer-content">血泪教训：1) 千万别签 Right to Rent 没查清楚的房东 2) 看房带个朋友，一个人去太被动 3) 如果是 HMO，问清楚有几个室友共用厨房，超过 5 个真的不要……</div>
+          <div class="answer-footer">
+            <span style="color:#9ca3af">📝 458 字 · 评分待结算</span>
+          </div>
+        </div>
+
+        <div class="answer-card">
+          <div class="answer-author">
+            <span class="avatar" style="background:#fef3c7;color:#92400e">M</span>
+            <span class="name">Marvin周末忙</span>
+            <span class="meta">1 天前</span>
+          </div>
+          <div class="answer-content">分享个具体网站，spareroom 上看房一定要看 last login，半年没登录的房东多半是钓鱼……</div>
+        </div>
+
+      </div>
+      <div class="tabbar">
+        <div class="tab-item"><span class="icon">🏠</span>首页</div>
+        <div class="tab-item"><span class="icon">💬</span>社区</div>
+        <div class="tab-item"><span class="icon">✉</span>消息</div>
+        <div class="tab-item"><span class="icon">👤</span>我的</div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li><strong>奖金池条</strong>用金色高亮，三档信息（池/倒计时/参与人数）一眼可见</li>
+        <li>"由 AI 出题"明确告知用户题目来源，符合 §2.3 出题透明原则</li>
+        <li>当前用户答案<strong>顶置</strong>且左侧蓝色边 + "你的回答"角标</li>
+        <li>"截止前可编辑 →" 提示用户在 <code>edit_lock_at</code> 之前都能改</li>
+        <li>答案列表 published 期间不显示"AI 生成提示"标签——评分阶段才有数据</li>
+        <li>说明条详细解释规则，对新用户友好</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M4 · 详情 · 已撤稿 -->
+<!-- ============================================================ -->
+<section class="section" id="m4">
+  <h2 class="section-title">M4 · 详情页 · canceled（admin 撤稿后）<span class="tag tag-p0">P0</span></h2>
+  <p class="section-meta">题目被 admin 撤稿后，详情页加 banner，已提交答案仍可见，奖金池不发，参与积分照给。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span class="back">‹</span>
+          <div class="title">AI 限时问答 · 第 9 期</div>
+          <span class="right"></span>
+        </div>
+
+        <!-- Cancel banner -->
+        <div class="banner-canceled" style="margin:10px 12px">
+          <strong>⚠ 本期问答已被取消</strong>
+          已答用户均收到 +5 参与积分；本期奖金池不发放。如需了解原因可联系客服。
+        </div>
+
+        <div class="qa-hero" style="border-radius:12px;margin:0 12px">
+          <span class="topic-tag">📰 时事话题</span>
+          <div class="title">关于英国签证最新政策的看法</div>
+          <div class="author">
+            <span class="avatar">🤖</span>
+            <span>由 AI 出题 · 已于 2026-04-23 撤稿</span>
+          </div>
+        </div>
+
+        <div class="section-header-text">8 个答案（已无法新增）</div>
+
+        <div class="answer-card">
+          <div class="answer-author">
+            <span class="avatar" style="background:#fce7f3;color:#9d174d">L</span>
+            <span class="name">Lily_LDN</span>
+            <span class="meta">2026-04-22</span>
+          </div>
+          <div class="answer-content">个人觉得最近的政策更倾向 high-skilled 路线，对 graduate visa 影响很大……</div>
+          <div class="answer-footer">
+            <span style="color:#9ca3af">📝 此答案已获得参与积分 +5</span>
+          </div>
+        </div>
+
+        <div class="answer-card">
+          <div class="answer-author">
+            <span class="avatar" style="background:#c7d2fe;color:#1e40af">A</span>
+            <span class="name">小Anna</span>
+            <span class="meta">2026-04-22</span>
+          </div>
+          <div class="answer-content">作为 Tier 2 签证持有者来说，新政策的过渡期长不长是关键……</div>
+        </div>
+
+      </div>
+      <div class="tabbar">
+        <div class="tab-item"><span class="icon">🏠</span>首页</div>
+        <div class="tab-item"><span class="icon">💬</span>社区</div>
+        <div class="tab-item"><span class="icon">✉</span>消息</div>
+        <div class="tab-item"><span class="icon">👤</span>我的</div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li>顶部红色 banner 显眼但不失礼貌</li>
+        <li>明确告知"参与积分照给"消除已答用户疑虑</li>
+        <li>"如需了解原因可联系客服"避免暴露撤稿原因（可能政治敏感等）</li>
+        <li>答案保持可见——保留 ForumPost 绑定（§7 决策）</li>
+        <li>"我来答"按钮消失，新用户无法再答</li>
+        <li>"已获得参与积分"小字提示透明化</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M5 · 详情 · 已结算 -->
+<!-- ============================================================ -->
+<section class="section" id="m5">
+  <h2 class="section-title">M5 · 详情页 · settled（已结算）<span class="tag tag-p0">P0</span></h2>
+  <p class="section-meta">评分 + 发奖完成。展示 top 3 金边 + 奖金、AI 生成提示标签、"已被删除"占位。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span class="back">‹</span>
+          <div class="title">AI 限时问答 · 第 11 期</div>
+          <span class="right">📤</span>
+        </div>
+
+        <!-- Settled banner -->
+        <div class="banner-settled" style="margin:10px 12px">
+          🎉 本期已结算 · 池子 £10.00 已分配给 25 位答主 · 你获得 +5 参与积分
+        </div>
+
+        <!-- 当前用户中奖：奖金已入钱包 banner -->
+        <div style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 16px;margin:0 12px 8px;border-radius:8px;font-size:13px;color:#065f46">
+          <strong>💰 你获得 £0.65 奖金</strong><br/>
+          <span style="font-size:12px">已入账到你的钱包余额。可在 "我的-钱包" 查看流水，达提现门槛后可提现到银行。</span>
+          <button class="btn-primary" style="margin-top:8px;padding:8px 12px;font-size:13px;background:#10b981">→ 查看我的钱包</button>
+        </div>
+
+        <div class="qa-hero" style="border-radius:12px;margin:0 12px">
+          <span class="topic-tag">🏥 海外华人生活</span>
+          <div class="title">第一次找陪诊有什么注意事项？</div>
+          <div class="author">
+            <span class="avatar">🤖</span>
+            <span>由 AI 出题 · 2026-04-29 结算 · 47 人作答</span>
+          </div>
+          <div class="pool-strip">
+            <div class="col">
+              <div class="label">奖金池</div>
+              <div class="value" style="color:#10b981">£10.00 已发</div>
+            </div>
+            <div class="col">
+              <div class="label">中奖人数</div>
+              <div class="value-sm">25 / 47</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header-text">最高分答案</div>
+
+        <!-- Rank 1 -->
+        <div class="answer-card rank-1" style="margin-top:14px">
+          <span class="answer-rank-badge">🥇 #1 · £1.20</span>
+          <div class="answer-author" style="margin-top:8px">
+            <span class="avatar" style="background:#fef3c7;color:#92400e">陪</span>
+            <span class="name">陪诊小姐姐</span>
+            <span class="meta">已成精选 ⭐</span>
+          </div>
+          <div class="answer-content">作为接陪诊单 3 年的人来说，第一次找陪诊一定要：1) 提前确认陪诊员是否有医院通行证 2) 问清是否懂当地医疗系统（NHS / 私立差别大）3) 明确陪诊时长 cap 4) 保留所有沟通记录……</div>
+          <div class="answer-footer">
+            <span class="reward-tag">£1.20 现金</span>
+            <span>+5 积分</span>
+            <span style="color:#9ca3af">· 458 字</span>
+          </div>
+        </div>
+
+        <!-- Rank 2 -->
+        <div class="answer-card rank-2">
+          <span class="answer-rank-badge r2">🥈 #2 · £0.95</span>
+          <div class="answer-author" style="margin-top:8px">
+            <span class="avatar" style="background:#fce7f3;color:#9d174d">L</span>
+            <span class="name">Lily_LDN</span>
+          </div>
+          <div class="answer-content">血泪教训：第一次找陪诊被宰 £80 多收 50%。后来才知道平台直接搜带评价的最稳……</div>
+          <div class="answer-footer">
+            <span class="reward-tag">£0.95</span><span>+5 积分</span>
+          </div>
+        </div>
+
+        <!-- Rank 3 -->
+        <div class="answer-card rank-3">
+          <span class="answer-rank-badge r3">🥉 #3 · £0.78</span>
+          <div class="answer-author" style="margin-top:8px">
+            <span class="avatar" style="background:#c7d2fe;color:#1e40af">A</span>
+            <span class="name">Anna_Healthcare</span>
+          </div>
+          <div class="answer-content">补充一下，如果是孕妇陪诊，记得问陪诊员是否有产科陪诊经验。语言能不能通也很重要……</div>
+          <div class="answer-footer">
+            <span class="reward-tag">£0.78</span><span>+5 积分</span>
+          </div>
+        </div>
+
+        <!-- AI 生成提示 -->
+        <div class="answer-card">
+          <div class="answer-author">
+            <span class="avatar" style="background:#e5e7eb;color:#6b7280">?</span>
+            <span class="name">用户1234</span>
+          </div>
+          <div class="answer-content">第一次找陪诊是一件值得仔细考虑的事情，建议从以下几个维度考虑：首先是专业资质，其次是服务态度，再次是价格透明……</div>
+          <div class="answer-footer">
+            <span class="reward-tag">£0.32</span>
+            <span class="ai-warning-tag">可能为 AI 生成</span>
+          </div>
+        </div>
+
+        <!-- 已删除占位 -->
+        <div class="answer-card deleted">
+          <div class="answer-author">
+            <span class="avatar" style="background:#e5e7eb;color:#6b7280">×</span>
+            <span class="name" style="text-decoration:line-through">用户9876</span>
+            <span class="meta">2026-04-30 已删除</span>
+          </div>
+          <div class="answer-content" style="font-style:italic;color:#9ca3af">该答案已被删除（用户 settled 后自行移除）</div>
+          <div class="answer-footer">
+            <span class="reward-tag">£0.42 已发</span>
+            <span style="color:#9ca3af">· 历史记录保留</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="tabbar">
+        <div class="tab-item"><span class="icon">🏠</span>首页</div>
+        <div class="tab-item"><span class="icon">💬</span>社区</div>
+        <div class="tab-item"><span class="icon">✉</span>消息</div>
+        <div class="tab-item"><span class="icon">👤</span>我的</div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li><strong>top 1/2/3 金/银/铜边 + 排名 badge</strong>（L3.a 决策）</li>
+        <li>top 1 标"已成精选 ⭐"——该 ForumPost 同时进了论坛 hot tab（L3.b）</li>
+        <li><strong>"可能为 AI 生成" 灰色标签</strong>（L4 决策）—— 不强扣分，只让读者自己判断</li>
+        <li><strong>已删除占位</strong>——保留 ai_answer_scores（无 FK）+ 仍展示 reward_pence；用户名加删除线，头像变 × 灰</li>
+        <li>顶部 banner 用绿色 settled 语气，"你获得 +5 积分"对所有人统一文案（不区分中奖与否，§2 通知规则）</li>
+        <li>右上角 📤 分享按钮 ——精选答案值得分享拉新</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M6 · 答题表单 -->
+<!-- ============================================================ -->
+<section class="section" id="m6">
+  <h2 class="section-title">M6 · 答题表单<span class="tag tag-p0">P0</span></h2>
+  <p class="section-meta">复用论坛编辑器，板块字段锁定为题目预设板块；ai_question_id 为隐藏字段；submit 走 /api/ai-qa/{id}/answer。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span class="back">取消</span>
+          <div class="title">写答案</div>
+          <span class="right" style="opacity:0.5">发布</span>
+        </div>
+
+        <!-- 题目摘要 -->
+        <div style="background:#eff6ff;margin:10px 12px;padding:12px;border-radius:10px;border:1px solid #bfdbfe">
+          <div style="font-size:11px;color:#3b82f6;margin-bottom:4px;font-weight:600">回答中：</div>
+          <div style="font-size:14px;font-weight:600;color:#1e3a8a">在伦敦 Zone 2 找合租室友，怎么避坑？</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:6px">⏱ 截止前 3 天 4 小时 · 截止前 1 小时锁编辑</div>
+        </div>
+
+        <div class="form-field">
+          <label>板块（已为你选好）</label>
+          <input class="locked" value="🏠 海外华人生活" disabled />
+          <div class="hint">本题答案统一发到该板块，无法修改</div>
+        </div>
+
+        <div class="form-field">
+          <label>标题（可选，留空将自动取题面）</label>
+          <input placeholder="例：我在伦敦 Zone 2 找了 5 次室友的真实经验" />
+        </div>
+
+        <div class="form-field">
+          <label>正文 *</label>
+          <textarea placeholder="100-1500 字 · 可加图片">血泪教训分享：
+
+1️⃣ 看房必须现场看
+照片真的会修过，灯光角度都能骗人。我第一次踩坑就是 SE15 一间房，照片明亮宽敞，到现场是阴面采光极差……
+
+2️⃣ 看 Bills included 范围
+有些房东说 "all bills included" 但 council tax 不算……</textarea>
+          <div class="hint">456 字 · 建议 100-1500 字</div>
+        </div>
+
+        <div style="padding:0 16px"><label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px">配图（可选，最多 3 张）</label></div>
+        <div class="image-upload">
+          <div class="slot filled" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)"></div>
+          <div class="slot filled" style="background:linear-gradient(135deg,#facc15,#f59e0b)"></div>
+          <div class="slot">+</div>
+        </div>
+
+        <div style="margin:24px 16px 12px">
+          <button class="btn-primary">提交答案</button>
+        </div>
+        <div style="text-align:center;font-size:11px;color:#9ca3af;padding-bottom:24px">
+          提交后可在截止前 1 小时内编辑
+        </div>
+
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li><strong>题目摘要顶贴</strong>——避免用户写到一半忘了在答什么</li>
+        <li>板块字段灰色 disabled，明示锁定</li>
+        <li>标题 optional，留空自动取题面（降低答题门槛 L2）</li>
+        <li>字数 hint "456 字 · 建议 100-1500 字"——L2 决策的"软推荐不强约"在 UI 上的表现</li>
+        <li>截止前可编辑提示 + 锁编辑时间提示，给用户安全感</li>
+        <li>"发布"按钮顶部右上角灰色 disabled，正文够短/未填时呈现禁用态</li>
+        <li>提交后调 <code>POST /api/ai-qa/{id}/answer</code>，失败时按 §4.2 错误码用 <code>error_localizer</code> 转译</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M7 · 答主累计榜 -->
+<!-- ============================================================ -->
+<section class="section" id="m7">
+  <h2 class="section-title">M7 · 答主累计榜<span class="tag tag-p2">P2</span></h2>
+  <p class="section-meta">读 ai_qa_leaderboard 表（P0 已写入），P2 才上前端入口。Top 50 按累计奖金降序。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span class="back">‹</span>
+          <div class="title">答主累计榜</div>
+          <span class="right">ⓘ</span>
+        </div>
+
+        <!-- 当前用户卡片 -->
+        <div style="background:linear-gradient(135deg,#007aff,#409cff);color:#fff;margin:12px;border-radius:14px;padding:16px">
+          <div style="font-size:11px;opacity:0.9;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">你的累计</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-size:24px;font-weight:700">£3.45</span>
+            <span style="font-size:13px;opacity:0.9">· 排名 #67</span>
+          </div>
+          <div style="font-size:12px;opacity:0.9;margin-top:4px">5 次中奖 · 累计 8 期作答</div>
+        </div>
+
+        <div class="section-header-text">Top 50 答主</div>
+
+        <div style="background:#fff;border-radius:12px;margin:8px 12px;overflow:hidden">
+
+          <div class="lb-item">
+            <div class="lb-rank r1">🥇</div>
+            <div class="avatar" style="background:#fef3c7;color:#92400e;width:36px;height:36px;font-size:14px">陪</div>
+            <div class="lb-info">
+              <div class="lb-name">陪诊小姐姐</div>
+              <div class="lb-stats">12 次中奖 · 15 期作答</div>
+            </div>
+            <div class="lb-amount">£8.30</div>
+          </div>
+
+          <div class="lb-item">
+            <div class="lb-rank r2">🥈</div>
+            <div class="avatar" style="background:#fce7f3;color:#9d174d;width:36px;height:36px;font-size:14px">L</div>
+            <div class="lb-info">
+              <div class="lb-name">Lily_LDN</div>
+              <div class="lb-stats">10 次中奖 · 14 期作答</div>
+            </div>
+            <div class="lb-amount">£7.85</div>
+          </div>
+
+          <div class="lb-item">
+            <div class="lb-rank r3">🥉</div>
+            <div class="avatar" style="background:#c7d2fe;color:#1e40af;width:36px;height:36px;font-size:14px">A</div>
+            <div class="lb-info">
+              <div class="lb-name">Anna_Healthcare</div>
+              <div class="lb-stats">9 次中奖 · 12 期作答</div>
+            </div>
+            <div class="lb-amount">£6.42</div>
+          </div>
+
+          <div class="lb-item">
+            <div class="lb-rank">4</div>
+            <div class="avatar" style="background:#d1fae5;color:#065f46;width:36px;height:36px;font-size:14px">M</div>
+            <div class="lb-info">
+              <div class="lb-name">Marvin周末忙</div>
+              <div class="lb-stats">8 次中奖 · 11 期作答</div>
+            </div>
+            <div class="lb-amount">£5.78</div>
+          </div>
+
+          <div class="lb-item">
+            <div class="lb-rank">5</div>
+            <div class="avatar" style="background:#fde68a;color:#78350f;width:36px;height:36px;font-size:14px">小</div>
+            <div class="lb-info">
+              <div class="lb-name">小Anna</div>
+              <div class="lb-stats">7 次中奖 · 10 期作答</div>
+            </div>
+            <div class="lb-amount">£4.95</div>
+          </div>
+
+          <div class="lb-item">
+            <div class="lb-rank">6</div>
+            <div class="avatar" style="background:#ddd6fe;color:#5b21b6;width:36px;height:36px;font-size:14px">K</div>
+            <div class="lb-info">
+              <div class="lb-name">Kevin留学日常</div>
+              <div class="lb-stats">6 次中奖 · 9 期作答</div>
+            </div>
+            <div class="lb-amount">£4.20</div>
+          </div>
+
+          <div style="text-align:center;padding:14px;font-size:12px;color:#9ca3af">·· 还有 44 位 ··</div>
+
+        </div>
+
+      </div>
+      <div class="tabbar">
+        <div class="tab-item"><span class="icon">🏠</span>首页</div>
+        <div class="tab-item"><span class="icon">💬</span>社区</div>
+        <div class="tab-item"><span class="icon">✉</span>消息</div>
+        <div class="tab-item"><span class="icon">👤</span>我的</div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li>顶部"你的累计"<strong>个人卡片</strong>——即使没上榜也能看到自己排名（第 67 名也鼓励），蓝色渐变跟首页 discovery 卡片调子一致</li>
+        <li>金/银/铜 emoji 区分前 3</li>
+        <li>显示"中奖次数"+"作答次数"——突出 win_count 比 answer_count，避免"刷题但不中奖" 的人比"少而精"的人靠前</li>
+        <li>右上角 ⓘ 解释"奖金计算方式"——透明化</li>
+        <li>P2 才上前端入口；P0 表已写入数据</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- A1 · 周期配置 -->
+<!-- ============================================================ -->
+<section class="section" id="a1">
+  <h2 class="section-title">A1 · Admin · 周期配置<span class="tag tag-p1">P1</span></h2>
+  <p class="section-meta">/admin/ai-qa/config —— 周期 cycle 配置 + direction_prompt + 默认 formula。P1 才上线（P0 走 draft 手填）。</p>
+
+  <div class="browser">
+    <div class="browser-chrome">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <div class="url">admin.link2ur.com/admin/ai-qa/config</div>
+    </div>
+    <div class="admin-page">
+      <div class="admin-sidebar">
+        <div class="brand-line">Link2Ur Admin</div>
+        <h3>AI 限时问答</h3>
+        <a href="#" class="active">周期配置</a>
+        <a href="#">候选题待审 <span style="background:#ef4444;color:#fff;padding:0 6px;border-radius:99px;font-size:10px;margin-left:6px">3</span></a>
+        <a href="#">草稿管理</a>
+        <a href="#">题目列表</a>
+        <h3>其他</h3>
+        <a href="#">用户管理</a>
+        <a href="#">财务</a>
+      </div>
+      <div class="admin-main">
+        <div class="breadcrumb">AI 限时问答 / 周期配置</div>
+        <div class="page-header">
+          <h2>周期配置</h2>
+          <button class="btn-admin primary">+ 新建周期</button>
+        </div>
+
+        <div class="banner-info">
+          ℹ️ <strong>P1 才上线 cycle 自动出题</strong>。P0 阶段走 <code>/admin/ai-qa/drafts</code> 手填路径即可。
+        </div>
+
+        <div class="card-admin">
+          <h3>周期 #1 · 留学生场景题（活跃中）</h3>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label>周期名称</label>
+              <input value="留学生场景题" />
+            </div>
+            <div class="form-row">
+              <label>触发频率</label>
+              <select>
+                <option>每周（weekly）</option>
+                <option>每两周（biweekly）</option>
+                <option>每月（monthly）</option>
+                <option>一次性（once）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label>下次触发时间</label>
+              <input value="2026-05-20 10:00 (UTC)" />
+            </div>
+            <div class="form-row">
+              <label>状态</label>
+              <select>
+                <option>active</option>
+                <option>paused</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label>题目方向 prompt（送给 AI 出题用）</label>
+            <textarea>请围绕"在英国生活的中国留学生 / 海外华人"场景出 3-5 道开放题，每题 200 字以内：
+- 优先具体场景（找房 / 看医生 / 寄包裹 / 兼职 / 签证 / 二手 / 找陪诊）
+- 题目要能撑起 100+ 字的图文回答
+- 避免一句话能答完的题
+- 避免政治、宗教、争议性话题
+- 题目带场景细节（地点 / 阶段 / 角色等限定）
+
+题目格式：
+{title: "...", content: "...", topic_tag: "..."}</textarea>
+            <div class="help">📖 出题指南详见 <a href="#" style="color:#007aff">spec §2.3</a>。建议参考已结算高分题题面。</div>
+          </div>
+
+          <h3 style="margin-top:24px">默认参数（候选生成时快照到 candidate）</h3>
+          <div class="form-grid">
+            <div class="form-row">
+              <label>奖金池（pence）<span style="font-size:10px;color:#dc2626;font-weight:600;margin-left:6px">硬上限 100000 = £1000</span></label>
+              <input type="number" value="1000" min="0" max="100000" />
+              <div class="help">默认 £10.00 = 1000 pence · &gt; 5000 (£50) 保存时弹二次确认</div>
+            </div>
+            <div class="form-row">
+              <label>参与积分</label>
+              <input value="5" />
+            </div>
+            <div class="form-row">
+              <label>答题时长（小时）</label>
+              <input value="168" />
+              <div class="help">7 天 = 168h</div>
+            </div>
+            <div class="form-row">
+              <label>截止前锁编辑（小时）</label>
+              <input value="1" />
+            </div>
+            <div class="form-row">
+              <label>答题板块</label>
+              <select>
+                <option>🏠 海外华人生活</option>
+                <option>📚 学习交流</option>
+                <option>💼 职场求职</option>
+              </select>
+            </div>
+          </div>
+
+          <h3 style="margin-top:24px">奖金分配规则（默认 topn_formula）</h3>
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px">
+            <div class="form-grid">
+              <div class="form-row" style="margin-bottom:0">
+                <label>中奖人数模式</label>
+                <select>
+                  <option>按比例 ratio</option>
+                  <option>固定人数 fixed</option>
+                </select>
+                <div class="help">ratio = 取答题人数 X% · fixed = 固定 N 人</div>
+              </div>
+              <div class="form-row" style="margin-bottom:0">
+                <label>中奖比例 ratio</label>
+                <input type="number" value="0.5" step="0.1" min="0" max="1" />
+                <div class="help">0.5 = 取答题人数前 50%</div>
+              </div>
+              <div class="form-row" style="margin-bottom:0">
+                <label>中奖上限 max_winners</label>
+                <input type="number" value="30" />
+                <div class="help">最多多少人能中奖</div>
+              </div>
+              <div class="form-row" style="margin-bottom:0">
+                <label>单人最低 floor_pence</label>
+                <input type="number" value="10" />
+                <div class="help">10 = £0.10 · 低于此抹零不发</div>
+              </div>
+              <div class="form-row" style="margin-bottom:0;grid-column:span 2">
+                <label>全员分阈值 min_for_full_split</label>
+                <input type="number" value="10" style="max-width:120px" />
+                <div class="help">答题人数 < 此值时全员瓜分（不取 top-N）</div>
+              </div>
+            </div>
+            <div style="margin-top:14px;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;color:#374151;line-height:1.7">
+              <strong>📊 实时预览</strong>（按当前 £10.00 池子 + 当前规则）：<br/>
+              · 9 人答题 → <strong style="color:#10b981">9 人全员分</strong> ≈ £1.11/人（< 10 触发 full_split）<br/>
+              · 30 人答题 → <strong style="color:#10b981">15 人中奖</strong> ≈ £0.67/人（30 × 0.5）<br/>
+              · 100 人答题 → <strong style="color:#10b981">30 人中奖</strong> ≈ £0.33/人（max 封顶）
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px;border-top:1px solid #f3f4f6;padding-top:16px">
+            <button class="btn-admin primary">保存</button>
+            <button class="btn-admin">立刻试跑出题（linktest 用）</button>
+            <button class="btn-admin warn">暂停周期</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- A2 · 候选题待审 -->
+<!-- ============================================================ -->
+<section class="section" id="a2">
+  <h2 class="section-title">A2 · Admin · 候选题待审<span class="tag tag-p1">P1</span></h2>
+  <p class="section-meta">cycle beat 跑完 AI 出题后产生 3-5 候选；admin 选一题 publish。pre-fill 用 candidate.snapshot_*。</p>
+
+  <div class="browser">
+    <div class="browser-chrome">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <div class="url">admin.link2ur.com/admin/ai-qa/candidates</div>
+    </div>
+    <div class="admin-page">
+      <div class="admin-sidebar">
+        <div class="brand-line">Link2Ur Admin</div>
+        <h3>AI 限时问答</h3>
+        <a href="#">周期配置</a>
+        <a href="#" class="active">候选题待审 <span style="background:#ef4444;color:#fff;padding:0 6px;border-radius:99px;font-size:10px;margin-left:6px">3</span></a>
+        <a href="#">草稿管理</a>
+        <a href="#">题目列表</a>
+      </div>
+      <div class="admin-main">
+        <div class="breadcrumb">AI 限时问答 / 候选题待审</div>
+        <div class="page-header">
+          <h2>候选题待审 (cycle_run #38)</h2>
+          <span style="font-size:13px;color:#6b7280">⏱ 超期作废倒计时：38h 22m · 周期"留学生场景题" 出</span>
+        </div>
+
+        <div class="banner-warn">
+          <strong>提醒</strong>同一 cycle_run 内只能 publish 一题，其余 48h 后自动作废。可以编辑 publish 时的 title/content/deadline/池子。
+        </div>
+
+        <div class="card-admin">
+          <h3>候选 #1 · 来自 GLM-4.7-FlashX</h3>
+          <div style="font-size:14px;font-weight:600;line-height:1.5;margin-bottom:8px">在伦敦 Zone 2 找合租室友，怎么避坑？</div>
+          <div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:12px">最近 spareroom / Gumtree 上各种 listing 真假难辨，作为过来人有什么提醒？例如看房注意点、合同陷阱、bill 怎么分摊等。可以分享你的踩坑经历或检验清单。</div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:12px">topic_tag: 海外华人生活 · ai_model: glm-4.7-flashx · 生成于 2 小时前</div>
+
+          <details style="border-top:1px solid #f3f4f6;padding-top:12px;margin-bottom:12px">
+            <summary style="cursor:pointer;font-size:13px;color:#007aff;font-weight:500">编辑 publish 参数（pre-fill 来自 candidate.snapshot_*）</summary>
+            <div class="form-grid" style="margin-top:12px">
+              <div class="form-row">
+                <label>截止时间</label>
+                <input value="2026-05-20 10:00" />
+              </div>
+              <div class="form-row">
+                <label>奖金池（可改 cycle 默认）</label>
+                <input value="1000" />
+                <div class="help">candidate snapshot: 1000</div>
+              </div>
+            </div>
+          </details>
+
+          <div style="display:flex;gap:8px">
+            <button class="btn-admin primary">✓ 选这条 publish</button>
+            <button class="btn-admin">编辑题面</button>
+            <button class="btn-admin">作废</button>
+          </div>
+        </div>
+
+        <div class="card-admin">
+          <h3>候选 #2 · 来自 GLM-4.7-FlashX</h3>
+          <div style="font-size:14px;font-weight:600;line-height:1.5;margin-bottom:8px">海外党第一次买保险，怎么选 NHS 加私人保险组合？</div>
+          <div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:12px">英国 NHS 等待时间长，私人保险贵但能加速。作为留学生 / 工签持有者，第一次买保险该怎么权衡？包不包含家人的方案有什么差异？</div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:12px">topic_tag: 海外华人生活 · ai_model: glm-4.7-flashx</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-admin">✓ 选这条 publish</button>
+            <button class="btn-admin">编辑题面</button>
+            <button class="btn-admin">作废</button>
+          </div>
+        </div>
+
+        <div class="card-admin" style="opacity:0.6">
+          <h3>候选 #3 · 来自 GLM-4.7-FlashX <span style="font-size:11px;font-weight:400;color:#dc2626">⚠ 你最爱的英剧是什么？</span></h3>
+          <div style="font-size:14px;font-weight:600;line-height:1.5;margin-bottom:8px">你最近看的最喜欢的英剧是什么？</div>
+          <div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:12px">分享你最近喜欢的英剧 / 美剧，并简单说说理由。</div>
+          <div style="background:#fee2e2;color:#991b1b;padding:8px 12px;border-radius:4px;font-size:12px;margin-bottom:12px">⚠ 此题违反出题原则 §2.3：「避免通用开放问」+「避免一句话能答完的题」。建议作废，重新生成。</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-admin" disabled>✓ 选这条 publish</button>
+            <button class="btn-admin">编辑题面</button>
+            <button class="btn-admin danger">作废</button>
+          </div>
+        </div>
+
+        <div style="text-align:center;padding:16px;font-size:13px;color:#9ca3af">
+          <button class="btn-admin">+ 让 AI 重新出 3-5 题</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- A3 · 草稿管理 -->
+<!-- ============================================================ -->
+<section class="section" id="a3">
+  <h2 class="section-title">A3 · Admin · 草稿管理<span class="tag tag-p0">P0</span></h2>
+  <p class="section-meta">/admin/ai-qa/drafts —— P0 上线即可用。admin 手填一道题、反复编辑、最终 publish。</p>
+
+  <div class="browser">
+    <div class="browser-chrome">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <div class="url">admin.link2ur.com/admin/ai-qa/drafts</div>
+    </div>
+    <div class="admin-page">
+      <div class="admin-sidebar">
+        <div class="brand-line">Link2Ur Admin</div>
+        <h3>AI 限时问答</h3>
+        <a href="#">周期配置</a>
+        <a href="#">候选题待审</a>
+        <a href="#" class="active">草稿管理</a>
+        <a href="#">题目列表</a>
+      </div>
+      <div class="admin-main">
+        <div class="breadcrumb">AI 限时问答 / 草稿管理</div>
+        <div class="page-header">
+          <h2>草稿管理</h2>
+          <button class="btn-admin primary">+ 新建草稿</button>
+        </div>
+
+        <div class="banner-info">
+          ℹ️ 草稿（status=draft）只能在 admin 后台看到，发布后变 published 进入用户面。<br/>
+          📖 出题原则：海外华人 / 留学生场景 · 避免通用开放问 · 避免争议话题（详见 spec §2.3）
+        </div>
+
+        <table class="admin">
+          <thead>
+            <tr>
+              <th>ID</th><th>题面预览</th><th>板块</th><th>奖金池</th><th>预设截止</th><th>创建</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>#15</td>
+              <td class="text-truncate"><strong>留学生在英国怎么省钱寄国内包裹？</strong><br/><span style="color:#9ca3af;font-size:11px">渔具、化妆品、零食包裹方案对比……</span></td>
+              <td>海外华人生活</td>
+              <td>£10.00</td>
+              <td>+7 天</td>
+              <td>admin · 1h 前</td>
+              <td>
+                <button class="btn-admin sm primary">发布</button>
+                <button class="btn-admin sm">编辑</button>
+                <button class="btn-admin sm danger">删除</button>
+              </td>
+            </tr>
+            <tr>
+              <td>#14</td>
+              <td class="text-truncate"><strong>第一次去英国 GP 注册要准备什么？</strong><br/><span style="color:#9ca3af;font-size:11px">需要的文件、流程、可能的坑……</span></td>
+              <td>海外华人生活</td>
+              <td>£15.00</td>
+              <td>+5 天</td>
+              <td>admin · 昨天</td>
+              <td>
+                <button class="btn-admin sm primary">发布</button>
+                <button class="btn-admin sm">编辑</button>
+                <button class="btn-admin sm danger">删除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:32px;font-size:16px;font-weight:600;color:#374151">编辑草稿 #15</h3>
+        <div class="card-admin" style="margin-top:8px">
+          <div class="form-row">
+            <label>题面 *</label>
+            <input value="留学生在英国怎么省钱寄国内包裹？" />
+          </div>
+          <div class="form-row">
+            <label>题干描述</label>
+            <textarea>分享下你常用的快递渠道、价格对比、什么物品该走哪种方式。比如化妆品、零食、衣服各应该选什么寄送方式？英国本地哪些 forwarder 比较靠谱？</textarea>
+          </div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label>topic_tag</label>
+              <select>
+                <option>海外华人生活</option>
+                <option>学习交流</option>
+                <option>职场求职</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>答题板块（target_forum_category_id）*</label>
+              <select>
+                <option>🏠 海外华人生活 (id=12)</option>
+                <option>📚 学习交流 (id=15)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>奖金池 pence * <span style="font-size:10px;color:#dc2626;font-weight:600">≤ 100000</span></label>
+              <input type="number" value="1000" min="0" max="100000" />
+              <div class="help">&gt; £50 保存时弹二次确认</div>
+            </div>
+            <div class="form-row">
+              <label>参与积分</label>
+              <input value="5" />
+            </div>
+            <div class="form-row">
+              <label>预设截止时长（小时）</label>
+              <input value="168" />
+              <div class="help">发布时按此时长 + now() 设 deadline</div>
+            </div>
+            <div class="form-row">
+              <label>截止前锁编辑（小时）</label>
+              <input value="1" />
+            </div>
+          </div>
+          <h3 style="margin-top:20px;font-size:13px;font-weight:600;color:#374151;padding-top:14px;border-top:1px solid #f3f4f6">奖金分配规则</h3>
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:14px">
+            <div class="form-grid">
+              <div class="form-row" style="margin-bottom:0">
+                <label>中奖人数模式</label>
+                <select>
+                  <option>按比例 ratio</option>
+                  <option>固定人数 fixed</option>
+                </select>
+              </div>
+              <div class="form-row" style="margin-bottom:0">
+                <label>中奖比例</label>
+                <input type="number" value="0.5" step="0.1" min="0" max="1" />
+                <div class="help">0.5 = 取前 50% 答主</div>
+              </div>
+              <div class="form-row" style="margin-bottom:0">
+                <label>中奖上限</label>
+                <input type="number" value="30" />
+              </div>
+              <div class="form-row" style="margin-bottom:0">
+                <label>单人最低（pence）</label>
+                <input type="number" value="10" />
+                <div class="help">10 = £0.10</div>
+              </div>
+              <div class="form-row" style="margin-bottom:0;grid-column:span 2">
+                <label>全员分阈值</label>
+                <input type="number" value="10" style="max-width:120px" />
+                <div class="help">答题人数少于此值时全员瓜分</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;font-size:11.5px;color:#6b7280;line-height:1.6">
+              <strong>📊 预览</strong>（基于上方 £10.00 池子）：
+              9 人 → <strong>9 人全员分 ≈ £1.11/人</strong> ·
+              30 人 → <strong>15 人中奖 ≈ £0.67/人</strong> ·
+              100 人 → <strong>30 人封顶 ≈ £0.33/人</strong>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px;border-top:1px solid #f3f4f6;padding-top:16px">
+            <button class="btn-admin primary">💾 保存草稿</button>
+            <button class="btn-admin primary" style="background:#10b981;border-color:#10b981">🚀 立即发布（→ published）</button>
+            <button class="btn-admin danger">删除</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- A4 · 题目列表 -->
+<!-- ============================================================ -->
+<section class="section" id="a4">
+  <h2 class="section-title">A4 · Admin · 题目列表<span class="tag tag-p0">P0</span></h2>
+  <p class="section-meta">/admin/ai-qa/questions —— 所有题目（含状态过滤）。Cancel 入口在这里。</p>
+
+  <div class="browser">
+    <div class="browser-chrome">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <div class="url">admin.link2ur.com/admin/ai-qa/questions?status=all</div>
+    </div>
+    <div class="admin-page">
+      <div class="admin-sidebar">
+        <div class="brand-line">Link2Ur Admin</div>
+        <h3>AI 限时问答</h3>
+        <a href="#">周期配置</a>
+        <a href="#">候选题待审</a>
+        <a href="#">草稿管理</a>
+        <a href="#" class="active">题目列表</a>
+      </div>
+      <div class="admin-main">
+        <div class="breadcrumb">AI 限时问答 / 题目列表</div>
+        <div class="page-header">
+          <h2>题目列表</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:12px;color:#6b7280">状态：</span>
+            <select style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+              <option>全部</option>
+              <option>published（答题中）</option>
+              <option>scoring（评分中）</option>
+              <option>scored（待终审）</option>
+              <option>settled（已结算）</option>
+              <option>canceled</option>
+              <option>scoring_failed / settle_failed</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="admin">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>题面</th>
+              <th>状态</th>
+              <th>来源</th>
+              <th>奖金池</th>
+              <th>已答</th>
+              <th>截止</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>#34</td>
+              <td class="text-truncate"><strong>在伦敦 Zone 2 找合租室友，怎么避坑？</strong></td>
+              <td><span class="status-pill status-published">published</span></td>
+              <td>cycle #1</td>
+              <td>£10.00</td>
+              <td>23</td>
+              <td style="color:#dc2626">3天 4h</td>
+              <td>
+                <button class="btn-admin sm">查看</button>
+                <button class="btn-admin sm danger">撤稿</button>
+              </td>
+            </tr>
+            <tr>
+              <td>#33</td>
+              <td class="text-truncate"><strong>第一次找陪诊有什么注意事项？</strong></td>
+              <td><span class="status-pill status-scored">scored</span></td>
+              <td>draft</td>
+              <td>£10.00</td>
+              <td>47</td>
+              <td>已截止</td>
+              <td>
+                <button class="btn-admin sm primary">→ 终审</button>
+              </td>
+            </tr>
+            <tr>
+              <td>#32</td>
+              <td class="text-truncate"><strong>留学生怎么省钱寄国内包裹？</strong></td>
+              <td><span class="status-pill status-settled">settled</span></td>
+              <td>cycle #1</td>
+              <td>£10.00</td>
+              <td>31</td>
+              <td>4 天前</td>
+              <td>
+                <button class="btn-admin sm">查看</button>
+              </td>
+            </tr>
+            <tr>
+              <td>#31</td>
+              <td class="text-truncate"><strong>关于英国签证最新政策的看法</strong></td>
+              <td><span class="status-pill status-canceled">canceled</span></td>
+              <td>cycle #1</td>
+              <td>£10.00</td>
+              <td>8</td>
+              <td>已撤稿</td>
+              <td>
+                <button class="btn-admin sm">查看</button>
+              </td>
+            </tr>
+            <tr>
+              <td>#30</td>
+              <td class="text-truncate"><strong>如何在英国办理国际驾照换本</strong></td>
+              <td><span class="status-pill status-empty">closed_empty</span></td>
+              <td>draft</td>
+              <td>£10.00</td>
+              <td>0</td>
+              <td>3 周前</td>
+              <td>
+                <button class="btn-admin sm">查看</button>
+              </td>
+            </tr>
+            <tr>
+              <td>#29</td>
+              <td class="text-truncate"><strong>测试题：第一次注册英国手机号怎么搞？</strong></td>
+              <td><span class="status-pill status-failed">scoring_failed</span></td>
+              <td>draft</td>
+              <td>£5.00</td>
+              <td>12</td>
+              <td>已截止</td>
+              <td>
+                <button class="btn-admin sm warn">重跑评分</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- A5 · 评分终审 -->
+<!-- ============================================================ -->
+<section class="section" id="a5">
+  <h2 class="section-title">A5 · Admin · 评分终审<span class="tag tag-p0">P0</span></h2>
+  <p class="section-meta">/admin/ai-qa/review/:qid —— 整个 feature 的核心 admin 页。看 AI 分 + 改分 + 看风险标 + 一键发奖。</p>
+
+  <div class="browser">
+    <div class="browser-chrome">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <div class="url">admin.link2ur.com/admin/ai-qa/review/33</div>
+    </div>
+    <div class="admin-page">
+      <div class="admin-sidebar">
+        <div class="brand-line">Link2Ur Admin</div>
+        <h3>AI 限时问答</h3>
+        <a href="#">周期配置</a>
+        <a href="#">候选题待审</a>
+        <a href="#">草稿管理</a>
+        <a href="#" class="active">题目列表 → 终审</a>
+      </div>
+      <div class="admin-main" style="overflow-x:auto">
+        <div class="breadcrumb">题目 #33 / 终审</div>
+        <div class="page-header">
+          <h2>第一次找陪诊有什么注意事项？</h2>
+          <div><span class="status-pill status-scored">scored 待终审</span></div>
+        </div>
+
+        <div class="pool-summary">
+          <div><div class="label">奖金池</div><div class="value">£10.00</div></div>
+          <div><div class="label">实时分配总额</div><div class="value">£10.00</div></div>
+          <div><div class="label">中奖人数</div><div class="value">25 / 47</div></div>
+          <div><div class="label">高风险答案</div><div class="value value-warn">3</div></div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn-admin">重跑 AI 评分</button>
+            <button class="btn-admin primary" style="background:#10b981;border-color:#10b981">✓ 确认发奖（事务）</button>
+          </div>
+        </div>
+
+        <div class="banner-warn">
+          <strong>风险提示</strong>表格按 risk_score 降序 + AI 检测高优先排列。3 条高风险答案已红底标记，请优先核对。<strong>"发布时间"列</strong>显示 <code>forum_posts.created_at</code>（非 updated_at），用于凭经验判模仿——晚答 + 内容相似 + 编辑时间在高分答案之后的，可酌情 hide_in_qa。
+        </div>
+
+        <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;font-size:12px;color:#6b7280">
+          排序：
+          <button class="btn-admin sm primary">风险降序（默认）</button>
+          <button class="btn-admin sm">按发布时间升序</button>
+          <button class="btn-admin sm">按 AI 分降序</button>
+        </div>
+
+        <table class="admin">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th>用户</th>
+              <th style="min-width:130px">发布时间</th>
+              <th style="min-width:240px">答案预览</th>
+              <th>AI 分</th>
+              <th>AI 检测</th>
+              <th>风险</th>
+              <th>改分</th>
+              <th>屏蔽</th>
+              <th>奖金</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="high-risk">
+              <td>1</td>
+              <td>用户1234<br/><span style="font-size:10px;color:#9ca3af">同设备 5 个账号</span></td>
+              <td>
+                <span style="font-size:12px;color:#374151">04-25 20:14</span><br/>
+                <span style="font-size:10px;color:#dc2626;font-weight:600">⚠ 已编辑 (2 分钟前)</span>
+              </td>
+              <td class="text-truncate">第一次找陪诊是一件值得仔细考虑的事情，建议从以下几个维度考虑：首先是专业资质，其次是服务态度…</td>
+              <td>78</td>
+              <td><span class="ai-gen-pill ai-gen-high">high</span></td>
+              <td><span class="risk-pill risk-high">85</span><br/><span style="font-size:10px;color:#991b1b">设备关联 5 账号</span></td>
+              <td><input class="score-input" value="78" /></td>
+              <td><input type="checkbox" class="checkbox" checked /></td>
+              <td class="cash-budget">—</td>
+              <td><button class="btn-admin sm">详情</button></td>
+            </tr>
+            <tr class="high-risk">
+              <td>2</td>
+              <td>用户9876<br/><span style="font-size:10px;color:#9ca3af">device 共享</span></td>
+              <td>
+                <span style="font-size:12px;color:#374151">04-26 09:42</span><br/>
+                <span style="font-size:10px;color:#dc2626;font-weight:600">⚠ 已编辑 (5 小时前)</span>
+              </td>
+              <td class="text-truncate">推荐去专业平台找。具体流程是先看评价，再问详细服务内容。</td>
+              <td>52</td>
+              <td><span class="ai-gen-pill ai-gen-medium">medium</span></td>
+              <td><span class="risk-pill risk-mid">38</span></td>
+              <td><input class="score-input" value="52" /></td>
+              <td><input type="checkbox" class="checkbox" /></td>
+              <td class="cash-budget">£0.42</td>
+              <td><button class="btn-admin sm">详情</button></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>陪诊小姐姐<br/><span style="font-size:10px;color:#10b981">low risk</span></td>
+              <td>
+                <span style="font-size:12px;color:#374151">04-22 14:08</span><br/>
+                <span style="font-size:10px;color:#9ca3af">早答 (基准)</span>
+              </td>
+              <td class="text-truncate">作为接陪诊单 3 年的人来说，第一次找陪诊一定要：1) 提前确认陪诊员是否有医院通行证 2) 问清是否懂当地医疗系统 (NHS / 私立差别大)…</td>
+              <td>96</td>
+              <td><span class="ai-gen-pill ai-gen-low">low</span></td>
+              <td><span class="risk-pill risk-low">0</span></td>
+              <td><input class="score-input" value="96" /></td>
+              <td><input type="checkbox" class="checkbox" /></td>
+              <td class="cash-budget">£1.20</td>
+              <td><button class="btn-admin sm">详情</button></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Lily_LDN</td>
+              <td>
+                <span style="font-size:12px;color:#374151">04-23 10:30</span>
+              </td>
+              <td class="text-truncate">血泪教训：第一次找陪诊被宰 £80 多收 50%。后来才知道平台直接搜带评价的最稳。具体经验……</td>
+              <td>88</td>
+              <td><span class="ai-gen-pill ai-gen-low">low</span></td>
+              <td><span class="risk-pill risk-low">0</span></td>
+              <td><input class="score-input" value="88" /></td>
+              <td><input type="checkbox" class="checkbox" /></td>
+              <td class="cash-budget">£0.95</td>
+              <td><button class="btn-admin sm">详情</button></td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>Anna_Healthcare</td>
+              <td>
+                <span style="font-size:12px;color:#374151">04-24 16:55</span>
+              </td>
+              <td class="text-truncate">补充一下，如果是孕妇陪诊，记得问陪诊员是否有产科陪诊经验。语言能不能通也很重要……</td>
+              <td>82</td>
+              <td><span class="ai-gen-pill ai-gen-low">low</span></td>
+              <td><span class="risk-pill risk-low">0</span></td>
+              <td><input class="score-input" value="82" /></td>
+              <td><input type="checkbox" class="checkbox" /></td>
+              <td class="cash-budget">£0.78</td>
+              <td><button class="btn-admin sm">详情</button></td>
+            </tr>
+            <tr style="background:#fffbeb">
+              <td>6</td>
+              <td>Marvin周末忙</td>
+              <td>
+                <span style="font-size:12px;color:#374151">04-25 22:18</span><br/>
+                <span style="font-size:10px;color:#b45309;font-weight:600">📍 在 #3 之后</span>
+              </td>
+              <td class="text-truncate">具体推荐使用平台的搜索功能筛选有评价的陪诊员，并优先选择带"医院通行证"标签的，懂 NHS / 私立差别的优先……</td>
+              <td>75</td>
+              <td><span class="ai-gen-pill ai-gen-low">low</span></td>
+              <td><span class="risk-pill risk-low">5</span></td>
+              <td><input class="score-input" value="75" /></td>
+              <td><input type="checkbox" class="checkbox" /></td>
+              <td class="cash-budget">£0.65</td>
+              <td><button class="btn-admin sm">详情</button></td>
+            </tr>
+            <tr style="background:#f9fafb;border-top:2px solid #e5e7eb">
+              <td colspan="11" style="text-align:center;color:#6b7280;font-size:13px;padding:12px">·· 还有 41 条答案 · 滚动查看 ··</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;color:#6b7280">
+            ✓ 改分将实时刷新右上角"分配总额"。settle 前后端再校验总额 = 池。
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-admin">重跑 AI 评分</button>
+            <button class="btn-admin primary" style="background:#10b981;border-color:#10b981">✓ 确认发奖</button>
+          </div>
+        </div>
+
+        <!-- 各种异常 banner 折叠演示 -->
+        <details style="margin-top:32px">
+          <summary style="cursor:pointer;font-size:13px;color:#9ca3af">▾ 各种 banner 演示（settle_failed / 余额不足 / settle 二次确认）</summary>
+
+          <div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;border-left:3px solid #ef4444;padding:12px 14px;border-radius:6px;font-size:13px;color:#7f1d1d">
+            <strong>⚠ 上次发奖事务失败 (settle_failed)</strong><br/>
+            原因：钱包写入失败，可能是用户钱包冻结或网络抖动。已自动回滚，没有任何用户被错发。请检查后再点"确认发奖"重试，事务幂等。
+          </div>
+
+          <div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;border-left:3px solid #ef4444;padding:12px 14px;border-radius:6px;font-size:13px;color:#7f1d1d">
+            <strong>🚫 周度发奖上限触发 (S5)</strong><br/>
+            本周已累计发奖 £185.00，本期需发 £10.00，合计 £195.00 超过 cap £200。已拒绝 settle + 已触发 S6 邮件告警。<br/>
+            <span style="font-size:11px;opacity:0.8">若需调整 cap，请使用 <code>/admin/ai-qa/settings</code> 修改 <code>ai_qa_weekly_settle_cap_pence</code>（需 2 步确认）。</span>
+          </div>
+
+          <div style="margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;border-left:3px solid #f97316;padding:12px 14px;border-radius:6px;font-size:13px;color:#7c2d12">
+            <strong>💰 wallet_service.credit_wallet 失败</strong><br/>
+            示例原因：DB 锁冲突 / WalletAccount CHECK 约束触发 / 单笔金额 DECIMAL 精度溢出。事务已回滚 → status=settle_failed，<strong>所有用户均未入账</strong>。<br/>
+            幂等保证：<code>idempotency_key='ai_qa_settle_{qid}_{user_id}'</code> UNIQUE 约束，admin 重试时已成功的不会双发。<br/>
+            <button class="btn-admin sm warn" style="margin-top:6px">查看失败明细 (audit log)</button>
+          </div>
+
+          <div style="margin-top:12px;background:#fefce8;border:1px solid #fef08a;border-left:3px solid #eab308;padding:12px 14px;border-radius:6px;font-size:13px;color:#713f12">
+            <strong>📧 S6 邮件告警样例</strong>（事务外发送给所有 admin）<br/>
+            <code style="display:block;background:#fff;padding:8px;border-radius:4px;margin-top:6px;font-size:11px;line-height:1.5">
+              主题：[Link2Ur] AI 限时问答周度发奖触达阈值<br/>
+              本周 AI 限时问答累计已 settled £100.00（阈值 £100.00）。<br/>
+              · 本次触发：题目 #34 "在伦敦 Zone 2 找合租室友"，发奖 £10.00<br/>
+              · 操作 admin：zixiong（admin_id=1）<br/>
+              · 时间：2026-05-15 14:32 UTC<br/>
+              · 若非预期，立即检查 audit log + admin 账号被陷可能。
+            </code>
+          </div>
+
+          <div style="margin-top:12px;background:#fff;border:2px solid #007aff;border-radius:8px;padding:16px;font-size:13px;max-width:480px;box-shadow:0 4px 16px rgba(0,122,255,0.15)">
+            <strong style="font-size:14px">⚠ 发奖确认 (S2 大额二次确认)</strong>
+            <div style="margin-top:8px;color:#6b7280;line-height:1.6">
+              你即将发放：<br/>
+              · 奖金池总额 <strong style="color:#dc2626">£10.00</strong><br/>
+              · 中奖人数 25 人<br/>
+              · top 1 获得 <strong>£1.20</strong><br/>
+              · 钱将进入 25 个用户的 wallet，<strong style="color:#dc2626">无法程序化撤回</strong>。<br/>
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px"><input type="checkbox" checked /> 我已确认该金额</label>
+            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+              <button class="btn-admin sm">取消</button>
+              <button class="btn-admin sm primary" style="background:#10b981;border-color:#10b981">确认发奖</button>
+            </div>
+          </div>
+
+        </details>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 配色 / Tag 图例 -->
+<!-- ============================================================ -->
+<section class="section" id="legend">
+  <h2 class="section-title">配色 / Tag 图例</h2>
+  <p class="section-meta">mockup 用色规范，方便实施时一致。</p>
+
+  <div style="background:#fff;border-radius:12px;padding:24px;border:1px solid #e5e7eb">
+
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">主色调（参考 link2ur app_colors.dart）</h3>
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
+      <div style="background:#007aff;color:#fff;padding:12px 16px;border-radius:8px;font-size:12px">主色 #007AFF</div>
+      <div style="background:linear-gradient(135deg,#ffd700,#ffaa00);color:#553c00;padding:12px 16px;border-radius:8px;font-size:12px;font-weight:700">现金奖金 #FFD700</div>
+      <div style="background:#ff8033;color:#fff;padding:12px 16px;border-radius:8px;font-size:12px">奖励数字 #FF8033</div>
+      <div style="background:#ff3b30;color:#fff;padding:12px 16px;border-radius:8px;font-size:12px">倒计时/危险 #FF3B30</div>
+      <div style="background:#10b981;color:#fff;padding:12px 16px;border-radius:8px;font-size:12px">成功/已结算 #10B981</div>
+      <div style="background:#7359f2;color:#fff;padding:12px 16px;border-radius:8px;font-size:12px">紫色（如新手任务）#7359F2</div>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">状态 pill</h3>
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
+      <span class="status-pill status-draft">draft</span>
+      <span class="status-pill status-published">published</span>
+      <span class="status-pill status-canceled">canceled</span>
+      <span class="status-pill status-closed">closed</span>
+      <span class="status-pill status-empty">closed_empty</span>
+      <span class="status-pill status-scoring">scoring</span>
+      <span class="status-pill status-failed">scoring_failed</span>
+      <span class="status-pill status-scored">scored</span>
+      <span class="status-pill status-settled">settled</span>
+      <span class="status-pill status-failed">settle_failed</span>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">风险 / AI 检测 pill（admin review 用）</h3>
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
+      <span class="risk-pill risk-low">risk: 0-29</span>
+      <span class="risk-pill risk-mid">risk: 30-59</span>
+      <span class="risk-pill risk-high">risk: 60-100</span>
+      <span class="ai-gen-pill ai-gen-low">ai_generated: low</span>
+      <span class="ai-gen-pill ai-gen-medium">ai_generated: medium</span>
+      <span class="ai-gen-pill ai-gen-high">ai_generated: high</span>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">用户面 badge</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="badge-cash">£10 现金</span>
+      <span class="badge-points">+5 积分</span>
+      <span class="badge-live">进行中</span>
+      <span class="badge-canceled">已取消</span>
+      <span class="ai-warning-tag">可能为 AI 生成</span>
+      <span style="background:#ffd700;color:#5c3c00;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px">🥇 #1</span>
+      <span style="background:#d4d4d8;color:#18181b;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px">🥈 #2</span>
+      <span style="background:#fdba74;color:#7c2d12;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px">🥉 #3</span>
+    </div>
+
+  </div>
+</section>
+
+</main>
+</div>
+</body>
+</html>
