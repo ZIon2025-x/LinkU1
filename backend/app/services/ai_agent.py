@@ -1042,6 +1042,7 @@ class _PipelineContext:
         "reply_lang", "intent", "accept_lang",
         "full_response", "all_tool_calls", "all_tool_results",
         "total_input_tokens", "total_output_tokens", "model_used",
+        "total_raw_input_tokens", "total_cached_input_tokens",
         "terminated",
     )
 
@@ -1069,6 +1070,8 @@ class _PipelineContext:
         self.all_tool_results: list[dict] = []
         self.total_input_tokens = 0
         self.total_output_tokens = 0
+        self.total_raw_input_tokens = 0
+        self.total_cached_input_tokens = 0
         self.model_used = ""
         self.terminated = False
 
