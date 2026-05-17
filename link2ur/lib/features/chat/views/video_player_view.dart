@@ -69,6 +69,10 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
         autoPlay: true,
         // 整页就是全屏,不需要 chewie 二次全屏
         allowFullScreen: false,
+        // 强制 Material 风格 controls — iOS 默认的 CupertinoControls 拖进度条时
+        // 不实时 seek 画面(松手才 seek),Material 风格 onChanged 实时 seekTo,
+        // 跟微信/抖音/IG 的"拖到哪看到哪"一致。用户体验优先于 native 风格。
+        customControls: const MaterialControls(),
       );
       _retryCount = 0; // 成功后清零,允许后续无限重试
       if (mounted) setState(() {});
