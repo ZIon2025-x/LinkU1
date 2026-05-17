@@ -175,7 +175,12 @@ CREATE TABLE IF NOT EXISTS messages (
     CONSTRAINT fk_messages_receiver FOREIGN KEY (receiver_id) REFERENCES users(id),
     CONSTRAINT fk_messages_task FOREIGN KEY (task_id) REFERENCES tasks(id),
     CONSTRAINT ck_messages_task_bind CHECK (conversation_type <> 'task' OR task_id IS NOT NULL),
-    CONSTRAINT ck_messages_type CHECK (message_type IN ('normal', 'system')),
+    CONSTRAINT ck_messages_type CHECK (message_type IN (
+        'normal', 'system', 'price_proposal',
+        'negotiation', 'quote', 'counter_offer',
+        'negotiation_accepted', 'negotiation_rejected',
+        'text', 'image', 'video', 'file'
+    )),
     CONSTRAINT ck_messages_conversation_type CHECK (conversation_type IN ('task', 'customer_service', 'global'))
 );
 
