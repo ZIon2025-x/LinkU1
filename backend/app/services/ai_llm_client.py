@@ -155,45 +155,61 @@ class AnthropicProvider:
         self, model: str, messages: list[dict], system: str,
         tools: list[dict] | None, max_tokens: int,
     ) -> AsyncIterator[tuple[str, Any]]:
-        """流式调用：yield ('text_delta', text) 边收边推，最后 yield ('done', LLMResponse)。"""
-        kwargs: dict[str, Any] = {
-            "model": model,
-            "max_tokens": max_tokens,
-            "system": system,
-            "messages": messages,
-        }
-        if tools:
-            kwargs["tools"] = tools
+        """流式调用：yield ('text_delta', text) 边收边推,最后 yield ('done', LLMResponse)."""
+        cache_enabled = Config.AI_ANTHROPIC_CACHE_ENABLED
+        kwargs = self._build_chat_kwargs(
+            model=model, messages=messages, system=system,
+            tools=tools, max_tokens=max_tokens, cache_enabled=cache_enabled,
+        )
 
-        async with self._client.messages.stream(**kwargs) as stream:
-            async for event in stream:
-                if getattr(event, "type", None) == "content_block_delta":
-                    delta = getattr(event, "delta", None)
-                    if delta and getattr(delta, "type", None) == "text_delta":
-                        text = getattr(delta, "text", "") or ""
+        async def _do_stream(_kwargs: dict[str, Any]):
+            async with self._client.messages.stream(**_kwargs) as stream:
+                async for event in stream:
+                    if getattr(event, "type", None) == "content_block_delta":
+                        delta = getattr(event, "delta", None)
+                        if delta and getattr(delta, "type", None) == "text_delta":
+                            text = getattr(delta, "text", "") or ""
+                            if text:
+                                yield ("text_delta", text)
+                    elif getattr(event, "type", None) == "text":
+                        text = getattr(event, "text", "") or ""
                         if text:
                             yield ("text_delta", text)
-                elif getattr(event, "type", None) == "text":
-                    text = getattr(event, "text", "") or ""
-                    if text:
-                        yield ("text_delta", text)
-            final = await stream.get_final_message()
-            content = []
-            for block in final.content:
-                if block.type == "text":
-                    content.append(LLMTextBlock(text=block.text))
-                elif block.type == "tool_use":
-                    content.append(LLMToolUse(id=block.id, name=block.name, input=block.input))
-            yield ("done", LLMResponse(
-                content=content,
-                model=final.model,
-                usage=LLMUsage(
-                    input_tokens=final.usage.input_tokens,
-                    output_tokens=final.usage.output_tokens,
-                    cached_input_tokens=getattr(final.usage, "cache_read_input_tokens", 0) or 0,
-                ),
-                stop_reason=final.stop_reason,
-            ))
+                final = await stream.get_final_message()
+                content = []
+                for block in final.content:
+                    if block.type == "text":
+                        content.append(LLMTextBlock(text=block.text))
+                    elif block.type == "tool_use":
+                        content.append(LLMToolUse(id=block.id, name=block.name, input=block.input))
+                yield ("done", LLMResponse(
+                    content=content,
+                    model=final.model,
+                    usage=LLMUsage(
+                        input_tokens=final.usage.input_tokens,
+                        output_tokens=final.usage.output_tokens,
+                        cached_input_tokens=getattr(final.usage, "cache_read_input_tokens", 0) or 0,
+                    ),
+                    stop_reason=final.stop_reason,
+                ))
+
+        # str(e) includes the error body; fragile if Anthropic changes error format
+        try:
+            async for item in _do_stream(kwargs):
+                yield item
+        except anthropic.BadRequestError as e:
+            if cache_enabled and "cache_control" in str(e):
+                logger.warning(
+                    "Anthropic stream cache_control rejected, falling back: %r", e
+                )
+                kwargs_fallback = self._build_chat_kwargs(
+                    model=model, messages=messages, system=system,
+                    tools=tools, max_tokens=max_tokens, cache_enabled=False,
+                )
+                async for item in _do_stream(kwargs_fallback):
+                    yield item
+            else:
+                raise
 
 
 class OpenAICompatibleProvider:

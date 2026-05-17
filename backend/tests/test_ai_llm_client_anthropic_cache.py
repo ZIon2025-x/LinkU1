@@ -229,3 +229,101 @@ async def test_openai_compatible_provider_unchanged(monkeypatch):
         assert body["messages"][0]["content"] == "sys"
         assert "cache_control" not in body["messages"][0]
         assert resp.usage.input_tokens == 50
+
+
+@pytest.mark.asyncio
+async def test_anthropic_chat_stream_with_cache_enabled_system_is_list(monkeypatch):
+    """chat_stream 也必须给 system 加 cache_control."""
+    from app import config as _cfg
+    monkeypatch.setattr(_cfg.Config, "AI_ANTHROPIC_CACHE_ENABLED", True)
+
+    captured_kwargs = {}
+
+    class FakeStream:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *a):
+            return False
+        def __aiter__(self):
+            async def gen():
+                if False:
+                    yield None
+            return gen()
+        async def get_final_message(self):
+            return _make_anthropic_response()
+
+    def fake_stream_factory(**kwargs):
+        captured_kwargs.update(kwargs)
+        return FakeStream()
+
+    with patch("app.services.ai_llm_client.anthropic.AsyncAnthropic") as mock_cls:
+        mock_client = MagicMock()
+        mock_client.messages.stream = fake_stream_factory
+        mock_cls.return_value = mock_client
+
+        provider = AnthropicProvider(api_key="test-key")
+        async for _ in provider.chat_stream(
+            model="claude-sonnet-4-5",
+            messages=[{"role": "user", "content": "hi"}],
+            system="You are helpful.",
+            tools=None,
+            max_tokens=100,
+        ):
+            pass
+
+    assert isinstance(captured_kwargs["system"], list)
+    assert captured_kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+
+
+@pytest.mark.asyncio
+async def test_anthropic_chat_stream_fallback_on_cache_control_error(monkeypatch):
+    """chat_stream 遇 cache 相关错误也走 fallback."""
+    from app import config as _cfg
+    monkeypatch.setattr(_cfg.Config, "AI_ANTHROPIC_CACHE_ENABLED", True)
+
+    import anthropic
+    err = anthropic.BadRequestError(
+        message="Invalid cache_control",
+        response=MagicMock(),
+        body={"error": {"message": "cache_control"}},
+    )
+
+    call_count = {"n": 0}
+
+    class FakeStream:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *a):
+            return False
+        def __aiter__(self):
+            async def gen():
+                if False:
+                    yield None
+            return gen()
+        async def get_final_message(self):
+            return _make_anthropic_response()
+
+    def fake_stream_factory(**kwargs):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise err
+        return FakeStream()
+
+    with patch("app.services.ai_llm_client.anthropic.AsyncAnthropic") as mock_cls:
+        mock_client = MagicMock()
+        mock_client.messages.stream = fake_stream_factory
+        mock_cls.return_value = mock_client
+
+        provider = AnthropicProvider(api_key="test-key")
+        items = []
+        async for item in provider.chat_stream(
+            model="claude-sonnet-4-5",
+            messages=[{"role": "user", "content": "hi"}],
+            system="sys",
+            tools=None,
+            max_tokens=100,
+        ):
+            items.append(item)
+
+    assert call_count["n"] == 2  # 重试发生
+    assert items[-1][0] == "done"
