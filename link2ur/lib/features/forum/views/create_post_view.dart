@@ -9,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/design/app_colors.dart';
-import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -612,7 +611,12 @@ class _CreatePostViewState extends State<CreatePostView> {
                   ),
                 ),
                 AppSpacing.vSm,
-                _buildImagePicker(isDark),
+                _ImageThumbGrid4(
+                  images: _selectedImages,
+                  maxImages: _kMaxImages,
+                  onRemove: _removeImage,
+                  onAdd: _pickImages,
+                ),
                 AppSpacing.vMd,
                 // 文件附件（选填，最多 1 个）
                 Text(
@@ -651,82 +655,6 @@ class _CreatePostViewState extends State<CreatePostView> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildImagePicker(bool isDark) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        ..._selectedImages.asMap().entries.map((entry) {
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              ClipRRect(
-                borderRadius: AppRadius.allSmall,
-                child: CrossPlatformImage(
-                  xFile: entry.value,
-                  width: 80,
-                  height: 80,
-                ),
-              ),
-              Positioned(
-                top: -8,
-                right: -8,
-                child: ImageRemoveButton(
-                  onTap: () => _removeImage(entry.key),
-                ),
-              ),
-            ],
-          );
-        }),
-        if (_selectedImages.length < _kMaxImages)
-          Semantics(
-            button: true,
-            label: 'Add image',
-            child: GestureDetector(
-              onTap: _pickImages,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : AppColors.backgroundLight,
-                borderRadius: AppRadius.allSmall,
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : AppColors.textTertiaryLight.withValues(alpha: 0.4),
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.add_photo_alternate_outlined,
-                    size: 28,
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    context.l10n.forumCreatePostAddImage,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          ),
-      ],
     );
   }
 
@@ -1087,4 +1015,187 @@ class _ContentFieldState extends State<_ContentField> {
   }
 }
 
+class _ImageThumbGrid4 extends StatelessWidget {
+  const _ImageThumbGrid4({
+    required this.images,
+    required this.maxImages,
+    required this.onRemove,
+    required this.onAdd,
+  });
+
+  final List<XFile> images;
+  final int maxImages;
+  final void Function(int index) onRemove;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final canAdd = images.length < maxImages;
+    final cellCount = images.length + (canAdd ? 1 : 0);
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: cellCount,
+      itemBuilder: (context, index) {
+        if (canAdd && index == images.length) {
+          return _AddImageTile(onTap: onAdd, isDark: isDark);
+        }
+        return _ImageTile(
+          file: images[index],
+          index: index,
+          isCover: index == 0,
+          onRemove: () => onRemove(index),
+        );
+      },
+    );
+  }
+}
+
+class _ImageTile extends StatelessWidget {
+  const _ImageTile({
+    required this.file,
+    required this.index,
+    required this.isCover,
+    required this.onRemove,
+  });
+
+  final XFile file;
+  final int index;
+  final bool isCover;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(
+          borderRadius: AppRadius.allSmall,
+          child: CrossPlatformImage(
+            xFile: file,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        ),
+        if (isCover)
+          Positioned(
+            left: 4,
+            top: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: AppColors.gradientPrimary,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                '封面',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          )
+        else
+          Positioned(
+            left: 4,
+            bottom: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${index + 1}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  width: 1.5,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.close, size: 12, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddImageTile extends StatelessWidget {
+  const _AddImageTile({required this.onTap, required this.isDark});
+  final VoidCallback onTap;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.allSmall,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.04),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.35),
+              width: 1.5,
+            ),
+            borderRadius: AppRadius.allSmall,
+          ),
+          // Flutter built-in 不支持 dashed border, 接受 solid 妥协 (mockup 上 dashed
+          // 是视觉细节; 用 third-party 包 'dotted_border' 才能实现, YAGNI)
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add, size: 22, color: AppColors.primary),
+              const SizedBox(height: 4),
+              Text(
+                context.l10n.forumCreatePostAddImage,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
