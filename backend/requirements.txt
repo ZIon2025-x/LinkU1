@@ -69,6 +69,9 @@ xhtml2pdf>=0.2.16,<1.0.0
 # 图片处理
 Pillow>=10.0.0,<11.0.0
 
+# 媒体元数据清理 (chat_media 视频 strip metadata - GPS/拍摄时间/设备)
+mutagen>=1.47.0,<2.0.0
+
 # 云存储 (S3/R2)
 boto3>=1.28.0,<2.0.0
 

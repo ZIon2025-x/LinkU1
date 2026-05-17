@@ -627,6 +627,22 @@ async def upload_file(
                 max_file_size_override=30 * 1024 * 1024,
                 subdir="chat",
             )
+            # 清除媒体元数据(GPS/拍摄时间/设备型号)+ 重置 mtime,
+            # 保护发送方隐私 + 接收方保存到相册时显示为"刚保存"。
+            # 失败不阻断上传(只 warn)。
+            try:
+                from app.services.chat_media_strip import strip_chat_media_metadata
+                from pathlib import Path as _Path
+                # 重建落盘路径:base_dir/tasks/{task_id}/chat/{filename}
+                if task_id:
+                    full_path = private_file_system.base_dir / "tasks" / str(task_id) / "chat" / result["filename"]
+                    if full_path.exists():
+                        strip_chat_media_metadata(
+                            str(full_path),
+                            extension=result.get("extension") or _Path(result["filename"]).suffix.lower(),
+                        )
+            except Exception as e:
+                logger.warning(f"chat_media metadata strip skipped: {e}")
         else:
             result = private_file_system.upload_file(
                 content,
