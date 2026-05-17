@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:pod_player/pod_player.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -9,14 +10,19 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/media_saver.dart';
 
-/// 全屏视频播放器 — pod_player (Instagram Reels 风格,实时 scrub).
+/// 全屏视频播放器 — video_player + 自定义简洁 controls.
 ///
-/// 右上角三点菜单提供"保存到相册"功能.
+/// 设计原则: 任务聊天里看视频是"功能性"用途(快速看清现场/说明),不需要 chewie
+/// 或 pod_player 自带的 speed/quality/PIP/captions 等冗余按钮. 自己实现 ~80 行
+/// 控件完全可控,只保留:
+/// - 中央 play/pause 按钮(单击切换 + 单击空白处显示/隐藏 controls)
+/// - 底部进度条(拖动**实时**seek 画面 — 跟 IG/抖音/微信一致)
+/// - 底部时间显示 (current / duration)
+/// - 右上角三点菜单 → 保存到相册 (AppBar 提供)
 ///
-/// 实现策略: 先 MediaSaver.downloadToTemp 把签名 URL 下载到本地,然后用
-/// PlayVideoFrom.file 播本地文件 — 绕开 AVPlayer 对 HTTP Range 的挑剔
-/// (linktest backend FileResponse 不返 206 Partial Content),同时也避免
-/// 15min 签名 URL 在播放中途过期.
+/// 播放策略: 先 MediaSaver.downloadToTemp 把签名 URL 下载到本地,再 file:// 播 —
+/// 绕开 AVPlayer 对 HTTP Range 的挑剔 (backend 不返 206 Partial Content) +
+/// 避免 15min 签名 URL 中途过期.
 class VideoPlayerView extends StatefulWidget {
   const VideoPlayerView({
     super.key,
@@ -27,7 +33,6 @@ class VideoPlayerView extends StatefulWidget {
   final String videoUrl;
   final String filename;
 
-  /// 便捷方法 - push 进入全屏视频播放页(iOS 支持右滑返回)
   static void show(
     BuildContext context, {
     required String videoUrl,
@@ -44,9 +49,11 @@ class VideoPlayerView extends StatefulWidget {
 }
 
 class _VideoPlayerViewState extends State<VideoPlayerView> {
-  PodPlayerController? _controller;
+  VideoPlayerController? _controller;
   String? _initError;
   int _retryCount = 0;
+  bool _showControls = true;
+  Timer? _hideTimer;
 
   @override
   void initState() {
@@ -55,25 +62,19 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
   }
 
   Future<void> _init() async {
-    // 清理上一轮 controller (retry 时不可漏)
-    try {
-      _controller?.dispose();
-    } catch (_) {}
+    await _controller?.dispose();
     _controller = null;
     if (mounted) setState(() => _initError = null);
 
     try {
-      // 先下载到 app 临时目录,再用 file:// 播本地 —
-      // 绕开 AVPlayer 对 HTTP Range 的挑剔,同时避免 15min 签名 URL 中途过期.
       final localPath =
           await MediaSaver.downloadToTemp(widget.videoUrl, widget.filename);
-
-      _controller = PodPlayerController(
-        playVideoFrom: PlayVideoFrom.file(File(localPath)),
-        // autoPlay 默认 true, isLooping 默认 false — 用默认配置即可
-      );
-      await _controller!.initialise();
-      _retryCount = 0; // 成功后清零,允许后续无限重试
+      _controller = VideoPlayerController.file(File(localPath));
+      await _controller!.initialize();
+      _controller!.addListener(_onTick);
+      await _controller!.play();
+      _retryCount = 0;
+      _scheduleHideControls();
       if (mounted) setState(() {});
     } catch (e) {
       AppLogger.error(
@@ -84,47 +85,52 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
     }
   }
 
+  void _onTick() {
+    // 触发 rebuild 让进度条更新
+    if (mounted) setState(() {});
+  }
+
   Future<void> _onRetry() async {
     _retryCount++;
     await _init();
   }
 
-  /// 渲染 player,按视频真实比例传 aspectRatio,避免 pod_player 默认 16/9 把
-  /// 竖屏视频拉变形.
-  Widget _buildPlayer() {
-    // 从 PodPlayerController 拿真实 video size (initialise 后可用).
-    // 缺失时 fallback 16/9 (横屏假定,跟 pod_player 自己 default 一致).
-    final size = _controller!.videoPlayerValue?.size;
-    final aspect = (size != null && size.width > 0 && size.height > 0)
-        ? size.width / size.height
-        : 16 / 9;
-    return PodVideoPlayer(
-      controller: _controller!,
-      videoAspectRatio: aspect,
-      frameAspectRatio: aspect,
-      podProgressBarConfig: const PodProgressBarConfig(
-        // 拖动时实时更新画面 (pod_player 默认行为)
-        circleHandlerColor: Colors.white,
-        playingBarColor: Colors.white,
-        bufferedBarColor: Color(0x55FFFFFF),
-        backgroundColor: Color(0x33FFFFFF),
-      ),
-    );
+  void _togglePlayPause() {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    if (_controller!.value.isPlaying) {
+      _controller!.pause();
+    } else {
+      _controller!.play();
+    }
+    _scheduleHideControls();
+  }
+
+  void _toggleControls() {
+    setState(() => _showControls = !_showControls);
+    if (_showControls) _scheduleHideControls();
+  }
+
+  void _scheduleHideControls() {
+    _hideTimer?.cancel();
+    // 播放中 3 秒后自动隐藏 controls,暂停时常显
+    if (_controller != null && _controller!.value.isPlaying) {
+      _hideTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _showControls = false);
+      });
+    }
   }
 
   @override
   void dispose() {
-    try {
-      _controller?.dispose();
-    } catch (_) {}
+    _hideTimer?.cancel();
+    _controller?.removeListener(_onTick);
+    _controller?.dispose();
     super.dispose();
   }
 
   Future<void> _onSaveToAlbum() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      // 视频已经下载到本地 (在 _init 阶段),直接复用本地路径保存到相册.
-      // 但 pod_player 没暴露内部 path,所以重新下载一次 (Dio 缓存可能命中).
       final localPath =
           await MediaSaver.downloadToTemp(widget.videoUrl, widget.filename);
       final result = await MediaSaver.saveVideo(localPath);
@@ -156,13 +162,24 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
     }
   }
 
+  String _formatDuration(Duration d) {
+    final mm = d.inMinutes.toString().padLeft(2, '0');
+    final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$mm:$ss';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final c = _controller;
+    final initialized = c != null && c.value.isInitialized;
+    final isPlaying = initialized && c.value.isPlaying;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -184,42 +201,164 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
           ),
         ],
       ),
-      body: Center(
-        child: _initError != null
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    context.localizeError(_initError),
-                    style: const TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
+      body: _initError != null
+          ? _buildError()
+          : (initialized
+              ? _buildPlayer(c, isPlaying)
+              : const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            context.localizeError(_initError),
+            style: const TextStyle(color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _onRetry,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            label: Text(
+              context.l10n.commonRetry,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+          if (_retryCount >= 2)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                context.l10n.chatMediaUrlExpiredHint,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayer(VideoPlayerController c, bool isPlaying) {
+    final value = c.value;
+    final position = value.position;
+    final duration = value.duration;
+    final aspect = value.aspectRatio;
+
+    return GestureDetector(
+      onTap: _toggleControls,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        children: [
+          // 视频内容 — 居中,按视频实际 aspect ratio 显示,不变形
+          Center(
+            child: AspectRatio(
+              aspectRatio: aspect,
+              child: VideoPlayer(c),
+            ),
+          ),
+          // 中央播放/暂停按钮 — 暂停时常显, 播放时跟随 _showControls
+          if (!isPlaying || _showControls)
+            Center(
+              child: GestureDetector(
+                onTap: _togglePlayPause,
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: _onRetry,
-                    icon: const Icon(Icons.refresh, color: Colors.white),
-                    label: Text(
-                      context.l10n.commonRetry,
-                      style: const TextStyle(color: Colors.white),
-                    ),
+                  child: Icon(
+                    isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    size: 44,
                   ),
-                  if (_retryCount >= 2)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        context.l10n.chatMediaUrlExpiredHint,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                        textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          // 底部 controls:进度条 + 时间
+          if (_showControls)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      _formatDuration(position),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
                       ),
                     ),
-                ],
-              )
-            : (_controller != null
-                ? _buildPlayer()
-                : const CircularProgressIndicator(color: Colors.white)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 2.5,
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6,
+                          ),
+                          overlayShape: const RoundSliderOverlayShape(
+                            overlayRadius: 12,
+                          ),
+                          activeTrackColor: Colors.white,
+                          inactiveTrackColor:
+                              Colors.white.withValues(alpha: 0.3),
+                          thumbColor: Colors.white,
+                          overlayColor: Colors.white.withValues(alpha: 0.2),
+                        ),
+                        child: Slider(
+                          value: position.inMilliseconds
+                              .clamp(0, duration.inMilliseconds)
+                              .toDouble(),
+                          max: duration.inMilliseconds.toDouble(),
+                          onChanged: (v) {
+                            // 拖动时**实时** seek 画面 — 跟微信/IG/抖音一致
+                            c.seekTo(Duration(milliseconds: v.toInt()));
+                          },
+                          onChangeStart: (_) {
+                            // 拖动期间禁用自动隐藏
+                            _hideTimer?.cancel();
+                          },
+                          onChangeEnd: (_) {
+                            _scheduleHideControls();
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatDuration(duration),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
