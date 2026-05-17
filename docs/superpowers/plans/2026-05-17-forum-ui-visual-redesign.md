@@ -2069,7 +2069,15 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task C3: _PostImageGrid3 (3 列无缝拼 + N 遮罩)
+### Task C3: ~~_PostImageGrid3 (3 列无缝拼 + N 遮罩)~~ — **跳过** (2026-05-17)
+
+**用户决定**: 详情页图片保持现有"水平滑动 + 图片在内容上方"的交互不动。
+C8 整页 assembly 时仍渲染现有图片 widget,不替换为 PostImageGrid3。
+本任务删除,继续 C4。
+
+---
+
+### Task C3 原内容 (已跳过, 仅供参考)
 
 **Files:**
 - Modify: `link2ur/lib/features/forum/views/forum_post_detail_view.dart`
