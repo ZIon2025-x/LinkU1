@@ -497,7 +497,18 @@ export const UK_KNOWLEDGE_MATCH = {
       items: ['sort_code','overdraft','direct_debit','standing_order','isa','contactless'] },
     { id: 'renting',              name: '租房',
       items: ['holding_deposit','break_clause','epc_rating','inventory','deposit_protection','guarantor'] },
-    // Batch 3 (Task 3): tax_wages / academic_writing / transport / campus_systems / job_hunt / saving_money
+    { id: 'tax_wages',            name: '税 / 工资',
+      items: ['hmrc','ni_number','paye','p45','p60','min_wage'] },
+    { id: 'academic_writing',     name: '学术写作',
+      items: ['footnote','bibliography','abstract','in_text_cite','word_count','cover_sheet'] },
+    { id: 'transport',            name: '交通 / 出行',
+      items: ['oyster','railcard','railcard_1625','coach','tfl','national_rail'] },
+    { id: 'campus_systems',       name: '校园系统',
+      items: ['moodle','eduroam','library_card','nus_card','reading_week','welcome_week'] },
+    { id: 'job_hunt',             name: '求职 / 实习',
+      items: ['cv_uk','cover_letter','sandwich_placement','milkround','grad_scheme','assessment_centre'] },
+    { id: 'saving_money',         name: '省钱 / 日常',
+      items: ['meal_deal','clubcard','yellow_sticker','spoons_app','boots_advantage','nectar_card'] },
     // Batch 4 (Task 4): degrees / grading / class_types / assessment / online_tools / uni_groupings
   ],
   items: {
@@ -542,7 +553,48 @@ export const UK_KNOWLEDGE_MATCH = {
     inventory:        { label: 'Inventory',         desc: '入住物品清单 + 拍照记录' },
     deposit_protection:{label: 'Deposit Protection (DPS)', desc: '押金第三方托管' },
     guarantor:        { label: 'Guarantor',         desc: '担保人（国际生常用 Housing Hand）' },
-    // Batch 3 (Task 3) appends ~36 more here
+    // tax_wages
+    hmrc:             { label: 'HMRC',              desc: '英国税务海关总署' },
+    ni_number:        { label: 'NI Number',         desc: '社保号（合法工作必须）' },
+    paye:             { label: 'PAYE',              desc: '雇主代扣个税（不用自己报税）' },
+    p45:              { label: 'P45',               desc: '离职单（带到下家用）' },
+    p60:              { label: 'P60',               desc: '年度纳税总单（4 月发）' },
+    min_wage:         { label: 'Minimum Wage',      desc: '国家最低工资（£11.44/h, 21+, 2024）' },
+    // academic_writing
+    footnote:         { label: 'Footnote',          desc: '脚注（页面底部小字）' },
+    bibliography:     { label: 'Bibliography',      desc: '参考文献列表（论文最后）' },
+    abstract:         { label: 'Abstract',          desc: '论文摘要（150-300 词）' },
+    in_text_cite:     { label: 'In-text Citation',  desc: '正文内引用（如 Smith, 2020）' },
+    word_count:       { label: 'Word Count',        desc: '字数限制（通常 ±10% 浮动）' },
+    cover_sheet:      { label: 'Cover Sheet',       desc: '论文封面页（题目/学号/字数）' },
+    // transport
+    oyster:           { label: 'Oyster Card',       desc: '伦敦交通刷卡' },
+    railcard:         { label: 'Railcard',          desc: '火车通用 1/3 折扣卡（£30/年）' },
+    railcard_1625:    { label: '16-25 Railcard',    desc: '25 岁以下专属火车折扣卡' },
+    coach:            { label: 'Coach',             desc: '长途巴士（Megabus / National Express）' },
+    tfl:              { label: 'TfL',               desc: '伦敦交通局' },
+    national_rail:    { label: 'National Rail',     desc: '全国铁路网' },
+    // campus_systems
+    moodle:           { label: 'Moodle',            desc: '最主流 LMS' },
+    eduroam:          { label: 'Eduroam',           desc: '国际通用校园 WiFi（全球可用）' },
+    library_card:     { label: 'Library Card',      desc: '图书馆借书卡' },
+    nus_card:         { label: 'TOTUM (NUS)',       desc: '学生折扣卡（餐饮 / 购物）' },
+    reading_week:     { label: 'Reading Week',      desc: '期中读书周（通常 W6 没课）' },
+    welcome_week:     { label: 'Welcome Week',      desc: '开学迎新周（社团 / 派对）' },
+    // job_hunt
+    cv_uk:            { label: 'CV',                desc: '英国 1-2 页学历工作摘要（≠ 美式 Resume）' },
+    cover_letter:     { label: 'Cover Letter',      desc: '求职信（讲为啥适合）' },
+    sandwich_placement:{ label: 'Sandwich Placement', desc: '三明治课程实习年（本科第 3 年）' },
+    milkround:        { label: 'Milkround',         desc: '校招季（9-11 月）' },
+    grad_scheme:      { label: 'Grad Scheme',       desc: '应届生培养计划（大公司 2-3 年）' },
+    assessment_centre:{ label: 'Assessment Centre', desc: '终面（case + group exercise + presentation）' },
+    // saving_money
+    meal_deal:        { label: 'Meal Deal',         desc: '£3.5-4 三件套（主食+饮料+零食）' },
+    clubcard:         { label: 'Clubcard',          desc: 'Tesco 会员卡（黄标价 + 积分）' },
+    yellow_sticker:   { label: 'Yellow Sticker',    desc: '临期食品打折' },
+    spoons_app:       { label: 'Wetherspoons App',  desc: '酒馆桌号点单 app（便宜啤酒）' },
+    boots_advantage:  { label: 'Boots Advantage',   desc: '屈臣氏式会员卡（积分换购）' },
+    nectar_card:      { label: 'Nectar Card',       desc: "Sainsbury's 积分卡" },
     // Batch 4 (Task 4) appends ~39 more here
   },
 };
