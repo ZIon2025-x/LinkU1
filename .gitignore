@@ -105,3 +105,6 @@ nul
 # Claude Code 本机工具状态（每台机器不同，无需入仓）
 .claude/settings.local.json
 
+# Claude Code Agent 的隔离 worktree（用完即弃，不应入仓）
+.claude/worktrees/
+
