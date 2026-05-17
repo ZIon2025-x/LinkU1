@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/widgets/user_identity_badges.dart';
+import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -1810,7 +1811,7 @@ class _PostImageCarouselState extends State<_PostImageCarousel> {
   }
 }
 
-/// 附件 + 关联内容，紧凑一行展示
+/// 附件 + 关联内容: C4 详情页大卡 (PDF 下载 + 紫色关联).
 class _PostExtrasRow extends StatelessWidget {
   const _PostExtrasRow({
     required this.attachments,
@@ -1836,30 +1837,29 @@ class _PostExtrasRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ...attachments
-              .map((att) => _AttachmentChip(att: att, isDark: isDark)),
+          for (final att in attachments) ...[
+            _PostFileCard(
+              attachment: att,
+              onDownload: () => _openAttachment(context, att),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (_hasLink)
-            _LinkedChip(
-                type: linkedItemType!,
-                id: linkedItemId!,
-                name: linkedItemName,
-                isDark: isDark),
+            _LinkedItemCard(
+              itemType: linkedItemType!,
+              itemId: linkedItemId!,
+              itemName: linkedItemName,
+              isDark: isDark,
+            ),
         ],
       ),
     );
   }
-}
 
-class _AttachmentChip extends StatelessWidget {
-  const _AttachmentChip({required this.att, required this.isDark});
-  final ForumPostAttachment att;
-  final bool isDark;
-
-  void _open(BuildContext context) {
+  void _openAttachment(BuildContext context, ForumPostAttachment att) {
     if (att.url.isEmpty) return;
     if (att.isPdf) {
       context.push(
@@ -1880,104 +1880,226 @@ class _AttachmentChip extends StatelessWidget {
       return false;
     });
   }
+}
+
+/// 详情页 PDF/文件卡片: 红渐变 PDF 角标 + 文件名 + 大小 + 蓝色"下载"药丸
+class _PostFileCard extends StatelessWidget {
+  const _PostFileCard({
+    required this.attachment,
+    required this.onDownload,
+  });
+
+  final ForumPostAttachment attachment;
+  final VoidCallback onDownload;
 
   @override
   Widget build(BuildContext context) {
-    final icon = att.isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file;
-    final color = att.isPdf ? const Color(0xFFE53935) : AppColors.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPdf = attachment.isPdf;
+    final iconColor = isPdf ? const Color(0xFFF24D4D) : AppColors.primary;
     return Semantics(
       button: true,
       label: 'Open attachment',
-      child: GestureDetector(
-        onTap: () => _open(context),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : color.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.10)
-                  : color.withValues(alpha: 0.15),
-            ),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: AppRadius.allMedium,
+          border: Border.all(
+            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 6),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 140),
-                child: Text(
-                  att.filename,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 13, color: color, fontWeight: FontWeight.w500),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              offset: const Offset(0, 2),
+              blurRadius: 8,
+              spreadRadius: -3,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isPdf
+                      ? const [Color(0xFFF24D4D), Color(0xFFFF7A7A)]
+                      : [iconColor, iconColor.withValues(alpha: 0.7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(11),
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: 0.35),
+                    offset: const Offset(0, 4),
+                    blurRadius: 10,
+                    spreadRadius: -2,
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                isPdf ? 'PDF' : 'FILE',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    attachment.filename,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    attachment.formattedSize,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: onDownload,
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.download_outlined,
+                        size: 14, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      context.l10n.forumDownload,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _LinkedChip extends StatelessWidget {
-  const _LinkedChip({
-    required this.type,
-    required this.id,
-    this.name,
+/// 详情页紫色关联内容卡: 渐变方块图标 + tag + 名称 + chevron
+class _LinkedItemCard extends StatelessWidget {
+  const _LinkedItemCard({
+    required this.itemType,
+    required this.itemId,
+    required this.itemName,
     required this.isDark,
   });
 
-  final String type;
-  final String id;
-  final String? name;
+  final String itemType;
+  final String itemId;
+  final String? itemName;
   final bool isDark;
+
+  static const _purpleGradient = [Color(0xFF7359F2), Color(0xFFA18BFF)];
 
   @override
   Widget build(BuildContext context) {
+    final purple = _purpleGradient[0];
     return Semantics(
       button: true,
       label: 'View linked item',
-      child: GestureDetector(
+      child: InkWell(
         onTap: () => _navigate(context),
+        borderRadius: AppRadius.allMedium,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : AppColors.purple.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.10)
-                  : AppColors.purple.withValues(alpha: 0.15),
-            ),
+            color: purple.withValues(alpha: isDark ? 0.14 : 0.08),
+            border: Border.all(color: purple.withValues(alpha: 0.30)),
+            borderRadius: AppRadius.allMedium,
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(_iconData, size: 16, color: AppColors.purple),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  name ?? _typeLabel(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.purple,
-                      fontWeight: FontWeight.w500),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: _purpleGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                alignment: Alignment.center,
+                child: Icon(_iconData, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: purple.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _typeLabel(context),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: purple,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      itemName?.isNotEmpty == true
+                          ? itemName!
+                          : _typeLabel(context),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 2),
-              Icon(Icons.chevron_right,
-                  size: 14, color: AppColors.purple.withValues(alpha: 0.6)),
+              Icon(
+                Icons.chevron_right,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
             ],
           ),
         ),
@@ -1986,28 +2108,28 @@ class _LinkedChip extends StatelessWidget {
   }
 
   void _navigate(BuildContext context) {
-    switch (type) {
+    switch (itemType) {
       case 'product':
-        context.push('/flea-market/$id');
+        context.push('/flea-market/$itemId');
       case 'service':
-        final intId = int.tryParse(id);
+        final intId = int.tryParse(itemId);
         if (intId != null) context.push('/service/$intId');
       case 'expert':
-        context.push('/task-experts/$id');
+        context.push('/task-experts/$itemId');
       case 'activity':
-        context.push('/activities/$id');
+        context.push('/activities/$itemId');
       case 'ranking':
-        final intId = int.tryParse(id);
+        final intId = int.tryParse(itemId);
         if (intId != null) context.push('/leaderboard/$intId');
       case 'forum_post':
-        final intId = int.tryParse(id);
+        final intId = int.tryParse(itemId);
         if (intId != null) context.push('/forum/posts/$intId');
     }
   }
 
   String _typeLabel(BuildContext context) {
     final l10n = context.l10n;
-    switch (type) {
+    switch (itemType) {
       case 'product':
         return l10n.discoveryFeedTypeProduct;
       case 'service':
@@ -2020,12 +2142,12 @@ class _LinkedChip extends StatelessWidget {
       case 'forum_post':
         return l10n.discoveryFeedTypePost;
       default:
-        return type;
+        return itemType;
     }
   }
 
   IconData get _iconData {
-    switch (type) {
+    switch (itemType) {
       case 'product':
         return Icons.shopping_bag_outlined;
       case 'service':
@@ -2038,7 +2160,7 @@ class _LinkedChip extends StatelessWidget {
       case 'forum_post':
         return Icons.forum_outlined;
       default:
-        return Icons.link;
+        return Icons.dashboard;
     }
   }
 }

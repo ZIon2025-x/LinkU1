@@ -9815,6 +9815,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get forumDownload => '下载';
+
+  @override
   String forumFileAttachmentCount(String current, String max) {
     return '文件附件（$current/$max）';
   }
@@ -23729,6 +23732,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String forumAttachmentOpenFailed(String error) {
     return '無法開啟檔案: $error';
   }
+
+  @override
+  String get forumDownload => '下載';
 
   @override
   String forumFileAttachmentCount(String current, String max) {

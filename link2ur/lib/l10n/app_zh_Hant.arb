@@ -4557,6 +4557,8 @@
       }
     }
   },
+  "forumDownload": "下載",
+  "@forumDownload": {},
   "forumFileAttachmentCount": "檔案附件（{current}/{max}）",
   "@forumFileAttachmentCount": {
     "placeholders": {

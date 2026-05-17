@@ -18773,6 +18773,12 @@ abstract class AppLocalizations {
   /// **'Cannot open file: {error}'**
   String forumAttachmentOpenFailed(String error);
 
+  /// No description provided for @forumDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get forumDownload;
+
   /// No description provided for @forumFileAttachmentCount.
   ///
   /// In en, this message translates to:

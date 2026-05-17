@@ -10237,6 +10237,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get forumDownload => 'Download';
+
+  @override
   String forumFileAttachmentCount(String current, String max) {
     return 'File Attachment ($current/$max)';
   }
