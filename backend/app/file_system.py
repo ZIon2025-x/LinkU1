@@ -169,8 +169,15 @@ class PrivateFileSystem:
             # 🔒 安全检查：防止路径遍历攻击
             from app.file_utils import is_safe_file_id
             if not is_safe_file_id(file_id):
+                logger.warning(f"[get_file] is_safe_file_id rejected: '{file_id}'")
                 raise HTTPException(status_code=400, detail="Invalid file ID")
-            
+
+            # 诊断 log: 看 base_dir 实际指向哪里、file_id 是否合法
+            logger.info(
+                f"[get_file] start: file_id='{file_id}' user_id='{user_id}' "
+                f"base_dir='{self.base_dir}' base_dir_exists={self.base_dir.exists()}"
+            )
+
             # 优化：先从数据库查询附件，获取task_id或chat_id，直接定位文件夹
             file_path = None
             
@@ -179,17 +186,30 @@ class PrivateFileSystem:
                 MessageAttachment.blob_id == file_id
             ).first()
             
+            logger.info(
+                f"[get_file] attachment lookup: blob_id='{file_id}' → "
+                f"found={attachment is not None}"
+                + (f" (id={attachment.id}, message_id={attachment.message_id}, type={attachment.attachment_type})" if attachment else "")
+            )
+
             if attachment:
                 # 通过附件找到消息，再找到task_id或chat_id
                 from app.models import Message, CustomerServiceMessage
-                
+
                 # 查询任务消息
                 task_message = db.query(Message).filter(Message.id == attachment.message_id).first()
                 if task_message and task_message.task_id:
                     # 任务聊天文件：直接定位到任务文件夹(rglob 兼容 subdir 如 chat/)
                     task_dir = self.base_dir / "tasks" / str(task_message.task_id)
+                    logger.info(
+                        f"[get_file] task_dir='{task_dir}' exists={task_dir.exists()}"
+                    )
                     # 尝试不同扩展名,递归查找以兼容 subdir(如 chat_media 落 tasks/{id}/chat/)
-                    for ext_file in task_dir.rglob(f"{file_id}.*"):
+                    found_paths = list(task_dir.rglob(f"{file_id}.*"))
+                    logger.info(
+                        f"[get_file] rglob result in task_dir: {[str(p) for p in found_paths]}"
+                    )
+                    for ext_file in found_paths:
                         if ext_file.is_file():
                             file_path = ext_file
                             break
@@ -233,6 +253,16 @@ class PrivateFileSystem:
                         file_path = root_files[0]
             
             if not file_path or not file_path.exists() or not file_path.is_file():
+                # 诊断 log: 全局扫一遍 base_dir 看 file_id 究竟在哪(或不在)
+                try:
+                    all_matches = list(self.base_dir.rglob(f"{file_id}*"))
+                    logger.warning(
+                        f"[get_file] FILE NOT FOUND: file_id='{file_id}', "
+                        f"global rglob in base_dir='{self.base_dir}' found: "
+                        f"{[str(p) for p in all_matches]}"
+                    )
+                except Exception as scan_err:
+                    logger.warning(f"[get_file] scan failed: {scan_err}")
                 raise HTTPException(status_code=404, detail="文件不存在")
             
             # 确定MIME类型
