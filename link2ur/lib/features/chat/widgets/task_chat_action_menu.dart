@@ -31,7 +31,9 @@ class TaskChatActionMenu extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
-      height: isExpanded ? 100 : 0,
+      // 高度 = vertical padding(md×2=32) + button column(icon 56 + gap 6 + text ~14 = 76) = 108
+      // 留 2px 余量避免子像素 overflow;原 100 在 5 个按钮布局下会出现 8px 黄黑斜条纹
+      height: isExpanded ? 110 : 0,
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
