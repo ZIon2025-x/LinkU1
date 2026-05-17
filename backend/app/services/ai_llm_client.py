@@ -79,18 +79,31 @@ class AnthropicProvider:
         self, model: str, messages: list[dict], system: str,
         tools: list[dict] | None, max_tokens: int,
     ) -> LLMResponse:
-        kwargs: dict[str, Any] = {
-            "model": model,
-            "max_tokens": max_tokens,
-            "system": system,
-            "messages": messages,
-        }
-        if tools:
-            kwargs["tools"] = tools
+        from app.config import Config
 
-        resp = await self._client.messages.create(**kwargs)
+        kwargs: dict[str, Any] = self._build_chat_kwargs(
+            model=model, messages=messages, system=system,
+            tools=tools, max_tokens=max_tokens,
+            cache_enabled=Config.AI_ANTHROPIC_CACHE_ENABLED,
+        )
 
-        # 转换为统一格式
+        try:
+            resp = await self._client.messages.create(**kwargs)
+        except anthropic.BadRequestError as e:
+            if Config.AI_ANTHROPIC_CACHE_ENABLED and "cache_control" in str(e):
+                logger.warning(
+                    "Anthropic cache_control rejected, falling back to raw: %r", e
+                )
+                kwargs = self._build_chat_kwargs(
+                    model=model, messages=messages, system=system,
+                    tools=tools, max_tokens=max_tokens,
+                    cache_enabled=False,
+                )
+                resp = await self._client.messages.create(**kwargs)
+            else:
+                raise
+
+        # 转换为统一格式 (沿用原逻辑)
         content = []
         for block in resp.content:
             if block.type == "text":
@@ -108,6 +121,36 @@ class AnthropicProvider:
             ),
             stop_reason=resp.stop_reason,
         )
+
+    def _build_chat_kwargs(
+        self, model: str, messages: list[dict], system: str,
+        tools: list[dict] | None, max_tokens: int, cache_enabled: bool,
+    ) -> dict[str, Any]:
+        """构造 messages.create kwargs。cache_enabled=True 时给 system 和 tools 末尾加 cache_control."""
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "messages": messages,
+        }
+
+        if cache_enabled and system:
+            kwargs["system"] = [{
+                "type": "text", "text": system,
+                "cache_control": {"type": "ephemeral"},
+            }]
+        elif system:
+            kwargs["system"] = system
+
+        if cache_enabled and tools:
+            tools_marked = tools[:-1] + [{
+                **tools[-1],
+                "cache_control": {"type": "ephemeral"},
+            }]
+            kwargs["tools"] = tools_marked
+        elif tools:
+            kwargs["tools"] = tools
+
+        return kwargs
 
     async def chat_stream(
         self, model: str, messages: list[dict], system: str,
