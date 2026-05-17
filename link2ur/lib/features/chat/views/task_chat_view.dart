@@ -563,7 +563,14 @@ class _TaskChatContentState extends State<_TaskChatContent> {
               // 快捷操作（仅任务进行中显示）
               if (!state.isTaskClosed) _buildQuickActions(),
 
-              // 操作菜单（可展开）
+              // Typing indicator
+              if (!state.isTaskClosed && state.peerIsTyping)
+                _buildTypingIndicator(),
+
+              // 输入区域
+              if (!state.isTaskClosed) _buildInputArea(state),
+
+              // 操作菜单(微信风格): 从输入框**下方**展开 grid 面板,替代键盘位置
               if (!state.isTaskClosed)
                 TaskChatActionMenu(
                   isExpanded: _showActionMenu,
@@ -574,13 +581,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                     context.safePush('/tasks/${widget.taskId}');
                   },
                 ),
-
-              // Typing indicator
-              if (!state.isTaskClosed && state.peerIsTyping)
-                _buildTypingIndicator(),
-
-              // 输入区域
-              if (!state.isTaskClosed) _buildInputArea(state),
             ],
           ),
         );
