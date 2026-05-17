@@ -595,26 +595,10 @@ class _CreatePostViewState extends State<CreatePostView> {
                 ),
               ],
                 // 标题
-                TextField(
-                  controller: _titleController,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.forumEnterTitle,
-                    border: InputBorder.none,
-                  ),
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const Divider(),
+                _TitleField(controller: _titleController),
+                const SizedBox(height: 8),
                 // 内容
-                TextField(
-                  controller: _contentController,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.forumShareThoughts,
-                    border: InputBorder.none,
-                  ),
-                  maxLines: null,
-                  minLines: 10,
-                ),
+                _ContentField(controller: _contentController),
                 AppSpacing.vMd,
                 // 图片（选填，最多 5 张）
                 Text(
@@ -1002,6 +986,103 @@ class _PublishButton extends StatelessWidget {
                 ),
         ),
       ),
+    );
+  }
+}
+
+class _TitleField extends StatelessWidget {
+  const _TitleField({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: context.l10n.forumEnterTitle,
+        hintStyle: const TextStyle(
+          color: AppColors.textPlaceholderLight,
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+        ),
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.zero,
+        isDense: true,
+      ),
+      style: const TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+      ),
+      maxLength: 200,
+      buildCounter: (context,
+              {required currentLength, required isFocused, maxLength}) =>
+          null,
+      textInputAction: TextInputAction.next,
+    );
+  }
+}
+
+class _ContentField extends StatefulWidget {
+  const _ContentField({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  State<_ContentField> createState() => _ContentFieldState();
+}
+
+class _ContentFieldState extends State<_ContentField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChange);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChange);
+    super.dispose();
+  }
+
+  void _onChange() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final count = widget.controller.text.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: widget.controller,
+          decoration: InputDecoration(
+            hintText: context.l10n.forumShareThoughts,
+            hintStyle: const TextStyle(
+              color: AppColors.textPlaceholderLight,
+              fontSize: 15,
+            ),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
+          style: const TextStyle(fontSize: 15, height: 1.65),
+          maxLines: null,
+          minLines: 10,
+        ),
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            '$count / 5000',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
