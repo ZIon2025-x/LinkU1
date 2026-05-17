@@ -102,3 +102,6 @@ nul
 # Git worktrees
 .worktrees/
 
+# Claude Code 本机工具状态（每台机器不同，无需入仓）
+.claude/settings.local.json
+
