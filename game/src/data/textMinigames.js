@@ -509,7 +509,18 @@ export const UK_KNOWLEDGE_MATCH = {
       items: ['cv_uk','cover_letter','sandwich_placement','milkround','grad_scheme','assessment_centre'] },
     { id: 'saving_money',         name: '省钱 / 日常',
       items: ['meal_deal','clubcard','yellow_sticker','spoons_app','boots_advantage','nectar_card'] },
-    // Batch 4 (Task 4): degrees / grading / class_types / assessment / online_tools / uni_groupings
+    { id: 'degrees',              name: '学位 / 学制',
+      items: ['undergrad','pgt','pgr','phd','msc','ma','mba','foundation_year'] },
+    { id: 'grading',              name: '成绩 / 评分',
+      items: ['first_class','two_one','two_two','third_class','distinction','merit','pass_threshold'] },
+    { id: 'class_types',          name: '课程类型',
+      items: ['lecture_class','seminar','tutorial','lab','workshop','office_hours'] },
+    { id: 'assessment',           name: '评估方式',
+      items: ['coursework','dissertation','viva','open_book','take_home','group_project'] },
+    { id: 'online_tools',         name: '网课 / 数字工具',
+      items: ['zoom','ms_teams','panopto','blackboard','padlet','mentimeter'] },
+    { id: 'uni_groupings',        name: '大学集团 / 排名',
+      items: ['russell_group','red_brick','plate_glass','ancient_unis','oxbridge','qs_top100'] },
   ],
   items: {
     // visa
@@ -595,7 +606,51 @@ export const UK_KNOWLEDGE_MATCH = {
     spoons_app:       { label: 'Wetherspoons App',  desc: '酒馆桌号点单 app（便宜啤酒）' },
     boots_advantage:  { label: 'Boots Advantage',   desc: '屈臣氏式会员卡（积分换购）' },
     nectar_card:      { label: 'Nectar Card',       desc: "Sainsbury's 积分卡" },
-    // Batch 4 (Task 4) appends ~39 more here
+    // degrees
+    undergrad:        { label: 'Undergraduate',     desc: '本科（英格兰 3 年 / 苏格兰 4 年）' },
+    pgt:              { label: 'PGT',               desc: '授课型硕士（1 年）' },
+    pgr:              { label: 'PGR',               desc: '研究型硕士（M.Phil / M.Res）' },
+    phd:              { label: 'PhD',               desc: '博士（3-4 年）' },
+    msc:              { label: 'MSc',               desc: 'Master of Science（理工科）' },
+    ma:               { label: 'MA',                desc: 'Master of Arts（文科）' },
+    mba:              { label: 'MBA',               desc: '商学院硕士' },
+    foundation_year:  { label: 'Foundation Year',   desc: '预科年（IELTS 不足时升本）' },
+    // grading
+    first_class:      { label: 'First (1st)',       desc: '一等学位（≥70%）' },
+    two_one:          { label: '2:1',               desc: '上二等（60-69%，雇主基准线）' },
+    two_two:          { label: '2:2',               desc: '下二等（50-59%）' },
+    third_class:      { label: 'Third',             desc: '三等（40-49%）' },
+    distinction:      { label: 'Distinction',       desc: '硕士优秀（≥70%）' },
+    merit:            { label: 'Merit',             desc: '硕士良好（60-69%）' },
+    pass_threshold:   { label: '40% Pass',          desc: '本科及格分数线（不挂科）' },
+    // class_types
+    lecture_class:    { label: 'Lecture',           desc: '大课讲座（100+ 人）' },
+    seminar:          { label: 'Seminar',           desc: '小组讨论（15-30 人）' },
+    tutorial:         { label: 'Tutorial',          desc: '一对一 / 小组答疑' },
+    lab:              { label: 'Lab',               desc: '实验课' },
+    workshop:         { label: 'Workshop',          desc: '实操工作坊' },
+    office_hours:     { label: 'Office Hours',      desc: '教授固定答疑时段' },
+    // assessment
+    coursework:       { label: 'Coursework',        desc: '平时作业（essay / report）' },
+    dissertation:     { label: 'Dissertation',      desc: '学位论文（硕士 ~12k 词）' },
+    viva:             { label: 'Viva',              desc: 'PhD 答辩' },
+    open_book:        { label: 'Open Book',         desc: '开卷考试（可带书 / 笔记）' },
+    take_home:        { label: 'Take-home Exam',    desc: '带回家考试（24h / 48h）' },
+    group_project:    { label: 'Group Project',     desc: '小组项目作业' },
+    // online_tools
+    zoom:             { label: 'Zoom',              desc: '视频会议主流' },
+    ms_teams:         { label: 'MS Teams',          desc: '微软视频会议（学校常用）' },
+    panopto:          { label: 'Panopto',           desc: '课程录像播放器' },
+    blackboard:       { label: 'Blackboard',        desc: '老牌 LMS（Moodle 的竞品）' },
+    padlet:           { label: 'Padlet',            desc: '在线协作白板' },
+    mentimeter:       { label: 'Mentimeter',        desc: '实时投票 / 词云' },
+    // uni_groupings
+    russell_group:    { label: 'Russell Group',     desc: '24 所英国研究型大学联盟' },
+    red_brick:        { label: 'Red Brick',         desc: '19/20 世纪工业大学（如 Manchester）' },
+    plate_glass:      { label: 'Plate Glass',       desc: '1960s 现代化大学（如 York）' },
+    ancient_unis:     { label: 'Ancient Universities', desc: '中世纪老校（Oxford / Cambridge / St Andrews 等）' },
+    oxbridge:         { label: 'Oxbridge',          desc: '牛剑合称' },
+    qs_top100:        { label: 'QS Top 100',        desc: 'QS 全球前 100 排名' },
   },
 };
 

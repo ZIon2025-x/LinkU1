@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>异乡 · Minigame 试玩</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background:#0a0806; color:#e8e0d0; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; padding:40px 20px; line-height:1.7; }
+  h1 { font-weight:300; font-size:28px; margin-bottom:8px; text-align:center; }
+  .subtitle { text-align:center; opacity:0.6; margin-bottom:24px; font-style:italic; font-size:14px; }
+  .nav { text-align:center; margin:20px 0 40px; }
+  .nav a { color:#d4b070; text-decoration:none; margin:0 10px; font-family:monospace; font-size:11px; letter-spacing:0.1em; padding:4px 8px; border:1px solid rgba(212,176,112,0.3); }
+  .nav a:hover { background:rgba(212,176,112,0.1); }
+  section { max-width:620px; margin:0 auto 70px; }
+  section > h2 { font-weight:300; font-size:22px; margin-bottom:6px; border-left:3px solid #d4b070; padding-left:14px; color:#d4b070; }
+  section > .meta { font-family:monospace; font-size:11px; opacity:0.6; margin-left:14px; margin-bottom:14px; letter-spacing:0.1em; }
+  .card { background:#1a1612; border:1px solid rgba(232,224,208,0.4); padding:20px; max-width:28rem; margin:0 auto; }
+  .card h3 { font-weight:300; font-size:18px; margin-bottom:4px; }
+  .card .label-mg { font-family:monospace; font-size:10px; letter-spacing:0.3em; opacity:0.5; margin-bottom:8px; }
+  .card .quiz-meta { font-family:monospace; font-size:11px; opacity:0.6; font-style:italic; margin-bottom:14px; }
+  .btn { display:block; width:100%; padding:10px; border:1px solid rgba(232,224,208,0.4); background:transparent; color:inherit; cursor:pointer; text-align:left; font-size:13px; font-family:inherit; margin-bottom:6px; }
+  .btn:hover:not(:disabled) { background:rgba(232,224,208,0.05); border-color:#e8e0d0; }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-primary { padding:10px; border:1px solid #e8e0d0; font-family:monospace; letter-spacing:0.2em; font-size:12px; text-align:center; cursor:pointer; background:transparent; color:inherit; display:block; width:100%; margin-top:8px; }
+  .btn-primary:hover:not(:disabled) { background:#e8e0d0; color:#0a0806; }
+  .btn-primary:disabled { opacity:0.3; cursor:not-allowed; }
+  .small-btn { padding:4px 10px; border:1px solid rgba(232,224,208,0.4); background:transparent; color:inherit; cursor:pointer; font-size:11px; font-family:monospace; }
+  .quote { border-left:2px solid rgba(232,224,208,0.5); padding:8px 14px; font-style:italic; margin-bottom:14px; }
+  .quote .role { font-style:normal; font-size:11px; opacity:0.6; margin-right:6px; }
+  .mask { display:inline-block; background:rgba(232,224,208,0.4); color:transparent; padding:0 6px; border-radius:2px; user-select:none; letter-spacing:0.05em; font-family:monospace; }
+  .listening-bar { display:flex; align-items:center; gap:8px; margin-bottom:14px; font-family:monospace; font-size:11px; opacity:0.7; }
+  .listening-bar .bar { height:4px; background:rgba(232,224,208,0.15); flex:1; position:relative; }
+  .listening-bar .bar-fill { position:absolute; left:0; top:0; bottom:0; background:#d4b070; transition:width 0.3s; }
+  .listening-bar input[type=range] { width:120px; }
+  .feedback { padding:10px 14px; margin:10px 0; border-left:2px solid; font-style:italic; font-size:13px; line-height:1.7; }
+  .fb-ok { border-color:#a0c890; color:#a0c890; }
+  .fb-bad { border-color:#c86060; color:#e8b0a0; }
+  /* Yellow Label · 用 absolute + transform 让卡片真的"飞" */
+  .yl-grid { position:relative; margin:12px auto; width:320px; }
+  .yl-cell { position:absolute; left:0; top:0; box-sizing:border-box; border:1px solid rgba(232,224,208,0.4); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; user-select:none; will-change:transform; }
+  .yl-cell .emoji { font-size:28px; pointer-events:none; }
+  .yl-cell .name { font-size:11px; opacity:0.7; margin-top:3px; pointer-events:none; }
+  .yl-cell .yt { position:absolute; top:3px; right:3px; padding:1px 5px; background:#d4b070; color:#1a1612; font-family:monospace; font-size:9px; }
+  .yl-cell.back { background:rgba(90,138,168,0.1); }
+  .yl-cell.back .face { font-size:28px; color:#5a8aa8; pointer-events:none; }
+  .yl-cell.picked { background:rgba(212,176,112,0.2); border-color:#d4b070; box-shadow:0 0 0 2px rgba(212,176,112,0.4); }
+  .yl-cell.correct { background:rgba(160,200,144,0.18); border-color:#a0c890; }
+  .yl-cell.wrong { background:rgba(200,96,96,0.2); border-color:#c86060; }
+  .yl-cell.miss::after { content:'?'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#d4b070; background:rgba(212,176,112,0.18); font-size:24px; }
+  /* Lecture */
+  .letter-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin:12px 0; max-width:380px; }
+  .letter-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border:1px solid rgba(212,176,112,0.35); background:rgba(212,176,112,0.04); font-family:monospace; font-weight:600; font-size:13px; color:#d4b070; cursor:pointer; user-select:none; }
+  .letter-cell.path { background:rgba(212,176,112,0.4); color:#fff; box-shadow:0 0 0 2px #d4b070; }
+  .letter-cell.used { background:rgba(160,200,144,0.06); color:rgba(232,224,208,0.4); }
+  .current-word { font-family:monospace; font-size:16px; letter-spacing:0.12em; min-height:28px; padding:6px; border:1px dashed rgba(212,176,112,0.4); margin-bottom:10px; text-align:center; color:#d4b070; }
+  .found-words { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; max-height:80px; overflow-y:auto; }
+  .found-word { padding:3px 8px; background:rgba(160,200,144,0.08); border:1px solid rgba(160,200,144,0.4); font-family:monospace; font-size:11px; color:#a0c890; }
+  .found-word.bonus { background:rgba(212,176,112,0.12); border-color:#d4b070; color:#d4b070; }
+  /* Essay */
+  .essay-para { background:rgba(160,128,184,0.05); border-left:2px solid rgba(160,128,184,0.4); padding:10px 14px; font-style:italic; margin-bottom:12px; font-size:13px; line-height:1.8; }
+  .blank { display:inline-block; padding:2px 10px; margin:0 4px; border:1px dashed rgba(160,128,184,0.6); color:#9080b8; font-size:12px; }
+  /* Match */
+  .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:14px; }
+  .concept-tile { padding:6px 8px; border:1px solid rgba(232,224,208,0.4); cursor:pointer; font-size:12px; transition:all 200ms; }
+  .concept-tile:hover { border-color:#a0a0c8; }
+  .concept-tile.selected { border-color:#a0a0c8; background:rgba(160,160,200,0.12); }
+  .concept-tile.matched { opacity:0.4; }
+  .concept-desc { font-size:10px; opacity:0.55; font-style:italic; margin-top:2px; }
+  .theorist-tile { padding:6px 8px; border:1px solid rgba(160,160,200,0.4); cursor:pointer; font-size:12px; transition:all 200ms; }
+  .theorist-tile:hover { background:rgba(160,160,200,0.08); }
+  .theorist-tile.disabled { opacity:0.4; cursor:not-allowed; }
+  /* Design */
+  .brief-card { background:rgba(122,138,106,0.06); border:1px solid rgba(122,138,106,0.35); padding:12px; margin-bottom:14px; font-size:13px; line-height:1.7; }
+  .brief-from { font-family:monospace; font-size:11px; opacity:0.7; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .brief-avatar { width:22px; height:22px; border-radius:50%; background:#b85070; color:white; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .step-dots { display:flex; gap:5px; margin-bottom:12px; justify-content:center; }
+  .step-dot { width:24px; height:4px; background:rgba(232,224,208,0.15); }
+  .step-dot.active { background:#7a8a6a; }
+  .step-dot.done-ok { background:#a0c890; }
+  .step-dot.done-bad { background:#c86060; }
+  .swatch-row { display:flex; gap:3px; margin-top:5px; }
+  .swatch { width:18px; height:18px; border:1px solid rgba(232,224,208,0.2); }
+  .stat-row { display:flex; justify-content:space-between; margin-bottom:10px; font-family:monospace; font-size:11px; }
+  .timer-big { font-family:monospace; font-size:18px; }
+  hr { border:0; border-top:1px solid rgba(232,224,208,0.15); margin:50px 0; }
+</style>
+</head>
+<body>
+
+<h1>异乡 · Minigame 试玩</h1>
+<p class="subtitle">点击每个游戏开始试玩 · 难度按 week 调节 (默认 W10)</p>
+<div class="nav">
+  <a href="#yellow">🛒 抢黄标</a>
+  <a href="#pret">☕ Pret</a>
+  <a href="#lecture">📖 上课</a>
+  <a href="#essay">📝 写论文</a>
+  <a href="#match">🎴 概念匹配</a>
+  <a href="#brief">🎨 AI 设计</a>
+</div>
+
+<!-- ════════════════ 数据 ════════════════ -->
+<script>
+// 共用 week 调节
+let GLOBAL_WEEK = 10;
+
+// ── Yellow Label items ──
+const YL_ITEMS = [
+  {emoji:'🍣',name:'寿司',price:1.5},{emoji:'🥪',name:'三明治',price:2},{emoji:'🍎',name:'苹果',price:3},
+  {emoji:'🍞',name:'面包',price:1},{emoji:'🥛',name:'牛奶',price:2.5},{emoji:'🥤',name:'可乐',price:2},
+  {emoji:'🥣',name:'酸奶',price:1.8},{emoji:'🍌',name:'香蕉',price:1.2},{emoji:'🍓',name:'草莓',price:2.5},
+  {emoji:'🍇',name:'葡萄',price:3.5},{emoji:'🧃',name:'橙汁',price:2.8},{emoji:'🍝',name:'Pasta',price:4},
+  {emoji:'🍛',name:'咖喱',price:4.5},{emoji:'🍕',name:'披萨',price:3.5},{emoji:'🥗',name:'沙拉',price:4},
+  {emoji:'🍗',name:'烤鸡',price:4.5},{emoji:'🥐',name:'Croissant',price:1.5},{emoji:'🍫',name:'巧克力',price:2},
+];
+function ylConfig(w){
+  if(w<=5) return {cards:4,yc:1,shuffles:2,sMs:600,peekMs:3000};
+  if(w<=15) return {cards:6,yc:2,shuffles:4,sMs:500,peekMs:2500};
+  if(w<=25) return {cards:6,yc:2,shuffles:6,sMs:400,peekMs:2000};
+  return {cards:8,yc:3,shuffles:8,sMs:350,peekMs:1500};
+}
+
+// ── Pret ──
+const PRET_QS = [
+  {staff:'"What can I get you, love?"',mask:['get you','love'],opts:[
+    {t:'A flat white please',c:true,fb:'"Lovely, anything else?"'},
+    {t:'Yes',c:false,fb:'店员愣了一下:"...yes what?"'},
+    {t:"I don't know",c:false,fb:'店员忍住没翻白眼。'},
+  ]},
+  {staff:'"For here or takeaway?"',mask:['For here','takeaway'],opts:[
+    {t:'Takeaway please',c:true,fb:'"Cool."'},
+    {t:'"For here please" 但你其实想外带',c:false,fb:'你不敢改口。'},
+    {t:'"Both?"',c:false,fb:'店员笑了:"Choose one, love."'},
+  ]},
+  {staff:'"That\'ll be 4.85, cash or card?"',mask:['4.85','cash or card'],opts:[
+    {t:'递卡',c:true,fb:'"Tap or insert?"'},
+    {t:'"Card... I think?"',c:false,fb:'店员等了 5 秒。'},
+    {t:'掏出现金',c:false,fb:'"Sorry love, we\'re cashless."'},
+  ]},
+  {staff:'"Would you like a paper bag? It\'s 10p."',mask:['paper bag','10p'],opts:[
+    {t:'"No thanks"',c:true,fb:'"Cheers."'},
+    {t:'点头不说话',c:false,fb:'"...is that a yes or a no?"'},
+    {t:'"What does that mean?"',c:false,fb:'店员耐心解释 30 秒。'},
+  ]},
+  {staff:'"Have a lovely day!"',mask:['lovely day'],opts:[
+    {t:'"You too!"',c:true,fb:'你接住了。这是你今天最自然的英语对话。'},
+    {t:'"Thanks"',c:false,fb:'没错但缺了点温度。'},
+    {t:'"Same to you!"',c:false,fb:'"Same to you" 也行,但有点僵。'},
+  ]},
+];
+function pretMaskRate(w,plays){return Math.max(0,Math.min(60,60-w*3-(plays||0)*8));}
+function applyMask(t,mask,rate){
+  if(!mask||rate<=0)return t;
+  let r=t;
+  mask.forEach(p=>{
+    if(Math.random()*100>rate)return;
+    const i=r.indexOf(p); if(i<0)return;
+    r=r.slice(0,i)+'█'.repeat(Math.max(2,p.length-1))+r.slice(i+p.length);
+  });
+  return r;
+}
+
+// ── Lecture · 字典 + 主题 ──
+const LECTURE_DICT = new Set([
+  // 3 letter (subset)
+  'AND','THE','FOR','YOU','ARE','BUT','NOT','HAVE','ONE','WAS','HER','HIS','OUT','ITS','OUR','HOW','WHO','OWN','OFF','PUT','SEA','SET','RAW','OWE','WIN','SUN','RUN','HUG','EGO','EYE','EAR','EAT','END','ERA','EVE','ICE','ICY','OLD','OWL','ODE','ODD','OAR','OWE','ORE',
+  'PEW','POW','PAW','PEA','PEN','PET','PIE','PIG','PIN','PIT','POD','POP','POT','PRO','PRY','PUB','PUG','PUN','PUP','PUT','REP','RIM','RIP','RIB','RID','RIG','ROB','ROD','ROT','ROW','RUB','RUE','RUG','RUM','RYE',
+  'SOB','SOD','SON','SOP','SOW','SOY','SPA','SPY','SUB','SUE','SUM','SUP','TAB','TAG','TAN','TAP','TAR','TAX','TEA','TEN','TIE','TIN','TIP','TOE','TOO','TOP','TOT','TOW','TOY','TRY','TUB','TUG','TWO',
+  'AGE','AID','AIR','AIM','ALL','ARM','ART','ASK','ATE','AWE','AXE','BAD','BAG','BAR','BAT','BAY','BED','BEE','BEG','BET','BID','BIG','BIN','BIT','BOW','BOX','BOY','BUD','BUG','BUN','BUS','BUT','BUY',
+  'CAB','CAR','CAT','COP','COW','CUB','CUE','CUP','CUT','DAY','DEN','DEW','DID','DIG','DIM','DIP','DOE','DOG','DOT','DRY','DUE','DUG','EAR','EAT','EGG','ELF','ELM',
+  // 4 letter (~150)
+  'POWER','GAZE','HAVE','BEEN','LIKE','TIME','YOUR','GOOD','LOOK','MAKE','TAKE','LIFE','HAND','WHAT','BACK','PART','MOVE','LIVE','SHOW','HEAR','PLAY','TURN','KIND','HELP','TALK','WORK','LOVE','FOOD','LATE','LONG','HARD','HIGH','OPEN','CALL','LEFT','BIRD','FACE','BLUE','TREE','LAKE','HOPE','STAR','FIRE','RIVER','GAME','BOOK','HOME','ROOM','DOOR','ROAD','TOWN','MIND','SOUL','HEAD','HAIR','EARS','EYES','NOSE','MILE','FOOT','HAND','SKIN','BONE','WING','TAIL','HORN','HOOF','HIDE','FLAG','BAND','SHIP','BOAT','PORT','RAFT','SAIL','MAST',
+  'GOD','GOT','GUM','GUN','GUT','GUY','GYM','HAD','HAM','HAS','HAT','HAY','HER','HEW','HEX','HEY','HID','HIM','HIP','HIS','HIT','HOG','HOP','HOT','HUB','HUE','HUG','HUM','HUT','ICE','ICY','ILK','ILL','IMP','INK','INN','ION','IRE','ITS','IVY','JAB','JAR','JAW','JAY','JET','JIB','JOB','JOG','JOT','JOY','JUG','JUT','KEG','KEY','KID','KIN','KIT','LAB','LAD','LAG','LAP','LAW','LAY','LED','LEG','LET','LID','LIE','LIP','LIT','LOB','LOG','LOT','LOW','MAD','MAN','MAP','MAR','MAT','MAY','MEN','MET','MID','MIX','MOB','MOM','MOO','MOP','MUD','MUG','MUM','NAB','NAG','NAP','NET','NEW','NIB','NIL','NIP','NIT','NOB','NOD','NOR','NOT','NOW','NUB','NUN','NUT','OAK','OAR','OAT',
+  // 4 lettered theme + common
+  'ACID','ACNE','ACRE','AGED','AIDE','AKIN','ALAS','ALSO','AMOK','ANTE','APEX','AREA','ARID','ARMS','ARMY','ARTS','ATOM','AUNT','AUTO','AWAY','AWRY','AXES','BABY','BACK','BAKE','BALD','BALE','BALM','BAND','BANE','BANG','BANK','BARB','BARD','BARE','BARK','BARN','BASE','BASH','BASK','BATH','BAYS','BEAD','BEAK','BEAM','BEAN','BEAR','BEAT','BEAU','BECK','BEDS','BEEF','BEEN','BEEP','BEER','BELL','BELT','BENT','BEST','BETS','BIAS','BIDE','BIKE','BILE','BILK','BILL','BIND','BIRD','BITE','BLED','BLEW','BLIP','BLOB','BLOC','BLOT','BLOW','BLUE','BLUR','BOAR','BOAT','BODY','BOIL','BOLD','BOLT','BOMB','BOND','BONE','BOOK','BOOM','BOON','BOOR','BOOT','BORE','BORN','BOSS','BOTH','BOUT','BOWL','BOYS','BRAG','BRAN','BRAS','BRAT','BRAY','BRED','BREW','BRIM','BROW','BUCK','BUFF','BUGS','BULB','BULK','BULL','BUMP','BUNK','BUOY','BURN','BURP','BURY','BUSH','BUST','BUSY','BUTT','BUZZ','CAFE','CAGE','CAKE','CALF','CALL','CALM','CAME','CAMP','CANE','CANT','CAPE','CAPS','CARD','CARE','CARP','CARS','CART','CASE','CASH','CASK','CAST','CATS','CAVE','CEDE','CELL','CENT','CHAP','CHAR','CHAT','CHEF','CHEW','CHIC','CHIN','CHIP','CHOP','CITE','CITY','CLAN','CLAP','CLAW','CLAY','CLEF','CLIP','CLOG','CLOP','CLOT','CLUB','CLUE','COAL','COAT','COAX','COBS','COCK','CODA','CODE','COIN','COKE','COLA','COLD','COLT','COMA','COMB','COME','CONE','COOK','COOL','COOP','COPE','COPY','CORD','CORE','CORK','CORN','COST','COVE','COWL','COWS','CRAB','CRAM','CRED','CREW','CRIB','CROP','CROW','CRUD','CUBS','CUFF','CULL','CULT','CURB','CURD','CURE','CURL','CUTE','CUTS','CYAN','CYST',
+  'FACE','FACT','FADE','FAIL','FAIR','FAKE','FALL','FAME','FANG','FARE','FARM','FAST','FATE','FAWN','FEAR','FEAT','FEED','FEEL','FELL','FELT','FERN','FEUD','FIFE','FILE','FILL','FILM','FIND','FINE','FINK','FINS','FIRE','FIRM','FISH','FIST','FIVE','FLAG','FLAP','FLAT','FLAX','FLEA','FLED','FLEE','FLEW','FLEX','FLIP','FLOP','FLOW','FOAL','FOAM','FOLD','FOLK','FOND','FONT','FOOD','FOOL','FOOT','FORD','FORE','FORK','FORM','FORT','FOUL','FOUR','FOWL','FRAY','FREE','FRET','FROG','FROM','FUEL','FULL','FUME','FUND','FUSE','FUSS','FUZZ','GAGE','GAIN','GAIT','GALA','GALE','GALL','GAME','GANG','GAPE','GARB','GASH','GASP','GATE','GAVE','GAZE','GEAR','GENE','GERM','GIFT','GILL','GIRL','GIVE','GLAD','GLEE','GLEN','GLOW','GLUE','GLUM','GNAT','GNAW','GOAD','GOAL','GOAT','GODS','GOLD','GOLF','GONE','GONG','GOOD','GORE','GOWN','GRAB','GRAD','GRAM','GRAY','GREW','GRID','GRIM','GRIN','GRIP','GRIT','GROG','GROW','GRUB','GULF','GULL','GULP','GUNS','GURU','GUSH','GUST','GUTS','GUYS','GYMS','HACK','HAIL','HAIR','HALE','HALF','HALL','HALT','HAND','HANG','HARD','HARE','HARK','HARM','HARP','HASH','HASP','HATE','HAUL','HAVE','HAWK','HAZE','HEAD','HEAL','HEAP','HEAR','HEAT','HEED','HEEL','HEIR','HELD','HELL','HELM','HELP','HEMP','HERD','HERE','HERO','HERS','HIDE','HIGH','HIKE','HILL','HILT','HIND','HINT','HIRE','HIVE','HOAX','HOCK','HOES','HOGS','HOLD','HOLE','HOLY','HOME','HONE','HOOD','HOOF','HOOK','HOOP','HOOT','HOPE','HORN','HOSE','HOST','HOUR','HOWL','HUFF','HUGE','HULK','HULL','HUMP','HUNG','HUNK','HUNT','HURL','HURT','HUSH','HUSK','HYMN','HYPE',
+  // 5-7 letter common
+  'POWER','GAZER','GROUP','FIELD','CLASS','TASTE','NORMS','EMPIRE','OTHER','VOICE','SPEAK','RACE','BRITISH','POPULAR','THEORY','ESSAY','READING','LECTURE','PAPER','GROUND','ABOUT','AFTER','AGAIN','BEING','LIGHT','MIGHT','PLACE','RIGHT','SOUND','THING','THINK','WATER','WORLD','WOULD','WRITE','OFTEN','UNDER','HEART','POINT','ALONE','UNTIL','WHILE','HOUSE','BUILD','PHONE','MUSIC','PARTY','HORSE','HONEY','SOLAR','TIGER','RIVER','FOUND','BLOCK','BLACK','BREAD','GREEN','GREAT','HORROR','MEMORY','BORDER','MOTHER','FATHER','FRIEND','HAPPEN','HUSBAND','SISTER','BROTHER','MOMENT','ATTACK','ANIMAL','BEAUTY','BRIDGE','BUTTER','DANCER','DOCTOR','EUROPE','FAMILY','FELLOW','FINISH','FRENCH','GARDEN','HEALTH','LEAGUE','MEMBER','METHOD','MIDDLE','MINUTE','MORNING','MOTHER','NATION','NATURE','NUMBER','OFFICE','ORANGE','PALACE','PEOPLE','PERSON','POLICY','PRINCE','PRIVATE','REASON','SCHOOL','SECOND','SECRET','SEEMED','SILVER','SIMPLE','SUMMER','SUNDAY','SUPPLY','SYSTEM','TICKET','UNIQUE','WINTER','WONDER','YOUNG',
+  // Theme keywords (Foucault era)
+  'POWER','GAZE','PRISON','DISCIPLINE','PANOPTICON','SURVEILLANCE','BIOPOWER','DOCILE','SUBJECT','REGIME','FOUCAULT','BODY','NORM','GOVERN',
+  // Common with theme letters
+  'PORE','POSE','PROD','PRAY','PRINT','PROUD','LANE','LAND','LARGE','LATTER','LOWER','BORN','BORE','GONE','GORE','RICE','ROCK','RODE','ROPE','LIFE','LIVE','LIPS','LISP','LIST','RING','RANK','RANG','RAGE','RAID','RAIN','RAGE','RAW','REAL','READ','REIN','LION',
+]);
+const LECTURE_THEME = { name:'Foucault · Power & Gaze', bonus:['POWER','GAZE','PRISON','DOCILE','REGIME','BODY','FOUCAULT','SUBJECT'], bias:'POWERGAZEFOUCAULTDISCIPLINE' };
+function makeGrid(){
+  const grid=[]; const bias=LECTURE_THEME.bias;
+  const common='ETAONIRSHDLUCMFGYPWBVKJXQZ';
+  for(let r=0;r<10;r++){
+    const row=[];
+    for(let c=0;c<10;c++){
+      const center = r>=2&&r<=6&&c>=2&&c<=7;
+      let ch;
+      if(center && Math.random()<0.55){
+        ch = bias[Math.floor(Math.random()*bias.length)];
+      } else {
+        const idx = Math.floor(Math.pow(Math.random(),1.5)*common.length);
+        ch = common[idx];
+      }
+      row.push(ch);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+function scoreLecture(word){
+  const len=word.length; let base=0;
+  if(len===3) base=1; else if(len===4) base=2; else if(len===5) base=4; else if(len===6) base=7; else if(len>=7) base=12;
+  const bonus = LECTURE_THEME.bonus.includes(word);
+  return { points: bonus?base*2:base, bonus };
+}
+
+// ── Essay puzzles (1 demo) ──
+const ESSAY_PUZZLE = {
+  context:'论文段落 · 文献综述',
+  paragraph:'Bourdieu\'s concept of habitus has been widely used in studies of migration. ___ However, recent scholarship has questioned its applicability to digitally connected migrants.',
+  opts:[
+    {t:'It captures how dispositions are shaped by social structures.',c:true,fb:'✓ 用一句话精准定义概念,再引出反驳。研究生水平。'},
+    {t:'Many people have written about it.',c:false,fb:'✗ 完全空洞。'},
+    {t:"It's a complicated theory.",c:false,fb:'✗ "complicated" 是描述,不是论证。'},
+    {t:'Bourdieu was a French sociologist.',c:false,fb:'✗ 这是百科信息,不是文献综述。'},
+  ],
+};
+
+// ── Match (demo) ──
+const MATCH_THEORISTS = [
+  { id:'foucault', name:'Foucault', concepts:['discipline','panopticon'] },
+  { id:'bourdieu', name:'Bourdieu', concepts:['habitus','cultural_capital'] },
+  { id:'butler', name:'Butler', concepts:['performativity'] },
+  { id:'said', name:'Said', concepts:['orientalism'] },
+];
+const MATCH_CONCEPTS = {
+  discipline:{label:'Discipline',desc:'规训'},
+  panopticon:{label:'Panopticon',desc:'全景监狱'},
+  habitus:{label:'Habitus',desc:'惯习'},
+  cultural_capital:{label:'Cultural Capital',desc:'文化资本'},
+  performativity:{label:'Performativity',desc:'操演性'},
+  orientalism:{label:'Orientalism',desc:'东方主义'},
+};
+
+// ── Design brief (demo) ──
+const DESIGN_BRIEF = {
+  client:{name:'小芳',emoji:'🍡',desc:'糖水铺主理人 · 30 岁'},
+  subject:'糖水铺七夕 IG post',
+  brief:'"我那个糖水铺子要做七夕的 IG post,要那种治愈系小红书爆款感哎 ❤️ 颜色要温柔一点,不要太甜了显得 cheap,但也不要太暗显得 sad。预算 £60 谢谢～"',
+  steps:[
+    {q:'她真正要的是?',opts:[
+      {t:'"七夕 + 温馨家庭感的氛围照"',c:true,why:'七夕 + 糖水铺 = 情侣聚餐的怀旧感'},
+      {t:'"促销折扣大字 + 优惠码"',c:false,why:'她没说要 sale'},
+      {t:'"恋爱情侣亲密照"',c:false,why:'太露骨,算法会限流'},
+      {t:'"产品 close-up + 价格清单"',c:false,why:'她说"治愈感"不是 menu 卡'},
+    ]},
+    {q:'选 mood',opts:[
+      {t:'温暖怀旧',c:true,why:'"治愈" 中文等于这种暖怀旧'},
+      {t:'明亮俏皮',c:false,why:'太跳'},
+      {t:'冷静编辑级',c:false,why:'太暗'},
+      {t:'叛逆撞色',c:false,why:'完全错向'},
+    ]},
+    {q:'配色',opts:[
+      {t:'柔奶咖',swatch:['#f5e6d3','#d4a574','#a67c52','#5a4332'],c:true,why:'温柔 + 复古 + 不甜不暗'},
+      {t:'Y2K Pop',swatch:['#ff6bb5','#ffe156','#56d8ff','#a070ff'],c:false,why:'cheap'},
+      {t:'深夜黑金',swatch:['#1a1612','#3a3028','#d4b070','#8b7355'],c:false,why:'太暗 cocktail bar'},
+      {t:'薄荷渐变',swatch:['#d4f4dd','#86d4a6','#54a87b','#2d6448'],c:false,why:'不是七夕 vibe'},
+    ]},
+    {q:'格式',opts:[
+      {t:'小红书 3:4 竖图',c:true,why:'小红书主战场'},
+      {t:'IG 1:1 方图',c:false,why:'她说小红书'},
+      {t:'横幅 banner',c:false,why:'小红书裁剪'},
+      {t:'完整 brand kit',c:false,why:'over-scope'},
+    ]},
+  ],
+};
+</script>
+
+<!-- ════════════════ 1. Yellow Label ════════════════ -->
+<section id="yellow">
+  <h2>1. 抢黄标 · 记忆挑战</h2>
+  <div class="meta">peek → 翻面 → 洗牌 → 选黄标 · 难度按 week</div>
+  <div class="card" id="yl-card">
+    <div class="label-mg">MINIGAME</div>
+    <h3>🛒 抢黄标</h3>
+    <div class="quiz-meta" id="yl-meta">点开始</div>
+    <div id="yl-stage"></div>
+  </div>
+</section>
+
+<script>
+function ylInit(){
+  YL_STATE = null;
+  const cfg = ylConfig(GLOBAL_WEEK);
+  document.getElementById('yl-meta').textContent = `Week ${GLOBAL_WEEK} · ${cfg.cards} 牌 / ${cfg.yc} 黄标 / 洗 ${cfg.shuffles} 次`;
+  const stage = document.getElementById('yl-stage');
+  stage.innerHTML = `
+    <div style="font-size:13px; opacity:0.85; line-height:1.7; margin-bottom:12px;">
+      看 ${cfg.peekMs/1000}s 记 ${cfg.yc} 个黄标位置 → 翻面 + 洗 ${cfg.shuffles} 次 → 点出哪几张原本是黄标。错抢扣 1.5× 价。
+    </div>
+    <button class="btn-primary" onclick="ylStart()">开始</button>
+  `;
+}
+let YL_STATE = null;
+function ylStart(){
+  const cfg = ylConfig(GLOBAL_WEEK);
+  const cols = cfg.cards<=4?2:cfg.cards===6?3:4;
+  const shuffled = [...YL_ITEMS].sort(()=>Math.random()-0.5).slice(0,cfg.cards);
+  const yIdx = new Set();
+  while(yIdx.size<cfg.yc) yIdx.add(Math.floor(Math.random()*cfg.cards));
+  const items = shuffled.map((it,i)=>({...it,id:i,yellow:yIdx.has(i)}));
+  YL_STATE = { cfg, cols, items, positions:items.map((_,i)=>i), phase:'peek', picked:new Set(), sCount:0 };
+  ylBuildOnce();   // ✨ 只建一次 DOM
+  ylUpdate();      // 然后只更新 transform + class
+  setTimeout(ylFlip, cfg.peekMs);
+}
+function ylFlip(){
+  YL_STATE.phase='shuffle';
+  ylUpdate();
+  setTimeout(ylShuffle, 400);
+}
+function ylShuffle(){
+  if(YL_STATE.sCount >= YL_STATE.cfg.shuffles){
+    YL_STATE.phase='pick'; ylUpdate(); return;
+  }
+  const p=[...YL_STATE.positions];
+  const a=Math.floor(Math.random()*p.length); let b=Math.floor(Math.random()*p.length);
+  while(b===a) b=Math.floor(Math.random()*p.length);
+  [p[a],p[b]]=[p[b],p[a]];
+  YL_STATE.positions=p; YL_STATE.sCount++; ylUpdate();   // ✨ 改 transform 触发动画
+  setTimeout(ylShuffle, YL_STATE.cfg.sMs);
+}
+function ylTapItem(idx){
+  if(!YL_STATE || YL_STATE.phase!=='pick') return;
+  if(YL_STATE.picked.has(idx)) YL_STATE.picked.delete(idx);
+  else YL_STATE.picked.add(idx);
+  ylUpdate();
+}
+function ylSubmit(){
+  YL_STATE.phase='done';
+  ylUpdate();
+}
+// 几何:固定 container 320px,gap 8px,cellSize 按 cols 算
+const YL_GRID_W = 320;
+const YL_GAP = 8;
+
+// ✨ Build once · 创建所有卡片 DOM (一次性,不再删除重建)
+function ylBuildOnce(){
+  const {cfg,cols,items} = YL_STATE;
+  const rows = Math.ceil(cfg.cards/cols);
+  const cellSize = (YL_GRID_W - (cols-1)*YL_GAP) / cols;
+  const gridH = rows*cellSize + (rows-1)*YL_GAP;
+  YL_STATE.cellSize = cellSize;
+
+  const stage = document.getElementById('yl-stage');
+  stage.innerHTML = `
+    <div id="yl-header" style="display:flex;justify-content:space-between;margin-bottom:10px;font-family:monospace;font-size:12px;align-items:center;">
+      <span id="yl-info"></span>
+      <span id="yl-action"></span>
+    </div>
+    <div class="yl-grid" id="yl-grid" style="height:${gridH}px;"></div>
+    <div id="yl-result"></div>
+  `;
+  const grid = document.getElementById('yl-grid');
+  // 每个 item 一个 button — key 不变,后续只改 transform/class
+  items.forEach((it, itemIdx) => {
+    const btn = document.createElement('button');
+    btn.className = 'yl-cell';
+    btn.style.cssText = `width:${cellSize}px;height:${cellSize}px;`;
+    btn.dataset.item = itemIdx;
+    btn.onclick = () => ylTapItem(itemIdx);
+    btn.innerHTML = `
+      ${it.yellow ? `<div class="yt">£${it.price}</div>`:''}
+      <div class="emoji">${it.emoji}</div>
+      <div class="name">${it.name}</div>
+      <div class="face" style="position:absolute;inset:0;align-items:center;justify-content:center;font-size:30px;color:#5a8aa8;display:none;">?</div>
+    `;
+    grid.appendChild(btn);
+  });
+}
+
+// ✨ Update · 只改 transform / class / header 信息,DOM 节点不动 → 触发 CSS transition
+function ylUpdate(){
+  const {cfg,cols,items,positions,phase,picked,sCount,cellSize} = YL_STATE;
+  // header info
+  const info = document.getElementById('yl-info');
+  const action = document.getElementById('yl-action');
+  if(info){
+    if(phase==='peek') info.textContent = `👀 记住 · ${cfg.yc} 黄标 (${cfg.peekMs/1000}s)`;
+    else if(phase==='shuffle') info.textContent = `🌀 洗牌 ${sCount}/${cfg.shuffles}`;
+    else if(phase==='pick') info.textContent = `选 ${cfg.yc} 张 · 已选 ${picked.size}`;
+    else info.textContent = '结果';
+  }
+  if(action){
+    action.innerHTML = phase==='pick'
+      ? `<button class="small-btn" ${picked.size===0?'disabled':''} onclick="ylSubmit()" style="color:#a0c890;border-color:#a0c890;">确认</button>`
+      : '';
+  }
+
+  // item slot 映射
+  const itemSlot = {};
+  positions.forEach((itemIdx, slot) => { itemSlot[itemIdx] = slot; });
+
+  // 更新每个 button 的 transform + class + face
+  items.forEach((it, itemIdx) => {
+    const btn = document.querySelector(`.yl-cell[data-item="${itemIdx}"]`);
+    if(!btn) return;
+    const slot = itemSlot[itemIdx];
+    const r = Math.floor(slot/cols);
+    const c = slot%cols;
+    const x = c*(cellSize+YL_GAP);
+    const y = r*(cellSize+YL_GAP);
+    btn.style.transition = `transform ${cfg.sMs}ms cubic-bezier(.7,.1,.2,1), background 200ms, border-color 200ms, box-shadow 200ms`;
+    btn.style.transform = `translate(${x}px, ${y}px)`;
+
+    const faceUp = phase==='peek' || phase==='done';
+    const isPicked = picked.has(itemIdx);
+    btn.className = 'yl-cell' + (!faceUp?' back':'') + (isPicked?' picked':'')
+      + (phase==='done' && it.yellow && isPicked ? ' correct' : '')
+      + (phase==='done' && !it.yellow && isPicked ? ' wrong' : '')
+      + (phase==='done' && it.yellow && !isPicked ? ' miss' : '');
+    btn.disabled = phase !== 'pick';
+
+    // 切换 face 显示
+    const emoji = btn.querySelector('.emoji');
+    const name = btn.querySelector('.name');
+    const yt = btn.querySelector('.yt');
+    const face = btn.querySelector('.face');
+    if(emoji) emoji.style.display = faceUp ? '' : 'none';
+    if(name) name.style.display = faceUp ? '' : 'none';
+    if(yt) yt.style.display = (phase==='peek' || phase==='done') ? '' : 'none';
+    if(face) face.style.display = faceUp ? 'none' : 'flex';
+  });
+
+  // 结果区
+  const result = document.getElementById('yl-result');
+  if(result){
+    if(phase==='done'){
+      const correct = [...picked].filter(i=>items[i].yellow).length;
+      const wrong = [...picked].filter(i=>!items[i].yellow).length;
+      const missed = items.filter((it,i)=>it.yellow && !picked.has(i)).length;
+      const ok = correct===cfg.yc && wrong===0;
+      const txt = ok ? `🎯 全中 ${correct}/${cfg.yc} · 0 误判!` : `✓ ${correct}/${cfg.yc} · ✗ 错抢 ${wrong} · ? 漏 ${missed}`;
+      result.innerHTML = `<div class="feedback ${ok?'fb-ok':'fb-bad'}" style="margin-top:10px;">${txt}</div><button class="btn-primary" onclick="ylInit()">再来一次</button>`;
+    } else {
+      result.innerHTML = '';
+    }
+  }
+}
+ylInit();
+</script>
+
+<hr/>
+
+<!-- ════════════════ 2. Pret ════════════════ -->
+<section id="pret">
+  <h2>2. Pret 点餐 · 听力 + 马赛克</h2>
+  <div class="meta">滑动 "听力" 滑条实时调节马赛克量</div>
+  <div class="card">
+    <div class="label-mg">☕ MINIGAME</div>
+    <h3>Pret 点餐</h3>
+    <div class="quiz-meta">5 句对话 · 听力越低马赛克越多</div>
+    <div class="listening-bar">
+      <span>听力</span>
+      <input type="range" id="pret-mask" min="0" max="60" value="30" oninput="pretRender()" />
+      <span id="pret-mask-val">70%</span>
+    </div>
+    <div id="pret-stage"></div>
+  </div>
+</section>
+
+<script>
+let PRET_STATE = { qIdx:0, answers:[], showFb:null };
+function pretRender(){
+  const mr = parseInt(document.getElementById('pret-mask').value);
+  document.getElementById('pret-mask-val').textContent = `${100-mr}%`;
+  const stage = document.getElementById('pret-stage');
+  if(PRET_STATE.qIdx >= PRET_QS.length){
+    const correct = PRET_STATE.answers.filter(a=>a).length;
+    stage.innerHTML = `<div style="text-align:center;margin:20px 0;">
+      <div style="font-family:monospace;font-size:11px;opacity:0.6;">SCORE</div>
+      <div style="font-size:40px;font-family:monospace;color:${correct>=4?'#a0c890':'#d4b070'};">${correct}/5</div>
+    </div><button class="btn-primary" onclick="PRET_STATE={qIdx:0,answers:[],showFb:null};pretRender()">再来</button>`;
+    return;
+  }
+  const q = PRET_QS[PRET_STATE.qIdx];
+  if(PRET_STATE.showFb){
+    const fb = PRET_STATE.showFb;
+    stage.innerHTML = `<div class="feedback ${fb.c?'fb-ok':'fb-bad'}">${fb.c?'✓ ':'✗ '}${fb.fb}</div>
+      <button class="btn-primary" onclick="pretNext()">${PRET_STATE.qIdx+1<PRET_QS.length?'NEXT':'看结果'}</button>`;
+    return;
+  }
+  const masked = applyMask(q.staff, q.mask, mr);
+  let html = `<div style="font-family:monospace;font-size:11px;opacity:0.6;margin-bottom:6px;">第 ${PRET_STATE.qIdx+1}/5 句</div>`;
+  html += `<div class="quote"><span class="role">店员:</span><span style="font-family:monospace;letter-spacing:0.02em;">${masked}</span></div>`;
+  q.opts.forEach((o,i)=>{
+    html += `<button class="btn" onclick="pretAns(${i})">${o.t}</button>`;
+  });
+  stage.innerHTML = html;
+}
+function pretAns(i){
+  const q = PRET_QS[PRET_STATE.qIdx];
+  const opt = q.opts[i];
+  PRET_STATE.answers.push(opt.c);
+  PRET_STATE.showFb = opt;
+  pretRender();
+}
+function pretNext(){
+  PRET_STATE.showFb=null;
+  PRET_STATE.qIdx++;
+  pretRender();
+}
+pretRender();
+</script>
+
+<hr/>
+
+<!-- ════════════════ 3. Lecture ════════════════ -->
+<section id="lecture">
+  <h2>3. 上课字母连词 · 10×10</h2>
+  <div class="meta">点相邻字母 (横/竖/斜) 连词 · 主题 Foucault · 60s</div>
+  <div class="card">
+    <div class="label-mg">📖 MINIGAME · LECTURE</div>
+    <h3 id="lec-theme">Foucault · Power & Gaze</h3>
+    <div class="quiz-meta">字母连词 · 60s · 撞主题 ★ 翻倍</div>
+    <div id="lec-stage"></div>
+  </div>
+</section>
+
+<script>
+let LEC = null;
+function lecInit(){
+  LEC = { grid:makeGrid(), path:[], used:new Set(), found:[], score:0, time:60, fb:null, timer:null, phase:'intro' };
+  lecRender();
+}
+function lecStart(){
+  LEC.phase='play';
+  LEC.timer = setInterval(()=>{
+    LEC.time--;
+    if(LEC.time<=0){ clearInterval(LEC.timer); LEC.phase='done'; }
+    lecRender();
+  },1000);
+  lecRender();
+}
+function lecTap(r,c){
+  if(LEC.phase!=='play') return;
+  const last = LEC.path[LEC.path.length-1];
+  const prev = LEC.path[LEC.path.length-2];
+  if(prev && prev.r===r && prev.c===c){ LEC.path.pop(); lecRender(); return; }
+  if(LEC.path.some(p=>p.r===r&&p.c===c)) return;
+  if(LEC.path.length===0 || (Math.abs(last.r-r)<=1 && Math.abs(last.c-c)<=1)){
+    LEC.path.push({r,c});
+    lecRender();
+  }
+}
+function lecClear(){LEC.path=[];lecRender();}
+function lecSubmit(){
+  if(LEC.path.length<3){ LEC.fb={txt:'太短了 (≥3 字母)',bad:true}; lecRender(); return; }
+  const w = LEC.path.map(p=>LEC.grid[p.r][p.c]).join('');
+  if(LEC.found.some(f=>f.word===w)){ LEC.fb={txt:w+' 已连过了',bad:true}; LEC.path=[]; lecRender(); return; }
+  if(!LECTURE_DICT.has(w)){ LEC.fb={txt:w+' 不是英文词',bad:true}; LEC.path=[]; lecRender(); return; }
+  const s = scoreLecture(w);
+  LEC.found.push({word:w,points:s.points,bonus:s.bonus});
+  LEC.score += s.points;
+  LEC.path.forEach(p=>LEC.used.add(`${p.r}:${p.c}`));
+  LEC.fb={txt:`${w} · +${s.points}${s.bonus?' ★':''}`,bad:false};
+  LEC.path=[];
+  lecRender();
+}
+function lecFinish(){
+  clearInterval(LEC.timer);
+  LEC.phase='done';
+  lecRender();
+}
+function lecRender(){
+  const s = document.getElementById('lec-stage');
+  if(LEC.phase==='intro'){
+    s.innerHTML = `<div style="font-size:13px;opacity:0.85;line-height:1.7;margin-bottom:12px;">
+      点相邻字母 (横/竖/斜) 连英文单词。3+ 字母才算分。撞 POWER/GAZE/FOUCAULT 等主题词 ★ 翻倍。
+    </div><button class="btn-primary" onclick="lecStart()">开始 (60s)</button>`;
+    return;
+  }
+  if(LEC.phase==='done'){
+    s.innerHTML = `<div style="text-align:center;margin:20px 0;">
+      <div style="font-family:monospace;font-size:11px;opacity:0.6;">FINAL</div>
+      <div style="font-size:42px;font-family:monospace;color:${LEC.score>=25?'#a0c890':LEC.score>=8?'#d4b070':'#c86060'};">${LEC.score}</div>
+      <div style="font-size:11px;opacity:0.6;">${LEC.found.length} 词 · ${LEC.found.filter(f=>f.bonus).length} ★</div>
+    </div><button class="btn-primary" onclick="lecInit()">再来</button>`;
+    return;
+  }
+  const curr = LEC.path.map(p=>LEC.grid[p.r][p.c]).join('');
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-family:monospace;font-size:12px;">
+    <span>分数 <span style="color:#a0c890">${LEC.score}</span></span>
+    <span>已连 ${LEC.found.length}</span>
+    <span>⏱ <span style="color:${LEC.time<=15?'#c86060':'#e8e0d0'}">${LEC.time}s</span></span>
+  </div>`;
+  html += `<div class="current-word">${curr || '<span style="opacity:0.3;font-style:italic;font-size:11px;">点字母开始</span>'}</div>`;
+  html += '<div class="letter-grid">';
+  LEC.grid.forEach((row,r)=>row.forEach((ch,c)=>{
+    const k=`${r}:${c}`;
+    const inPath=LEC.path.some(p=>p.r===r&&p.c===c);
+    const used=LEC.used.has(k);
+    const cls='letter-cell'+(inPath?' path':'')+(used&&!inPath?' used':'');
+    html += `<button class="${cls}" onclick="lecTap(${r},${c})">${ch}</button>`;
+  }));
+  html += '</div>';
+  html += `<div style="display:flex;gap:8px;margin:8px 0;">
+    <button class="small-btn" onclick="lecClear()" style="flex:1;" ${LEC.path.length===0?'disabled':''}>清空</button>
+    <button class="small-btn" onclick="lecSubmit()" style="flex:1;border-color:#a0c890;color:#a0c890;" ${LEC.path.length<3?'disabled':''}>连!</button>
+  </div>`;
+  if(LEC.fb) html += `<div class="feedback ${LEC.fb.bad?'fb-bad':'fb-ok'}" style="font-size:12px;padding:4px 10px;">${LEC.fb.txt}</div>`;
+  if(LEC.found.length){
+    html += '<div class="found-words">';
+    LEC.found.forEach(f=>{
+      html += `<span class="found-word${f.bonus?' bonus':''}">${f.word}<span style="opacity:0.6;margin-left:3px;">+${f.points}${f.bonus?'★':''}</span></span>`;
+    });
+    html += '</div>';
+  }
+  html += `<button class="small-btn" onclick="lecFinish()" style="width:100%;margin-top:8px;opacity:0.6;">交卷</button>`;
+  s.innerHTML = html;
+}
+lecInit();
+</script>
+
+<hr/>
+
+<!-- ════════════════ 4. Essay ════════════════ -->
+<section id="essay">
+  <h2>4. 写论文 · 句子填空</h2>
+  <div class="meta">为段落选最学术的连接句</div>
+  <div class="card">
+    <div class="label-mg" style="color:#9080b8;">📝 MINIGAME</div>
+    <h3>写论文</h3>
+    <div class="quiz-meta">填入最合适的句子</div>
+    <div id="essay-stage"></div>
+  </div>
+</section>
+
+<script>
+let ESSAY_FB = null;
+function essayRender(){
+  const s = document.getElementById('essay-stage');
+  if(ESSAY_FB){
+    s.innerHTML = `<div class="feedback ${ESSAY_FB.c?'fb-ok':'fb-bad'}">${ESSAY_FB.fb}</div>
+      <button class="btn-primary" onclick="ESSAY_FB=null;essayRender();">再来一题</button>`;
+    return;
+  }
+  let html = `<div style="font-family:monospace;font-size:10px;letter-spacing:0.2em;opacity:0.6;margin-bottom:6px;">${ESSAY_PUZZLE.context}</div>`;
+  html += `<div class="essay-para">${ESSAY_PUZZLE.paragraph.replace('___','<span class="blank">?</span>')}</div>`;
+  ESSAY_PUZZLE.opts.forEach((o,i)=>{
+    html += `<button class="btn" onclick="essayPick(${i})">${o.t}</button>`;
+  });
+  s.innerHTML = html;
+}
+function essayPick(i){ ESSAY_FB = ESSAY_PUZZLE.opts[i]; essayRender(); }
+essayRender();
+</script>
+
+<hr/>
+
+<!-- ════════════════ 5. Match ════════════════ -->
+<section id="match">
+  <h2>5. 理论家 / 概念匹配</h2>
+  <div class="meta">先点概念再点理论家配对</div>
+  <div class="card">
+    <div class="label-mg" style="color:#a0a0c8;">🎴 MINIGAME</div>
+    <h3>理论家与概念</h3>
+    <div class="quiz-meta">把概念匹配到对的人</div>
+    <div id="match-stage"></div>
+  </div>
+</section>
+
+<script>
+let MATCH = { matched:{}, sel:null, done:false };
+function matchInit(){ MATCH={matched:{},sel:null,done:false}; matchRender(); }
+function matchSel(c){ if(MATCH.matched[c]) return; MATCH.sel=c; matchRender(); }
+function matchPair(t){
+  if(!MATCH.sel) return;
+  MATCH.matched[MATCH.sel]=t;
+  MATCH.sel=null;
+  if(Object.keys(MATCH.matched).length===Object.keys(MATCH_CONCEPTS).length){
+    setTimeout(()=>{MATCH.done=true;matchRender();},300);
+  }
+  matchRender();
+}
+function matchRender(){
+  const s = document.getElementById('match-stage');
+  if(MATCH.done){
+    let correct=0;
+    Object.entries(MATCH.matched).forEach(([cid,tid])=>{
+      const t = MATCH_THEORISTS.find(t=>t.id===tid);
+      if(t && t.concepts.includes(cid)) correct++;
+    });
+    let html = `<div style="text-align:center;margin:12px 0;"><div style="font-family:monospace;font-size:11px;opacity:0.6;">SCORE</div><div style="font-size:32px;font-family:monospace;">${correct}/${Object.keys(MATCH_CONCEPTS).length}</div></div>`;
+    Object.entries(MATCH.matched).forEach(([cid,tid])=>{
+      const t = MATCH_THEORISTS.find(t=>t.id===tid);
+      const ok = t&&t.concepts.includes(cid);
+      html += `<div style="font-size:11px;opacity:${ok?0.9:0.6};">${ok?'✓':'✗'} ${MATCH_CONCEPTS[cid].label} → ${t.name}</div>`;
+    });
+    html += `<button class="btn-primary" onclick="matchInit()">再来</button>`;
+    s.innerHTML = html;
+    return;
+  }
+  let html = `<div style="font-family:monospace;font-size:11px;opacity:0.6;margin-bottom:6px;">${MATCH.sel?'选一个理论家 →':'选一个概念 →'}</div>`;
+  html += '<div class="grid-2">';
+  Object.entries(MATCH_CONCEPTS).forEach(([cid,c])=>{
+    const cls='concept-tile'+(MATCH.matched[cid]?' matched':'')+(MATCH.sel===cid?' selected':'');
+    html += `<div class="${cls}" onclick="matchSel('${cid}')">${c.label}<div class="concept-desc">${c.desc}</div></div>`;
+  });
+  html += '</div>';
+  html += `<div style="border-top:1px solid rgba(232,224,208,0.2);padding-top:10px;"><div style="font-family:monospace;font-size:11px;opacity:0.6;margin-bottom:6px;">理论家</div><div class="grid-2">`;
+  MATCH_THEORISTS.forEach(t=>{
+    const matchedTo = Object.entries(MATCH.matched).filter(([_,tid])=>tid===t.id).map(([cid])=>cid);
+    const cls = 'theorist-tile'+(!MATCH.sel?' disabled':'');
+    html += `<div class="${cls}" onclick="matchPair('${t.id}')"><div style="font-weight:500;">${t.name}</div>${matchedTo.length?`<div class="concept-desc">${matchedTo.map(c=>MATCH_CONCEPTS[c].label).join(', ')}</div>`:''}</div>`;
+  });
+  html += '</div></div>';
+  s.innerHTML = html;
+}
+matchInit();
+</script>
+
+<hr/>
+
+<!-- ════════════════ 6. Design Brief ════════════════ -->
+<section id="brief">
+  <h2>6. AI 设计 · 客户简介解码</h2>
+  <div class="meta">4 步:意图 / mood / 配色 / 格式</div>
+  <div class="card" style="border-color:rgba(122,138,106,0.4);">
+    <div class="label-mg" style="color:#7a8a6a;">🎨 MINIGAME · BRIEF</div>
+    <h3>${DESIGN_BRIEF.subject}</h3>
+    <div class="quiz-meta">解码客户 · 4 步</div>
+    <div id="brief-stage"></div>
+  </div>
+</section>
+
+<script>
+document.querySelector('#brief h3').textContent = DESIGN_BRIEF.subject;
+let BR = { step:0, answers:[], fb:null, done:false };
+function brInit(){ BR={step:0,answers:[],fb:null,done:false}; brRender(); }
+function brPick(i){
+  const o = DESIGN_BRIEF.steps[BR.step].opts[i];
+  BR.answers.push(o.c);
+  BR.fb=o;
+  brRender();
+}
+function brNext(){
+  BR.fb=null;
+  if(BR.step+1<4) BR.step++;
+  else BR.done=true;
+  brRender();
+}
+function brRender(){
+  const s = document.getElementById('brief-stage');
+  const c = DESIGN_BRIEF.client;
+  let html = `<div class="brief-card"><div class="brief-from"><div class="brief-avatar">${c.emoji}</div>${c.name} · ${c.desc}</div><div style="font-style:italic;opacity:0.9;">${DESIGN_BRIEF.brief}</div></div>`;
+  html += '<div class="step-dots">';
+  for(let i=0;i<4;i++){
+    const cls='step-dot'+(i<BR.step?(BR.answers[i]?' done-ok':' done-bad'):'')+(i===BR.step&&!BR.fb&&!BR.done?' active':'');
+    html += `<div class="${cls}"></div>`;
+  }
+  html += '</div>';
+  if(BR.done){
+    const correct = BR.answers.filter(a=>a).length;
+    const stars = correct===4?5:correct===3?4:correct===2?3:correct===1?2:1;
+    html += `<div style="text-align:center;margin:12px 0;"><div style="font-family:monospace;font-size:11px;opacity:0.6;">CLIENT RATING</div><div style="font-size:30px;color:#d4b070;">${'⭐'.repeat(stars)}</div><div style="font-size:11px;opacity:0.6;">${correct}/4 答对</div></div>`;
+    html += `<button class="btn-primary" onclick="brInit()">再来</button>`;
+    s.innerHTML=html; return;
+  }
+  if(BR.fb){
+    html += `<div class="feedback ${BR.fb.c?'fb-ok':'fb-bad'}">${BR.fb.c?'✓ ':'✗ '}${BR.fb.why}</div><button class="btn-primary" onclick="brNext()">${BR.step<3?'NEXT →':'看评分'}</button>`;
+    s.innerHTML=html; return;
+  }
+  const step = DESIGN_BRIEF.steps[BR.step];
+  html += `<div style="font-family:monospace;font-size:11px;color:#7a8a6a;margin-bottom:10px;">第 ${BR.step+1}/4 步 · ${step.q}</div>`;
+  step.opts.forEach((o,i)=>{
+    let extra='';
+    if(o.swatch){
+      extra = '<div class="swatch-row">'+o.swatch.map(c=>`<div class="swatch" style="background:${c};"></div>`).join('')+'</div>';
+    }
+    html += `<button class="btn" onclick="brPick(${i})">${o.t}${extra}</button>`;
+  });
+  s.innerHTML=html;
+}
+brInit();
+</script>
+
+<hr/>
+
+<p style="text-align:center;opacity:0.4;font-size:11px;margin-top:50px;">异乡 · Minigame 试玩 · 2026</p>
+
+</body>
+</html>
