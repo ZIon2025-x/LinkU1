@@ -290,6 +290,9 @@ RATE_LIMITS = {
     
     # 消息相关（已在上面定义，这里移除重复）
     "upload_file": {"limit": 5, "window": 60},  # 5次/分钟
+    # 任务聊天视频/PDF 独立桶 — 与 image upload 隔离,避免连发图后视频被 429。
+    # 视频/PDF 单次体积大(≤30MB / ≤20MB),次数低但单次重,10/分钟够用。
+    "upload_chat_media": {"limit": 10, "window": 60},
     
     # 任务相关
     "create_task": {"limit": 5, "window": 300},  # 5次/5分钟

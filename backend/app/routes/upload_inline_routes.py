@@ -547,8 +547,8 @@ def generate_image_url(
 
 
 @router.post("/upload/file")
-@rate_limit("upload_file")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     task_id: Optional[int] = Query(None, description="任务ID（任务聊天时提供）"),
     chat_id: Optional[str] = Query(None, description="聊天ID（客服聊天时提供）"),
@@ -562,7 +562,23 @@ async def upload_file(
     - task_id: 任务聊天时提供，文件会存储在 tasks/{task_id}/ 文件夹
     - chat_id: 客服聊天时提供，文件会存储在 chats/{chat_id}/ 文件夹
     - usage='chat_media': 走白名单校验(视频 mp4/mov/m4v ≤30MB,PDF ≤20MB);其他 usage 走默认 10MB 通用校验
+
+    Rate limit:
+    - usage='chat_media': 10/分钟独立桶(upload_chat_media)
+    - 其他: 5/分钟通用桶(upload_file)
+    两者独立计数,避免连发图后视频被 429。注:既有装饰器 @rate_limit
+    需要 request 参数才能生效;此 endpoint 历史上没传 request → 装饰器空跑;
+    现在改为 in-function check 显式控制,既修了空跑 bug 又分桶。
     """
+    # 按 usage 选 rate limit 桶,显式 check(替代既有空跑的装饰器)
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+    if usage == "chat_media":
+        _rl_cfg = RATE_LIMITS["upload_chat_media"]
+        rate_limiter.check_rate_limit(request, "upload_chat_media", _rl_cfg["limit"], _rl_cfg["window"])
+    else:
+        _rl_cfg = RATE_LIMITS["upload_file"]
+        rate_limiter.check_rate_limit(request, "upload_file", _rl_cfg["limit"], _rl_cfg["window"])
+
     try:
         # 使用流式读取文件内容，避免大文件一次性读入内存
         from app.file_stream_utils import read_file_with_size_check
