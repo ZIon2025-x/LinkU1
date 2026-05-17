@@ -82,12 +82,29 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   bool _isProcessingMedia = false;
   String _processingLabel = '';
 
-  void _setProcessing(bool processing, [String label = '']) {
+  /// 标记当前是否在视频压缩(给"取消"按钮区分:压缩阶段可 cancel,
+  /// 上传阶段已上桨,不提供 cancel 避免半成品状态)。
+  bool _isCompressingVideo = false;
+
+  void _setProcessing(bool processing, [String label = '', bool isCompressing = false]) {
     if (!mounted) return;
     setState(() {
       _isProcessingMedia = processing;
       _processingLabel = processing ? label : '';
+      _isCompressingVideo = processing ? isCompressing : false;
     });
+  }
+
+  /// 取消正在进行的视频压缩。由进度 Banner 的"取消"按钮触发。
+  /// VideoCompress.cancelCompression() 会让 compressVideo Future 完成时 path 为 null,
+  /// _handlePickedVideo 后续步骤检测到 null 自然提前 return(无副作用)。
+  Future<void> _cancelVideoCompression() async {
+    try {
+      await VideoCompress.cancelCompression();
+    } catch (e) {
+      AppLogger.error('VideoCompress.cancelCompression failed', e);
+    }
+    _setProcessing(false);
   }
 
   /// 任务标题用于 AppBar，加载一次
@@ -282,7 +299,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   /// 视频处理:读元数据 -> 时长校验 -> 压缩 -> 抽首帧 -> 派发 ChatSendVideo
   Future<void> _handlePickedVideo(String filePath, String filename) async {
     final messenger = ScaffoldMessenger.of(context);
-    _setProcessing(true, context.l10n.chatVideoProcessing);
+    // isCompressing=true → Banner 显示"取消"按钮(压缩阶段可中断)
+    _setProcessing(true, context.l10n.chatVideoProcessing, true);
     try {
       // 1. 读取视频元数据(时长 / 尺寸)
       // 用 try/finally 确保即便 initialize 抛异常 controller 也被 dispose,防 native 资源泄漏。
@@ -315,6 +333,12 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         quality: VideoQuality.MediumQuality,
         includeAudio: true,
       );
+      // 用户取消压缩 → VideoCompress 返回 null/失败,Banner 已被 _cancelVideoCompression
+      // 清掉。这里检测后静默 return,不报错(用户主动操作)。
+      if (!_isProcessingMedia) {
+        AppLogger.info('Video compression cancelled by user');
+        return;
+      }
       final compressedPath = compressed?.path ?? filePath;
       final compressedBytes = await File(compressedPath).readAsBytes();
       if (compressedBytes.length > 30 * 1024 * 1024) {
@@ -699,8 +723,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   }
 
   /// 视频压缩/上传进度 Banner — 头部细条提示用户 app 在处理媒体。
-  /// 视频压缩阶段(bloc 派发前)用 _processingLabel;上传阶段(state.isSending)
-  /// 用通用文案 chatSendingMedia。
+  /// 视频压缩阶段(bloc 派发前)用 _processingLabel + 显示"取消"按钮;
+  /// 上传阶段(state.isSending)用通用文案 chatSendingMedia,无 cancel。
   Widget _buildMediaProgressBanner(ChatState state) {
     final label = _isProcessingMedia && _processingLabel.isNotEmpty
         ? _processingLabel
@@ -725,6 +749,24 @@ class _TaskChatContentState extends State<_TaskChatContent> {
               color: AppColors.textSecondaryLight,
             ),
           ),
+          if (_isCompressingVideo) ...[
+            const SizedBox(width: 12),
+            InkWell(
+              onTap: _cancelVideoCompression,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Text(
+                  context.l10n.commonCancel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
