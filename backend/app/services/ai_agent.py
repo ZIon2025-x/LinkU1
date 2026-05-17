@@ -1342,14 +1342,21 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
             if response is None:
                 break
             ctx.model_used = response.model
-            ctx.total_input_tokens += response.usage.input_tokens
+            effective_input = max(
+                0,
+                response.usage.input_tokens - response.usage.cached_input_tokens,
+            )
+            ctx.total_input_tokens += effective_input
+            ctx.total_raw_input_tokens += response.usage.input_tokens
+            ctx.total_cached_input_tokens += response.usage.cached_input_tokens
             ctx.total_output_tokens += response.usage.output_tokens
             # 监控 prompt cache 命中（GLM 隐式自动 / Claude 走 cache_control），命中率反映 system+history 的 cache 经济性
             if response.usage.cached_input_tokens:
                 logger.info(
-                    "AI cache hit: cached=%d / input=%d (%.0f%%) model=%s user=%s",
+                    "AI cache hit: cached=%d / input=%d (%.0f%%) effective=%d model=%s user=%s",
                     response.usage.cached_input_tokens, response.usage.input_tokens,
                     100 * response.usage.cached_input_tokens / max(response.usage.input_tokens, 1),
+                    effective_input,
                     response.model, ctx.user.id,
                 )
 
