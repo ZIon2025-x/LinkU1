@@ -70,7 +70,9 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
     } catch (e) {
       AppLogger.error('Video init failed (retry=$_retryCount) url=${widget.videoUrl}', e);
       if (mounted) {
-        setState(() => _initError = 'chat_video_play_failed');
+        // 临时诊断:显示 URL + raw error,便于定位 PlatformException 具体内容
+        setState(() => _initError =
+            'chat_video_play_failed\n\nURL: ${widget.videoUrl}\n\nError: $e');
       }
     }
   }
@@ -157,10 +159,13 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    context.localizeError(_initError),
-                    style: const TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
+                  // 临时诊断: SelectableText 让用户可复制 URL + error 内容
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SelectableText(
+                      _initError ?? '',
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextButton.icon(
