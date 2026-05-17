@@ -80,6 +80,40 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
     });
   }
 
+  /// C5: 互动条 "评论" 按钮 — 滚到评论输入栏并 focus
+  void _scrollToCommentInput() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+    _replyFocusNode.requestFocus();
+  }
+
+  /// C5: 互动条 "分享" 按钮 — 沿用 _showMoreActions 里的 share 实现
+  void _onShare(BuildContext context) {
+    final post = context.read<ForumBloc>().state.selectedPost;
+    if (post == null) return;
+    final locale = Localizations.localeOf(context);
+    AppHaptics.selection();
+    final shareTitle = post.displayTitle(locale);
+    final contentForDesc = post.displayContent(locale) ?? post.content;
+    final rawDesc = Helpers.normalizeContentNewlines(
+      contentForDesc?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '',
+    );
+    final description =
+        rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
+    final imageUrl = post.images.isNotEmpty ? post.images.first : null;
+    ShareUtil.share(
+      title: shareTitle,
+      description: description,
+      url: ShareUtil.forumPostUrl(widget.postId),
+      imageUrl: imageUrl,
+    );
+  }
+
   void _pruneReplyKeys(ForumState state) {
     // 收集所有"在树里"的 id (root + preview_children + loadedChildren)
     final liveIds = <int>{};
@@ -514,27 +548,36 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                             ),
                           ),
 
-                          // 统计 + 分隔线
+                          // C5: 浏览/编辑统计行 + 4 键互动条 (心/评论/分享/收藏)
                           SliverToBoxAdapter(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _PostStats(
-                                  post: post,
-                                  isDark: isDark,
-                                  postId: widget.postId,
-                                ),
-                                Divider(
-                                  height: 1,
-                                  indent: 20,
-                                  endIndent: 20,
-                                  color: (isDark
-                                          ? AppColors.separatorDark
-                                          : AppColors.separatorLight)
-                                      .withValues(alpha: 0.5),
-                                ),
-                                AppSpacing.vSm,
-                              ],
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 8),
+                                  _StatsRow(post: post),
+                                  const SizedBox(height: 12),
+                                  _EngagementBar(
+                                    post: post,
+                                    onLike: () => requireAuth(context, () {
+                                      AppHaptics.selection();
+                                      context
+                                          .read<ForumBloc>()
+                                          .add(ForumLikePost(widget.postId));
+                                    }),
+                                    onComment: _scrollToCommentInput,
+                                    onShare: () => _onShare(context),
+                                    onFavorite: () => requireAuth(context, () {
+                                      AppHaptics.selection();
+                                      context.read<ForumBloc>().add(
+                                          ForumFavoritePost(widget.postId));
+                                    }),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              ),
                             ),
                           ),
 
@@ -967,110 +1010,6 @@ class _PostContent extends StatelessWidget {
 }
 
 // ==================== 互动统计 ====================
-
-class _PostStats extends StatelessWidget {
-  const _PostStats({
-    required this.post,
-    required this.isDark,
-    required this.postId,
-  });
-
-  final ForumPost post;
-  final bool isDark;
-  final int postId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: Row(
-        children: [
-          // 浏览量 (非交互)
-          _StatLabel(
-            icon: Icons.visibility_outlined,
-            value: '${post.viewCount}',
-            label: context.l10n.forumBrowse,
-          ),
-          AppSpacing.hLg,
-          // 点赞已移至底部回复栏，此处仅显示计数
-          _StatLabel(
-            icon: post.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-            value: '${post.likeCount}',
-            label: context.l10n.forumLike,
-            color: post.isLiked ? AppColors.accentPink : null,
-          ),
-          AppSpacing.hLg,
-          // 收藏 (交互)
-          Semantics(
-            button: true,
-            label: 'Toggle favorite',
-            child: GestureDetector(
-              onTap: () => requireAuth(context, () {
-                AppHaptics.selection();
-                context.read<ForumBloc>().add(ForumFavoritePost(postId));
-              }),
-              child: _StatLabel(
-                icon: post.isFavorited ? Icons.bookmark : Icons.bookmark_border,
-                value: '',
-                label: context.l10n.forumFavorite,
-                color: post.isFavorited ? AppColors.gold : null,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatLabel extends StatelessWidget {
-  const _StatLabel({
-    required this.icon,
-    required this.value,
-    required this.label,
-    this.color,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultColor =
-        isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
-    final c = color ?? defaultColor;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: c),
-            if (value.isNotEmpty) ...[
-              AppSpacing.hXs,
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: c,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10, color: defaultColor),
-        ),
-      ],
-    );
-  }
-}
 
 // ==================== 评论区标题（用于 CustomScrollView sliver 布局） ====================
 
@@ -2517,6 +2456,166 @@ class _AuthorHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ==================== C5: _StatsRow + _EngagementBar + _EngageBtn ====================
+
+/// 12px 灰字 "浏览数 · 编辑时间" 行
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.post});
+  final ForumPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+    final wasEdited = post.updatedAt != null &&
+        post.createdAt != null &&
+        post.updatedAt!
+            .isAfter(post.createdAt!.add(const Duration(seconds: 5)));
+    return Row(
+      children: [
+        Icon(Icons.remove_red_eye_outlined, size: 13, color: color),
+        const SizedBox(width: 4),
+        Text(
+          '${post.viewCount} 浏览',
+          style: TextStyle(fontSize: 12, color: color),
+        ),
+        if (wasEdited) ...[
+          Text(' · ', style: TextStyle(color: color)),
+          Text(
+            '编辑于 ${_relativeTime(post.updatedAt!)}',
+            style: TextStyle(fontSize: 12, color: color),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _relativeTime(DateTime t) {
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
+    if (diff.inDays < 1) return '${diff.inHours} 小时前';
+    return '${diff.inDays} 天前';
+  }
+}
+
+/// 跨满宽 4 键互动条: 心 / 评论 / 分享 / 收藏
+/// 已点状态: 点赞 = 粉, 收藏 = 橙
+class _EngagementBar extends StatelessWidget {
+  const _EngagementBar({
+    required this.post,
+    required this.onLike,
+    required this.onComment,
+    required this.onShare,
+    required this.onFavorite,
+  });
+
+  final ForumPost post;
+  final VoidCallback onLike;
+  final VoidCallback onComment;
+  final VoidCallback onShare;
+  final VoidCallback onFavorite;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final divider =
+        isDark ? AppColors.dividerDark : AppColors.dividerLight;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: divider),
+          bottom: BorderSide(color: divider),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _EngageBtn(
+            icon:
+                post.isLiked ? Icons.favorite : Icons.favorite_outline,
+            count: post.likeCount,
+            tint: post.isLiked ? AppColors.accentPink : null,
+            onTap: onLike,
+          ),
+          _EngageBtn(
+            icon: Icons.chat_bubble_outline,
+            count: post.replyCount,
+            onTap: onComment,
+          ),
+          _EngageBtn(
+            icon: Icons.share_outlined,
+            count: 0, // 后端无 share count
+            label: '分享',
+            onTap: onShare,
+          ),
+          _EngageBtn(
+            icon: post.isFavorited
+                ? Icons.bookmark
+                : Icons.bookmark_outline,
+            count: post.favoriteCount,
+            tint: post.isFavorited ? AppColors.warning : null,
+            onTap: onFavorite,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EngageBtn extends StatelessWidget {
+  const _EngageBtn({
+    required this.icon,
+    required this.count,
+    this.label,
+    this.tint,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final int count;
+  final String? label;
+  final Color? tint;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = tint ??
+        (isDark
+            ? AppColors.textSecondaryDark
+            : AppColors.textSecondaryLight);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label ?? (count > 0 ? '$count' : ''),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
