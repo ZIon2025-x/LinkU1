@@ -1473,9 +1473,14 @@ async def send_task_message(
         # 创建消息
         meta_str = json.dumps(request.meta) if request.meta else None
 
-        # 消息类型: 由客户端传入 normal/image/video/file/text(已在 schema validator 白名单校验),
-        # system 等内部类型由服务端代码直接构造 Message,不走这条路径。
-        message_type = request.message_type
+        # 消息类型映射(避免 DB ck_messages_type 历史白名单拒掉新值):
+        # - 'text'  → 'normal':产品语义等同,历史所有文字消息都存 normal
+        # - 'image' → 'normal':前端用 hasImageAttachments(attachments 含 image 类型)识别图片,
+        #   不依赖 message_type;历史 image 消息 DB 里也都是 normal
+        # - 'video'/'file':**必须保持原值**,前端 MessageGroupBubble 按 messageType 分发,
+        #   存 normal 会回到 Critical #2 的死代码状态。需 migration 236 拓宽 DB 白名单。
+        _MESSAGE_TYPE_DB_MAP = {'text': 'normal', 'image': 'normal'}
+        message_type = _MESSAGE_TYPE_DB_MAP.get(request.message_type, request.message_type)
         sender_id = current_user.id
         
         new_message = models.Message(
