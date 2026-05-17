@@ -504,87 +504,13 @@ async def test_send_video_url_already_provided_not_overwritten():
 
 
 # ---------------------------------------------------------------------------
-# Important #36: POST attachment_type 与 blob_id 后缀 mismatch 防御
+# Important #36 attachment_type/blob mismatch 防御已删除:
+#
+# 原计划用 blob_id.endswith('.mp4'/.pdf) 校验,但 PrivateFileSystem.generate_file_id
+# 生成的 blob_id 是 "{user}_{ts}_{uuid}" 不含扩展名(扩展名在磁盘文件名),
+# 这层 check 永远拒绝合法上传。已删除 — 真实防御靠 upload 端 magic byte 校验。
+# 详见 task_chat_routes.py:send_task_message 内的注释。
 # ---------------------------------------------------------------------------
-
-def test_send_message_rejects_video_with_pdf_blob():
-    """attachment_type='video' 但 blob_id 是 .pdf → 422 拒绝。
-    防止客户端先上传 PDF 拿 blob,然后欺骗接收端为视频。"""
-    from app.task_chat_routes import send_task_message, SendMessageRequest
-    import asyncio
-
-    task = _make_task(task_id=30, poster_id="u_p", taker_id="u_t")
-    current_user = _make_user(user_id="u_p", name="P")
-    db, _ = _build_send_db(task)
-
-    request = SendMessageRequest(
-        content="[视频]",
-        message_type="video",
-        attachments=[
-            {
-                "attachment_type": "video",
-                "blob_id": "u_p_1700000000_evil.pdf",  # 故意 .pdf
-                "meta": {"duration": 10},
-            },
-        ],
-    )
-
-    async def _run():
-        with patch(
-            "app.signed_url.signed_url_manager.generate_signed_url",
-            return_value="x",
-        ), patch(
-            "app.redis_cache.invalidate_task_chat_cache",
-        ), patch(
-            "app.websocket_manager.get_ws_manager",
-        ):
-            await send_task_message(
-                task_id=30, request=request, current_user=current_user, db=db,
-            )
-
-    with pytest.raises(Exception) as exc_info:
-        asyncio.get_event_loop().run_until_complete(_run())
-    # FastAPI 把 HTTPException 转 detail,422,且 detail 含 'video' 关键字
-    assert "422" in str(exc_info.value) or "video" in str(exc_info.value).lower()
-
-
-def test_send_message_rejects_file_with_mp4_blob():
-    """attachment_type='file' 但 blob_id 是 .mp4 → 422 拒绝。"""
-    from app.task_chat_routes import send_task_message, SendMessageRequest
-    import asyncio
-
-    task = _make_task(task_id=31, poster_id="u_p", taker_id="u_t")
-    current_user = _make_user(user_id="u_p", name="P")
-    db, _ = _build_send_db(task)
-
-    request = SendMessageRequest(
-        content="[文件]",
-        message_type="file",
-        attachments=[
-            {
-                "attachment_type": "file",
-                "blob_id": "u_p_1700000000_evil.mp4",  # 故意 .mp4
-                "meta": {},
-            },
-        ],
-    )
-
-    async def _run():
-        with patch(
-            "app.signed_url.signed_url_manager.generate_signed_url",
-            return_value="x",
-        ), patch(
-            "app.redis_cache.invalidate_task_chat_cache",
-        ), patch(
-            "app.websocket_manager.get_ws_manager",
-        ):
-            await send_task_message(
-                task_id=31, request=request, current_user=current_user, db=db,
-            )
-
-    with pytest.raises(Exception) as exc_info:
-        asyncio.get_event_loop().run_until_complete(_run())
-    assert "422" in str(exc_info.value) or "file" in str(exc_info.value).lower()
 
 
 # ---------------------------------------------------------------------------

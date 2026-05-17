@@ -1437,35 +1437,15 @@ async def send_task_message(
                         detail="附件必须提供 url 或 blob_id 之一，且不能同时提供"
                     )
 
-                # attachment_type 与 blob_id 后缀一致性防御:
-                # 防止客户端先上传 PDF 拿 blob_id,然后声明 attachment_type='video' 欺骗接收端。
-                # - 'video' 必须配 .mp4/.mov/.m4v blob
-                # - 'file' 必须配 .pdf blob (任务聊天目前只支持 PDF)
-                # - 'image' 走 private_image_system,blob 扩展名多样(.jpg/.png/.webp/.heic),
-                #   且历史 image 既可走 url 又可走 blob_id,松校验避免回归。
-                if has_blob_id:
-                    att_type = att["attachment_type"]
-                    blob_lower = (att["blob_id"] or "").lower()
-                    if att_type == "video":
-                        if not (blob_lower.endswith(".mp4") or
-                                blob_lower.endswith(".mov") or
-                                blob_lower.endswith(".m4v")):
-                            raise HTTPException(
-                                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                detail=(
-                                    f"attachment_type='video' 必须配 .mp4/.mov/.m4v blob,"
-                                    f"收到 blob_id='{att['blob_id']}'"
-                                ),
-                            )
-                    elif att_type == "file":
-                        if not blob_lower.endswith(".pdf"):
-                            raise HTTPException(
-                                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                detail=(
-                                    f"attachment_type='file' 必须配 .pdf blob,"
-                                    f"收到 blob_id='{att['blob_id']}'"
-                                ),
-                            )
+                # 注: 不在这里做 attachment_type 与 blob 类型 mismatch 防御。
+                # PrivateFileSystem.generate_file_id 生成的 blob_id 是
+                # "{user}_{ts}_{uuid}" 不含扩展名(扩展名在磁盘文件名里),
+                # 没法用 endswith('.mp4') 类的简单 check。
+                # 实际防御:
+                #   - upload 端 /api/upload/file?usage=chat_media 已通过 magic byte +
+                #     扩展名 + 大小三重校验拦截非法上传
+                #   - 攻击者最多能"上传真 PDF 但声称 attachment_type=video"自欺欺人,
+                #     接收端 chewie 只是播放失败,不是安全漏洞,ROI 极低,YAGNI
         
         # 获取当前时间
         current_time = get_utc_time()
