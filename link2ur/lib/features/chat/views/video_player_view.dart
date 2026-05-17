@@ -89,6 +89,29 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
     await _init();
   }
 
+  /// 渲染 player,按视频真实比例传 aspectRatio,避免 pod_player 默认 16/9 把
+  /// 竖屏视频拉变形.
+  Widget _buildPlayer() {
+    // 从 PodPlayerController 拿真实 video size (initialise 后可用).
+    // 缺失时 fallback 16/9 (横屏假定,跟 pod_player 自己 default 一致).
+    final size = _controller!.videoPlayerValue?.size;
+    final aspect = (size != null && size.width > 0 && size.height > 0)
+        ? size.width / size.height
+        : 16 / 9;
+    return PodVideoPlayer(
+      controller: _controller!,
+      videoAspectRatio: aspect,
+      frameAspectRatio: aspect,
+      podProgressBarConfig: const PodProgressBarConfig(
+        // 拖动时实时更新画面 (pod_player 默认行为)
+        circleHandlerColor: Colors.white,
+        playingBarColor: Colors.white,
+        bufferedBarColor: Color(0x55FFFFFF),
+        backgroundColor: Color(0x33FFFFFF),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     try {
@@ -195,16 +218,7 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
                 ],
               )
             : (_controller != null
-                ? PodVideoPlayer(
-                    controller: _controller!,
-                    podProgressBarConfig: const PodProgressBarConfig(
-                      // 拖动时实时更新画面 (pod_player 默认行为,与 Instagram/IG Reels 一致)
-                      circleHandlerColor: Colors.white,
-                      playingBarColor: Colors.white,
-                      bufferedBarColor: Color(0x55FFFFFF),
-                      backgroundColor: Color(0x33FFFFFF),
-                    ),
-                  )
+                ? _buildPlayer()
                 : const CircularProgressIndicator(color: Colors.white)),
       ),
     );
