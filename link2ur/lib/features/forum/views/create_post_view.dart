@@ -1365,3 +1365,201 @@ class _LinkedChip extends StatelessWidget {
   }
 }
 
+class _BottomComposerToolbar extends StatelessWidget {
+  const _BottomComposerToolbar({
+    required this.imageCount,
+    required this.fileCount,
+    required this.linkedCount,
+    required this.topicCount,
+    required this.lockedReason,
+    required this.onTapImage,
+    required this.onTapFile,
+    required this.onTapLink,
+    required this.onTapTopic,
+  });
+
+  final int imageCount;
+  final int fileCount;
+  final int linkedCount;
+  final int topicCount;
+
+  /// null = 普通模式可点; 非 null = 锁定模式, 点 topic 弹 SnackBar 显示该文案
+  final String? lockedReason;
+
+  final VoidCallback onTapImage;
+  final VoidCallback onTapFile;
+  final VoidCallback onTapLink;
+  final VoidCallback onTapTopic;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark
+        ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
+        : Colors.white.withValues(alpha: 0.85);
+    final divider = isDark ? AppColors.dividerDark : AppColors.dividerLight;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border(top: BorderSide(color: divider)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        14,
+        10,
+        14,
+        16 + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _ToolButton(
+            label: '图片',
+            icon: Icons.image_outlined,
+            tint: const Color(0xFF26BF73),
+            count: imageCount,
+            onTap: onTapImage,
+          ),
+          _ToolButton(
+            label: '附件',
+            icon: Icons.upload_file_outlined,
+            tint: const Color(0xFFF24D4D),
+            count: fileCount,
+            onTap: onTapFile,
+          ),
+          _ToolButton(
+            label: '关联',
+            icon: Icons.link,
+            tint: const Color(0xFF7359F2),
+            count: linkedCount,
+            onTap: onTapLink,
+          ),
+          _ToolButton(
+            label: '话题',
+            icon: Icons.local_offer_outlined,
+            tint: AppColors.primary,
+            count: topicCount,
+            disabled: lockedReason != null,
+            disabledHint: Icons.lock_outline,
+            onTap: lockedReason != null
+                ? () => ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(lockedReason!)),
+                    )
+                : onTapTopic,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    required this.label,
+    required this.icon,
+    required this.tint,
+    required this.count,
+    required this.onTap,
+    this.disabled = false,
+    this.disabledHint,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color tint;
+  final int count;
+  final VoidCallback onTap;
+  final bool disabled;
+  final IconData? disabledHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveTint = disabled
+        ? (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)
+        : tint;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: effectiveTint.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: 20, color: effectiveTint),
+                ),
+                if (disabled && disabledHint != null)
+                  Positioned(
+                    right: -4,
+                    bottom: -4,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.cardBackgroundDark
+                            : Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(disabledHint, size: 10, color: effectiveTint),
+                    ),
+                  )
+                else if (count > 0)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 16),
+                      height: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.cardBackgroundDark
+                              : Colors.white,
+                          width: 2,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: effectiveTint,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
