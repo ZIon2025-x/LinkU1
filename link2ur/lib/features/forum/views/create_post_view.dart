@@ -658,7 +658,21 @@ class _CreatePostViewState extends State<CreatePostView> {
                   ),
                 ),
                 AppSpacing.vSm,
-                _buildLinkedChip(isDark),
+                if (_linkedName != null && _linkedName!.isNotEmpty)
+                  _LinkedChip(
+                    itemType: _linkedItemType ?? '',
+                    itemName: _linkedName!,
+                    onRemove: _clearLinked,
+                  )
+                else
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _showLinkSearchDialog,
+                      icon: const Icon(Icons.add_link, size: 20),
+                      label: Text(context.l10n.publishSearchAndLink),
+                    ),
+                  ),
                 if (_isUploading) ...[
                   AppSpacing.vMd,
                   const Center(child: CircularProgressIndicator()),
@@ -672,39 +686,6 @@ class _CreatePostViewState extends State<CreatePostView> {
     );
   }
 
-  Widget _buildLinkedChip(bool isDark) {
-    if (_linkedName != null && _linkedName!.isNotEmpty) {
-      return Row(
-        children: [
-          Expanded(
-            child: Chip(
-              avatar: Icon(
-                Icons.link,
-                size: 18,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
-              label: Text(
-                _linkedName!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onDeleted: _clearLinked,
-            ),
-          ),
-        ],
-      );
-    }
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: OutlinedButton.icon(
-        onPressed: _showLinkSearchDialog,
-        icon: const Icon(Icons.add_link, size: 20),
-        label: Text(context.l10n.publishSearchAndLink),
-      ),
-    );
-  }
 }
 
 class _CreateAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -1248,6 +1229,137 @@ class _AddFileTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LinkedChip extends StatelessWidget {
+  const _LinkedChip({
+    required this.itemType,
+    required this.itemName,
+    required this.onRemove,
+  });
+
+  final String itemType;
+  final String itemName;
+  final VoidCallback onRemove;
+
+  static const _purpleGradient = [Color(0xFF7359F2), Color(0xFFA18BFF)];
+
+  String _typeLabel(BuildContext context) {
+    switch (itemType) {
+      case 'service':
+        return '服务';
+      case 'expert':
+        return '达人';
+      case 'activity':
+        return '活动';
+      case 'product':
+        return '商品';
+      case 'ranking':
+        return '排行榜';
+      case 'forum_post':
+        return '帖子';
+      default:
+        return itemType;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final purple = _purpleGradient[0];
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: purple.withValues(alpha: isDark ? 0.14 : 0.08),
+        border: Border.all(color: purple.withValues(alpha: 0.30)),
+        borderRadius: AppRadius.allMedium,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: _purpleGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(9),
+              boxShadow: [
+                BoxShadow(
+                  color: purple.withValues(alpha: 0.4),
+                  offset: const Offset(0, 4),
+                  blurRadius: 10,
+                  spreadRadius: -2,
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.dashboard, size: 16, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: purple.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _typeLabel(context),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: purple,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  itemName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.close,
+                size: 13,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
