@@ -492,6 +492,8 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // C2: 作者大头条 (44 渐变头像 + 认证勾 + 时间)
+                                _AuthorHeader(post: post),
                                 _PostHeader(post: post, isDark: isDark),
                                 const Divider(height: 1),
                                 _PostContent(post: post, isDark: isDark),
@@ -2285,6 +2287,114 @@ class _GradientAvatarFallback extends StatelessWidget {
           fontSize: 14,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+/// 详情页正文上方的"作者大头条" — C2:
+/// 44x44 渐变头像 + 名字 15 + 蓝色 ✓ 认证徽章 + 元数据 "角色 · 时间 · 同城"。
+/// 当前 ForumPost 模型无 cityName 字段、UserBrief 无 role 字段，城市/角色降级不渲染;
+/// UserBrief.isVerified 存在时才显示蓝色认证勾。
+class _AuthorHeader extends StatelessWidget {
+  const _AuthorHeader({required this.post});
+  final ForumPost post;
+
+  String _formatTime(BuildContext context, DateTime? t) {
+    if (t == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(t);
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
+    if (diff.inDays < 1) return '${diff.inHours} 小时前';
+    if (diff.inDays < 7) return '${diff.inDays} 天前';
+    return '${t.year}-${t.month}-${t.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final author = post.author;
+
+    final displayName = post.displayName?.isNotEmpty == true
+        ? post.displayName!
+        : (author?.name ?? '匿名');
+    final displayAvatar = post.displayAvatar?.isNotEmpty == true
+        ? post.displayAvatar
+        : author?.avatar;
+    final timeStr = _formatTime(context, post.createdAt);
+    final metaColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Row(
+        children: [
+          ClipOval(
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: (displayAvatar != null && displayAvatar.isNotEmpty)
+                  ? AsyncImageView(
+                      imageUrl: displayAvatar,
+                      width: 44,
+                      height: 44,
+                      errorWidget: _GradientAvatarFallback(name: displayName),
+                    )
+                  : _GradientAvatarFallback(name: displayName),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (author?.isVerified == true) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.check,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                if (timeStr.isNotEmpty)
+                  Text(
+                    timeStr,
+                    style: TextStyle(fontSize: 12, color: metaColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
