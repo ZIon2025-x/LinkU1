@@ -10459,6 +10459,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumLoadChildrenError => '加载更多回复失败';
 
   @override
+  String get forumTopicLockedExpert => '话题已锁定: 以达人团队身份发帖';
+
+  @override
+  String get forumTopicLockedOfficialTask => '话题已锁定: 本帖将关联官方任务领取奖励';
+
+  @override
+  String get forumTopicLockedAdmin => '话题已锁定: 管理员专属板块';
+
+  @override
+  String get forumTopicLockedSchool => '话题已锁定: 校园板块入口';
+
+  @override
   String get expertOfficialBadge => '官方';
 
   @override
@@ -24361,6 +24373,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumLoadChildrenError => '載入更多回覆失敗';
+
+  @override
+  String get forumTopicLockedExpert => '話題已鎖定: 以達人團隊身份發帖';
+
+  @override
+  String get forumTopicLockedOfficialTask => '話題已鎖定: 本帖將關聯官方任務領取獎勵';
+
+  @override
+  String get forumTopicLockedAdmin => '話題已鎖定: 管理員專屬板塊';
+
+  @override
+  String get forumTopicLockedSchool => '話題已鎖定: 校園板塊入口';
 
   @override
   String get expertOfficialBadge => '官方';

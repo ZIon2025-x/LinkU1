@@ -10915,6 +10915,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumLoadChildrenError => 'Failed to load more replies';
 
   @override
+  String get forumTopicLockedExpert =>
+      'Topic is locked: posting under expert team identity';
+
+  @override
+  String get forumTopicLockedOfficialTask =>
+      'Topic is locked: this post earns the official task reward';
+
+  @override
+  String get forumTopicLockedAdmin => 'Topic is locked: admin-only board';
+
+  @override
+  String get forumTopicLockedSchool => 'Topic is locked: school board entry';
+
+  @override
   String get expertOfficialBadge => 'Official';
 
   @override

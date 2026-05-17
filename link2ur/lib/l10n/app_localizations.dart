@@ -19997,6 +19997,30 @@ abstract class AppLocalizations {
   /// **'Failed to load more replies'**
   String get forumLoadChildrenError;
 
+  /// No description provided for @forumTopicLockedExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic is locked: posting under expert team identity'**
+  String get forumTopicLockedExpert;
+
+  /// No description provided for @forumTopicLockedOfficialTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic is locked: this post earns the official task reward'**
+  String get forumTopicLockedOfficialTask;
+
+  /// No description provided for @forumTopicLockedAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic is locked: admin-only board'**
+  String get forumTopicLockedAdmin;
+
+  /// No description provided for @forumTopicLockedSchool.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic is locked: school board entry'**
+  String get forumTopicLockedSchool;
+
   /// No description provided for @expertOfficialBadge.
   ///
   /// In en, this message translates to:
