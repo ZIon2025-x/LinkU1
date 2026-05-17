@@ -417,21 +417,9 @@ class _CreatePostViewState extends State<CreatePostView> {
             child: Scaffold(
             backgroundColor:
                 AppColors.backgroundFor(Theme.of(context).brightness),
-            appBar: AppBar(
-              title: Text(context.l10n.forumCreatePostTitle),
-              actions: [
-                TextButton(
-                  onPressed: isBusy ? null : () => _submit(context),
-                  child: isBusy
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(context.l10n.forumPublish),
-                ),
-              ],
+            appBar: _CreateAppBar(
+              isBusy: isBusy,
+              onPublish: () => _submit(context),
             ),
             body: ListView(
               padding: AppSpacing.allMd,
@@ -924,6 +912,95 @@ class _CreatePostViewState extends State<CreatePostView> {
         onPressed: _showLinkSearchDialog,
         icon: const Icon(Icons.add_link, size: 20),
         label: Text(context.l10n.publishSearchAndLink),
+      ),
+    );
+  }
+}
+
+class _CreateAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _CreateAppBar({
+    required this.isBusy,
+    required this.onPublish,
+  });
+
+  final bool isBusy;
+  final VoidCallback onPublish;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(52);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AppBar(
+      backgroundColor: AppColors.backgroundFor(
+        isDark ? Brightness.dark : Brightness.light,
+      ),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      titleSpacing: 0,
+      title: Text(
+        context.l10n.forumCreatePostTitle,
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: _PublishButton(isBusy: isBusy, onTap: onPublish),
+        ),
+      ],
+    );
+  }
+}
+
+class _PublishButton extends StatelessWidget {
+  const _PublishButton({required this.isBusy, required this.onTap});
+  final bool isBusy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isBusy ? null : onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: AppColors.gradientPrimary,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                offset: const Offset(0, 6),
+                blurRadius: 18,
+                spreadRadius: -6,
+              ),
+            ],
+          ),
+          child: isBusy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                  ),
+                )
+              : Text(
+                  context.l10n.forumPublish,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+        ),
       ),
     );
   }
