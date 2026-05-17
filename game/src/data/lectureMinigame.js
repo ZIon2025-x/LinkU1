@@ -85,11 +85,38 @@ export const WORD_SET = (() => {
 // ============================================================
 export const LECTURE_THEMES_V2 = [
   // Batch 5 (Task 5): W1-24 themes 1-6
+  { id: 'academic_nouns',    weeks: [1, 4],    name: '学术名词 · Academic Nouns',
+    bonus: ['METHOD','THESIS','EVIDENCE','CONCEPT','THEORY','REVIEW','ANALYSIS','ARGUMENT','FRAMEWORK','HYPOTHESIS','FINDING','CONCLUSION','PERSPECTIVE','APPROACH','CRITIQUE'],
+    bias: 'METHODTHESISEVIDENCEANALYSIS' },
+  { id: 'academic_verbs',    weeks: [5, 8],    name: '学术动词 · Academic Verbs',
+    bonus: ['ARGUE','REFUTE','ASSERT','IMPLY','INFER','ANALYSE','EXAMINE','EVALUATE','ELABORATE','ADDRESS','COMPARE','CONTRAST'],
+    bias: 'ARGUEEXAMINEVALUATE' },
+  { id: 'academic_adjs',     weeks: [9, 12],   name: '学术形容词 · Academic Adjectives',
+    bonus: ['EMPIRICAL','CRITICAL','RIGOROUS','ROBUST','COHERENT','COGENT','NUANCED','SUBSTANTIVE','INHERENT','RELEVANT','SIGNIFICANT','VIABLE'],
+    bias: 'EMPIRICALROBUSTCOHERENT' },
+  { id: 'transition_words',  weeks: [13, 16],  name: '过渡 / 连接词 · Transitions',
+    bonus: ['HOWEVER','MOREOVER','NEVERTHELESS','FURTHERMORE','OTHERWISE','ACCORDINGLY','CONSEQUENTLY','HENCE','THEREFORE','THUS','MEANWHILE','WHEREAS'],
+    bias: 'HOWEVERTHEREFOREHENCE' },
+  { id: 'quantifiers',       weeks: [17, 20],  name: '量化描述 · Quantifiers',
+    bonus: ['SIGNIFICANT','MARGINAL','SUBSTANTIAL','NEGLIGIBLE','MODEST','PROFOUND','MODERATE','CONSIDERABLE','MINIMAL','EXTENSIVE','NOTABLE','PARTIAL'],
+    bias: 'SIGNIFICANTSUBSTANTIALMODEST' },
+  { id: 'reasoning',         weeks: [21, 24],  name: '逻辑推理 · Reasoning',
+    bonus: ['EXTRAPOLATE','GENERALIZE','CORRELATE','INFERENCE','CAUSATION','RATIONALE','PREMISE','DEDUCE','CONCLUDE','JUSTIFY','REASON','VALIDATE'],
+    bias: 'INFERENCECAUSATIONREASON' },
   // Batch 6 (Task 6): W25-52 themes 7-12
 ];
 
 // V2 bonus 词大全（去重）—— Task 7 atomic swap 时替换 THEME_WORDS
-const THEME_WORDS_V2 = [];
+const THEME_WORDS_V2 = [
+  // Batch 5 (Task 5) — themes 1-6
+  'METHOD','THESIS','EVIDENCE','CONCEPT','THEORY','REVIEW','ANALYSIS','ARGUMENT','FRAMEWORK','HYPOTHESIS','FINDING','CONCLUSION','PERSPECTIVE','APPROACH','CRITIQUE',
+  'ARGUE','REFUTE','ASSERT','IMPLY','INFER','ANALYSE','EXAMINE','EVALUATE','ELABORATE','ADDRESS','COMPARE','CONTRAST',
+  'EMPIRICAL','CRITICAL','RIGOROUS','ROBUST','COHERENT','COGENT','NUANCED','SUBSTANTIVE','INHERENT','RELEVANT','SIGNIFICANT','VIABLE',
+  'HOWEVER','MOREOVER','NEVERTHELESS','FURTHERMORE','OTHERWISE','ACCORDINGLY','CONSEQUENTLY','HENCE','THEREFORE','THUS','MEANWHILE','WHEREAS',
+  'MARGINAL','SUBSTANTIAL','NEGLIGIBLE','MODEST','PROFOUND','MODERATE','CONSIDERABLE','MINIMAL','EXTENSIVE','NOTABLE','PARTIAL',
+  'EXTRAPOLATE','GENERALIZE','CORRELATE','INFERENCE','CAUSATION','RATIONALE','PREMISE','DEDUCE','CONCLUDE','JUSTIFY','REASON','VALIDATE',
+  // Batch 6 (Task 6) — themes 7-12
+];
 
 export const LECTURE_THEMES = [
   { id: 'foucault_intro',  weeks: [1, 6],   name: 'Foucault · Power & Gaze',
