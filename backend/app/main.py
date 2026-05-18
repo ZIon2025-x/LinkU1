@@ -432,6 +432,10 @@ app.include_router(admin_ai_prompt_router)
 from app.ai_qa_user_routes import router as ai_qa_user_router
 app.include_router(ai_qa_user_router)
 
+# AI 限时问答 — Admin 端路由 (/api/admin/ai-qa/*); prefix 已在 APIRouter 里声明，此处不重复
+from app.ai_qa_admin_routes import router as ai_qa_admin_router
+app.include_router(ai_qa_admin_router)
+
 # 添加 SSR 路由（为社交媒体爬虫提供正确的 Open Graph meta 标签）
 from app.ssr_routes import ssr_router
 app.include_router(ssr_router, tags=["SSR"])
