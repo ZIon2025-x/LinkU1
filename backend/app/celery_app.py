@@ -326,6 +326,18 @@ celery_app.conf.beat_schedule = {
         'schedule': crontab(hour=2, minute=30),
     },
 
+    # 每日同城任务摘要推送 - 17:00 UTC (UK 当地 17:00 GMT / 18:00 BST)
+    'send-daily-task-digest': {
+        'task': 'app.celery_tasks.send_daily_task_digest_task',
+        'schedule': crontab(hour=17, minute=0),
+    },
+
+    # 清理过期每日摘要推送记录 - 每天凌晨 2:35
+    'cleanup-daily-digest-pushes': {
+        'task': 'app.celery_tasks.cleanup_daily_digest_pushes_task',
+        'schedule': crontab(hour=2, minute=35),
+    },
+
     # 团队任务 Stripe Transfer 90天时效预警 - 每天执行一次 (spec §3.4a)
     'warn-long-running-team-tasks': {
         'task': 'app.celery_tasks.warn_long_running_team_tasks_task',
@@ -471,6 +483,18 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.check_stale_disputes_task',
         'schedule': crontab(hour=2, minute=20),
         'kwargs': {'days': 7},
+    },
+
+    # ========== AI 限时问答 (P0) ==========
+    # 关闭过期 published 题：每 5 分钟扫一次（deadline 过期 → closed/closed_empty）
+    'ai-qa-close-expired': {
+        'task': 'ai_qa.close_expired',
+        'schedule': crontab(minute='*/5'),
+    },
+    # 评分管道：每 10 分钟扫 closed 题跑 AI 评分（→ scored / scoring_failed）
+    'ai-qa-score-closed': {
+        'task': 'ai_qa.score_closed',
+        'schedule': crontab(minute='*/10'),
     },
 }
 

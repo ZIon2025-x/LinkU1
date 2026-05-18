@@ -2755,3 +2755,116 @@ def check_expert_volume_thresholds(db: Session):
         db.rollback()
         logger.error(f"check_expert_volume_thresholds 失败: {e}", exc_info=True)
         raise
+
+
+# ========== AI 限时问答 (P0) ==========
+# Beat #1: 扫 published 题 deadline 过期 → closed / closed_empty
+# Beat #2: 扫 closed 题 → scoring → AI 评分 → scored / scoring_failed
+# Admin 手动 rescore 用 score_single_ai_question(qid) 直接复用
+
+
+def close_expired_ai_questions():
+    """beat: 扫 status=published & deadline < now,切到 closed 或 closed_empty。"""
+    from app.models_ai_qa import AiQuestion, AiAnswerScore
+    from sqlalchemy import select, func
+    db = SessionLocal()
+    try:
+        now = datetime.now(tz.utc)
+        questions = db.execute(
+            select(AiQuestion).where(
+                AiQuestion.status == "published",
+                AiQuestion.deadline < now,
+            )
+        ).scalars().all()
+        for q in questions:
+            # 数 active answer (forum_post 没被删的)
+            count = db.execute(
+                select(func.count(AiAnswerScore.id))
+                .join(models.ForumPost, AiAnswerScore.forum_post_id == models.ForumPost.id)
+                .where(
+                    AiAnswerScore.ai_question_id == q.id,
+                    AiAnswerScore.hide_in_qa == False,
+                    models.ForumPost.is_deleted == False,
+                )
+            ).scalar() or 0
+            if count == 0:
+                q.status = "closed_empty"
+                # TODO sponsor: 退款给加注 sponsor
+            else:
+                q.status = "closed"
+            db.commit()
+            logger.info(f"ai_qa: closed question #{q.id}, answer_count={count}, new_status={q.status}")
+    finally:
+        db.close()
+
+
+def score_closed_ai_questions():
+    """beat: 扫 status=closed,跑 AI 评分,切到 scored 或 scoring_failed。"""
+    from app.models_ai_qa import AiQuestion
+    from sqlalchemy import select
+    db = SessionLocal()
+    try:
+        questions = db.execute(
+            select(AiQuestion).where(AiQuestion.status == "closed")
+        ).scalars().all()
+        qids = [q.id for q in questions]
+    finally:
+        db.close()
+    for qid in qids:
+        score_single_ai_question(qid)
+
+
+def score_single_ai_question(qid: int):
+    """单题评分（rescore 也调这个）。"""
+    from app.models_ai_qa import AiQuestion, AiAnswerScore
+    from app.services.ai_qa_scoring import score_all_answers
+    from sqlalchemy import select
+    db = SessionLocal()
+    try:
+        q = db.get(AiQuestion, qid)
+        if q is None or q.status not in ("closed", "scoring"):
+            return
+        q.status = "scoring"
+        db.commit()
+        # 拉所有 active answer
+        rows = db.execute(
+            select(AiAnswerScore)
+            .where(AiAnswerScore.ai_question_id == qid, AiAnswerScore.hide_in_qa == False)
+        ).scalars().all()
+        forum_post_ids = [r.forum_post_id for r in rows]
+        posts = {p.id: p for p in db.query(models.ForumPost).filter(models.ForumPost.id.in_(forum_post_ids))}
+        # 过滤已删的（双保险）
+        valid_rows = [r for r in rows if posts.get(r.forum_post_id) and not posts[r.forum_post_id].is_deleted]
+        if not valid_rows:
+            q.status = "closed_empty"
+            # TODO sponsor: 退款给加注 sponsor
+            db.commit()
+            return
+        answers_payload = [
+            {"id": r.id, "content": posts[r.forum_post_id].content}
+            for r in valid_rows
+        ]
+        try:
+            scored = score_all_answers(q.title, q.content, answers_payload, batch_size=10)
+        except Exception:
+            logger.exception(f"ai_qa scoring failed qid={qid}")
+            q.status = "scoring_failed"
+            # TODO sponsor: 评分失败时 sponsor 加注的处理
+            db.commit()
+            return
+        # UPDATE ai_answer_scores
+        score_map = {s["id"]: s for s in scored}
+        for r in valid_rows:
+            s = score_map.get(r.id)
+            if not s:
+                continue
+            r.ai_score = s.get("score", 0)
+            r.off_topic = bool(s.get("off_topic", False))
+            r.ai_generated = s.get("ai_generated", "low")
+            r.ai_raw_response = s
+        q.status = "scored"
+        db.commit()
+        logger.info(f"ai_qa: scored question #{qid}, {len(valid_rows)} answers")
+        # TODO: 通知 admin 终审
+    finally:
+        db.close()

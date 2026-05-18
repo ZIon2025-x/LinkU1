@@ -878,8 +878,7 @@ if CELERY_AVAILABLE:
         """清理30天前的附近任务推送记录"""
         task_name = "cleanup_nearby_task_pushes"
         lock_key = f"celery_lock:{task_name}"
-        lock_value = get_redis_distributed_lock(lock_key, expire_seconds=300)
-        if not lock_value:
+        if not get_redis_distributed_lock(lock_key, lock_ttl=300):
             return {"status": "skipped", "reason": "lock_held"}
 
         import time
@@ -901,7 +900,70 @@ if CELERY_AVAILABLE:
             raise self.retry(exc=e, countdown=120)
         finally:
             db.close()
-            release_redis_distributed_lock(lock_key, lock_value)
+            release_redis_distributed_lock(lock_key)
+
+
+    @celery_app.task(name='app.celery_tasks.send_daily_task_digest_task', bind=True, max_retries=1)
+    def send_daily_task_digest_task(self):
+        """每日同城任务摘要推送（17:00 UTC 触发，每用户每天最多 1 条）"""
+        task_name = "send_daily_task_digest"
+        lock_key = f"celery_lock:{task_name}"
+        # 摘要执行可能较慢，给较长锁时间避免重复跑
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+            return {"status": "skipped", "reason": "lock_held"}
+
+        import time
+        start_time = time.time()
+        db = SessionLocal()
+        try:
+            from app.services.daily_digest_service import run_daily_digest
+            result = run_daily_digest(db)
+            duration = time.time() - start_time
+            logger.info(f"每日同城摘要推送完成: {result} (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", **result}
+        except Exception as e:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            duration = time.time() - start_time
+            logger.error(f"每日同城摘要推送失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            raise self.retry(exc=e, countdown=300)
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+
+    @celery_app.task(name='app.celery_tasks.cleanup_daily_digest_pushes_task', bind=True, max_retries=2)
+    def cleanup_daily_digest_pushes_task(self):
+        """清理 60 天前的每日摘要推送记录"""
+        task_name = "cleanup_daily_digest_pushes"
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=300):
+            return {"status": "skipped", "reason": "lock_held"}
+
+        import time
+        start_time = time.time()
+        db = SessionLocal()
+        try:
+            from app.services.daily_digest_service import cleanup_old_digest_pushes
+            deleted = cleanup_old_digest_pushes(db, days=60)
+            db.commit()
+            duration = time.time() - start_time
+            logger.info(f"每日摘要推送记录清理完成: 删除 {deleted} 条 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "deleted": deleted}
+        except Exception as e:
+            db.rollback()
+            duration = time.time() - start_time
+            logger.error(f"每日摘要推送记录清理失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            raise self.retry(exc=e, countdown=120)
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
 
 
     # ========== 用户画像系统任务 ==========
@@ -1881,6 +1943,67 @@ if CELERY_AVAILABLE:
             raise
         finally:
             db.close()
+
+    # ========== AI 限时问答 (P0) ==========
+    @celery_app.task(name='ai_qa.close_expired', bind=True, max_retries=2, default_retry_delay=60)
+    def celery_close_expired_ai_questions(self):
+        """AI 问答 — 扫过期 published 题切到 closed/closed_empty。"""
+        start_time = time.time()
+        task_name = 'ai_qa.close_expired'
+        try:
+            from app.scheduled_tasks import close_expired_ai_questions
+            close_expired_ai_questions()
+            duration = time.time() - start_time
+            logger.info(f"{task_name} 完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success"}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{task_name} 失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+
+    @celery_app.task(name='ai_qa.score_closed', bind=True, max_retries=2, default_retry_delay=120)
+    def celery_score_closed_ai_questions(self):
+        """AI 问答 — 扫 closed 题跑 AI 评分。"""
+        start_time = time.time()
+        task_name = 'ai_qa.score_closed'
+        try:
+            from app.scheduled_tasks import score_closed_ai_questions
+            score_closed_ai_questions()
+            duration = time.time() - start_time
+            logger.info(f"{task_name} 完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success"}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{task_name} 失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+
+    @celery_app.task(name='ai_qa.score_single', bind=True, max_retries=2, default_retry_delay=60)
+    def celery_score_single_ai_question(self, qid: int):
+        """AI 问答 — 单题评分（admin rescore 端点触发）。"""
+        start_time = time.time()
+        task_name = 'ai_qa.score_single'
+        try:
+            from app.scheduled_tasks import score_single_ai_question
+            score_single_ai_question(qid)
+            duration = time.time() - start_time
+            logger.info(f"{task_name} 完成 qid={qid} (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "qid": qid}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{task_name} 失败 qid={qid}: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
 
     @celery_app.task(
         name='app.celery_tasks.check_expert_volume_thresholds_task',

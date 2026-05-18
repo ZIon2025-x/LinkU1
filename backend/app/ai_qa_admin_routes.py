@@ -230,7 +230,7 @@ def rescore(
     # 异步触发评分 (复用 scheduled_tasks 的逻辑,见 Task 10)
     # prod 用 Celery 异步，linktest 无 Celery 时退化为同步
     try:
-        from app.scheduled_tasks import celery_score_single_ai_question
+        from app.celery_tasks import celery_score_single_ai_question
         celery_score_single_ai_question.delay(qid)
     except (ImportError, AttributeError):
         from app.scheduled_tasks import score_single_ai_question
