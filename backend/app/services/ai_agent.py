@@ -12,6 +12,7 @@ AI Agent 核心调度器 — Pipeline 架构
 8. 按意图选择工具子集（减少 ~1000 input tokens/次）
 """
 
+import hashlib
 import json
 import logging
 import re
@@ -1682,6 +1683,77 @@ async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
     max_turns = Config.AI_MAX_HISTORY_TURNS
     rows = await _fetch_history_rows(db, conversation_id, max_turns * 2)
     return _build_raw_messages(rows)
+
+
+async def _summarize_history_cached(rows, conversation_id: str) -> str | None:
+    """生成 Layer C 摘要, 用 Redis 缓存 24h.
+
+    参数:
+        rows: AIMessage 列表 (待摘要的最老一批)
+        conversation_id: 用于 cache key
+
+    返回:
+        摘要字符串; 失败 / 空字符串 / 异常时返回 None (caller 应跳过 Layer C)。
+    """
+    if not rows:
+        return None
+
+    msg_ids = ",".join(str(m.id) for m in rows)
+    key_hash = hashlib.md5(msg_ids.encode()).hexdigest()[:16]
+    cache_key = f"ai:hist_sum:{conversation_id}:{key_hash}"
+
+    r = _get_redis()
+    if r:
+        try:
+            cached = r.get(cache_key)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
+    rows_text = "\n".join(
+        f"{m.role}: {(m.content or '')[:300]}"
+        for m in rows if (m.content or "").strip()
+    )
+    if not rows_text.strip():
+        return None
+
+    summary_prompt = (
+        "Summarize the following conversation in 1-2 sentences. "
+        "Preserve: user's key intent, unfinished requests, important context entities "
+        "(names, IDs, dates).\n\n"
+        f"{rows_text}"
+    )
+
+    try:
+        llm = get_llm_client()
+        resp = await llm.chat(
+            messages=[{"role": "user", "content": summary_prompt}],
+            system=(
+                "You are a conversation summarizer. Be concise and information-dense. "
+                "Respond in the same language as the conversation."
+            ),
+            tools=None,
+            model_tier="small",
+            max_tokens=200,
+        )
+        summary = "".join(
+            b.text for b in resp.content
+            if getattr(b, "type", None) == "text"
+        ).strip()
+
+        if not summary:
+            return None
+
+        if r:
+            try:
+                r.setex(cache_key, 86400, summary)
+            except Exception:
+                pass
+        return summary
+    except Exception as e:
+        logger.warning("History summary failed for conv %s: %r", conversation_id, e)
+        return None
 
 
 async def _save_assistant_message(
