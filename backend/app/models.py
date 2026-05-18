@@ -2530,7 +2530,10 @@ class ForumPost(Base):
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     last_reply_at = Column(DateTime(timezone=True), nullable=True)
-    
+
+    # AI 限时问答关联（绑了则该 ForumPost 是某 ai_question 的答案）
+    ai_question_id = Column(Integer, ForeignKey("ai_questions.id", ondelete="SET NULL"), nullable=True)
+
     # 图片和关联内容（Discovery Feed 功能）
     images = Column(JSON, nullable=True)  # JSON数组，最多5张图片URL
     attachments = Column(JSON, nullable=True)  # JSON数组，文件附件 [{url, filename, size, content_type}]，可与 images 同时存在
@@ -2558,6 +2561,8 @@ class ForumPost(Base):
         Index("idx_forum_posts_author", author_id, is_deleted, is_visible),
         Index("idx_forum_posts_admin_author", admin_author_id, is_deleted, is_visible),
         Index("idx_forum_posts_pinned", is_pinned, created_at),
+        Index("idx_forum_posts_ai_question_id", "ai_question_id",
+              postgresql_where=text("ai_question_id IS NOT NULL")),
         # 确保至少有一个作者（普通用户或管理员）
         CheckConstraint(
             "(author_id IS NOT NULL) OR (admin_author_id IS NOT NULL)",
@@ -3788,6 +3793,8 @@ class UserProfilePreference(Base):
     preferred_helper_types = Column(JSON, default=list)
     nearby_push_enabled = Column(Boolean, default=False, server_default="false", nullable=False)
     city = Column(String(64))
+    # 'gps'(默认): 自动同步 GPS 反查的城市；'manual': 用户在偏好页改过，GPS 不再覆盖
+    city_source = Column(String(16), default="gps", server_default="gps", nullable=False)
     # Migrated from UserPreferences
     task_types = Column(JSON, nullable=True)
     locations = Column(JSON, nullable=True)
