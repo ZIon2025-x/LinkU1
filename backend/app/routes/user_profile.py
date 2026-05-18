@@ -48,6 +48,7 @@ class PreferenceUpdate(BaseModel):
     preferred_categories: list[int] | None = None
     preferred_helper_types: list[str] | None = None
     nearby_push_enabled: bool | None = None
+    daily_digest_enabled: bool | None = None
     city: str | None = None
     identity: str | None = None  # "pre_arrival" or "in_uk"
     interests: list[str] | None = None
@@ -55,6 +56,9 @@ class PreferenceUpdate(BaseModel):
 class LocationUpdate(BaseModel):
     latitude: float
     longitude: float
+    # 可选：客户端用 geocoding 反查得到的城市名，后端透传到 UserProfilePreference.city
+    # 仅当 city_source != 'manual' 时才会覆盖现有值（见 user_profile_service.update_city_from_gps）
+    city: str | None = None
 
     @field_validator('latitude')
     @classmethod
@@ -128,7 +132,8 @@ async def get_preferences(current_user=Depends(get_current_user_secure_sync_csrf
     if not pref:
         return {"mode": "both", "duration_type": "both", "reward_preference": "no_preference",
                 "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
-                "nearby_push_enabled": False, "city": None}
+                "nearby_push_enabled": False, "daily_digest_enabled": True,
+                "city": None, "city_source": "gps"}
     return {
         "mode": pref.mode.value if pref.mode else "both",
         "duration_type": pref.duration_type.value if pref.duration_type else "both",
@@ -137,7 +142,9 @@ async def get_preferences(current_user=Depends(get_current_user_secure_sync_csrf
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
         "nearby_push_enabled": pref.nearby_push_enabled or False,
+        "daily_digest_enabled": pref.daily_digest_enabled or False,
         "city": pref.city,
+        "city_source": pref.city_source or "gps",
     }
 
 
@@ -220,7 +227,8 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
     pref = summary["preference"]
     pref_data = {"mode": "both", "duration_type": "both", "reward_preference": "no_preference",
                  "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
-                 "nearby_push_enabled": False, "city": None} if not pref else {
+                 "nearby_push_enabled": False, "daily_digest_enabled": True,
+                 "city": None, "city_source": "gps"} if not pref else {
         "mode": pref.mode.value if pref.mode else "both",
         "duration_type": pref.duration_type.value if pref.duration_type else "both",
         "reward_preference": pref.reward_preference.value if pref.reward_preference else "no_preference",
@@ -228,7 +236,9 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
         "nearby_push_enabled": pref.nearby_push_enabled or False,
+        "daily_digest_enabled": pref.daily_digest_enabled or False,
         "city": pref.city,
+        "city_source": pref.city_source or "gps",
     }
 
     rel = summary["reliability"]
@@ -282,6 +292,14 @@ async def upload_location(
     from app.services.nearby_task_service import upsert_user_location, process_nearby_push
     upsert_user_location(db, current_user.id, data.latitude, data.longitude)
     db.commit()
+    # 客户端如带了反查到的城市，同步到偏好（仅当 city_source != 'manual' 且值有变化时实际写入）
+    # 单独成事务：失败不应影响主流程
+    if data.city:
+        try:
+            svc.update_city_from_gps(db, current_user.id, data.city)
+            db.commit()
+        except Exception:
+            db.rollback()
     # Push runs in same request but failure won't affect response
     try:
         process_nearby_push(db, current_user.id, data.latitude, data.longitude)

@@ -12,7 +12,9 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../data/repositories/user_profile_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../user_profile/bloc/user_profile_bloc.dart';
 
 /// 设置页面
 /// 参考iOS SettingsView.swift
@@ -72,6 +74,15 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    return BlocProvider<UserProfileBloc>(
+      create: (ctx) => UserProfileBloc(
+        repository: ctx.read<UserProfileRepository>(),
+      )..add(const UserProfileLoadSummary()),
+      child: _buildScaffold(context, isDark),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context, bool isDark) {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.profileSettings),
@@ -139,6 +150,57 @@ class _SettingsViewState extends State<SettingsView> {
                             context.read<SettingsBloc>().add(
                                   SettingsSoundToggled(value),
                                 );
+                          },
+                        ),
+                        _settingsDivider(isDark),
+                        // 任务推送偏好：从 UserProfileBloc 读 + 写
+                        BlocBuilder<UserProfileBloc, UserProfileState>(
+                          buildWhen: (prev, curr) =>
+                              prev.summary?.preference !=
+                              curr.summary?.preference,
+                          builder: (ctx, profileState) {
+                            final pref = profileState.summary?.preference;
+                            final nearby = pref?.nearbyPushEnabled ?? false;
+                            final daily = pref?.dailyDigestEnabled ?? true;
+                            return Column(
+                              children: [
+                                _SettingsSwitchRow(
+                                  icon: Icons.location_on_outlined,
+                                  title: ctx.l10n.settingsNearbyPushTitle,
+                                  subtitle:
+                                      ctx.l10n.settingsNearbyPushSubtitle,
+                                  value: nearby,
+                                  onChanged: (v) {
+                                    ctx
+                                        .read<UserProfileBloc>()
+                                        .add(UserProfileUpdatePreferences(
+                                          preferences: {
+                                            'nearby_push_enabled': v,
+                                          },
+                                        ));
+                                  },
+                                ),
+                                _settingsDivider(isDark),
+                                _SettingsSwitchRow(
+                                  icon: Icons
+                                      .notifications_active_outlined,
+                                  title:
+                                      ctx.l10n.settingsDailyDigestTitle,
+                                  subtitle:
+                                      ctx.l10n.settingsDailyDigestSubtitle,
+                                  value: daily,
+                                  onChanged: (v) {
+                                    ctx
+                                        .read<UserProfileBloc>()
+                                        .add(UserProfileUpdatePreferences(
+                                          preferences: {
+                                            'daily_digest_enabled': v,
+                                          },
+                                        ));
+                                  },
+                                ),
+                              ],
+                            );
                           },
                         ),
                       ],

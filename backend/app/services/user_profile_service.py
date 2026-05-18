@@ -65,16 +65,26 @@ def get_preference(db: Session, user_id: str) -> UserProfilePreference | None:
 
 
 def upsert_preference(db: Session, user_id: str, data: dict) -> UserProfilePreference:
-    """Create or update preference. data keys match model field names."""
+    """Create or update preference. data keys match model field names.
+
+    `city` 走手动覆盖语义：只有值真正变化时才写入并标记 city_source='manual'，
+    避免用户开偏好页又原样保存就把 GPS 源锁成 manual。
+    """
     pref = get_preference(db, user_id)
     if not pref:
         pref = UserProfilePreference(user_id=user_id)
         db.add(pref)
     for key in ["mode", "duration_type", "reward_preference",
                 "preferred_time_slots", "preferred_categories", "preferred_helper_types",
-                "nearby_push_enabled", "city"]:
+                "nearby_push_enabled", "daily_digest_enabled"]:
         if key in data:
             setattr(pref, key, data[key])
+
+    if "city" in data:
+        new_city = (data["city"] or None) if data["city"] != "" else None
+        if new_city != pref.city:
+            pref.city = new_city
+            pref.city_source = "manual"
 
     # Handle identity and interests — stored on UserDemand, not UserProfilePreference
     if "identity" in data or "interests" in data:
@@ -106,6 +116,35 @@ def upsert_preference(db: Session, user_id: str, data: dict) -> UserProfilePrefe
                 }
             demand.recent_interests = existing
 
+    db.flush()
+    return pref
+
+
+def update_city_from_gps(db: Session, user_id: str, city: str) -> UserProfilePreference | None:
+    """GPS 反查到的城市自动同步到偏好。
+
+    - 若用户偏好行不存在则创建（city_source 默认 'gps'）
+    - 若 city_source == 'manual' 则不动（尊重用户手动选择）
+    - 若新城市与现值相同则不动（去抖）
+    - 否则写入新 city 并保持/设置 source='gps'
+
+    返回更新后的 pref（caller 负责 commit）。空 city 直接返回 None 不写入。
+    """
+    city = (city or "").strip()
+    if not city:
+        return None
+    pref = get_preference(db, user_id)
+    if not pref:
+        pref = UserProfilePreference(user_id=user_id, city=city, city_source="gps")
+        db.add(pref)
+        db.flush()
+        return pref
+    if pref.city_source == "manual":
+        return pref
+    if pref.city == city:
+        return pref
+    pref.city = city
+    pref.city_source = "gps"
     db.flush()
     return pref
 

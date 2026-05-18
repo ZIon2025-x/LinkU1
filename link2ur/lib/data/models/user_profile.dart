@@ -59,7 +59,12 @@ class UserProfilePreference extends Equatable {
   final List<int> preferredCategories;
   final List<String> preferredHelperTypes;
   final bool nearbyPushEnabled;
+  /// 每日 17:00 UTC 推送同城任务摘要（独立于 1km 实时推送的开关）
+  final bool dailyDigestEnabled;
   final String? city;
+  /// 'gps' (默认) 或 'manual'。manual 表示用户手动改过 city，App 启动时
+  /// 上传 GPS 城市的请求不会覆盖这条偏好（后端 [update_city_from_gps] 兜底）。
+  final String citySource;
 
   const UserProfilePreference({
     this.mode = 'both',
@@ -69,7 +74,9 @@ class UserProfilePreference extends Equatable {
     this.preferredCategories = const [],
     this.preferredHelperTypes = const [],
     this.nearbyPushEnabled = false,
+    this.dailyDigestEnabled = true,
     this.city,
+    this.citySource = 'gps',
   });
 
   factory UserProfilePreference.fromJson(Map<String, dynamic> json) {
@@ -81,7 +88,9 @@ class UserProfilePreference extends Equatable {
       preferredCategories: (json['preferred_categories'] as List?)?.cast<int>() ?? [],
       preferredHelperTypes: (json['preferred_helper_types'] as List?)?.cast<String>() ?? [],
       nearbyPushEnabled: json['nearby_push_enabled'] as bool? ?? false,
+      dailyDigestEnabled: json['daily_digest_enabled'] as bool? ?? true,
       city: json['city'] as String?,
+      citySource: json['city_source'] as String? ?? 'gps',
     );
   }
 
@@ -93,7 +102,9 @@ class UserProfilePreference extends Equatable {
     'preferred_categories': preferredCategories,
     'preferred_helper_types': preferredHelperTypes,
     'nearby_push_enabled': nearbyPushEnabled,
+    'daily_digest_enabled': dailyDigestEnabled,
     'city': city,
+    'city_source': citySource,
   };
 
   UserProfilePreference copyWith({
@@ -104,7 +115,9 @@ class UserProfilePreference extends Equatable {
     List<int>? preferredCategories,
     List<String>? preferredHelperTypes,
     bool? nearbyPushEnabled,
+    bool? dailyDigestEnabled,
     String? city,
+    String? citySource,
   }) {
     return UserProfilePreference(
       mode: mode ?? this.mode,
@@ -114,12 +127,14 @@ class UserProfilePreference extends Equatable {
       preferredCategories: preferredCategories ?? this.preferredCategories,
       preferredHelperTypes: preferredHelperTypes ?? this.preferredHelperTypes,
       nearbyPushEnabled: nearbyPushEnabled ?? this.nearbyPushEnabled,
+      dailyDigestEnabled: dailyDigestEnabled ?? this.dailyDigestEnabled,
       city: city ?? this.city,
+      citySource: citySource ?? this.citySource,
     );
   }
 
   @override
-  List<Object?> get props => [mode, durationType, rewardPreference, preferredTimeSlots, preferredCategories, preferredHelperTypes, nearbyPushEnabled, city];
+  List<Object?> get props => [mode, durationType, rewardPreference, preferredTimeSlots, preferredCategories, preferredHelperTypes, nearbyPushEnabled, dailyDigestEnabled, city, citySource];
 }
 
 /// 可靠度画像

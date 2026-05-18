@@ -276,10 +276,22 @@ class PushNotificationService with WidgetsBindingObserver {
         lng = position.longitude;
       }
 
+      // 顺带把 GPS 反查到的城市传给后端：后端在 city_source != 'manual' 时
+      // 才会写到 UserProfilePreference.city。client 无需关心覆盖逻辑。
+      String? gpsCity = LocationCityService.instance.city;
+      if (gpsCity == null || gpsCity.isEmpty) {
+        try {
+          gpsCity = await LocationCityService.instance.resolve();
+        } catch (_) {
+          gpsCity = null;
+        }
+      }
+
       // Upload to backend
       await _apiService?.post('/api/profile/location', data: {
         'latitude': lat,
         'longitude': lng,
+        if (gpsCity != null && gpsCity.isNotEmpty) 'city': gpsCity,
       });
 
       // Save timestamp
@@ -624,6 +636,10 @@ class PushNotificationService with WidgetsBindingObserver {
         } else {
           _router!.push('/notifications');
         }
+        break;
+      case 'daily_task_digest':
+        // 每日同城摘要：跳到任务列表，让用户自己挑
+        _router!.push('/tasks');
         break;
       case 'service_application':
         _router!.push('/expert-dashboard');

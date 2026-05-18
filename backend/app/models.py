@@ -3795,6 +3795,8 @@ class UserProfilePreference(Base):
     city = Column(String(64))
     # 'gps'(默认): 自动同步 GPS 反查的城市；'manual': 用户在偏好页改过，GPS 不再覆盖
     city_source = Column(String(16), default="gps", server_default="gps", nullable=False)
+    # 每日同城任务摘要推送（Celery beat 17:00 UTC 触发）— 默认开，用户可在设置里关
+    daily_digest_enabled = Column(Boolean, default=True, server_default="true", nullable=False)
     # Migrated from UserPreferences
     task_types = Column(JSON, nullable=True)
     locations = Column(JSON, nullable=True)
@@ -3883,6 +3885,23 @@ class NearbyTaskPush(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "task_id", name="uq_nearby_push_user_task"),
         Index("ix_nearby_task_pushes_user_pushed", "user_id", "pushed_at"),
+    )
+
+
+class DailyTaskDigestPush(Base):
+    """每日同城任务摘要推送去重表：每个用户每个日期最多一条"""
+    __tablename__ = "daily_task_digest_pushes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    sent_date = Column(Date, nullable=False)
+    task_count = Column(Integer, nullable=False, default=0)
+    city = Column(String(64), nullable=True)
+    pushed_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "sent_date", name="uq_daily_digest_user_date"),
+        Index("ix_daily_task_digest_pushes_pushed_at", "pushed_at"),
     )
 
 

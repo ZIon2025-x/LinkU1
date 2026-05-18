@@ -1245,6 +1245,48 @@ def init_scheduler():
         description="清理过期附近任务推送记录"
     )
 
+    # 每日同城任务摘要 - linktest 兜底（prod 走 Celery beat 17:00 UTC）
+    # 间隔 24h，配合 make_daily_task 在 17:00 UTC 灰度执行
+    def _daily_digest():
+        try:
+            from app.services.daily_digest_service import run_daily_digest
+            db = SessionLocal()
+            try:
+                result = run_daily_digest(db)
+                logger.info(f"每日同城摘要推送完成（fallback）: {result}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"每日同城摘要推送失败（fallback）: {e}", exc_info=True)
+
+    scheduler.register_task(
+        'send_daily_task_digest',
+        make_daily_task('send_daily_task_digest', 17, _daily_digest),
+        interval_seconds=3600,
+        description="每日同城任务摘要推送（17:00 UTC）"
+    )
+
+    # 清理摘要推送记录 - 每天执行
+    def _cleanup_daily_digest_pushes():
+        try:
+            from app.services.daily_digest_service import cleanup_old_digest_pushes
+            db = SessionLocal()
+            try:
+                deleted = cleanup_old_digest_pushes(db, days=60)
+                db.commit()
+                logger.info(f"每日摘要推送记录清理完成（fallback）: {deleted}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"每日摘要推送记录清理失败（fallback）: {e}")
+
+    scheduler.register_task(
+        'cleanup_daily_digest_pushes',
+        _cleanup_daily_digest_pushes,
+        interval_seconds=86400,
+        description="清理过期每日摘要推送记录"
+    )
+
     # ========== 用户画像系统 ==========
 
     # 需求画像夜间推断 - 每天凌晨3:30

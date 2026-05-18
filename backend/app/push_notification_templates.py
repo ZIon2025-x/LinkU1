@@ -610,6 +610,31 @@ PUSH_NOTIFICATION_TEMPLATES = {
             "body_template": "{task_title}，就在你附近"
         }
     },
+
+    # 每日同城任务摘要（title 不会走 .format()，变量必须放在 body_template 里）
+    "daily_task_digest": {
+        "en": {
+            "title": "New tasks today",
+            "body_template": "{task_count} new tasks in {city} waiting for you"
+        },
+        "zh": {
+            "title": "今日新任务",
+            "body_template": "{city}今天有 {task_count} 个同城任务可接"
+        }
+    },
+
+    # 每日同城任务摘要（含 Online 细分）
+    # 注：不带 {city}，避免"全部任务都是 Online"时出现 "in London" 的误导框架
+    "daily_task_digest_with_online": {
+        "en": {
+            "title": "New tasks today",
+            "body_template": "{task_count} new tasks today (incl. {online_count} online)"
+        },
+        "zh": {
+            "title": "今日新任务",
+            "body_template": "今日 {task_count} 个任务可接（含 {online_count} 个 Online）"
+        }
+    },
 }
 
 
