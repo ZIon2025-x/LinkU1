@@ -52,6 +52,8 @@ async def test_summarize_calls_glm_and_caches_result():
     fake_redis.setex.assert_called_once()
     cache_key = fake_redis.setex.call_args.args[0]
     assert cache_key.startswith("ai:hist_sum:conv_1:")
+    ttl = fake_redis.setex.call_args.args[1]
+    assert ttl == 86400  # 24h
 
 
 @pytest.mark.asyncio
@@ -140,3 +142,23 @@ async def test_summarize_works_without_redis():
         summary = await ai_agent._summarize_history_cached(rows, "conv_1")
 
     assert summary == "Summary"
+
+
+@pytest.mark.asyncio
+async def test_summarize_empty_rows_returns_none():
+    """Empty rows list should return None immediately without calling Redis or GLM."""
+    from app.services import ai_agent
+
+    fake_redis = MagicMock()
+    fake_redis.get = MagicMock()
+    fake_llm = MagicMock()
+    fake_llm.chat = AsyncMock()
+
+    with patch.object(ai_agent, "_get_redis", return_value=fake_redis), \
+         patch.object(ai_agent, "get_llm_client", return_value=fake_llm):
+
+        summary = await ai_agent._summarize_history_cached([], "conv_1")
+
+    assert summary is None
+    fake_redis.get.assert_not_called()
+    fake_llm.chat.assert_not_awaited()
