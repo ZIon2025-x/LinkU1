@@ -1463,7 +1463,7 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     try:
         await _save_assistant_message(
             ctx, ctx.full_response, ctx.model_used,
-            ctx.total_input_tokens, ctx.total_output_tokens,
+            ctx.total_raw_input_tokens, ctx.total_output_tokens,
             ctx.all_tool_calls, ctx.all_tool_results,
         )
 
@@ -1487,7 +1487,7 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
         async with AsyncSessionLocal() as fresh_db:
             await _save_assistant_message_standalone(
                 fresh_db, ctx.conversation_id, ctx.full_response, ctx.model_used,
-                ctx.total_input_tokens, ctx.total_output_tokens,
+                ctx.total_raw_input_tokens, ctx.total_output_tokens,
                 ctx.all_tool_calls, ctx.all_tool_results,
                 ctx.user_message, total_tokens,
             )
