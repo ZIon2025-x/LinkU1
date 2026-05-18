@@ -112,10 +112,11 @@ def award_participation_points_on_cancel(db: Session, qid: int) -> int:
         add_points_transaction(
             db,
             user_id=post.user_id,
+            type='earn',  # add_points_transaction 必填 (signature: earn/spend/refund/expire)
             amount=q.participation_points,
             source='ai_qa_cancel_participation',
             related_type='ai_question',
-            related_id=str(qid),
+            related_id=qid,  # Optional[int],不要 str()
             description=f'AI 限时问答 #{qid} 被取消,补发参与积分',
         )
         count += 1
