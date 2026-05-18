@@ -1147,22 +1147,13 @@ class _FilePdfCard extends StatelessWidget {
                 Text(
                   // 客户端选好文件即视为"已就绪",真实上传发生在 publish 时
                   // (整体进度由外层 _isUploading 决定),这里只展示文件元数据。
-                  '$sizeKb KB · 已就绪',
+                  // UX audit #9: 不显示假的"100% 已就绪"进度条; 未来真做上传进度时再加。
+                  '$sizeKb KB',
                   style: TextStyle(
                     fontSize: 11,
                     color: isDark
                         ? AppColors.textTertiaryDark
                         : AppColors.textTertiaryLight,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: 1.0,
-                    minHeight: 3,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
                   ),
                 ),
               ],
