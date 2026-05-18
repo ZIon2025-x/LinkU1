@@ -1952,6 +1952,8 @@ class _DetailCompactAppBar extends StatelessWidget
     final displayAvatar = post.displayAvatar?.isNotEmpty == true
         ? post.displayAvatar
         : author?.avatar;
+    // UX audit #6: follow pill 隐藏期间 hasAuthorId 暂未使用; 接入 follow 后恢复使用
+    // ignore: unused_local_variable
     final hasAuthorId =
         (author?.id.isNotEmpty ?? false) || post.authorId.isNotEmpty;
     return AppBar(
@@ -2004,10 +2006,13 @@ class _DetailCompactAppBar extends StatelessWidget
         ),
       ),
       actions: [
-        if (hasAuthorId) ...[
-          _FollowPill(isFollowing: isFollowing, onTap: onToggleFollow),
-          const SizedBox(width: 4),
-        ],
+        // UX audit #6: 关注 pill 当前只是 placeholder (SnackBar "关注功能待接入"),
+        // 在接入 follow_repository 之前隐藏, 避免用户被误导.
+        // TODO(follow): 接入后启用, 把 hasAuthorId / isFollowing / onToggleFollow 接回真实数据
+        // if (hasAuthorId) ...[
+        //   _FollowPill(isFollowing: isFollowing, onTap: onToggleFollow),
+        //   const SizedBox(width: 4),
+        // ],
         IconButton(
           icon: const Icon(Icons.more_horiz, size: 20),
           onPressed: onMore,
@@ -2018,6 +2023,9 @@ class _DetailCompactAppBar extends StatelessWidget
   }
 }
 
+// UX audit #6: 暂时未在 _DetailCompactAppBar 引用 (follow_repository 接入前隐藏),
+// 保留类定义以便接入后直接启用; 抑制 unused_element 警告。
+// ignore: unused_element
 class _FollowPill extends StatelessWidget {
   const _FollowPill({required this.isFollowing, required this.onTap});
   final bool isFollowing;
