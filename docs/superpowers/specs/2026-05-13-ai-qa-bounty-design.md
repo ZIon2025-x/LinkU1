@@ -39,75 +39,36 @@
 | 答案载体 | 一个绑了 `ai_question_id` 的 ForumPost，**论坛流和问答页双露脸** |
 | 评分 | AI 简化输出 `{score, off_topic, ai_generated}` + admin 终审改分 |
 | 奖金池 | 固定（如 10 GBP），admin 可改 |
-| 分配 | 默认 50% 比例公式，封顶 30 人，不足 10 人全员分；可后期切 fixed 模式 |
+| 分配 | **全员候选按 final_score 比例分配**，低于 `floor_pence` (默认 10p) 抹零；不设 winners_count cap（高分多拿，低分少拿，太低自然归零）|
 | 现金落地 | settle 时调 `wallet_service.credit_wallet()` → 钱进用户 `WalletAccount.balance`（DECIMAL，默认 GBP）；流水 `source='ai_qa_reward'` + `related_type='ai_question'` + `related_id=qid` + `idempotency_key='ai_qa_settle_{qid}_{user_id}'` 防双发。**提现**：用户在 Link2Ur "我的-钱包" 页面（现成）调 `/api/wallet/withdraw` → 走现有 Stripe Transfer 到 `stripe_account_id` → 用户银行 |
 | 参与积分 | 答题即得 5 积分（admin 可配） |
 | 通知 | 发布、截止前 24h、发奖完成、admin 撤稿（如发生） 全站推送，发奖话术不区分中奖与否 |
 | 入口 | 首页"发现更多"区 + "官方活动"区 |
-| 命名 | 用户面统一叫"AI 限时问答"（区别于 OfficialTask 的"新手任务"——后者在 `features/newbie_tasks/` 模块独立） |
+| 命名 | **本 P0 路径（admin 出题 / cycle）用户面叫"AI 限时问答"**（金色卡片 + 🤖 角标）；用户提议路径（独立 spec `2026-05-18-ai-qa-user-submitted-design.md`）叫"社区限时问答"（蓝色卡片 + 💡 角标），两者同列表混排但视觉一眼分辨。两者都跟 OfficialTask"新手任务"（紫色，`features/newbie_tasks/` 模块）独立 |
 | 答题长度 | 建议 100-1500 字 + 0-3 张图（spec 推荐值，代码不强约束；可在题面/出题指南中提示） |
 | 反作弊 | 接现有 `risk_control.check_risk('ai_qa_answer', ...)`：硬封禁拒答；高风险（score≥30）记录但放行 admin highlight |
 | AI 生成识别 | AI 评分输出 `ai_generated=high` 的答案，前端展示时打"可能为 AI 生成"提示标签（仅 scored 后；admin 可改 score） |
 
-### 2.1 中奖人数公式
+### 2.1 奖金分配算法
+
+**简化版（无 winners_count cap）**：所有 hide_in_qa=False 的答主都进分配；按 final_score 比例分；低于 `floor_pence` (默认 10p) 自然归零。
 
 ```python
-def calc_cash_winners(answer_count: int, formula: dict) -> int:
-    if answer_count == 0:
-        return 0
-    if answer_count < formula["min_for_full_split"]:  # 默认 10
-        return answer_count
-    if formula["mode"] == "fixed":
-        return min(formula["fixed_winners"], formula["max_winners"], answer_count)
-    # mode == "ratio"
-    import math
-    n = math.ceil(answer_count * formula["ratio"])
-    return min(n, formula["max_winners"], answer_count)
-```
-
-**上线默认 formula JSON**：
-
-```json
-{
-  "min_for_full_split": 10,
-  "mode": "ratio",
-  "fixed_winners": 10,
-  "ratio": 0.5,
-  "max_winners": 30,
-  "floor_pence": 10
-}
-```
-
-> `withdraw_threshold_pence` 已删——本 feature 不设提现门槛；用户提现走现有 wallet_service / `/api/wallet/withdraw` 的全局风控（参考 §1 wallet 体系说明）
-
-举例（默认参数下）：
-
-| 答题人数 | 中奖人数 |
-|---|---|
-| 5 | 5（全员） |
-| 9 | 9（全员） |
-| 10 | 10（max 兜底） |
-| 30 | 15 |
-| 50 | 25 |
-| 100 | 30（封顶） |
-| 300 | 30（封顶） |
-
-### 2.2 池子分配算法
-
-```python
-def distribute_pool(scored_answers, pool_pence, floor_pence):
-    """
-    scored_answers: List[(answer_id, final_score)] —— admin 终审后的有效答案，已按分降序
-    返回 List[(answer_id, reward_pence)]
-    """
-    winners = scored_answers[:calc_cash_winners(...)]
-    total_score = sum(s for _, s in winners)
+def distribute_pool(
+    scored_answers: List[Tuple[int, int]],  # [(answer_id, final_score)] 已按分降序
+    pool_pence: int,
+    floor_pence: int,
+) -> List[Tuple[int, int]]:
+    """返回 [(answer_id, reward_pence)]，长度 = len(scored_answers)。"""
+    if not scored_answers:
+        return []
+    total_score = sum(s for _, s in scored_answers)
     if total_score == 0:
-        return [(aid, 0) for aid, _ in winners]
-    raw = [(aid, round(pool_pence * s / total_score)) for aid, s in winners]
-    # 抹零：低于 floor_pence 的归零
+        return [(aid, 0) for aid, _ in scored_answers]
+    raw = [(aid, round(pool_pence * s / total_score)) for aid, s in scored_answers]
+    # 抹零：低于 floor_pence 归零
     cleaned = [(aid, amt if amt >= floor_pence else 0) for aid, amt in raw]
-    # 总额误差修正：差额加到第 1 名
+    # 差额加到第 1 名（round 累积误差修正）
     diff = pool_pence - sum(a for _, a in cleaned)
     if cleaned:
         first_aid, first_amt = cleaned[0]
@@ -115,7 +76,27 @@ def distribute_pool(scored_answers, pool_pence, floor_pence):
     return cleaned
 ```
 
-**未中奖者**（非 top-N）拿固定参与积分，不进现金分配。**未中奖+未发出的钱**留在 reward_pool_pence 字段里历史记录，不退、不补、不滚——本来钱就没动过。
+**关键设计点（vs 旧 top-N 模式）**：
+- ❌ 删除 `winners_count` / `max_winners` / `mode` (ratio/fixed) / `fixed_winners` / `ratio` / `min_for_full_split`
+- ✅ 只剩 `floor_pence` 一个参数（默认 10p = £0.10）
+- ✅ "高分排名分到截止" 由 floor 自然实现（pool 太小时低分自然被抹零）
+- ✅ 加注（参考 sponsor spec）越多 → 能高于 floor 的人越多 → 更多人分到
+
+**默认 `floor_pence` = 10p (£0.10)**
+
+**举例 (pool=£10 = 1000p)**：
+
+| 答题人数 | 分数分布 (final_score) | 实际分到的人数 + 单人金额 |
+|---|---|---|
+| 5 | [90, 80, 70, 60, 50] (total 350) | 5 人：£2.57 / £2.29 / £2.00 / £1.71 / £1.43 |
+| 10 | [100, 90, ..., 10] (total 550) | 10 人：top 1 £1.82, top 10 £0.18 |
+| 30 | 均匀 [80, 79, ..., 51] (total 1965) | 30 人：每人 £0.26-£0.41 |
+| 100 | 均匀 [80, 79, ..., 0]，多数 score 低 | top X 人能拿，bottom (100-X) 被 floor 抹零 |
+| 5 (全 0 分) | [0, 0, 0, 0, 0] | 5 人：每人 £0（钱留 reward_pool 不发） |
+
+**未中奖者**（reward_pence=0 抹零的）仍拿固定参与积分，不进现金分配。**未发出的钱**（floor 抹零部分）留在 `reward_pool_pence` 字段里历史记录，不退、不补、不滚——但若有 sponsor 加注资金、且题目走 canceled/closed_empty，详见 sponsor spec carry over 逻辑。
+
+> `withdraw_threshold_pence` 已删——本 feature 不设提现门槛；用户提现走现有 wallet_service / `/api/wallet/withdraw` 的全局风控（参考 §1 wallet 体系说明）
 
 ### 2.3 出题原则（admin guideline）
 
@@ -153,9 +134,9 @@ CREATE TABLE ai_questions (
     canceled_at     TIMESTAMPTZ,           -- admin 撤稿时间
     cancel_reason   TEXT,                  -- admin 撤稿理由(留底,不分类)
     settled_at      TIMESTAMPTZ,
-    reward_pool_pence       INT NOT NULL DEFAULT 1000 CHECK (reward_pool_pence BETWEEN 0 AND 100000),  -- S2:单期最高 £1000 硬封顶
+    reward_pool_pence       INT NOT NULL DEFAULT 1000 CHECK (reward_pool_pence BETWEEN 0 AND 100000),  -- S2:单期最高 £1000 硬封顶（不含 sponsor 加注）
     participation_points    INT NOT NULL DEFAULT 5 CHECK (participation_points BETWEEN 0 AND 1000),
-    topn_formula            JSONB NOT NULL,
+    floor_pence             INT NOT NULL DEFAULT 10 CHECK (floor_pence BETWEEN 1 AND 1000),  -- 单人最低分配,低于抹零
     ai_prompt_used          TEXT,           -- 出题时所用 prompt 留底
     target_forum_category_id INT NOT NULL REFERENCES forum_categories(id),  -- 答题强制进的论坛板块,从 cycle_config 复制或 draft 手填
     cycle_config_id         INT REFERENCES ai_qa_cycle_configs(id),  -- 手填 draft 路径可空
@@ -179,7 +160,7 @@ CREATE TABLE ai_question_candidates (
     -- 默认参数快照(候选生成时从 cycle_config.default_* 复制,锁定该候选的参考值)
     -- 即使后续 admin 改了 cycle_config 默认值,候选 publish 时 pre-fill 仍用此快照
     snapshot_reward_pool_pence       INT NOT NULL,
-    snapshot_topn_formula            JSONB NOT NULL,
+    snapshot_floor_pence             INT NOT NULL,
     snapshot_duration_hours          INT NOT NULL,
     snapshot_edit_lock_hours_before  INT NOT NULL,
     snapshot_participation_points    INT NOT NULL,
@@ -197,7 +178,7 @@ CREATE TABLE ai_qa_cycle_configs (
     direction_prompt        TEXT NOT NULL,  -- "题目方向" prompt,送给 AI
     default_reward_pool_pence       INT NOT NULL DEFAULT 1000 CHECK (default_reward_pool_pence BETWEEN 0 AND 100000),  -- S2:单期最高 £1000
     default_participation_points    INT NOT NULL DEFAULT 5 CHECK (default_participation_points BETWEEN 0 AND 1000),
-    default_topn_formula            JSONB NOT NULL,
+    default_floor_pence             INT NOT NULL DEFAULT 10 CHECK (default_floor_pence BETWEEN 1 AND 1000),
     default_duration_hours          INT NOT NULL DEFAULT 168,  -- 7 天
     default_edit_lock_hours_before  INT NOT NULL DEFAULT 1,
     target_forum_category_id        INT NOT NULL REFERENCES forum_categories(id),  -- 该周期答题落入的论坛板块
@@ -346,7 +327,7 @@ ai_qa_cycle_configs.next_run_at ──Celery beat 扫到──► run_qa_cycle(c
 
 ```
 admin POST /admin/ai-qa/drafts (body: title, content, target_forum_category_id, deadline,
-                                       reward_pool_pence, participation_points, topn_formula,
+                                       reward_pool_pence, participation_points, floor_pence,
                                        posed_by_expert_id?: 不填则用 SystemSettings['ai_qa_default_expert_id'])
        ↓
    创建 ai_questions (status=draft, cycle_config_id=NULL,
@@ -456,8 +437,8 @@ admin 点 [确认发奖] → POST /admin/ai-qa/review/{qid}/settle
      │     若 sum + 本期 reward_pool_pence > cap → 拒,409 + audit log + 触发 S6 邮件
      │     修改该 setting 本身需 2 步确认（admin UI 强制）+ 单独 audit
      ├─ 用 admin_override_score (or ai_score) 重算 final_score 排序
-     ├─ 调 calc_cash_winners() 得 winner 列表
-     ├─ 调 distribute_pool() 得每人金额
+     ├─ 调 distribute_pool(scored_tuples, pool_pence=reward_pool_pence, floor_pence=q.floor_pence)
+     │    返回 [(answer_id, reward_pence), ...] 长度 = 所有 hide_in_qa=False 答主数
      ├─ 写 ai_answer_scores.reward_pence / reward_points / rank_final / settled_at
      ├─ **入账 wallet**（对每个 reward_pence > 0 的中奖者，事务内同步）：
      │     wallet_service.lock_wallet(db, user_id, currency='GBP')        # 行锁防并发
@@ -538,7 +519,7 @@ DELETE /api/admin/ai-qa/candidates/{id}    作废候选
 # 草稿（手填路径,兜底）
 POST   /api/admin/ai-qa/drafts             手填创建草稿
                                            body: {title, content, target_forum_category_id, deadline,
-                                                  reward_pool_pence, participation_points, topn_formula, ...}
+                                                  reward_pool_pence, participation_points, floor_pence, ...}
                                            创建 ai_questions (status=draft, cycle_config_id=NULL)
 PATCH  /api/admin/ai-qa/drafts/{id}        编辑草稿（仅 status=draft 可改,否则 409）
 DELETE /api/admin/ai-qa/drafts/{id}        删除草稿（仅 status=draft,硬删,无用户面）
@@ -633,10 +614,9 @@ ai_qa/
 ### 6.2 Admin Web (`admin/`)
 
 **通用规范**：
-- `topn_formula` JSONB 字段在 admin 表单中**不**以 raw JSON 暴露。拆成 5 个 input：
-  `mode` dropdown (ratio/fixed) · `ratio` (0-1, 仅 ratio 模式) / `fixed_winners` (仅 fixed 模式) · `max_winners` · `floor_pence` · `min_for_full_split`
-  下方实时显示**预览**："9 人答 → 9 人全员分 ≈ £X/人 · 30 人答 → Y 人中奖 ≈ £Z/人 · 100 人答 → max 封顶 ≈ £W/人"
-  保存时前端将表单值组装为 JSON 存入 JSONB。同样规则适用于 cycle_config.default_topn_formula 和 candidate snapshot/draft 编辑。
+- `floor_pence` 单字段 input（默认 10，单位 pence；范围 1-1000 = £0.01-£10.00 hard cap）
+  下方实时显示**预览**："pool=£X,5 人答全分 ≈ £Y/人 · 30 人答 ≈ £Z/人 · 100 人答（多数被 floor 抹零）实际分到 N 人"
+  同样适用于 cycle_config.default_floor_pence 和 candidate snapshot/draft 编辑。
 - **S2 大额二次确认**：reward_pool_pence input 校验 0 ≤ x ≤ 100000 (£0-£1000)。
   当 admin 提交时若 reward_pool_pence > 5000（即 > £50），弹模态框二次确认：
   "⚠ 你正设置一个 £X.XX 的奖金池（高于 £50）。本期发奖后无法撤回，请确认。"
@@ -666,8 +646,8 @@ ai_qa/
 
 | 情况 | 处理 |
 |---|---|
-| 答题人数 = 0 | 题目状态切 `closed_empty`，奖金池不发；钱本来就没动 |
-| 答题人数 < 10 但 > 0 | 全员分（按 formula 规则） |
+| 答题人数 = 0 | 题目状态切 `closed_empty`，奖金池不发；钱本来就没动；若有 sponsor 加注资金，按 sponsor spec carry over 进加注池 |
+| 答题人数 > 0 但 final_score 全 0 | distribute_pool 返回每人 0；reward_pool 全保留不发；走 settled 流程但 leaderboard 不写中奖记录 |
 | AI 出题失败 / 超时 | 候选表空，admin 后台显示 "AI 没出题，可手填"；admin 可手动建一道发 |
 | AI 评分 API 错 | 切 `scoring_failed`，admin 可点 "重跑评分"；不自动重试（防 API 抖动烧钱） |
 | 评分超期 24h admin 没审 | 邮件 escalation；不自动发奖 |
@@ -703,8 +683,7 @@ ai_qa/
 
 | 测试 | 覆盖 |
 |---|---|
-| `calc_cash_winners` | 0/5/9/10/30/50/300 等边界，fixed/ratio 两模式 |
-| `distribute_pool` | 加权分配 / floor 抹零 / 总额修正 / 全 0 分情况 |
+| `distribute_pool` | 边界：空列表 / 全 0 分 / floor 抹零 / 总额误差修正 / 不同 pool/floor 组合下各人金额正确 |
 | AI 评分 mock | 正常响应 / JSON 损坏 / 超时 / 部分答案缺失 |
 | 状态机转换 | 所有合法路径 + 非法跳转拒绝 |
 

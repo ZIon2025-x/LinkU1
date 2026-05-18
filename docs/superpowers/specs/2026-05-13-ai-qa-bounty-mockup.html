@@ -106,6 +106,17 @@ main { padding: 32px 40px 80px; max-width: 1500px; }
 .feed-aiqa-hero .aiqa-cash-sub { font-size: 10px; color: #553c00; font-weight: 600; opacity: 0.85; margin-top: 2px; position: relative; z-index: 1; }
 .feed-aiqa-meta { font-size: 11px; color: #dc2626; font-weight: 600; }
 
+/* 社区限时问答卡片（用户提议路径,蓝色调,与 AI 限时问答区分） */
+.feed-card-communityqa { border: 1.5px solid #007aff; box-shadow: 0 1px 6px rgba(0,122,255,0.25); position: relative; }
+.feed-communityqa-hero { background: linear-gradient(135deg, #007aff 0%, #409cff 100%); padding: 16px 10px 12px; text-align: center; position: relative; overflow: hidden; color: #fff; }
+.feed-communityqa-hero::before { content: ''; position: absolute; top: -20px; right: -20px; width: 60px; height: 60px; background: rgba(255,255,255,0.15); border-radius: 50%; }
+.feed-communityqa-hero::after { content: ''; position: absolute; bottom: -10px; left: -10px; width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+.feed-communityqa-hero .pre { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.95; position: relative; z-index: 1; }
+.feed-communityqa-hero .cash { font-size: 32px; font-weight: 800; line-height: 1; margin-top: 4px; position: relative; z-index: 1; }
+.feed-communityqa-hero .cash-sub { font-size: 10px; font-weight: 600; opacity: 0.95; margin-top: 2px; position: relative; z-index: 1; }
+.feed-communityqa-sponsor { font-size: 10px; color: #6b7280; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.feed-communityqa-sponsor .mini-avatar { width: 16px; height: 16px; border-radius: 50%; background: #fce7f3; color: #9d174d; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+
 /* answer cards */
 .answer-card { background: #fff; border-radius: 12px; margin: 8px 12px; padding: 14px; border: 1px solid #f0f0f0; position: relative; }
 .answer-card.rank-1 { border: 2px solid #ffd700; box-shadow: 0 0 0 1px rgba(255,215,0,0.15); }
@@ -124,6 +135,13 @@ main { padding: 32px 40px 80px; max-width: 1500px; }
 .answer-images { display: flex; gap: 4px; margin-top: 8px; }
 .answer-images .img { width: 60px; height: 60px; background: #e5e7eb; border-radius: 6px; }
 .answer-footer { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6; font-size: 11px; color: #9ca3af; }
+/* 论坛 like/favorite icons — 复用现有论坛 widget,因为答案是 ForumPost */
+.forum-actions { display: inline-flex; gap: 12px; margin-left: auto; align-items: center; }
+.forum-actions .action { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: #6b7280; cursor: pointer; padding: 3px 6px; border-radius: 4px; user-select: none; }
+.forum-actions .action:hover { background: #f3f4f6; }
+.forum-actions .action.liked { color: #ef4444; }
+.forum-actions .action.faved { color: #f59e0b; }
+.forum-actions .action .icon { font-size: 14px; line-height: 1; }
 .reward-tag { color: #ff8033; font-weight: 600; font-size: 12px; }
 .ai-warning-tag { background: #f3f4f6; color: #6b7280; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
 .ai-warning-tag::before { content: '⚠ '; }
@@ -278,6 +296,13 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
 </div>
 
 <div class="nav-group">
+  <h4>Sponsor 加注 (独立 spec)</h4>
+  <a href="#m8">M8 · 详情页含加注</a>
+  <a href="#m9">M9 · 加注 dialog</a>
+  <a href="#a6">A6 · admin 加注池</a>
+</div>
+
+<div class="nav-group">
   <h4>说明</h4>
   <a href="#legend">配色 / Tag 图例</a>
 </div>
@@ -376,6 +401,23 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
               </div>
             </div>
 
+            <!-- 社区限时问答（用户提议路径,蓝色调） -->
+            <div class="feed-card feed-card-communityqa">
+              <div class="feed-communityqa-hero">
+                <div class="pre">💡 社区限时问答 #5</div>
+                <div class="cash">£20</div>
+                <div class="cash-sub">现金奖池</div>
+              </div>
+              <div class="feed-body">
+                <div class="feed-title">伦敦有哪些住宿体验好的公寓推荐？</div>
+                <div class="feed-aiqa-meta">⏱ 5天12小时 · 8人答</div>
+                <div class="feed-communityqa-sponsor">
+                  <span class="mini-avatar">L</span>
+                  <span>由 @Lily_LDN 提议</span>
+                </div>
+              </div>
+            </div>
+
             <!-- 普通帖子卡 -->
             <div class="feed-card">
               <div class="feed-img" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);height:130px"></div>
@@ -391,7 +433,7 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
         <div class="section-header-text" style="margin-top:8px">官方活动</div>
 
         <!-- AI 限时问答 in 官方活动 list item -->
-        <div class="qa-item">
+        <div class="qa-item" style="border-left:3px solid #ffd700">
           <div class="qa-meta">
             <span class="badge-cash">£10 现金</span>
             <span class="badge-points">+5 积分</span>
@@ -402,6 +444,21 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
             <span>🤖 AI 出题</span>
             <span>📝 已 23 人作答</span>
             <span class="qa-deadline">⏱ 3 天 4 小时后截止</span>
+          </div>
+        </div>
+
+        <!-- 社区限时问答 in 官方活动 list item (蓝色左边框) -->
+        <div class="qa-item" style="border-left:3px solid #007aff">
+          <div class="qa-meta">
+            <span class="badge-cash">£20 现金</span>
+            <span class="badge-points">+5 积分</span>
+            <span class="badge-live">进行中</span>
+          </div>
+          <div class="qa-title">伦敦有哪些住宿体验好的公寓推荐？</div>
+          <div class="qa-stats">
+            <span>💡 @Lily_LDN 提议</span>
+            <span>📝 已 8 人作答</span>
+            <span class="qa-deadline">⏱ 5 天 12 小时后截止</span>
           </div>
         </div>
 
@@ -430,12 +487,15 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
     <div class="mockup-caption">
       <h4>设计要点</h4>
       <ul>
-        <li><strong>瀑布流融入而非横条</strong>：发现流是 <code>SliverMasonryGrid.count(crossAxisCount=2)</code> 双列竖式，AI 限时问答卡片<strong>跟其他帖子/服务/闲鱼卡同列宽</strong>，不破坏瀑布流节奏</li>
-        <li><strong>金色 hero 替代图位</strong>：普通卡片顶部是图（4:3 比例），AI 限时问答顶部是金色渐变 hero 显示 £10 大数字 — 视觉上一眼就 stand out</li>
-        <li><strong>金色边框 + 阴影</strong>：1.5px 金边 + 浅金阴影，进一步强调"现金 + 奖励"语义</li>
+        <li><strong>两种限时问答 type 视觉区分</strong>：<br/>
+          · 🤖 <strong>AI 限时问答</strong>（金色 hero #FFD700 + 金边）—— admin 出题 / cycle 路径<br/>
+          · 💡 <strong>社区限时问答</strong>（蓝色 hero #007AFF + 蓝边 + "由 @username 提议" 小标签）—— 用户付费提议路径<br/>
+          一眼分辨来源，同列表混排不混淆</li>
+        <li><strong>瀑布流融入而非横条</strong>：发现流是 <code>SliverMasonryGrid.count(crossAxisCount=2)</code> 双列竖式，两种限时问答卡片<strong>都跟其他帖子/服务/闲鱼卡同列宽</strong>，不破坏瀑布流节奏</li>
+        <li><strong>hero 替代图位</strong>：普通卡片顶部是图（4:3 比例），限时问答顶部是渐变 hero 显示 £X 大数字 — 视觉上 stand out</li>
         <li><strong>题面 2 行 ellipsis</strong>：跟普通卡片一致的截断规则</li>
-        <li><strong>底部红色倒计时</strong>替代普通卡的"赞数/价格"，强调紧迫感</li>
-        <li>下方"官方活动"区是 list 形式（非瀑布流），跟"新手任务" OfficialTask 同区共存，靠 badge 颜色区分（金色 £ vs 紫色积分）</li>
+        <li><strong>底部红色倒计时</strong>替代普通卡的"赞数/价格"，强调紧迫感；社区限时问答额外加灰色"由 @username 提议"行</li>
+        <li>下方"官方活动"区 list 形式，左边框颜色区分（金色 = AI 限时问答 / 蓝色 = 社区限时问答 / 紫色 = 新手任务），靠 badge 颜色 + 来源标志（🤖 vs 💡 vs 🎁）区分</li>
       </ul>
     </div>
   </div>
@@ -616,6 +676,10 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
           </div>
           <div class="answer-footer">
             <span style="color:#9ca3af">截止前可编辑 →</span>
+            <span class="forum-actions">
+              <span class="action"><span class="icon">♡</span> 2</span>
+              <span class="action"><span class="icon">☆</span> 0</span>
+            </span>
           </div>
         </div>
 
@@ -628,7 +692,11 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
           </div>
           <div class="answer-content">血泪教训：1) 千万别签 Right to Rent 没查清楚的房东 2) 看房带个朋友，一个人去太被动 3) 如果是 HMO，问清楚有几个室友共用厨房，超过 5 个真的不要……</div>
           <div class="answer-footer">
-            <span style="color:#9ca3af">📝 458 字 · 评分待结算</span>
+            <span style="color:#9ca3af">📝 458 字</span>
+            <span class="forum-actions">
+              <span class="action liked"><span class="icon">❤️</span> 12</span>
+              <span class="action faved"><span class="icon">⭐</span> 3</span>
+            </span>
           </div>
         </div>
 
@@ -639,6 +707,13 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
             <span class="meta">1 天前</span>
           </div>
           <div class="answer-content">分享个具体网站，spareroom 上看房一定要看 last login，半年没登录的房东多半是钓鱼……</div>
+          <div class="answer-footer">
+            <span style="color:#9ca3af">📝 89 字</span>
+            <span class="forum-actions">
+              <span class="action"><span class="icon">♡</span> 5</span>
+              <span class="action"><span class="icon">☆</span> 1</span>
+            </span>
+          </div>
         </div>
 
       </div>
@@ -658,6 +733,7 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
         <li>当前用户答案<strong>顶置</strong>且左侧蓝色边 + "你的回答"角标</li>
         <li>"截止前可编辑 →" 提示用户在 <code>edit_lock_at</code> 之前都能改</li>
         <li>答案列表 published 期间不显示"AI 生成提示"标签——评分阶段才有数据</li>
+        <li><strong>答案底部 ❤️/☆ 论坛 like/favorite</strong>：published 期间就有（ForumPost 原生），不受评分阶段限制；own 答案少互动正常 (♡ 2)，早答的 Lily 已累积 ❤️ 12</li>
         <li>说明条详细解释规则，对新用户友好</li>
       </ul>
     </div>
@@ -707,7 +783,11 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
           </div>
           <div class="answer-content">个人觉得最近的政策更倾向 high-skilled 路线，对 graduate visa 影响很大……</div>
           <div class="answer-footer">
-            <span style="color:#9ca3af">📝 此答案已获得参与积分 +5</span>
+            <span style="color:#9ca3af">📝 已获得参与积分 +5</span>
+            <span class="forum-actions">
+              <span class="action liked"><span class="icon">❤️</span> 9</span>
+              <span class="action"><span class="icon">☆</span> 2</span>
+            </span>
           </div>
         </div>
 
@@ -718,6 +798,13 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
             <span class="meta">2026-04-22</span>
           </div>
           <div class="answer-content">作为 Tier 2 签证持有者来说，新政策的过渡期长不长是关键……</div>
+          <div class="answer-footer">
+            <span style="color:#9ca3af">📝 已获得参与积分 +5</span>
+            <span class="forum-actions">
+              <span class="action"><span class="icon">♡</span> 4</span>
+              <span class="action"><span class="icon">☆</span> 0</span>
+            </span>
+          </div>
         </div>
 
       </div>
@@ -807,6 +894,10 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
             <span class="reward-tag">£1.20 现金</span>
             <span>+5 积分</span>
             <span style="color:#9ca3af">· 458 字</span>
+            <span class="forum-actions">
+              <span class="action liked"><span class="icon">❤️</span> 47</span>
+              <span class="action faved"><span class="icon">⭐</span> 12</span>
+            </span>
           </div>
         </div>
 
@@ -820,6 +911,10 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
           <div class="answer-content">血泪教训：第一次找陪诊被宰 £80 多收 50%。后来才知道平台直接搜带评价的最稳……</div>
           <div class="answer-footer">
             <span class="reward-tag">£0.95</span><span>+5 积分</span>
+            <span class="forum-actions">
+              <span class="action liked"><span class="icon">❤️</span> 31</span>
+              <span class="action"><span class="icon">☆</span> 5</span>
+            </span>
           </div>
         </div>
 
@@ -833,6 +928,10 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
           <div class="answer-content">补充一下，如果是孕妇陪诊，记得问陪诊员是否有产科陪诊经验。语言能不能通也很重要……</div>
           <div class="answer-footer">
             <span class="reward-tag">£0.78</span><span>+5 积分</span>
+            <span class="forum-actions">
+              <span class="action"><span class="icon">♡</span> 23</span>
+              <span class="action faved"><span class="icon">⭐</span> 3</span>
+            </span>
           </div>
         </div>
 
@@ -846,6 +945,10 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
           <div class="answer-footer">
             <span class="reward-tag">£0.32</span>
             <span class="ai-warning-tag">可能为 AI 生成</span>
+            <span class="forum-actions">
+              <span class="action"><span class="icon">♡</span> 2</span>
+              <span class="action"><span class="icon">☆</span> 0</span>
+            </span>
           </div>
         </div>
 
@@ -1196,43 +1299,19 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
             </div>
           </div>
 
-          <h3 style="margin-top:24px">奖金分配规则（默认 topn_formula）</h3>
+          <h3 style="margin-top:24px">奖金分配规则（新算法：全员按分数比例分）</h3>
           <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px">
-            <div class="form-grid">
-              <div class="form-row" style="margin-bottom:0">
-                <label>中奖人数模式</label>
-                <select>
-                  <option>按比例 ratio</option>
-                  <option>固定人数 fixed</option>
-                </select>
-                <div class="help">ratio = 取答题人数 X% · fixed = 固定 N 人</div>
-              </div>
-              <div class="form-row" style="margin-bottom:0">
-                <label>中奖比例 ratio</label>
-                <input type="number" value="0.5" step="0.1" min="0" max="1" />
-                <div class="help">0.5 = 取答题人数前 50%</div>
-              </div>
-              <div class="form-row" style="margin-bottom:0">
-                <label>中奖上限 max_winners</label>
-                <input type="number" value="30" />
-                <div class="help">最多多少人能中奖</div>
-              </div>
-              <div class="form-row" style="margin-bottom:0">
-                <label>单人最低 floor_pence</label>
-                <input type="number" value="10" />
-                <div class="help">10 = £0.10 · 低于此抹零不发</div>
-              </div>
-              <div class="form-row" style="margin-bottom:0;grid-column:span 2">
-                <label>全员分阈值 min_for_full_split</label>
-                <input type="number" value="10" style="max-width:120px" />
-                <div class="help">答题人数 < 此值时全员瓜分（不取 top-N）</div>
-              </div>
+            <div class="form-row" style="margin-bottom:0;max-width:360px">
+              <label>单人最低金额 <code>floor_pence</code> （pence，1-1000）</label>
+              <input type="number" value="10" min="1" max="1000" />
+              <div class="help">默认 10 = £0.10。所有答主按 final_score 比例分；分到低于此值自动抹零（钱留池子不发）；自然实现"高分排在前面分完，低分截止"。</div>
             </div>
             <div style="margin-top:14px;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;color:#374151;line-height:1.7">
-              <strong>📊 实时预览</strong>（按当前 £10.00 池子 + 当前规则）：<br/>
-              · 9 人答题 → <strong style="color:#10b981">9 人全员分</strong> ≈ £1.11/人（< 10 触发 full_split）<br/>
-              · 30 人答题 → <strong style="color:#10b981">15 人中奖</strong> ≈ £0.67/人（30 × 0.5）<br/>
-              · 100 人答题 → <strong style="color:#10b981">30 人中奖</strong> ≈ £0.33/人（max 封顶）
+              <strong>📊 实时预览</strong>（按当前 £10.00 池子 + floor £0.10）：<br/>
+              · 5 人答题 [分数 90/80/70/60/50] → <strong style="color:#10b981">5 人都分</strong>：£2.57 / £2.29 / £2.00 / £1.71 / £1.43<br/>
+              · 30 人答题 (分数均匀 50-80) → <strong style="color:#10b981">30 人都分</strong>：每人 £0.26-£0.41<br/>
+              · 100 人答题 (分数差距大) → <strong style="color:#10b981">top 30-40 人分到</strong>，其余被 floor 抹零（钱留池子）<br/>
+              <span style="color:#6b7280;font-size:11px">💡 池子越大 → 能高于 floor 的人越多 → 更多人分到。sponsor 加注（参考独立 spec）会自动扩大覆盖面。</span>
             </div>
           </div>
 
@@ -1455,41 +1534,18 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
               <input value="1" />
             </div>
           </div>
-          <h3 style="margin-top:20px;font-size:13px;font-weight:600;color:#374151;padding-top:14px;border-top:1px solid #f3f4f6">奖金分配规则</h3>
+          <h3 style="margin-top:20px;font-size:13px;font-weight:600;color:#374151;padding-top:14px;border-top:1px solid #f3f4f6">奖金分配规则（新算法）</h3>
           <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:14px">
-            <div class="form-grid">
-              <div class="form-row" style="margin-bottom:0">
-                <label>中奖人数模式</label>
-                <select>
-                  <option>按比例 ratio</option>
-                  <option>固定人数 fixed</option>
-                </select>
-              </div>
-              <div class="form-row" style="margin-bottom:0">
-                <label>中奖比例</label>
-                <input type="number" value="0.5" step="0.1" min="0" max="1" />
-                <div class="help">0.5 = 取前 50% 答主</div>
-              </div>
-              <div class="form-row" style="margin-bottom:0">
-                <label>中奖上限</label>
-                <input type="number" value="30" />
-              </div>
-              <div class="form-row" style="margin-bottom:0">
-                <label>单人最低（pence）</label>
-                <input type="number" value="10" />
-                <div class="help">10 = £0.10</div>
-              </div>
-              <div class="form-row" style="margin-bottom:0;grid-column:span 2">
-                <label>全员分阈值</label>
-                <input type="number" value="10" style="max-width:120px" />
-                <div class="help">答题人数少于此值时全员瓜分</div>
-              </div>
+            <div class="form-row" style="margin-bottom:0;max-width:320px">
+              <label>单人最低 <code>floor_pence</code> (1-1000)</label>
+              <input type="number" value="10" min="1" max="1000" />
+              <div class="help">默认 10 = £0.10 · 所有答主按分数比例分,低于此值抹零</div>
             </div>
             <div style="margin-top:10px;padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;font-size:11.5px;color:#6b7280;line-height:1.6">
-              <strong>📊 预览</strong>（基于上方 £10.00 池子）：
-              9 人 → <strong>9 人全员分 ≈ £1.11/人</strong> ·
-              30 人 → <strong>15 人中奖 ≈ £0.67/人</strong> ·
-              100 人 → <strong>30 人封顶 ≈ £0.33/人</strong>
+              <strong>📊 预览</strong>（基于上方 £10.00 池子 + floor £0.10）：
+              5 人 [90/80/70/60/50] → <strong>5 人都分 £2.57-£1.43</strong> ·
+              30 人均匀分数 → <strong>30 人都分 £0.26-£0.41</strong> ·
+              100 人差距大 → <strong>top 30-40 分到,其余抹零</strong>
             </div>
           </div>
 
@@ -1868,6 +1924,364 @@ table.admin .text-truncate { max-width: 280px; overflow: hidden; text-overflow: 
 
         </details>
 
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M8 · 详情页含加注 (P0-sponsor) -->
+<!-- ============================================================ -->
+<section class="section" id="m8">
+  <h2 class="section-title">M8 · 详情页 · 含加注（P0-sponsor）<span class="tag tag-p1">P0-sponsor</span></h2>
+  <p class="section-meta">M3 的升级版：奖金池条拆分显示 + "💰 加注" 按钮 + 底部"加注支持者"列表。独立 spec <code>2026-05-18-ai-qa-sponsor-pledge-design.md</code>。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+        <div class="app-bar">
+          <span class="back">‹</span>
+          <div class="title">AI 限时问答 · 第 12 期</div>
+          <span class="right">⚙</span>
+        </div>
+
+        <!-- Hero -->
+        <div class="qa-hero">
+          <span class="topic-tag">🏠 海外华人生活</span>
+          <div class="title">伦敦有哪些住宿体验好的公寓推荐？</div>
+          <div class="author">
+            <span class="avatar">🤖</span>
+            <span>由 AI 出题 · 平台官方活动</span>
+          </div>
+
+          <!-- 拆分奖金池条 (Q7 决策) -->
+          <div style="background:linear-gradient(135deg,#fff8e1,#fffbeb);border:1px solid #ffd700;border-radius:12px;padding:14px;margin-bottom:12px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <div style="font-size:10px;color:#92400e;letter-spacing:0.05em;text-transform:uppercase">总奖池</div>
+                <div style="font-size:24px;font-weight:800;color:#553c00;line-height:1.1">£55.00</div>
+              </div>
+              <button class="btn-primary" style="padding:10px 18px;font-size:14px;border-radius:99px;width:auto;background:#ff8033">💰 加注</button>
+            </div>
+            <div style="font-size:11px;color:#6b7280;line-height:1.6;padding-top:8px;border-top:1px dashed #fde68a">
+              <span style="color:#553c00">📦 £10 平台金</span>
+              · <span style="color:#553c00">👥 £35 来自 23 位支持者</span>
+              · <span style="color:#553c00">🔄 £10 上期 carry over</span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;background:#f9fafb;border-radius:8px;padding:10px 12px;font-size:12px">
+            <span>⏱ <strong style="color:#dc2626">3天 4:32</strong> 后截止</span>
+            <span>📝 23 人作答</span>
+          </div>
+
+          <button class="btn-primary" style="margin-top:12px">✍ 我来答（截止前可编辑）</button>
+        </div>
+
+        <!-- 加注支持者列表 (新增) -->
+        <div class="section-header-text">💰 加注支持者 · 23 人共 £35</div>
+
+        <div style="background:#fff;border-radius:12px;margin:8px 12px;overflow:hidden">
+          <!-- 第 1 名 -->
+          <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:0.5px solid #f3f4f6;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#fef3c7;color:#92400e;display:flex;align-items:center;justify-content:center;font-weight:600">U</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600">Unite Students UK</div>
+              <div style="font-size:11px;color:#9ca3af">3 笔加注 · 最近 5 分钟前</div>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:#ff8033">£10.00</div>
+          </div>
+
+          <!-- 第 2 名 -->
+          <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:0.5px solid #f3f4f6;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#fce7f3;color:#9d174d;display:flex;align-items:center;justify-content:center;font-weight:600">L</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600">Lily_LDN</div>
+              <div style="font-size:11px;color:#9ca3af">1 笔加注 · 1 小时前</div>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:#ff8033">£5.00</div>
+          </div>
+
+          <!-- 第 3 名 -->
+          <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:0.5px solid #f3f4f6;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#c7d2fe;color:#1e40af;display:flex;align-items:center;justify-content:center;font-weight:600">A</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600">小Anna</div>
+              <div style="font-size:11px;color:#9ca3af">2 笔加注 · 昨天</div>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:#ff8033">£3.00</div>
+          </div>
+
+          <!-- 第 4 名 -->
+          <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:0.5px solid #f3f4f6;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#d1fae5;color:#065f46;display:flex;align-items:center;justify-content:center;font-weight:600">M</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600">Marvin周末忙</div>
+              <div style="font-size:11px;color:#9ca3af">1 笔加注 · 2 天前</div>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:#ff8033">£2.00</div>
+          </div>
+
+          <div style="text-align:center;padding:12px;font-size:12px;color:#007aff;cursor:pointer">展开查看全部 23 人 →</div>
+        </div>
+
+        <div class="section-header-text">23 个答案</div>
+        <div class="answer-card" style="margin-bottom:60px">
+          <div class="answer-author">
+            <span class="avatar" style="background:#fce7f3;color:#9d174d">L</span>
+            <span class="name">Lily_LDN</span>
+            <span class="meta">5 小时前</span>
+          </div>
+          <div class="answer-content">Zone 2 推荐 The Stay Club Camden, 价格中等装修好；如果预算高可以看 Vita 系列…</div>
+          <div class="answer-footer">
+            <span style="color:#9ca3af">📝 458 字</span>
+            <span class="forum-actions">
+              <span class="action liked"><span class="icon">❤️</span> 18</span>
+              <span class="action"><span class="icon">☆</span> 4</span>
+            </span>
+          </div>
+        </div>
+
+      </div>
+      <div class="tabbar">
+        <div class="tab-item"><span class="icon">🏠</span>首页</div>
+        <div class="tab-item"><span class="icon">💬</span>社区</div>
+        <div class="tab-item"><span class="icon">✉</span>消息</div>
+        <div class="tab-item"><span class="icon">👤</span>我的</div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li><strong>奖金池条拆分显示</strong>: 总额一眼，下方明细 "平台金 · 支持者加注 · carry over"（spec §6.1 Q7）</li>
+        <li><strong>"💰 加注" 按钮</strong>: 橙色突出（不用主蓝，留主蓝给"我来答"）</li>
+        <li><strong>"加注支持者" 列表</strong>: 头像 + 名字 + 单笔总额（同人合并），<strong>按总额从高到低降序</strong>；公司账号（如 Unite Students UK）跟普通用户视觉完全一样——<strong>无 logo，无链接，无 CTA</strong>。"刷存在感"靠加注金额自然排前</li>
+        <li>列表内每行小字 "X 笔加注 · 最近 Y 分钟前"——给加注节奏感</li>
+        <li>"展开查看全部"——上限 100 人，超出折叠</li>
+        <li><strong>答案卡片底部 ❤️ + ☆ 是论坛原生 like/favorite</strong>（答案 = ForumPost，自带）——<strong>跟加注是两套机制</strong>：加注 = 给题目奖金池打钱（影响所有人）；点赞 = 给单个答案表态（影响该答案排序 / 论坛热度）。M5 settled 页能看到 ❤️ 47 / ⭐ 12 这种累积数据</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- M9 · 加注 dialog (P0-sponsor) -->
+<!-- ============================================================ -->
+<section class="section" id="m9">
+  <h2 class="section-title">M9 · 加注 dialog（BottomSheet）<span class="tag tag-p1">P0-sponsor</span></h2>
+  <p class="section-meta">点 "💰 加注" 按钮后弹出。预设档位 + 自定义金额 + 钱包余额展示 + 不足走 Stripe fallback 提示。</p>
+
+  <div class="mockup-row">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen" style="background:rgba(0,0,0,0.45);position:relative">
+        <!-- 背景虚化的详情页 -->
+        <div style="opacity:0.3;pointer-events:none">
+          <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+          <div class="app-bar"><div class="title">AI 限时问答 · 第 12 期</div></div>
+          <div class="qa-hero">
+            <div class="title" style="opacity:0.5">伦敦有哪些住宿体验好的公寓推荐？</div>
+          </div>
+        </div>
+
+        <!-- BottomSheet 弹窗 -->
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;padding:20px 16px 28px;box-shadow:0 -8px 32px rgba(0,0,0,0.15)">
+          <div style="width:36px;height:4px;background:#d1d5db;border-radius:2px;margin:0 auto 16px"></div>
+
+          <div style="font-size:18px;font-weight:600;margin-bottom:4px">💰 加注奖金池</div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:16px">让更多人来答这道题</div>
+
+          <!-- 钱包余额 -->
+          <div style="background:#eff6ff;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:#1e40af;display:flex;justify-content:space-between">
+            <span>你的钱包余额</span>
+            <strong>£23.45</strong>
+          </div>
+
+          <!-- 预设档位 -->
+          <div style="font-size:11px;color:#6b7280;margin-bottom:6px">快速选择</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
+            <button style="padding:10px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;font-weight:600">£1</button>
+            <button style="padding:10px;border:2px solid #007aff;background:#eff6ff;color:#007aff;border-radius:8px;font-weight:700">£5</button>
+            <button style="padding:10px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;font-weight:600">£10</button>
+            <button style="padding:10px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;font-weight:600">£20</button>
+            <button style="padding:10px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;font-weight:600">£50</button>
+          </div>
+
+          <!-- 自定义 -->
+          <div style="font-size:11px;color:#6b7280;margin-bottom:6px">或自定义金额（£1-£100）</div>
+          <div style="display:flex;align-items:center;border:1px solid #e5e7eb;border-radius:8px;padding:0 12px;margin-bottom:14px;background:#fff">
+            <span style="font-size:16px;color:#6b7280;margin-right:8px">£</span>
+            <input type="number" value="5" min="1" max="100" style="flex:1;border:none;outline:none;font-size:16px;font-weight:600;padding:12px 0" />
+          </div>
+
+          <!-- 重要提示 -->
+          <div style="background:#fffbeb;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:6px;font-size:12px;color:#7c2d12;margin-bottom:16px;line-height:1.6">
+            ⚠ <strong>加注不可撤回。</strong>若本期取消或无人作答，你的加注会自动进入下期奖金池继续使用。
+          </div>
+
+          <button class="btn-primary" style="margin-bottom:8px">确认加注 £5.00</button>
+          <button style="background:transparent;color:#6b7280;border:none;width:100%;padding:12px;font-size:14px;cursor:pointer">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 钱包不足 fallback 演示 -->
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-screen" style="background:rgba(0,0,0,0.45);position:relative">
+        <div style="opacity:0.3;pointer-events:none">
+          <div class="status-bar"><span>9:41</span><span>●●●●● 5G</span></div>
+          <div class="app-bar"><div class="title">AI 限时问答 · 第 12 期</div></div>
+        </div>
+
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;padding:20px 16px 28px">
+          <div style="width:36px;height:4px;background:#d1d5db;border-radius:2px;margin:0 auto 16px"></div>
+
+          <div style="font-size:18px;font-weight:600;margin-bottom:4px">💳 钱包 + Stripe 混合支付</div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:16px">钱包余额不够全额，差额直接走 Stripe 卡支付（跟任务支付一样）</div>
+
+          <div style="background:#eff6ff;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:#1e40af">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <span>本次加注</span>
+              <span style="font-weight:600">£20.00</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span>· 钱包扣</span>
+              <span>£3.45 <span style="opacity:0.6;font-size:11px">(全部余额)</span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px dashed #bfdbfe">
+              <span>· Stripe 卡支付</span>
+              <span>£16.55</span>
+            </div>
+            <div style="font-size:11px;color:#6b7280;line-height:1.5;margin-top:8px">
+              💡 平台不支持主动充值钱包。钱包余额只来自历次问答的奖金累积。
+            </div>
+          </div>
+
+          <button class="btn-primary" style="margin-bottom:8px;background:#635bff">用 Apple Pay / 卡支付 £16.55</button>
+          <button style="background:transparent;color:#6b7280;border:none;width:100%;padding:12px;font-size:14px;cursor:pointer">改加注金额</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup-caption">
+      <h4>设计要点</h4>
+      <ul>
+        <li><strong>BottomSheet 形式</strong>: 不破坏详情页上下文，下拉收起，符合 iOS 习惯</li>
+        <li><strong>预设档位 + 自定义</strong>: 5 个 button 快选，自定义 input 限 £1-£100（DB CHECK 兜底）</li>
+        <li><strong>钱包余额顶部展示</strong>: 用户一眼知道够不够，减少 trial-and-error</li>
+        <li><strong>"加注不可撤回"显眼提示</strong>: 黄底警告，避免事后客诉</li>
+        <li><strong>钱包不足 fallback (右侧 phone)</strong>: 钱包用完 + Stripe 卡直付差额 → webhook 一次性完成所有写入（跟任务支付混合付款一致）</li>
+        <li>余额充足 ✓ 显示"确认加注 £X.XX" 主按钮；不足 ✗ 替换为"钱包扣 £X + Stripe 卡支付 £Y" 拆分明细 + "用 Apple Pay / 卡支付 £Y" 主按钮</li>
+        <li><strong>明确不引入"充值"概念</strong>：平台 wallet 只接收 settle 奖金，用户不能主动充钱进去（产品方向决定）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- A6 · admin 加注池监控 (P0-sponsor) -->
+<!-- ============================================================ -->
+<section class="section" id="a6">
+  <h2 class="section-title">A6 · Admin · 加注池监控<span class="tag tag-p1">P0-sponsor</span></h2>
+  <p class="section-meta">/admin/ai-qa/pledge-pool —— 全局加注池余额 + 流水。<strong>只读</strong>，admin 不能手动操纵（防被攻陷）。</p>
+
+  <div class="browser">
+    <div class="browser-chrome">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <div class="url">admin.link2ur.com/admin/ai-qa/pledge-pool</div>
+    </div>
+    <div class="admin-page">
+      <div class="admin-sidebar">
+        <div class="brand-line">Link2Ur Admin</div>
+        <h3>AI 限时问答</h3>
+        <a href="#">周期配置</a>
+        <a href="#">候选题待审</a>
+        <a href="#">草稿管理</a>
+        <a href="#">题目列表</a>
+        <a href="#" class="active">加注池监控</a>
+      </div>
+      <div class="admin-main">
+        <div class="breadcrumb">AI 限时问答 / 加注池监控</div>
+        <div class="page-header">
+          <h2>全局加注池</h2>
+        </div>
+
+        <!-- 余额卡片 -->
+        <div style="display:flex;gap:16px;margin-bottom:20px">
+          <div style="flex:1;background:linear-gradient(135deg,#fef3c7,#fbbf24);padding:20px;border-radius:12px;color:#553c00">
+            <div style="font-size:11px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">当前余额</div>
+            <div style="font-size:32px;font-weight:800">£18.50</div>
+            <div style="font-size:11px;margin-top:6px;opacity:0.8">下一期 publish 时自动归并到新题</div>
+          </div>
+          <div style="flex:1;background:#fff;border:1px solid #e5e7eb;padding:20px;border-radius:12px">
+            <div style="font-size:11px;letter-spacing:0.05em;text-transform:uppercase;color:#6b7280;margin-bottom:4px">本月累计 credit</div>
+            <div style="font-size:24px;font-weight:700;color:#10b981">+£28.50</div>
+            <div style="font-size:11px;margin-top:6px;color:#6b7280">3 题 canceled/closed_empty</div>
+          </div>
+          <div style="flex:1;background:#fff;border:1px solid #e5e7eb;padding:20px;border-radius:12px">
+            <div style="font-size:11px;letter-spacing:0.05em;text-transform:uppercase;color:#6b7280;margin-bottom:4px">本月累计 debit</div>
+            <div style="font-size:24px;font-weight:700;color:#dc2626">-£10.00</div>
+            <div style="font-size:11px;margin-top:6px;color:#6b7280">1 次新题 carry consumed</div>
+          </div>
+        </div>
+
+        <!-- 流水表格 -->
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">流水（最近 50 条）</h3>
+        <table class="admin">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>类型</th>
+              <th>金额</th>
+              <th>余额(after)</th>
+              <th>关联题目</th>
+              <th>描述</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026-05-18 10:14</td>
+              <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">credit</span></td>
+              <td style="color:#10b981;font-weight:600">+£15.00</td>
+              <td>£18.50</td>
+              <td>#31 <span style="color:#9ca3af">关于英国签证最新政策</span></td>
+              <td style="font-size:12px;color:#6b7280">carry_over from question #31 (status=canceled)</td>
+            </tr>
+            <tr>
+              <td>2026-05-17 08:00</td>
+              <td><span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">debit</span></td>
+              <td style="color:#dc2626;font-weight:600">-£10.00</td>
+              <td>£3.50</td>
+              <td>#34 <span style="color:#9ca3af">伦敦 Zone 2 找合租室友</span></td>
+              <td style="font-size:12px;color:#6b7280">carry_over to new question #34</td>
+            </tr>
+            <tr>
+              <td>2026-05-15 22:30</td>
+              <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">credit</span></td>
+              <td style="color:#10b981;font-weight:600">+£8.50</td>
+              <td>£13.50</td>
+              <td>#30 <span style="color:#9ca3af">如何办理国际驾照换本</span></td>
+              <td style="font-size:12px;color:#6b7280">carry_over from question #30 (status=closed_empty)</td>
+            </tr>
+            <tr>
+              <td>2026-05-12 14:20</td>
+              <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">credit</span></td>
+              <td style="color:#10b981;font-weight:600">+£5.00</td>
+              <td>£5.00</td>
+              <td>#28 <span style="color:#9ca3af">测试题</span></td>
+              <td style="font-size:12px;color:#6b7280">carry_over from question #28 (status=canceled)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="banner-warn" style="margin-top:20px">
+          <strong>⚠ 注意</strong>
+          admin 后台<strong>不提供</strong>直接 credit/debit 加注池的端点（防被攻陷盗取）。所有变动来自 题目 canceled/closed_empty 自动 carry over、或新题 publish 自动归并。如有异常，查 audit log 排查。
+        </div>
       </div>
     </div>
   </div>
