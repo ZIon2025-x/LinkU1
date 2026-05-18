@@ -744,7 +744,7 @@ def award_participation_points_on_cancel(db: Session, qid: int) -> int:
     - 调用方必须先调 cancel_question 切状态,再调本函数;失败时事务回滚,状态也回滚
     """
     from app.models import ForumPost
-    from app.crud.points import add_points_transaction  # 现有积分服务
+    from app.coupon_points_crud import add_points_transaction  # 现有积分服务
 
     q = db.get(AiQuestion, qid)
     if not q or q.status != "canceled":
@@ -1191,9 +1191,13 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
                 idempotency_key=f"ai_qa_settle_{qid}_{r.user_id}",
                 description=f"AI 限时问答 #{qid} 第 {r.rank_final} 名奖金",
             )
-        except IntegrityError as e:
-            # idempotency_key UNIQUE 冲突 — 该 user 已发过,跳过（重试场景）
-            db.rollback()  # 注意：这里只 rollback wallet 写,但 ORM session 一致性需要小心
+        # wallet_service.credit_wallet 幂等冲突时返回 None (不抛 IntegrityError),
+        # 这里检查 None 视为"已入账,跳过":
+        if tx is None:
+            # idempotency_key 命中已存在的 transaction — 该 user 已发过,跳过(重试场景)
+            logger.info(f"settle ai_qa #{qid} user {r.user_id}: wallet credit skipped (idempotent)")
+            continue
+        # 真正的事务错误 (lock 超时 / DB 故障 / 余额异常) 仍走外层 try/except → settle_failed
             logger.warning(
                 f"settle qid={qid} user={r.user_id} idempotency duplicate, skipped: {e}"
             )
@@ -1204,7 +1208,7 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
             db,
             user_id=r.user_id,
             amount=r.reward_points,
-            type_="earn",
+            type="earn",
             source="ai_qa_participation",
             related_id=qid,
         )
@@ -1229,6 +1233,11 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
     q.settled_at = settled_at
 
     # === S3 审计 ===
+    # ⚠️ create_audit_log 函数内部自带 db.commit() (crud/audit.py:34) —
+    # 该调用会一次性 commit 上面 lock+wallet credit+leaderboard+is_featured+status 切换的全部写入。
+    # 这是隐式的事务边界,plan 接受此现状不动 audit_log 函数。
+    # 任一前置写入失败 → 不会走到这里 (异常冒泡) → 外层路由 try/except 回滚到 settle_failed。
+    # 后续 db.flush() / 路由层 db.commit() 都是 no-op。
     create_audit_log(
         db,
         action_type="ai_qa_settle",
@@ -1243,7 +1252,7 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
         reason=f"settle ai_question #{qid}",
     )
 
-    db.flush()
+    db.flush()  # no-op (audit_log 内部 commit 已 flush 了全部);保留是为可读性
     return {
         "total_settled_pence": total_settled_pence,
         "winner_count": sum(1 for r in rows if r.reward_pence > 0),
@@ -1499,14 +1508,15 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.deps import get_db
-from app.separate_auth import get_current_admin  # 现有 admin auth
+from app.separate_auth_deps import get_current_admin  # 现有 admin auth (在 separate_auth_deps.py:20,不是 separate_auth)
 from app.models_ai_qa import AiQuestion, AiAnswerScore
 from app.schemas_ai_qa import (
     DraftCreate, DraftUpdate, AdminScoreUpdate, CancelRequest,
     SettingUpdate, AdminReviewData, AdminReviewRow, AiQuestionOut,
 )
 from app.crud import ai_qa as ai_qa_crud
-from app.crud import get_system_setting, set_system_setting, add_points_transaction
+from app.crud.system import get_system_setting, update_system_setting  # 注意:函数名是 update_ 不是 set_
+from app.coupon_points_crud import add_points_transaction  # 积分入口在 coupon_points_crud,不在 crud.points
 from app.crud.audit import create_audit_log
 from app.services.ai_qa_settle import settle_question, maybe_send_s6_alert, SettleError
 
@@ -1776,8 +1786,8 @@ def update_settings(
     if payload.confirm_token != expected:
         raise HTTPException(400, "ai_qa_settings_confirm_token_invalid")
     old = get_system_setting(db, payload.key)
-    old_val = old.setting_value if old else None
-    set_system_setting(db, payload.key, payload.new_value)
+    old_val = old.setting_value if old else None  # get_system_setting 返回 SystemSettings 对象,需取 .setting_value
+    update_system_setting(db, payload.key, payload.new_value)
     _audit(db, "settings_update", payload.key, admin.id, old={payload.key: old_val}, new={payload.key: payload.new_value})
     db.commit()
     return {"ok": True}
@@ -2097,8 +2107,8 @@ def test_settle_weekly_cap(db_session, admin_user, monkeypatch):
     """case (f): S5 周度上限超出拒绝。"""
     from app.services.ai_qa_settle import settle_question, SettleError
     # mock SystemSettings cap 极低
-    from app.crud import set_system_setting
-    set_system_setting(db_session, "ai_qa_weekly_settle_cap_pence", "100")
+    from app.crud.system import update_system_setting
+    update_system_setting(db_session, "ai_qa_weekly_settle_cap_pence", "100")
     db_session.commit()
     q = _create_settled_ready_question(db_session, admin_user.id, reward_pool_pence=1000)
     with pytest.raises(SettleError, match="weekly settle cap"):
@@ -2234,7 +2244,8 @@ def test_settle_all_zero_scores(db_session, admin_user):
     # 全员 reward_points > 0 (参与积分照发)
     assert all(r.reward_points > 0 for r in rows)
     # wallet 没 credit (查 wallet_transactions WHERE related_type='ai_question' AND related_id=qid)
-    tx = db_session.query(models.WalletTransaction).filter_by(
+    from app.wallet_models import WalletTransaction  # 注意:wallet 模型在 wallet_models.py 不在 models.py
+    tx = db_session.query(WalletTransaction).filter_by(
         related_type="ai_question", related_id=str(q.id),
     ).all()
     assert len(tx) == 0, "全 0 分不应触发任何 wallet credit"
@@ -2841,21 +2852,24 @@ l10n（每个 .arb 加，下方 zh 为例）：
   "aiQaCountdown": "倒计时",
   "aiQaPool": "奖金池",
   "aiQaAnswered": "已作答",
-  "aiQa_deadline_passed": "答题已截止",
-  "aiQa_edit_locked": "已锁定编辑",
-  "aiQa_already_answered": "你已答过本题",
-  "aiQa_blocked_by_risk": "风控拒绝答题",
-  "aiQa_status_not_published": "本题不在答题中"
+  "aiQaDeadlinePassed": "答题已截止",
+  "aiQaEditLocked": "已锁定编辑",
+  "aiQaAlreadyAnswered": "你已答过本题",
+  "aiQaBlockedByRisk": "风控拒绝答题",
+  "aiQaStatusNotPublished": "本题不在答题中"
 }
 ```
 
-error_localizer.dart 加：
+> 注意:ARB key 必须 **camelCase** (`aiQaDeadlinePassed`),不是 snake_case;否则 `AppLocalizations` getter 不生成,编译报错。
+> 后端返的错误码 (`ai_qa_deadline_passed`) 保持 snake_case,在 error_localizer 里做映射。
+
+error_localizer.dart 加 (在 L99 起的 `switch (code)` 块):
 ```dart
-case 'ai_qa_deadline_passed': return l10n.aiQa_deadline_passed;
-case 'ai_qa_edit_locked': return l10n.aiQa_edit_locked;
-case 'ai_qa_already_answered': return l10n.aiQa_already_answered;
-case 'ai_qa_blocked_by_risk': return l10n.aiQa_blocked_by_risk;
-case 'ai_qa_status_not_published': return l10n.aiQa_status_not_published;
+case 'ai_qa_deadline_passed': return l10n.aiQaDeadlinePassed;
+case 'ai_qa_edit_locked': return l10n.aiQaEditLocked;
+case 'ai_qa_already_answered': return l10n.aiQaAlreadyAnswered;
+case 'ai_qa_blocked_by_risk': return l10n.aiQaBlockedByRisk;
+case 'ai_qa_status_not_published': return l10n.aiQaStatusNotPublished;
 ```
 
 - [ ] **Step 2: 创建 models/ai_qa.dart**
@@ -2964,41 +2978,58 @@ import '../models/ai_qa.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
+/// 现有 27/29 repository 都用 ({required ApiService apiService}) 命名参数;
+/// ApiService 方法返回 ApiResponse<T>,必须先判 isSuccess 才能用 .data —
+/// 否则 .data 是 null 时会 NPE。参考 question_repository.dart / badges_repository.dart。
 class AiQaRepository {
-  final ApiService _api;
-  AiQaRepository(this._api);
+  final ApiService _apiService;
+  AiQaRepository({required ApiService apiService}) : _apiService = apiService;
 
   Future<AiQuestion> getQuestion(int id) async {
-    final resp = await _api.get(ApiEndpoints.aiQaDetail(id));
-    return AiQuestion.fromJson(resp.data);
+    final resp = await _apiService.get(ApiEndpoints.aiQaDetail(id));
+    if (resp.isSuccess && resp.data != null) {
+      return AiQuestion.fromJson(resp.data as Map<String, dynamic>);
+    }
+    throw Exception(resp.errorCode ?? resp.message ?? 'ai_qa_load_detail_failed');
   }
 
   Future<List<AiAnswer>> getAnswers(int id) async {
-    final resp = await _api.get(ApiEndpoints.aiQaAnswers(id));
-    final List items = resp.data;
-    return items.map((j) => AiAnswer.fromJson(j)).toList();
+    final resp = await _apiService.get(ApiEndpoints.aiQaAnswers(id));
+    if (resp.isSuccess && resp.data != null) {
+      final List items = resp.data as List;
+      return items.map((j) => AiAnswer.fromJson(j as Map<String, dynamic>)).toList();
+    }
+    throw Exception(resp.errorCode ?? resp.message ?? 'ai_qa_load_answers_failed');
   }
 
   Future<Map<String, dynamic>> submitAnswer(int id, {
     String? title, required String content, List<String> images = const [],
   }) async {
-    final resp = await _api.post(ApiEndpoints.aiQaAnswer(id), data: {
+    final resp = await _apiService.post(ApiEndpoints.aiQaAnswer(id), data: {
       'title': title, 'content': content, 'images': images,
     });
-    return resp.data;
+    if (resp.isSuccess && resp.data != null) {
+      return resp.data as Map<String, dynamic>;
+    }
+    throw Exception(resp.errorCode ?? resp.message ?? 'ai_qa_submit_answer_failed');
   }
 }
 ```
 
 - [ ] **Step 4: 注册 repository in app_providers.dart**
 
+跟现有 RepositoryProvider 命名参数风格保持一致 (参考 app_providers.dart L92-150)。
+
 ```dart
-RepositoryProvider(
-  create: (ctx) => AiQaRepository(ctx.read<ApiService>()),
+RepositoryProvider<AiQaRepository>(
+  create: (_) => AiQaRepository(apiService: apiService),
 ),
 ```
 
-- [ ] **Step 5: 创建 BLoC**
+- [ ] **Step 5: 创建 BLoC (单文件,跟现有 settings_bloc / ai_chat_bloc 风格一致;不用 part of)**
+
+> 注意: CLAUDE.md memory 里写 "AuthEvent/AuthState are part of 'auth_bloc.dart'" 是**历史模式,只对 auth_bloc 属实**。
+> 现有 30+ bloc (settings/ai_chat/wallet/...) 全是 events/state/bloc 同文件,不拆 part。新 bloc 沿用新风格。
 
 ```dart
 // link2ur/lib/features/ai_qa/bloc/ai_qa_bloc.dart
@@ -3007,43 +3038,9 @@ import 'package:equatable/equatable.dart';
 import '../../../data/repositories/ai_qa_repository.dart';
 import '../../../data/models/ai_qa.dart';
 
-part 'ai_qa_event.dart';
-part 'ai_qa_state.dart';
-
-class AiQaBloc extends Bloc<AiQaEvent, AiQaState> {
-  final AiQaRepository _repo;
-  AiQaBloc(this._repo) : super(const AiQaState()) {
-    on<AiQaLoadDetail>(_onLoadDetail);
-    on<AiQaSubmitAnswer>(_onSubmit);
-  }
-
-  Future<void> _onLoadDetail(AiQaLoadDetail e, Emitter emit) async {
-    emit(state.copyWith(status: AiQaStatus.loading));
-    try {
-      final q = await _repo.getQuestion(e.qid);
-      final answers = await _repo.getAnswers(e.qid);
-      emit(state.copyWith(status: AiQaStatus.loaded, question: q, answers: answers));
-    } catch (err) {
-      emit(state.copyWith(status: AiQaStatus.error, errorMessage: err.toString()));
-    }
-  }
-
-  Future<void> _onSubmit(AiQaSubmitAnswer e, Emitter emit) async {
-    emit(state.copyWith(status: AiQaStatus.submitting));
-    try {
-      await _repo.submitAnswer(e.qid, title: e.title, content: e.content, images: e.images);
-      emit(state.copyWith(status: AiQaStatus.submitted));
-      add(AiQaLoadDetail(e.qid));
-    } catch (err) {
-      emit(state.copyWith(status: AiQaStatus.error, errorMessage: err.toString()));
-    }
-  }
-}
-```
-
-```dart
-// link2ur/lib/features/ai_qa/bloc/ai_qa_event.dart
-part of 'ai_qa_bloc.dart';
+// ============================================================================
+// Events
+// ============================================================================
 
 abstract class AiQaEvent extends Equatable {
   const AiQaEvent();
@@ -3064,11 +3061,10 @@ class AiQaSubmitAnswer extends AiQaEvent {
   const AiQaSubmitAnswer({required this.qid, this.title, required this.content, this.images = const []});
   @override List<Object?> get props => [qid, title, content, images];
 }
-```
 
-```dart
-// link2ur/lib/features/ai_qa/bloc/ai_qa_state.dart
-part of 'ai_qa_bloc.dart';
+// ============================================================================
+// State
+// ============================================================================
 
 enum AiQaStatus { initial, loading, loaded, submitting, submitted, error }
 
@@ -3096,6 +3092,50 @@ class AiQaState extends Equatable {
   @override
   List<Object?> get props => [status, question, answers, errorMessage];
 }
+
+// ============================================================================
+// Bloc
+// ============================================================================
+
+class AiQaBloc extends Bloc<AiQaEvent, AiQaState> {
+  final AiQaRepository _repository;
+
+  AiQaBloc({required AiQaRepository repository})
+      : _repository = repository,
+        super(const AiQaState()) {
+    on<AiQaLoadDetail>(_onLoadDetail);
+    on<AiQaSubmitAnswer>(_onSubmit);
+  }
+
+  Future<void> _onLoadDetail(AiQaLoadDetail event, Emitter<AiQaState> emit) async {
+    emit(state.copyWith(status: AiQaStatus.loading));
+    try {
+      final q = await _repository.getQuestion(event.qid);
+      final answers = await _repository.getAnswers(event.qid);
+      emit(state.copyWith(status: AiQaStatus.loaded, question: q, answers: answers));
+    } catch (err) {
+      // err 是 Exception(errorCode);err.toString() 是 "Exception: <code>"
+      // 走 error_localizer.localize 映射成 l10n 文本
+      emit(state.copyWith(status: AiQaStatus.error, errorMessage: err.toString()));
+    }
+  }
+
+  Future<void> _onSubmit(AiQaSubmitAnswer event, Emitter<AiQaState> emit) async {
+    emit(state.copyWith(status: AiQaStatus.submitting));
+    try {
+      await _repository.submitAnswer(
+        event.qid,
+        title: event.title,
+        content: event.content,
+        images: event.images,
+      );
+      emit(state.copyWith(status: AiQaStatus.submitted));
+      add(AiQaLoadDetail(event.qid));
+    } catch (err) {
+      emit(state.copyWith(status: AiQaStatus.error, errorMessage: err.toString()));
+    }
+  }
+}
 ```
 
 - [ ] **Step 6: 创建 detail view (M3/M4/M5 三态)**
@@ -3117,7 +3157,7 @@ class AiQaDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (ctx) => AiQaBloc(ctx.read<AiQaRepository>())..add(AiQaLoadDetail(qid)),
+      create: (ctx) => AiQaBloc(repository: ctx.read<AiQaRepository>())..add(AiQaLoadDetail(qid)),
       child: const _Body(),
     );
   }
@@ -3281,7 +3321,7 @@ class _AiQaAnswerFormViewState extends State<AiQaAnswerFormView> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return BlocProvider(
-      create: (ctx) => AiQaBloc(ctx.read<AiQaRepository>())..add(AiQaLoadDetail(widget.qid)),
+      create: (ctx) => AiQaBloc(repository: ctx.read<AiQaRepository>())..add(AiQaLoadDetail(widget.qid)),
       child: BlocConsumer<AiQaBloc, AiQaState>(
         listener: (context, state) {
           if (state.status == AiQaStatus.submitted) {
@@ -3329,12 +3369,51 @@ class _AiQaAnswerFormViewState extends State<AiQaAnswerFormView> {
 }
 ```
 
-- [ ] **Step 8: 注册路由 + BuildContext 扩展**
+- [ ] **Step 8: 注册路由 + AppRoutes 常量 + BuildContext 扩展**
 
-`app_router.dart` 加：
+50+ 路由按 feature 拆到 `lib/core/router/routes/*.dart` 16 个模块,**不直接编辑 `app_router.dart`**。
+参照 `routes/ai_chat_routes.dart`,新建 `routes/ai_qa_routes.dart`:
+
 ```dart
-GoRoute(path: '/ai-qa/:id', builder: (ctx, st) => AiQaDetailView(qid: int.parse(st.pathParameters['id']!))),
-GoRoute(path: '/ai-qa/:id/answer', builder: (ctx, st) => AiQaAnswerFormView(qid: int.parse(st.pathParameters['id']!))),
+// link2ur/lib/core/router/routes/ai_qa_routes.dart
+import 'package:go_router/go_router.dart';
+import '../../../features/ai_qa/views/ai_qa_detail_view.dart';
+import '../../../features/ai_qa/views/ai_qa_answer_form_view.dart';
+import '../app_routes.dart';
+
+final List<GoRoute> aiQaRoutes = [
+  GoRoute(
+    path: AppRoutes.aiQaDetail,
+    builder: (ctx, st) => AiQaDetailView(qid: int.parse(st.pathParameters['id']!)),
+  ),
+  GoRoute(
+    path: AppRoutes.aiQaAnswer,
+    builder: (ctx, st) => AiQaAnswerFormView(qid: int.parse(st.pathParameters['id']!)),
+  ),
+];
+```
+
+在 `app_routes.dart` 加常量 (参考现有 AppRoutes.taskDetail 等):
+```dart
+class AppRoutes {
+  // ... 现有
+  static const aiQaDetail = '/ai-qa/:id';
+  static const aiQaAnswer = '/ai-qa/:id/answer';
+}
+```
+
+在 `app_router.dart` (L194 后) 加 spread:
+```dart
+routes: [
+  // ... 现有 routes
+  ...aiQaRoutes,
+],
+```
+
+(可选) 加 `BuildContext` extension 在 `go_router_extensions.dart`:
+```dart
+void goToAiQaDetail(int qid) => go('/ai-qa/$qid');
+void goToAiQaAnswer(int qid) => go('/ai-qa/$qid/answer');
 ```
 
 - [ ] **Step 9: 跑 flutter analyze + flutter gen-l10n**
