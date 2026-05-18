@@ -39,6 +39,7 @@ const CheckinRewardConfig = lazy(() => import('../pages/admin/checkin-rewards/Ch
 const SkillCategoryManagement = lazy(() => import('../pages/admin/skill-categories/SkillCategoryManagement'));
 const SkillLeaderboardManagement = lazy(() => import('../pages/admin/skill-leaderboard/SkillLeaderboardManagement'));
 const AIPromptManagement = lazy(() => import('../pages/admin/ai-prompt/AIPromptManagement'));
+const AIQaDraftsPage = lazy(() => import('../pages/ai-qa/DraftsPage').then(m => ({ default: m.DraftsPage })));
 
 // Loading component
 const LoadingFallback = () => (
@@ -161,6 +162,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* AI System Prompt */}
           <Route path="ai-prompt" element={<AIPromptManagement />} />
+
+          {/* AI 限时问答 — 草稿管理 (A3) */}
+          <Route path="ai-qa/drafts" element={<AIQaDraftsPage />} />
 
           {/* Settings */}
           <Route path="settings" element={<Settings />} />
