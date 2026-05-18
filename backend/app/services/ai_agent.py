@@ -1630,8 +1630,8 @@ class AIAgent:
 
 # ==================== 辅助函数（模块级） ====================
 
-async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
-    max_turns = Config.AI_MAX_HISTORY_TURNS
+async def _fetch_history_rows(db: AsyncSession, conversation_id: str, max_messages: int):
+    """从 DB 取最近 max_messages 条 AIMessage,按时间正序返回."""
     q = (
         select(models.AIMessage)
         .where(and_(
@@ -1639,10 +1639,13 @@ async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
             models.AIMessage.role.in_(["user", "assistant"]),
         ))
         .order_by(desc(models.AIMessage.created_at))
-        .limit(max_turns * 2)
+        .limit(max_messages)
     )
-    rows = list(reversed((await db.execute(q)).scalars().all()))
+    return list(reversed((await db.execute(q)).scalars().all()))
 
+
+def _build_raw_messages(rows) -> list[dict]:
+    """把 AIMessage rows 完整还原成 LLM messages 数组 (含 tool_use / tool_result 块)."""
     messages = []
     for msg in rows:
         if msg.role == "assistant" and msg.tool_calls:
@@ -1672,6 +1675,13 @@ async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
         else:
             messages.append({"role": msg.role, "content": msg.content})
     return messages
+
+
+async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
+    """原 _load_history 改为薄包装,走 fetch + build."""
+    max_turns = Config.AI_MAX_HISTORY_TURNS
+    rows = await _fetch_history_rows(db, conversation_id, max_turns * 2)
+    return _build_raw_messages(rows)
 
 
 async def _save_assistant_message(
