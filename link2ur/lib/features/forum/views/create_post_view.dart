@@ -850,61 +850,57 @@ class _ComposerCardState extends State<_ComposerCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 标题
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: TextField(
-              controller: widget.titleController,
-              focusNode: _titleFocus,
-              decoration: InputDecoration(
-                hintText: context.l10n.forumEnterTitle,
-                hintStyle: const TextStyle(
-                  color: AppColors.textPlaceholderLight,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
-              ),
-              style: const TextStyle(
+          TextField(
+            controller: widget.titleController,
+            focusNode: _titleFocus,
+            decoration: InputDecoration(
+              hintText: context.l10n.forumEnterTitle,
+              hintStyle: const TextStyle(
+                color: AppColors.textPlaceholderLight,
                 fontSize: 20,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 letterSpacing: -0.2,
-                height: 1.3,
+                height: 1.4,
               ),
-              maxLength: 200,
-              buildCounter: (context,
-                      {required currentLength,
-                      required isFocused,
-                      maxLength}) =>
-                  null,
-              textInputAction: TextInputAction.next,
-              onSubmitted: (_) => _contentFocus.requestFocus(),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             ),
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+              height: 1.4,
+            ),
+            cursorHeight: 22,
+            maxLength: 200,
+            buildCounter: (context,
+                    {required currentLength,
+                    required isFocused,
+                    maxLength}) =>
+                null,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _contentFocus.requestFocus(),
           ),
           // 细分割线
           Divider(height: 1, thickness: 1, color: dividerColor),
           // 正文
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: widget.contentController,
-              focusNode: _contentFocus,
-              decoration: InputDecoration(
-                hintText: context.l10n.forumShareThoughts,
-                hintStyle: const TextStyle(
-                  color: AppColors.textPlaceholderLight,
-                  fontSize: 15,
-                  height: 1.6,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
+          TextField(
+            controller: widget.contentController,
+            focusNode: _contentFocus,
+            decoration: InputDecoration(
+              hintText: context.l10n.forumShareThoughts,
+              hintStyle: const TextStyle(
+                color: AppColors.textPlaceholderLight,
+                fontSize: 15,
+                height: 1.6,
               ),
-              style: const TextStyle(fontSize: 15, height: 1.6),
-              maxLines: null,
-              minLines: 8,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             ),
+            style: const TextStyle(fontSize: 15, height: 1.6),
+            cursorHeight: 18,
+            maxLines: null,
+            minLines: 8,
           ),
           // 字数计数器
           Padding(
