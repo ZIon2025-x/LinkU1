@@ -6449,5 +6449,8 @@
   },
   "communityHotSearches": "熱搜榜",
   "communityDiscoverMore": "發現更多",
-  "discoveryAnonymousUser": "匿名用戶"
+  "discoveryAnonymousUser": "匿名用戶",
+  "commonFollow": "+ 關注",
+  "commonFollowing": "已關注",
+  "commonAnonymous": "匿名"
 }

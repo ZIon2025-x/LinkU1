@@ -287,7 +287,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               ),
               ListTile(
                 leading: const Icon(Icons.share_outlined),
-                title: const Text('Share'),
+                title: Text(l10n.commonShare),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   AppHaptics.selection();
@@ -1874,7 +1874,7 @@ class _DetailCompactAppBar extends StatelessWidget
     final author = post.author;
     final displayName = post.displayName?.isNotEmpty == true
         ? post.displayName!
-        : (author?.name ?? '匿名');
+        : (author?.name ?? context.l10n.commonAnonymous);
     final displayAvatar = post.displayAvatar?.isNotEmpty == true
         ? post.displayAvatar
         : author?.avatar;
@@ -1964,7 +1964,9 @@ class _FollowPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            isFollowing ? '已关注' : '+ 关注',
+            isFollowing
+                ? context.l10n.commonFollowing
+                : context.l10n.commonFollow,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -2042,7 +2044,7 @@ class _AuthorHeader extends StatelessWidget {
 
     final displayName = post.displayName?.isNotEmpty == true
         ? post.displayName!
-        : (author?.name ?? '匿名');
+        : (author?.name ?? context.l10n.commonAnonymous);
     final displayAvatar = post.displayAvatar?.isNotEmpty == true
         ? post.displayAvatar
         : author?.avatar;
@@ -2217,7 +2219,7 @@ class _EngagementBar extends StatelessWidget {
           _EngageBtn(
             icon: Icons.share_outlined,
             count: 0, // 后端无 share count
-            label: '分享',
+            label: context.l10n.commonShare,
             onTap: onShare,
           ),
           _EngageBtn(

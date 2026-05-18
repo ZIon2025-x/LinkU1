@@ -6477,5 +6477,8 @@
   },
   "communityHotSearches": "热搜榜",
   "communityDiscoverMore": "发现更多",
-  "discoveryAnonymousUser": "匿名用户"
+  "discoveryAnonymousUser": "匿名用户",
+  "commonFollow": "+ 关注",
+  "commonFollowing": "已关注",
+  "commonAnonymous": "匿名"
 }

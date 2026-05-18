@@ -13921,6 +13921,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoveryAnonymousUser => '匿名用户';
+
+  @override
+  String get commonFollow => '+ 关注';
+
+  @override
+  String get commonFollowing => '已关注';
+
+  @override
+  String get commonAnonymous => '匿名';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -27840,4 +27849,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get discoveryAnonymousUser => '匿名用戶';
+
+  @override
+  String get commonFollow => '+ 關注';
+
+  @override
+  String get commonFollowing => '已關注';
+
+  @override
+  String get commonAnonymous => '匿名';
 }

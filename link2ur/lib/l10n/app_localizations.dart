@@ -26699,6 +26699,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Anonymous'**
   String get discoveryAnonymousUser;
+
+  /// No description provided for @commonFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'+ Follow'**
+  String get commonFollow;
+
+  /// No description provided for @commonFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get commonFollowing;
+
+  /// No description provided for @commonAnonymous.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous'**
+  String get commonAnonymous;
 }
 
 class _AppLocalizationsDelegate

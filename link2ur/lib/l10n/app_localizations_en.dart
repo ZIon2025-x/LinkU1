@@ -14553,4 +14553,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoveryAnonymousUser => 'Anonymous';
+
+  @override
+  String get commonFollow => '+ Follow';
+
+  @override
+  String get commonFollowing => 'Following';
+
+  @override
+  String get commonAnonymous => 'Anonymous';
 }

@@ -6663,5 +6663,8 @@
   },
   "communityHotSearches": "Trending",
   "communityDiscoverMore": "Discover more",
-  "discoveryAnonymousUser": "Anonymous"
+  "discoveryAnonymousUser": "Anonymous",
+  "commonFollow": "+ Follow",
+  "commonFollowing": "Following",
+  "commonAnonymous": "Anonymous"
 }
