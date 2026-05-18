@@ -1241,7 +1241,7 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     except Exception:
         pass
 
-    history = await _load_history(ctx.db, ctx.conversation_id)
+    history = await _select_history_loader()(ctx.db, ctx.conversation_id)
     messages = history + [{"role": "user", "content": ctx.user_message}]
 
     prompt_template = await _get_system_prompt_template(ctx.db)
@@ -1825,6 +1825,13 @@ async def _load_history_compacted(db: AsyncSession, conversation_id: str) -> lis
     messages.extend(_build_raw_messages(layer_a))
 
     return messages
+
+
+def _select_history_loader():
+    """根据 AI_HISTORY_COMPACTION_ENABLED flag 返回对应的 history 加载函数."""
+    if Config.AI_HISTORY_COMPACTION_ENABLED:
+        return _load_history_compacted
+    return _load_history
 
 
 async def _save_assistant_message(

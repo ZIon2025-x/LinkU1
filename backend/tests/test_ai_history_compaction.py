@@ -285,3 +285,64 @@ async def test_compacted_layer_b_replaces_tool_result_with_placeholder():
     for tr in tool_results:
         assert "big_data" not in tr["content"]
         assert "omitted" in tr["content"] or "[Tool" in tr["content"]
+
+
+@pytest.mark.asyncio
+async def test_flag_disabled_uses_raw_load_history(monkeypatch):
+    """AI_HISTORY_COMPACTION_ENABLED=false → 走原 _load_history."""
+    from app import config as _cfg
+    from app.services import ai_agent
+
+    monkeypatch.setattr(_cfg.Config, "AI_HISTORY_COMPACTION_ENABLED", False)
+
+    fake_db = MagicMock()
+    rows = [_make_msg(i, "user" if i % 2 == 0 else "assistant", f"msg {i}") for i in range(40)]
+
+    called = {"compacted": False, "raw": False}
+
+    async def fake_compacted(db, conv_id):
+        called["compacted"] = True
+        return []
+
+    async def fake_raw(db, conv_id):
+        called["raw"] = True
+        return ai_agent._build_raw_messages(rows)
+
+    with patch.object(ai_agent, "_load_history_compacted", new=fake_compacted), \
+         patch.object(ai_agent, "_load_history", new=fake_raw):
+        from app.services.ai_agent import _select_history_loader
+        loader = _select_history_loader()
+        await loader(fake_db, "conv_1")
+
+    assert called["raw"] is True
+    assert called["compacted"] is False
+
+
+@pytest.mark.asyncio
+async def test_flag_enabled_uses_compacted(monkeypatch):
+    """AI_HISTORY_COMPACTION_ENABLED=true → 走 _load_history_compacted."""
+    from app import config as _cfg
+    from app.services import ai_agent
+
+    monkeypatch.setattr(_cfg.Config, "AI_HISTORY_COMPACTION_ENABLED", True)
+
+    fake_db = MagicMock()
+
+    called = {"compacted": False, "raw": False}
+
+    async def fake_compacted(db, conv_id):
+        called["compacted"] = True
+        return []
+
+    async def fake_raw(db, conv_id):
+        called["raw"] = True
+        return []
+
+    with patch.object(ai_agent, "_load_history_compacted", new=fake_compacted), \
+         patch.object(ai_agent, "_load_history", new=fake_raw):
+        from app.services.ai_agent import _select_history_loader
+        loader = _select_history_loader()
+        await loader(fake_db, "conv_1")
+
+    assert called["compacted"] is True
+    assert called["raw"] is False
