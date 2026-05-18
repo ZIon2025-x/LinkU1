@@ -41,6 +41,7 @@ const SkillLeaderboardManagement = lazy(() => import('../pages/admin/skill-leade
 const AIPromptManagement = lazy(() => import('../pages/admin/ai-prompt/AIPromptManagement'));
 const AIQaDraftsPage = lazy(() => import('../pages/ai-qa/DraftsPage').then(m => ({ default: m.DraftsPage })));
 const AIQaQuestionsPage = lazy(() => import('../pages/ai-qa/QuestionsPage').then(m => ({ default: m.QuestionsPage })));
+const AIQaReviewPage = lazy(() => import('../pages/ai-qa/ReviewPage').then(m => ({ default: m.ReviewPage })));
 
 // Loading component
 const LoadingFallback = () => (
@@ -169,6 +170,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* AI 限时问答 — 题目列表 (A4) */}
           <Route path="ai-qa/questions" element={<AIQaQuestionsPage />} />
+
+          {/* AI 限时问答 — 评分终审页 (A5) */}
+          <Route path="ai-qa/review/:qid" element={<AIQaReviewPage />} />
 
           {/* Settings */}
           <Route path="settings" element={<Settings />} />
