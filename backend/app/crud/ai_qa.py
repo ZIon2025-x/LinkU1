@@ -118,6 +118,10 @@ def award_participation_points_on_cancel(db: Session, qid: int) -> int:
             related_type='ai_question',
             related_id=qid,  # Optional[int],不要 str()
             description=f'AI 限时问答 #{qid} 被取消,补发参与积分',
+            # 幂等防双发: 双击撤稿/重试 cancel 都走同一个 key,add_points_transaction
+            # 命中 idempotency_key 时直接 return 已存在 txn (coupon_points_crud:96-102),
+            # 不会双发。Final review critical issue #4.
+            idempotency_key=f'ai_qa_cancel_{qid}_{post.user_id}',
         )
         count += 1
     db.flush()

@@ -132,6 +132,11 @@ def submit_answer(
     # NOTE(P0-T7): plan 原文调用 `forum_crud.create_post(...)`,但 `app.crud.forum` 模块不存在
     # (现有 forum post 创建逻辑在 `app.routes.forum_posts_routes.create_post`,异步、带速率限制/内容审核,
     # 不能直接复用)。这里 inline 一个最小 ForumPost insert——同样写到 forum_posts 表,带 ai_question_id 反向关联。
+    #
+    # TODO P1 安全收口: 当前绕过 forum_posts_routes 的敏感词/速率限制 helper,
+    # 仅靠 risk_control.check_risk 覆盖反作弊。Spec §7 要求"敏感词命中走现有论坛 hidden 机制",
+    # P1 接入 _check_content_moderation 或加专用 ai-qa 敏感词检查。
+    # 当前接受风险: admin 控制题目方向,UGC 答题量小,人工 admin 审兜底。
     post = models.ForumPost(
         author_id=current_user.id,
         category_id=q.target_forum_category_id,

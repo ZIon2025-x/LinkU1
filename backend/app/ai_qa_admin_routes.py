@@ -24,10 +24,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin/ai-qa", tags=["Admin · AI Limited QA"])
 
 
-def _audit(db, action, qid_or_score_id, admin_id, old=None, new=None, reason=None):
+def _audit(db, action, qid_or_id, admin_id, *, entity_type: str = "ai_question",
+           old=None, new=None, reason=None):
+    """Audit log helper for ai-qa admin actions.
+
+    entity_type defaults to 'ai_question' (most actions). Caller MUST override for:
+      - score_update → 'ai_answer_score' (entity_id = score row id, not qid)
+      - settings_update → 'system_setting' (entity_id = setting key)
+    Final review hard issue #3.
+    """
     create_audit_log(
-        db, action_type=f"ai_qa_{action}", entity_type="ai_question",
-        entity_id=str(qid_or_score_id), admin_id=admin_id,
+        db, action_type=f"ai_qa_{action}", entity_type=entity_type,
+        entity_id=str(qid_or_id), admin_id=admin_id,
         old_value=old, new_value=new, reason=reason,
     )
 
@@ -128,6 +136,9 @@ def cancel_question(
 
     任一步异常 → 整事务回滚,status 不变,积分不发,确保一致。
 
+    TODO P1 admin 安全: 当前 solo admin 模式可接受;多 admin 时此端点应改 require_super_admin
+    (cancel 影响用户积分发放 + 全站可见状态切换)。
+
     TODO sponsor (上线时同事务追加):
       - ai_qa_sponsor.carry_over_pledges_to_pool(db, qid)  # sponsor spec §4.2
         把本题 sponsor_pool_pence + pledge_pool_carryover_pence 进全局加注池
@@ -206,9 +217,13 @@ def update_score(
         raise HTTPException(422, "ai_qa_score_out_of_range")
     old = {"admin_override_score": row.admin_override_score, "hide_in_qa": row.hide_in_qa}
     ai_qa_crud.update_admin_score(db, row, admin.id, payload.admin_override_score, payload.hide_in_qa)
-    _audit(db, "score_update", row.ai_question_id, admin.id, old=old,
+    # entity_type='ai_answer_score' (entity_id = score row id), 不是 ai_question;
+    # 把 ai_question_id 放到 reason 里供溯源
+    _audit(db, "score_update", score_id, admin.id,
+           entity_type="ai_answer_score",
+           old=old,
            new={"admin_override_score": row.admin_override_score, "hide_in_qa": row.hide_in_qa},
-           reason=f"score_id={score_id}")
+           reason=f"ai_question_id={row.ai_question_id}")
     db.commit()
     return {"ok": True}
 
@@ -246,6 +261,11 @@ def settle(
     admin: models.AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
+    """Admin settle 端点 — 触发 settle_question 事务 + 异步 S6 邮件。
+
+    TODO P1 admin 安全: 当前 solo admin 模式可接受;多 admin 时此端点应改 require_super_admin
+    (settle 直接发钱到 wallet,周度 cap 之内一次最多 £200)。
+    """
     try:
         result = settle_question(db, qid, admin.id)
     except SettleError as e:
@@ -268,7 +288,9 @@ def settle(
         raise HTTPException(500, "ai_qa_settle_failed")
     db.commit()
     # 事务外 S6 邮件
-    background.add_task(maybe_send_s6_alert, db, qid, admin.id)
+    # maybe_send_s6_alert 内部自开 SessionLocal session (BackgroundTasks 在 response
+    # 返回后才执行,届时这个 db 已 close),不接收 db 参数
+    background.add_task(maybe_send_s6_alert, qid, admin.id)
     return result
 
 
@@ -279,6 +301,11 @@ def update_settings(
     admin: models.AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
+    """更新 ai-qa 系统设置 (周度 cap / 阈值 / 默认 expert_id 等)。
+
+    TODO P1 admin 安全: 当前 solo admin 模式可接受;多 admin 时此端点应改 require_super_admin
+    (能改周度发奖 cap → 间接控制所有未来 settle 上限,影响全站发钱总额)。
+    """
     # 2 步确认 token 校验（简化版：要求 confirm_token == sha256(key + new_value)[:8]）
     import hashlib
     expected = hashlib.sha256(f"{payload.key}:{payload.new_value}".encode()).hexdigest()[:8]
@@ -287,6 +314,9 @@ def update_settings(
     old = get_system_setting(db, payload.key)
     old_val = old.setting_value if old else None  # get_system_setting 返回 SystemSettings 对象,需取 .setting_value
     update_system_setting(db, payload.key, payload.new_value)
-    _audit(db, "settings_update", payload.key, admin.id, old={payload.key: old_val}, new={payload.key: payload.new_value})
+    # entity_type='system_setting' (entity_id = setting key), 不是 ai_question
+    _audit(db, "settings_update", payload.key, admin.id,
+           entity_type="system_setting",
+           old={payload.key: old_val}, new={payload.key: payload.new_value})
     db.commit()
     return {"ok": True}

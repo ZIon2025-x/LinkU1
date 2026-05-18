@@ -74,16 +74,24 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
     distribution_map = dict(distribution)
 
     # === 写 rank_final + reward_pence + settled_at ===
+    # rank_final 用密集排名 (dense ranking): 并列分共享 rank,下一个不跳号
+    # 例: scores=[90,80,80,70,60] → ranks=[1,2,2,3,4] (不是 [1,2,2,4,5])
+    # spec §6.1 "rank_final ∈ [1,3] 且 settled" 金边规则:并列时多人都享金边
     settled_at = datetime.now(timezone.utc)
     top1_user_id = None
     top1_forum_post_id = None
     total_settled_pence = 0
+    prev_score = None
+    current_rank = 0
     for i, r in enumerate(rows):
-        r.rank_final = i + 1
+        if r.final_score != prev_score:
+            current_rank = i + 1
+        r.rank_final = current_rank
+        prev_score = r.final_score
         r.reward_pence = distribution_map.get(r.id, 0)
         r.reward_points = q.participation_points  # 所有未 hide 答主都拿
         r.settled_at = settled_at
-        if r.rank_final == 1:
+        if r.rank_final == 1 and top1_user_id is None:
             top1_user_id = r.user_id
             top1_forum_post_id = r.forum_post_id
         total_settled_pence += r.reward_pence
@@ -114,6 +122,9 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
         # 冒泡到外层 settle_question try/except → status=settle_failed
 
     # === add_points_transaction (所有未 hide 答主,含答案未被采纳的) ===
+    # 幂等防双发: settle_failed 重试场景下 add_points_transaction 命中 idempotency_key
+    # 会直接 return 已存在 txn (coupon_points_crud:96-102),不会双发。
+    # Final review critical issue #5.
     for r in rows:
         add_points_transaction(
             db,
@@ -122,6 +133,7 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
             type="earn",
             source="ai_qa_participation",
             related_id=qid,
+            idempotency_key=f"ai_qa_settle_points_{qid}_{r.user_id}",
         )
 
     # === leaderboard upsert ===
@@ -171,19 +183,25 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
     }
 
 
-def maybe_send_s6_alert(db: Session, qid: int, admin_id: str):
-    """事务外异步调（事务 commit 后）。周累计 ≥ 阈值发 email。"""
-    threshold = get_system_setting(db, "ai_qa_settle_alert_threshold_pence")
-    threshold_pence = int(threshold.setting_value) if threshold else 10000
-    weekly = ai_qa_crud.get_weekly_settled_pence(db)
-    if weekly < threshold_pence:
-        return
-    # 拉所有 admin email
-    admin_emails = [
-        a.email for a in db.execute(
-            select(models.AdminUser).where(models.AdminUser.is_active == True)
-        ).scalars() if a.email
-    ]
+def maybe_send_s6_alert(qid: int, admin_id: str):
+    """事务外异步调（事务 commit 后）。周累计 ≥ 阈值发 email。
+
+    BackgroundTasks 在 response 返回后才执行,届时 request-scoped db session 已 close。
+    所以内部必须自开 session,不能接收外部传入的 db (final review hard issue #1)。
+    """
+    from app.database import SessionLocal
+    with SessionLocal() as db:
+        threshold = get_system_setting(db, "ai_qa_settle_alert_threshold_pence")
+        threshold_pence = int(threshold.setting_value) if threshold else 10000
+        weekly = ai_qa_crud.get_weekly_settled_pence(db)
+        if weekly < threshold_pence:
+            return
+        # 拉所有 admin email
+        admin_emails = [
+            a.email for a in db.execute(
+                select(models.AdminUser).where(models.AdminUser.is_active == True)
+            ).scalars() if a.email
+        ]
     if not admin_emails:
         return
     subject = "[Link2Ur] AI 限时问答周度发奖触达阈值"
