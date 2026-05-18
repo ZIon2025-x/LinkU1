@@ -1077,6 +1077,21 @@ class _PipelineContext:
         self.terminated = False
 
 
+def _accumulate_response_tokens(ctx: _PipelineContext, usage) -> int:
+    """累加 LLM response usage 到 ctx 各字段,返回 effective_input.
+
+    cached_input_tokens 从 effective input 中减去(用于 daily budget 控制),
+    raw input 和 cached 分别保留(用于审计/对账)。`max(0, ...)` 防御 provider
+    上报 cached > input 的异常情况。
+    """
+    effective = max(0, usage.input_tokens - usage.cached_input_tokens)
+    ctx.total_input_tokens += effective
+    ctx.total_raw_input_tokens += usage.input_tokens
+    ctx.total_cached_input_tokens += usage.cached_input_tokens
+    ctx.total_output_tokens += usage.output_tokens
+    return effective
+
+
 async def _step_budget_check(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     ok, reason = _state.check_daily_budget(ctx.user.id, ctx.lang)
     if not ok:
@@ -1344,14 +1359,7 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
             if response is None:
                 break
             ctx.model_used = response.model
-            effective_input = max(
-                0,
-                response.usage.input_tokens - response.usage.cached_input_tokens,
-            )
-            ctx.total_input_tokens += effective_input
-            ctx.total_raw_input_tokens += response.usage.input_tokens
-            ctx.total_cached_input_tokens += response.usage.cached_input_tokens
-            ctx.total_output_tokens += response.usage.output_tokens
+            effective_input = _accumulate_response_tokens(ctx, response.usage)
             # 监控 prompt cache 命中（GLM 隐式自动 / Claude 走 cache_control），命中率反映 system+history 的 cache 经济性
             if response.usage.cached_input_tokens:
                 logger.info(

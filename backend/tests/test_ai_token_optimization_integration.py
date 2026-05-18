@@ -42,8 +42,9 @@ def _make_llm_response(input_tokens, output_tokens, cached):
 
 @pytest.mark.asyncio
 async def test_full_agent_with_cache_records_only_effective_tokens():
-    """改动 1+2 联合: ctx.total_input_tokens 应等于 (input - cached) 累加."""
-    from app.services.ai_agent import _PipelineContext
+    """改动 1+2 联合: 调用产线 _accumulate_response_tokens, ctx.total_input_tokens
+    应等于 (input - cached) 累加 — 不是测试公式的复制品。"""
+    from app.services.ai_agent import _PipelineContext, _accumulate_response_tokens
 
     db = MagicMock()
     user = MagicMock(); user.id = "u_test"; user.language_preference = "en"
@@ -56,11 +57,7 @@ async def test_full_agent_with_cache_records_only_effective_tokens():
     ]
 
     for resp in responses:
-        effective = max(0, resp.usage.input_tokens - resp.usage.cached_input_tokens)
-        ctx.total_input_tokens += effective
-        ctx.total_raw_input_tokens += resp.usage.input_tokens
-        ctx.total_cached_input_tokens += resp.usage.cached_input_tokens
-        ctx.total_output_tokens += resp.usage.output_tokens
+        _accumulate_response_tokens(ctx, resp.usage)
 
     # effective = (2000-1500) + (2500-2000) = 500 + 500 = 1000
     assert ctx.total_input_tokens == 1000
