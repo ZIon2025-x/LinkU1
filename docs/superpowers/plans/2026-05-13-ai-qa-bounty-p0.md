@@ -1323,7 +1323,10 @@ from app.deps import get_db, get_current_user_secure_sync_csrf
 from app.models_ai_qa import AiQuestion, AiAnswerScore
 from app.schemas_ai_qa import AiQuestionOut, AiAnswerOut, AnswerCreate
 from app.crud import ai_qa as ai_qa_crud
-from app.crud import forum as forum_crud  # 现有论坛 CRUD
+# 注意:不存在 app.crud.forum 模块。`def create_post` 实际在 routes/forum_posts_routes.py:389
+# 是带速率限制/内容审核的 async 路由,不能直接复用。ai-qa 答题用 inline ForumPost insert 替代,
+# 跳过论坛流程的 rate limit/重复标题/敏感词,因为 risk_control.check_risk 已覆盖 ai-qa 专属反作弊
+from app import models
 from app.risk_control import check_risk
 from app.device_fingerprint import generate_device_fingerprint, get_ip_address
 
@@ -1391,7 +1394,7 @@ def list_answers(qid: int, db: Session = Depends(get_db)):
             forum_post_id=r.forum_post_id,
             user_id=r.user_id,
             user_name=user.name if user else None,
-            user_avatar=user.avatar_url if user else None,
+            user_avatar=user.avatar if user else None,  # User.avatar 不是 avatar_url
             title=post.title if post and not post.is_deleted else None,
             content=post.content if post and not post.is_deleted else None,
             images=post.images if post and not post.is_deleted else None,
@@ -1443,16 +1446,19 @@ def submit_answer(
     )
     if not allowed:
         raise HTTPException(403, f"ai_qa_blocked_by_risk: {reason}")
-    # 事务: 建 ForumPost + ai_answer_scores 行
-    post = forum_crud.create_post(
-        db,
+    # 事务: 建 ForumPost (inline) + ai_answer_scores 行
+    # 跳过 routes/forum_posts_routes.py 的 rate limit/敏感词/重复标题(那些是 community post 防滥用),
+    # ai-qa 用 risk_control.check_risk 做答题专属反作弊 (上面已校验)
+    post = models.ForumPost(
         author_id=current_user.id,
         category_id=q.target_forum_category_id,
         title=payload.title or q.title[:200],
         content=payload.content,
-        images=payload.images,
+        images=payload.images or [],
         ai_question_id=qid,
     )
+    db.add(post)
+    db.flush()  # 拿 post.id 用于 ai_answer_scores
     ai_qa_crud.create_answer_score_row(
         db,
         ai_question_id=qid,
