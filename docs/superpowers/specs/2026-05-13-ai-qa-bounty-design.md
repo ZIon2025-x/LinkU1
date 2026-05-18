@@ -42,7 +42,7 @@
 | 分配 | **全员候选按 final_score 比例分配**，低于 `floor_pence` (默认 10p) 抹零；不设 winners_count cap（高分多拿，低分少拿，太低自然归零）|
 | 现金落地 | settle 时调 `wallet_service.credit_wallet()` → 钱进用户 `WalletAccount.balance`（DECIMAL，默认 GBP）；流水 `source='ai_qa_reward'` + `related_type='ai_question'` + `related_id=qid` + `idempotency_key='ai_qa_settle_{qid}_{user_id}'` 防双发。**提现**：用户在 Link2Ur "我的-钱包" 页面（现成）调 `/api/wallet/withdraw` → 走现有 Stripe Transfer 到 `stripe_account_id` → 用户银行 |
 | 参与积分 | 答题即得 5 积分（admin 可配） |
-| 通知 | 发布、截止前 24h、发奖完成、admin 撤稿（如发生） 全站推送，发奖话术不区分中奖与否 |
+| 通知 | 发布、截止前 24h、发奖完成、admin 撤稿（如发生） 全站推送，发奖话术不区分答案是否被采纳 |
 | 入口 | 首页"发现更多"区 + "官方活动"区 |
 | 命名 | **本 P0 路径（admin 出题 / cycle）用户面叫"AI 限时问答"**（金色卡片 + 🤖 角标）；用户提议路径（独立 spec `2026-05-18-ai-qa-user-submitted-design.md`）叫"社区限时问答"（蓝色卡片 + 💡 角标），两者同列表混排但视觉一眼分辨。两者都跟 OfficialTask"新手任务"（紫色，`features/newbie_tasks/` 模块）独立 |
 | 答题长度 | 建议 100-1500 字 + 0-3 张图（spec 推荐值，代码不强约束；可在题面/出题指南中提示） |
@@ -94,7 +94,7 @@ def distribute_pool(
 | 100 | 均匀 [80, 79, ..., 0]，多数 score 低 | top X 人能拿，bottom (100-X) 被 floor 抹零 |
 | 5 (全 0 分) | [0, 0, 0, 0, 0] | 5 人：每人 £0（钱留 reward_pool 不发） |
 
-**未中奖者**（reward_pence=0 抹零的）仍拿固定参与积分，不进现金分配。**未发出的钱**（floor 抹零部分）留在 `reward_pool_pence` 字段里历史记录，不退、不补、不滚——但若有 sponsor 加注资金、且题目走 canceled/closed_empty，详见 sponsor spec carry over 逻辑。
+**答案未被采纳的用户**（reward_pence=0 抹零的）仍拿固定参与积分，不进现金分配。**未发出的钱**（floor 抹零部分）留在 `reward_pool_pence` 字段里历史记录，不退、不补、不滚——但若有 sponsor 加注资金、且题目走 canceled/closed_empty，详见 sponsor spec carry over 逻辑。
 
 > `withdraw_threshold_pence` 已删——本 feature 不设提现门槛；用户提现走现有 wallet_service / `/api/wallet/withdraw` 的全局风控（参考 §1 wallet 体系说明）
 
@@ -440,7 +440,7 @@ admin 点 [确认发奖] → POST /admin/ai-qa/review/{qid}/settle
      ├─ 调 distribute_pool(scored_tuples, pool_pence=reward_pool_pence, floor_pence=q.floor_pence)
      │    返回 [(answer_id, reward_pence), ...] 长度 = 所有 hide_in_qa=False 答主数
      ├─ 写 ai_answer_scores.reward_pence / reward_points / rank_final / settled_at
-     ├─ **入账 wallet**（对每个 reward_pence > 0 的中奖者，事务内同步）：
+     ├─ **入账 wallet**（对每个 reward_pence > 0 的答案被采纳用户，事务内同步）：
      │     wallet_service.lock_wallet(db, user_id, currency='GBP')        # 行锁防并发
      │     wallet_service.credit_wallet(
      │         db, user_id=user_id,
@@ -454,7 +454,7 @@ admin 点 [确认发奖] → POST /admin/ai-qa/review/{qid}/settle
      │     )
      │     若任一 credit_wallet 抛异常 → 整个事务回滚至 settle_failed
      │     idempotency_key UNIQUE 保证即使行锁/状态校验失效,DB 层也拒绝双发
-     ├─ add_points_transaction（所有未被拉黑答主，含未中奖者）
+     ├─ add_points_transaction（所有未被拉黑答主，含答案未被采纳的用户）
      ├─ 更新 ai_qa_leaderboard
      ├─ **L3.b 曝光**：若有 rank_final=1 的答案,UPDATE forum_posts.is_featured=True
      ├─ 切 ai_questions.status = settled
@@ -476,10 +476,10 @@ admin 点 [确认发奖] → POST /admin/ai-qa/review/{qid}/settle
 **leaderboard 写入语义**（per user_id 在 ai_qa_leaderboard 行的字段更新）：
 
 ```python
-# 对所有 hide_in_qa=False 的答主（含未中奖）：
+# 对所有 hide_in_qa=False 的答主（含答案未被采纳的用户）：
 answer_count += 1
 
-# 仅对 reward_pence > 0 的中奖者：
+# 仅对 reward_pence > 0 的答案被采纳用户：
 total_won_pence += reward_pence
 win_count += 1
 last_won_at = NOW()
@@ -647,12 +647,12 @@ ai_qa/
 | 情况 | 处理 |
 |---|---|
 | 答题人数 = 0 | 题目状态切 `closed_empty`，奖金池不发；钱本来就没动；若有 sponsor 加注资金，按 sponsor spec carry over 进加注池 |
-| 答题人数 > 0 但 final_score 全 0 | distribute_pool 返回每人 0；reward_pool 全保留不发；走 settled 流程但 leaderboard 不写中奖记录 |
+| 答题人数 > 0 但 final_score 全 0 | distribute_pool 返回每人 0；reward_pool 全保留不发；走 settled 流程但 leaderboard 不写采纳记录 |
 | AI 出题失败 / 超时 | 候选表空，admin 后台显示 "AI 没出题，可手填"；admin 可手动建一道发 |
 | AI 评分 API 错 | 切 `scoring_failed`，admin 可点 "重跑评分"；不自动重试（防 API 抖动烧钱） |
 | 评分超期 24h admin 没审 | 邮件 escalation；不自动发奖 |
 | 帖子被 admin 删 / 用户删（settled 前） | ForumPost.is_deleted=True；评分管道 WHERE is_deleted=False 自动过滤；不写 ai_answer_scores |
-| 帖子被 admin 删 / 用户删（settled 后） | **保留 `ai_answer_scores` 行**（无 FK,不级联）；详情页查 `forum_posts.is_deleted` 显示"该答案已删除"占位 + 仍展示获奖金额；钱已发不退 |
+| 帖子被 admin 删 / 用户删（settled 后） | **保留 `ai_answer_scores` 行**（无 FK,不级联）；详情页查 `forum_posts.is_deleted` 显示"该答案已删除"占位 + 仍展示采纳金额；钱已发不退 |
 | 同人发了 2 个答案（绕过 lock） | 后端 `/api/ai-qa/{id}/answer` 入口去重：返回 409；如绕过入口直接调论坛接口，beat 跑分前去重取最新 |
 | 答案触发敏感词 | ForumPost 走现有 hidden 机制（系统级，论坛和问答页都不显示），不计评分 |
 | Admin 终审"屏蔽"某答案 | 写 `ai_answer_scores.hide_in_qa=True`（业务级，仅问答页不计分/不展示；该 ForumPost 在论坛流仍正常显示） |
@@ -672,7 +672,7 @@ ai_qa/
 | **S2 admin 设置超额池子** | DB CHECK 拒绝 reward_pool_pence > 100000（£1000）；UI 大额（>£50）弹二次确认 + 必勾"我已确认"；settle 前 review 页表头再次显示总额 |
 | **S5 周度发奖累计超上限（防 admin 被攻陷高频刷题）** | 事务前置查 7 天累计 settled pence + 本期 ≤ SystemSettings cap（默认 £200/周）；超过 409 + audit log + S6 邮件触发；admin 修改该 setting 需 2 步确认 + 独立 audit log |
 | **S6 异常发奖邮件告警** | 周累计 settled ≥ 阈值（默认 £100/周）→ 事务外异步 email_utils 发邮件给所有 admin；攻陷场景下攻击者拿到 admin 不一定能修改邮箱即时告警 |
-| **中奖者未绑 Stripe Connect** | 钱**照样进入 WalletAccount.balance**，用户在"我的-钱包"看得到；只是点提现时现有钱包流程会引导先绑 Stripe Connect（已有交互，不在本 feature 范围）|
+| **答案被采纳的用户未绑 Stripe Connect** | 钱**照样进入 WalletAccount.balance**，用户在"我的-钱包"看得到；只是点提现时现有钱包流程会引导先绑 Stripe Connect（已有交互，不在本 feature 范围）|
 | **wallet_service.credit_wallet 抛异常（DB 锁冲突/IO 失败）** | 事务回滚 → settle_failed；幂等 key UNIQUE 保证重试时不会双发 |
 | **idempotency_key 冲突（settle 重试时已部分成功）** | UNIQUE 约束触发 IntegrityError → wallet_service 内部捕获并视为已入账（跳过该用户），其他用户继续；保证最终一致 |
 | **用户钱包被冻结 / balance 异常** | credit_wallet 仍然能入账（balance 字段不阻塞）；提现时由现有钱包冻结流程处理，与本 feature 解耦 |
@@ -718,7 +718,7 @@ ai_qa/
 | **P0 — MVP** | 5 张新表全建（含 `ai_qa_leaderboard`）+ admin 后台 draft 手填（drafts 增删改 + publish + cancel）+ 用户答题（含 **L4 接 risk_control.check_risk**）+ AI 评分（含 ai_generated 字段写入）+ admin 终审（含 risk_score / ai_generated 高亮表格）+ 发奖（settle 时同步写 leaderboard + **L3.b ForumPost.is_featured 置 top1**）+ **L3.a 详情页 top 3 高亮**；前端答案卡片 **L4 "可能为 AI 生成" 提示标签**；**不接 Celery 出题**（draft 路径足够验证产品形态）|
 | **P1** | Cycle 自动出题 + candidate 审核流（含 snapshot pre-fill）+ admin prompt 动态编辑 |
 | **P2** | Flutter 用户入口（home discovery + 官方活动区卡片）+ 答主排行榜前端入口（表早已写满数据,直接读）+ 通知优化 + **L3.c 头像角标 7 天**（需新表 `user_badges`）+ **L3.d Profile 累积勋章** |
-| **P3+** | Admin 数据看板（参与率/平均分/答题分布）+ **L3.e 首页 banner top 1 推荐一周**（动 home_discovery 架构）+ **L3.f Expert 邀请通道**（top N 期获奖触发 admin 邀请加 Expert 团队，接现有 ExpertApplication）|
+| **P3+** | Admin 数据看板（参与率/平均分/答题分布）+ **L3.e 首页 banner top 1 推荐一周**（动 home_discovery 架构）+ **L3.f Expert 邀请通道**（top N 期答案被采纳触发 admin 邀请加 Expert 团队，接现有 ExpertApplication）|
 
 solo 项目直推 main，不开 feature 分支（参考 `feedback_direct_to_main`）。
 
@@ -738,7 +738,7 @@ solo 项目直推 main，不开 feature 分支（参考 `feedback_direct_to_main
 | **经济模型 ROI 不明（10 GBP/期诱因弱）** | P0 不调，先验证产品形态；上线后看 DAU/答题率/UGC 阅读量决定是否调高池子或加 L3.e/f 曝光 |
 | **L4 风控误伤（同设备共享场景）** | 选档 2 mixed,不直接拒答；admin 终审兜底；上线后 admin 反馈风控误伤多则收紧 / 少则放宽 |
 | **AI 误判 ai_generated** | 前端只做"可能为 AI 生成"灰色提示标签，不影响 score 自动扣减；admin 改分兜底；用户能看到提示但无投票机制可受影响 |
-| **C1 HMRC 税务 / promotional expense** | 英国法律下平台向用户付现金奖励的法律定性不明（用户角度 < £1000/年 在 trading allowance 内；平台角度作为 promotional expense 入账）。**上线前需咨询会计师**确认申报方式；若某用户年累计获奖 > £500 可能需主动告知 |
+| **C1 HMRC 税务 / promotional expense** | 英国法律下平台向用户付现金奖励的法律定性不明（用户角度 < £1000/年 在 trading allowance 内；平台角度作为 promotional expense 入账）。**上线前需咨询会计师**确认申报方式；若某用户年累计被采纳奖金 > £500 可能需主动告知 |
 | **C2 AML / FCA 钱包合规** | 单期 £10 不直接触发，但 wallet 累计余额 + 跨渠道合算可能触线。**复用现有钱包合规链路**（KYC + 提现风控），本 feature 不新增合规面 |
 | **C3 假账号 / 反洗钱** | L4 风控基线（device fingerprint + check_risk）覆盖部分；深层（同身份证多账号、KYC 后绑不同收款账户）属现有钱包系统范畴，本 feature 不重造 |
 | **admin 后台被攻陷 → 高频刷题给同伙发奖 → 同伙提现跑路** | 攻击路径：admin 高频 settle → 钱进同伙 WalletAccount → 同伙调 `/api/wallet/withdraw` → Stripe Transfer 到同伙银行（不可逆）。防御：① **S5 周度入账上限**（DB 硬墙，默认 £200/周）② **S6 邮件告警**（早期发现）③ **现有钱包提现流程的风控**（KYC、提现门槛、风控审核）④ audit log 全量留痕便于追溯并对未提现 balance 做 `reverse_debit`。攻陷场景下最坏损失 = 同伙已提现到 Stripe 部分（cap 之内）|

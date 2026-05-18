@@ -13,6 +13,25 @@
 
 ---
 
+## 后续 spec 增量的 migration 编号策略
+
+本 plan 只覆盖 P0 基础流程,migration 编号 **237**。两个增量 spec **不合并到 237**,各自独立编号 + 各自独立 plan,P0 上线在前。约定:
+
+| spec | migration 编号 | DB 改动 | 上线节奏 |
+|---|---|---|---|
+| **P0 基础** (本 plan) | `237_ai_qa_bounty.sql` | 5 新表 + ForumPost.ai_question_id + SystemSettings 3 项 | 第一波 |
+| **Sponsor 加注** (`2026-05-18-ai-qa-sponsor-pledge-design.md`) | `238_ai_qa_sponsor_pledge.sql` | 3 新表 (ai_qa_pledges / ai_qa_pledge_pool / ai_qa_pledge_pool_transactions) + ai_questions 加 sponsor_pool_pence + pledge_pool_carryover_pence 2 字段 | P0 上线观察一周后 |
+| **社区限时问答** (`2026-05-18-ai-qa-user-submitted-design.md`) | `239_ai_qa_user_submitted.sql` | ai_questions 加 5 字段 (submitted_by_user_id / submitted_at / rejected_at / rejected_reason_code / rejected_reason_detail / withdrawn_at) + status enum 扩展 3 个 (pending_review / rejected / withdrawn) + 2 索引 | 依赖 sponsor 的混合付款流程,sponsor 之后 |
+
+**关键 forward-compat 注释** (本 plan 实施时需埋点,避免 sponsor/user-submitted 上线时回头改):
+
+- **`cancel_question` / `close_expired_ai_questions` / `score_closed_ai_questions` 三处状态切换** (P0 Task 4 + Task 10): 注释里写明 "TODO sponsor: 此处加 `carry_over_pledges_to_pool(db, qid)` hook"。sponsor 上线时同处加 hook,**不动 P0 代码结构**,只增量补 import + 一行调用。
+- **`publish_draft` / `publish_candidate`** (P0 Task 4 + 未来 P1 cycle): 注释里写明 "TODO sponsor: 此处加 `consume_pledge_pool_for_new_question(db, q)` hook"。
+- **`/api/ai-qa/{qid}/answer` 端点** (P0 Task 7): 注释里写明 "TODO user-submitted: 校验 if ai_questions.submitted_by_user_id == current_user.id → 拒 403 `ai_qa_self_submission_cannot_answer`"。
+- **详情页 hero 区** (P0 Task 15 Flutter): 注释 "TODO user-submitted: 根据 submitted_by_user_id 是否 NULL 切金色 (AI 限时问答) / 蓝色 (社区限时问答) 皮肤"。
+
+---
+
 ## 文件结构
 
 ### 后端新建（按职责）
@@ -698,7 +717,11 @@ def publish_draft(db: Session, q: AiQuestion) -> AiQuestion:
 
 
 def cancel_question(db: Session, q: AiQuestion, admin_id: str, reason: str) -> AiQuestion:
-    """published → canceled。给所有未删答主补发参与积分（事务外）。"""
+    """published → canceled。只切状态;参与积分补发由 caller 在同事务调 award_participation_points_on_cancel。
+
+    TODO sponsor: caller 在切状态后同事务还要调 carry_over_pledges_to_pool(db, qid) (sponsor spec §4.2),
+    把本题 sponsor_pool_pence + pledge_pool_carryover_pence 进全局加注池。
+    """
     if q.status != "published":
         raise ValueError(f"only published can be canceled, got status={q.status}")
     q.status = "canceled"
@@ -706,6 +729,47 @@ def cancel_question(db: Session, q: AiQuestion, admin_id: str, reason: str) -> A
     q.cancel_reason = reason
     db.flush()
     return q
+
+
+def award_participation_points_on_cancel(db: Session, qid: int) -> int:
+    """canceled 时补发参与积分给所有未删答主 (spec §7 + §4.4)。
+
+    扫 forum_posts WHERE ai_question_id=qid AND is_deleted=False,逐个 add_points_transaction。
+    幂等:用 source='ai_qa_cancel_participation' + related_id=qid + reference=user_id 防重 (依赖
+    points_transactions 现有去重机制;如无 UNIQUE,可用 SystemSettings flag 兜底避免双发)。
+    返回补发人数。
+
+    注意:
+    - 不写 ai_qa_leaderboard (spec §4.4 末段:canceled 题不写 leaderboard,保持数据干净只反映正常 settled)
+    - 调用方必须先调 cancel_question 切状态,再调本函数;失败时事务回滚,状态也回滚
+    """
+    from app.models import ForumPost
+    from app.crud.points import add_points_transaction  # 现有积分服务
+
+    q = db.get(AiQuestion, qid)
+    if not q or q.status != "canceled":
+        raise ValueError(f"question {qid} not in canceled state")
+
+    posts = db.execute(
+        select(ForumPost).where(
+            and_(ForumPost.ai_question_id == qid, ForumPost.is_deleted == False)
+        )
+    ).scalars().all()
+
+    count = 0
+    for post in posts:
+        add_points_transaction(
+            db,
+            user_id=post.user_id,
+            amount=q.participation_points,
+            source='ai_qa_cancel_participation',
+            related_type='ai_question',
+            related_id=str(qid),
+            description=f'AI 限时问答 #{qid} 被取消,补发参与积分',
+        )
+        count += 1
+    db.flush()
+    return count
 
 
 def list_questions(
@@ -1110,7 +1174,7 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
             top1_forum_post_id = r.forum_post_id
         total_settled_pence += r.reward_pence
 
-    # === wallet credit (每个中奖者) ===
+    # === wallet credit (每个答案被采纳的用户) ===
     for r in rows:
         if r.reward_pence <= 0:
             continue
@@ -1134,7 +1198,7 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
                 f"settle qid={qid} user={r.user_id} idempotency duplicate, skipped: {e}"
             )
 
-    # === add_points_transaction (所有未 hide 答主含未中奖) ===
+    # === add_points_transaction (所有未 hide 答主,含答案未被采纳的) ===
     for r in rows:
         add_points_transaction(
             db,
@@ -1547,26 +1611,35 @@ def cancel_question(
     admin: models.AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
+    """
+    Admin 撤稿。同事务保证:
+      1. cancel_question 切状态 (published → canceled)
+      2. award_participation_points_on_cancel 给所有未删答主补 participation_points (spec §7)
+      3. 单独 audit log (action_type='ai_qa_cancel' + reason)
+
+    任一步异常 → 整事务回滚,status 不变,积分不发,确保一致。
+
+    TODO sponsor (上线时同事务追加):
+      - ai_qa_sponsor.carry_over_pledges_to_pool(db, qid)  # sponsor spec §4.2
+        把本题 sponsor_pool_pence + pledge_pool_carryover_pence 进全局加注池
+    """
     q = ai_qa_crud.get_question(db, qid)
     if q is None:
         raise HTTPException(404, "ai_qa_not_found")
     try:
         ai_qa_crud.cancel_question(db, q, admin.id, payload.reason)
+        # 同事务补发参与积分 (helper 内部扫 forum_posts 而非 ai_answer_scores,
+        # 兼容用户绕过 /api/ai-qa/{id}/answer 入口直接塞 ai_question_id 进论坛的边缘 case)
+        awarded_count = ai_qa_crud.award_participation_points_on_cancel(db, qid)
     except ValueError as e:
         raise HTTPException(409, str(e))
-    # 给所有未删答主补发参与积分
-    rows = ai_qa_crud.list_answer_scores_for_question(db, qid, include_hidden=False)
-    for r in rows:
-        post = db.get(models.ForumPost, r.forum_post_id)
-        if post and not post.is_deleted:
-            add_points_transaction(
-                db, user_id=r.user_id, amount=q.participation_points,
-                type_="earn", source="ai_qa_participation_canceled",
-                related_id=qid,
-            )
-    _audit(db, "cancel", qid, admin.id, old={"status": "published"}, new={"status": "canceled", "reason": payload.reason})
+    _audit(
+        db, "cancel", qid, admin.id,
+        old={"status": "published"},
+        new={"status": "canceled", "reason": payload.reason, "participation_awarded_count": awarded_count},
+    )
     db.commit()
-    # TODO: 全站通知 "本期问答已取消"
+    # TODO: 全站通知 "本期问答已取消" (含已答用户的私推)
     return q
 
 
@@ -2060,12 +2133,166 @@ def test_settle_canceled_not_in_leaderboard(db_session, admin_user):
     db_session.commit()
     # canceled 流程不会调 settle_question,所以 leaderboard 不动
     assert db_session.query(AiQaLeaderboard).count() == 0
+
+
+# ============================================================================
+# 以下 3 个 case 覆盖新算法 (spec §2.1) 关键场景:验证 settle 集成层在
+# floor_pence 抹零 / 全 0 分 / 并列分 等情况下 wallet+leaderboard+rank 链路对
+# ============================================================================
+
+def test_settle_floor_cuts_off_bottom_at_scale(db_session, admin_user):
+    """case (i): 100 人答 + floor 抹零 → top X 拿钱, bottom 被归零;
+    全员 leaderboard.answer_count += 1 但仅 winners win_count += 1。
+
+    spec §2.1 表第 4 行场景:pool=£10 (1000p), floor=10p, 100 人分数 [80..0]。
+    多数 score 低 → bottom 被 floor 抹零,只有 top X 实际拿钱。
+    """
+    from app.services.ai_qa_settle import settle_question
+    from app.models_ai_qa import AiQuestion, AiAnswerScore, AiQaLeaderboard
+    from app import models
+
+    q = AiQuestion(
+        title="100q", content="c", posed_by_expert_id="EXP00001", status="scored",
+        reward_pool_pence=1000, participation_points=5, floor_pence=10,
+        target_forum_category_id=1, created_by_admin_id=admin_user.id,
+        deadline=datetime.now(timezone.utc) - timedelta(hours=1),
+    )
+    db_session.add(q); db_session.flush()
+    # 100 个答主, score 从 80 递减到 0 (人为构造大量低分被 floor 抹零)
+    for i in range(100):
+        uid = f"U{i:07d}"
+        post = models.ForumPost(
+            title=f"a{i}", content="c", author_id=uid, category_id=1,
+            ai_question_id=q.id,
+        )
+        db_session.add(post); db_session.flush()
+        score = max(0, 80 - i)  # i=0 → 80, i=80+ → 0
+        db_session.add(AiAnswerScore(
+            ai_question_id=q.id, forum_post_id=post.id, user_id=uid, ai_score=score,
+        ))
+    db_session.commit()
+
+    settle_question(db_session, q.id, admin_user.id)
+    db_session.commit()
+
+    rows = db_session.query(AiAnswerScore).filter_by(ai_question_id=q.id).all()
+    winners = [r for r in rows if r.reward_pence > 0]
+    losers = [r for r in rows if r.reward_pence == 0]
+
+    # 关键断言:
+    assert len(winners) < 100, "floor 抹零应过滤掉一些低分,而非全员都拿钱"
+    assert len(winners) >= 1, "至少 top 1 应拿到钱"
+    assert all(r.reward_pence >= 10 for r in winners), "winners 单人 ≥ floor (10p)"
+    assert sum(r.reward_pence for r in rows) == 1000, "总额 = 池子"
+    # rank_final 全员都有 (排名给所有人,跟 reward_pence 是否 0 无关)
+    assert all(r.rank_final is not None for r in rows)
+    # leaderboard: 100 行 (每人 answer_count +=1), 但 win_count > 0 只在 winners
+    lb_rows = db_session.query(AiQaLeaderboard).all()
+    assert len(lb_rows) == 100
+    win_lb = [lb for lb in lb_rows if lb.win_count > 0]
+    assert len(win_lb) == len(winners), "leaderboard win_count 跟 reward_pence>0 一致"
+
+
+def test_settle_all_zero_scores(db_session, admin_user):
+    """case (j): 全 0 分 settle → wallet 没 credit + leaderboard 不写 win_count + status 仍切 settled。
+
+    spec §2.1 表第 5 行场景:5 人都拿 0 分。distribute_pool 返回全 0;
+    钱留在 reward_pool_pence (不退不补);但 status 仍走完 settled 流程 + 参与积分照发。
+    """
+    from app.services.ai_qa_settle import settle_question
+    from app.models_ai_qa import AiQuestion, AiAnswerScore, AiQaLeaderboard
+    from app import models
+
+    q = AiQuestion(
+        title="zeroq", content="c", posed_by_expert_id="EXP00001", status="scored",
+        reward_pool_pence=1000, participation_points=5, floor_pence=10,
+        target_forum_category_id=1, created_by_admin_id=admin_user.id,
+        deadline=datetime.now(timezone.utc) - timedelta(hours=1),
+    )
+    db_session.add(q); db_session.flush()
+    for i in range(5):
+        uid = f"U{i:07d}"
+        post = models.ForumPost(
+            title=f"a{i}", content="c", author_id=uid, category_id=1,
+            ai_question_id=q.id,
+        )
+        db_session.add(post); db_session.flush()
+        db_session.add(AiAnswerScore(
+            ai_question_id=q.id, forum_post_id=post.id, user_id=uid, ai_score=0,
+        ))
+    db_session.commit()
+
+    settle_question(db_session, q.id, admin_user.id)
+    db_session.commit()
+    db_session.refresh(q)
+
+    # 状态切 settled (走完完整流程)
+    assert q.status == "settled"
+    rows = db_session.query(AiAnswerScore).filter_by(ai_question_id=q.id).all()
+    # 全员 reward_pence = 0 (无答案被采纳)
+    assert all(r.reward_pence == 0 for r in rows)
+    # 全员 reward_points > 0 (参与积分照发)
+    assert all(r.reward_points > 0 for r in rows)
+    # wallet 没 credit (查 wallet_transactions WHERE related_type='ai_question' AND related_id=qid)
+    tx = db_session.query(models.WalletTransaction).filter_by(
+        related_type="ai_question", related_id=str(q.id),
+    ).all()
+    assert len(tx) == 0, "全 0 分不应触发任何 wallet credit"
+    # leaderboard: 5 行都写 (answer_count +=1) 但 win_count 全 0
+    lb_rows = db_session.query(AiQaLeaderboard).all()
+    assert len(lb_rows) == 5
+    assert all(lb.win_count == 0 and lb.total_won_pence == 0 for lb in lb_rows)
+
+
+def test_settle_rank_final_with_ties(db_session, admin_user):
+    """case (k): rank_final 排名正确性 (含并列分场景)。
+
+    并列分时 rank_final 不应跳号 (1, 2, 2, 4) 或乱排;具体决策跟 spec §6.1
+    "rank_final ∈ [1, 3] 且 settled" 金边规则相关,影响前端 top3 高亮。
+    """
+    from app.services.ai_qa_settle import settle_question
+    from app.models_ai_qa import AiQuestion, AiAnswerScore
+    from app import models
+
+    q = AiQuestion(
+        title="tieq", content="c", posed_by_expert_id="EXP00001", status="scored",
+        reward_pool_pence=1000, participation_points=5, floor_pence=10,
+        target_forum_category_id=1, created_by_admin_id=admin_user.id,
+        deadline=datetime.now(timezone.utc) - timedelta(hours=1),
+    )
+    db_session.add(q); db_session.flush()
+    # 分数: [90, 80, 80, 70, 60] — 第 2/3 名并列
+    scores = [("U0000001", 90), ("U0000002", 80), ("U0000003", 80),
+              ("U0000004", 70), ("U0000005", 60)]
+    for uid, score in scores:
+        post = models.ForumPost(
+            title="a", content="c", author_id=uid, category_id=1,
+            ai_question_id=q.id,
+        )
+        db_session.add(post); db_session.flush()
+        db_session.add(AiAnswerScore(
+            ai_question_id=q.id, forum_post_id=post.id, user_id=uid, ai_score=score,
+        ))
+    db_session.commit()
+    settle_question(db_session, q.id, admin_user.id)
+    db_session.commit()
+
+    rows = {r.user_id: r for r in db_session.query(AiAnswerScore).filter_by(ai_question_id=q.id).all()}
+    # 关键断言:并列分 reward_pence 必须相等 (按比例分)
+    assert rows["U0000002"].reward_pence == rows["U0000003"].reward_pence
+    # rank_final:第 1 名 rank=1;第 2/3 名 (并列 80) 都应该 rank=2 (不跳号到 3)
+    # 注意:此断言依赖实现决策。如选"密集排名 1,2,2,3,4" → 改下面;如选"标准 1,2,2,4,5" → 改下面
+    # spec §6.1 没明确,但 settle 服务 (Task 6) 实现时应当 explicit 选一种,这里跟 settle 实现保持一致
+    assert rows["U0000001"].rank_final == 1
+    assert rows["U0000002"].rank_final == rows["U0000003"].rank_final  # 并列必须相同
+    # 总额对齐池子
+    assert sum(r.reward_pence for r in rows.values()) == 1000
 ```
 
 - [ ] **Step 2: 跑测试**
 
 Run: `cd backend && pytest tests/test_ai_qa_settle.py -v`
-Expected: 5 个测试通过（可能需要根据 conftest fixture 适配）
+Expected: 8 个测试通过（可能需要根据 conftest fixture 适配）
 
 - [ ] **Step 3: Commit**
 
@@ -2997,7 +3224,11 @@ class _AnswerCard extends StatelessWidget {
     final isDeleted = answer.isDeleted;
     final isSettledOrCanceled = questionStatus == 'settled' || questionStatus == 'canceled';
     if (isDeleted && !isSettledOrCanceled) return const SizedBox.shrink();
-    final isTop = (answer.rankFinal ?? 999) <= 3 && questionStatus == 'settled';
+    // top3 高亮: 新算法 (spec §2.1) 下排名前 3 但 reward_pence 被 floor 抹零为 0 的情况
+    // (小池子大池子边界 case) 不应贴金边,否则会展示"#2 金边 + 无奖金"的矛盾视觉
+    final isTop = (answer.rankFinal ?? 999) <= 3
+        && answer.rewardPence > 0
+        && questionStatus == 'settled';
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       padding: const EdgeInsets.all(14),
@@ -3122,7 +3353,7 @@ Expected: 0 errors
 Run: `flutter run -d web-server`，然后浏览器手动 navigate 到 `/ai-qa/{id}`（id 用 admin 后台已 publish 的题），验证：
 - M3 published 显示倒计时 + "我来答"
 - M4 canceled 显示 banner
-- M5 settled 显示 top 1/2/3 金边 + 奖金
+- M5 settled 显示前 3 名 (且 rewardPence > 0) 金边 + 奖金;floor 抹零导致 reward=0 的不贴金边
 
 - [ ] **Step 11: Commit**
 
@@ -3133,13 +3364,61 @@ git commit -m "feat(ai-qa/flutter): M3/M4/M5/M6 详情+答题页 + Bloc + reposi
 
 ---
 
+## 上线前 manual ops checklist (在 P0 验收前必做)
+
+migration 237 给 `system_settings.ai_qa_default_expert_id` 留了**空字符串**占位 (Task 1 Step 1)。如果不补值,**第一道 admin draft publish 会直接 500** (FK 校验 `posed_by_expert_id NOT NULL REFERENCES experts(id)` 失败)。同样,migration 跑了不等于功能就绪 —— 下面 3 步是真实的"开第一道题之前必须做"checklist:
+
+- [ ] **Step 1: linktest 先建一个 official Expert**
+
+  在 admin web `/admin/experts` 新建一个 team:
+  - name: `Link2Ur AI` (用户面 hero 显示这个名字)
+  - is_official: `True` (db 字段)
+  - 头像: AI 主题 (机器人 emoji or Link2Ur logo 变体)
+  - 不需要 owner_user_id (官方账号)
+
+  拿到 expert_id (类似 `EXP_xxx` 8 字符 ID)。
+
+- [ ] **Step 2: 写进 SystemSettings**
+
+  ```sql
+  -- linktest 先做
+  UPDATE system_settings
+    SET setting_value = '<刚建的 expert_id>'
+    WHERE setting_key = 'ai_qa_default_expert_id';
+  ```
+
+  或 admin web `/admin/settings` 找 `ai_qa_default_expert_id` 改值。
+
+- [ ] **Step 3: verify draft 路径**
+
+  linktest:
+  ```bash
+  curl -X POST https://linktest.up.railway.app/api/admin/ai-qa/drafts \
+    -H "Authorization: Bearer <admin_token>" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "title": "smoke test",
+      "content": "smoke",
+      "target_forum_category_id": 1,
+      "deadline": "2027-01-01T00:00:00Z"
+    }'
+  ```
+  应返回 200 + 含 `posed_by_expert_id` 字段 (= step 1 expert_id)。如果返回 500/422 提示 "posed_by_expert_id required",回 step 2 检查 SystemSettings。
+
+- [ ] **Step 4: linktest 验证通过后 prod 重做 step 1+2**
+
+  prod 的 expert_id 跟 linktest 不一样,**不可直接 copy linktest 的 SystemSettings 值**。
+
+---
+
 ## P0 验收清单（实施完所有 Task 后做）
 
 - [ ] **跨层一致性**：按 CLAUDE.md `full-stack-consistency-check` skill 跑一遍 DB → schema → route → frontend
 - [ ] **migration 顺序**：先 push DB migration（[`feedback_migration_before_deploy`]），再 push 代码
+- [ ] **manual ops checklist**: 上面 4 步必须做完 (尤其 SystemSettings 不补值会触发 500)
 - [ ] **linktest 端到端**：admin 建 draft → publish → 多用户答题 → 手动跑 close_expired + score_closed → admin 改分 → settle → 验证 wallet 余额 + audit log + leaderboard
 - [ ] **scheduled_tasks 同步 Celery**：beat_schedule 加 ai_qa.close_expired + ai_qa.score_closed（[`feedback_scheduled_tasks_celery_sync`]）
-- [ ] **prod 灰度**：linktest 验证完后 push main → Railway 自动部署 prod，观察 1 个完整周期
+- [ ] **prod 灰度**：linktest 验证完后 push main → Railway 自动部署 prod,**prod manual ops 单独重做一遍** → 观察 1 个完整周期
 
 ## P1/P2/P3+ 后续 plan（不在本 P0 范围）
 
