@@ -974,7 +974,7 @@ import logging
 from typing import List, Tuple, Optional
 from anthropic import Anthropic
 
-from app.config import settings
+from app.config import Config  # 注意:Config 是 class,无顶层 settings 变量;访问用 Config.XXX
 
 logger = logging.getLogger(__name__)
 
@@ -1025,7 +1025,7 @@ def score_answers_batch(
     answers: List[dict],  # [{"id": int, "content": str}, ...]
 ) -> List[dict]:
     """调 Claude Sonnet 4.5 批量打分。返回 [{"id", "score", "off_topic", "ai_generated"}, ...]。"""
-    client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    client = Anthropic(api_key=Config.ANTHROPIC_API_KEY)
     prompt = SCORING_PROMPT_TEMPLATE.format(
         question=f"{question_title}\n\n{question_content}",
         answers=json.dumps(answers, ensure_ascii=False),
