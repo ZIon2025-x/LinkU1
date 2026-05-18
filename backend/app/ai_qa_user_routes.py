@@ -152,3 +152,53 @@ def submit_answer(
     )
     db.commit()
     return {"forum_post_id": post.id, "ai_question_id": qid}
+
+
+@router.patch("/{qid}/answer", response_model=dict)
+def edit_answer(
+    qid: int,
+    payload: AnswerCreate,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """
+    编辑答案 (spec §2 "截止前 1 小时锁编辑")。
+
+    校验顺序:
+    1. ai_question 存在 → 404
+    2. status='published' → 否则 409 ai_qa_status_not_published
+    3. now < deadline → 否则 409 ai_qa_deadline_passed
+    4. now < edit_lock_at → 否则 409 ai_qa_edit_locked
+    5. 当前 user 在此题有答案 → 否则 404 ai_qa_answer_not_found
+    6. UPDATE ForumPost.title/content/images (ai_question_id / author_id 不动)
+    7. ai_answer_scores 行不变 (评分阶段未到,不需要重置)
+    """
+    q = db.get(AiQuestion, qid)
+    if q is None:
+        raise HTTPException(404, "ai_qa_not_found")
+    if q.status != "published":
+        raise HTTPException(409, "ai_qa_status_not_published")
+    now = datetime.now(timezone.utc)
+    if q.deadline and now >= q.deadline:
+        raise HTTPException(409, "ai_qa_deadline_passed")
+    if q.edit_lock_at and now >= q.edit_lock_at:
+        raise HTTPException(409, "ai_qa_edit_locked")
+    row = ai_qa_crud.get_user_answer(db, qid, current_user.id)
+    if row is None:
+        raise HTTPException(404, "ai_qa_answer_not_found")
+    post = db.get(models.ForumPost, row.forum_post_id)
+    if post is None or post.is_deleted:
+        raise HTTPException(404, "ai_qa_answer_not_found")
+    # 更新 ForumPost (post 字段; ai_question_id / author_id / category_id 不动)
+    post.title = payload.title or q.title[:200]
+    post.content = payload.content
+    if payload.images is not None:
+        post.images = payload.images
+    db.flush()
+    db.commit()
+    return {
+        "forum_post_id": post.id,
+        "ai_question_id": qid,
+        "updated_at": post.updated_at.isoformat() if post.updated_at else None,
+    }
