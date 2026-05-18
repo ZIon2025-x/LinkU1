@@ -1315,10 +1315,13 @@ class _RootReplyGroup extends StatelessWidget {
           isNested: false,
           onLike: () =>
               context.read<ForumBloc>().add(ForumLikeReply(root.id)),
-          onReply: () => onReplyTo(
-            root.id,
-            root.author?.name ?? root.authorId.toString(),
-          ),
+          // audit C8 #3: 未登录先走登录页,避免输入框 focus 后无法 submit
+          onReply: () => requireAuth(context, () {
+            onReplyTo(
+              root.id,
+              root.author?.name ?? root.authorId.toString(),
+            );
+          }),
           onMentionTap: (id) => onMentionTap(id),
           highlightStream: highlightStream,
           canDelete: _canDelete(root),
@@ -1335,10 +1338,13 @@ class _RootReplyGroup extends StatelessWidget {
             isNested: true,
             onLike: () =>
                 context.read<ForumBloc>().add(ForumLikeReply(child.id)),
-            onReply: () => onReplyTo(
-              child.id,
-              child.author?.name ?? child.authorId.toString(),
-            ),
+            // audit C8 #3: 同上,未登录先弹登录
+            onReply: () => requireAuth(context, () {
+              onReplyTo(
+                child.id,
+                child.author?.name ?? child.authorId.toString(),
+              );
+            }),
             onMentionTap: (id) => onMentionTap(id),
             highlightStream: highlightStream,
             canDelete: _canDelete(child),
