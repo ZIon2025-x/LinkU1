@@ -1179,29 +1179,26 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
     for r in rows:
         if r.reward_pence <= 0:
             continue
-        try:
-            lock_wallet(db, r.user_id, currency="GBP")  # 行锁
-            credit_wallet(
-                db,
-                user_id=r.user_id,
-                amount=Decimal(r.reward_pence) / 100,
-                currency="GBP",
-                source="ai_qa_reward",
-                related_type="ai_question",
-                related_id=str(qid),
-                idempotency_key=f"ai_qa_settle_{qid}_{r.user_id}",
-                description=f"AI 限时问答 #{qid} 第 {r.rank_final} 名奖金",
-            )
-        # wallet_service.credit_wallet 幂等冲突时返回 None (不抛 IntegrityError),
-        # 这里检查 None 视为"已入账,跳过":
+        lock_wallet(db, r.user_id, currency="GBP")  # 行锁
+        tx = credit_wallet(
+            db,
+            user_id=r.user_id,
+            amount=Decimal(r.reward_pence) / 100,
+            currency="GBP",
+            source="ai_qa_reward",
+            related_type="ai_question",
+            related_id=str(qid),
+            idempotency_key=f"ai_qa_settle_{qid}_{r.user_id}",
+            description=f"AI 限时问答 #{qid} 第 {r.rank_final} 名奖金",
+        )
+        # wallet_service.credit_wallet 幂等冲突时返回 None (不抛 IntegrityError,
+        # 见 wallet_service.py:156-158);这里检查 None 视为"已入账,跳过":
         if tx is None:
             # idempotency_key 命中已存在的 transaction — 该 user 已发过,跳过(重试场景)
             logger.info(f"settle ai_qa #{qid} user {r.user_id}: wallet credit skipped (idempotent)")
             continue
-        # 真正的事务错误 (lock 超时 / DB 故障 / 余额异常) 仍走外层 try/except → settle_failed
-            logger.warning(
-                f"settle qid={qid} user={r.user_id} idempotency duplicate, skipped: {e}"
-            )
+        # 真正的事务错误 (lock 超时 / DB 故障 / 余额异常) 由 credit_wallet raise,
+        # 冒泡到外层 settle_question try/except → status=settle_failed
 
     # === add_points_transaction (所有未 hide 答主,含答案未被采纳的) ===
     for r in rows:
@@ -1286,7 +1283,7 @@ def maybe_send_s6_alert(db: Session, qid: int, admin_id: str):
     )
     for email in admin_emails:
         try:
-            send_email(to=email, subject=subject, body=body)
+            send_email(to_email=email, subject=subject, body=body)  # 注意:to_email 不是 to (email_utils.py:183 signature)
         except Exception as e:
             logger.error(f"S6 email send failed to {email}: {e}")
 ```
