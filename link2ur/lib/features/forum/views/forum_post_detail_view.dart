@@ -1307,31 +1307,25 @@ class _RootReplyGroup extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 根评论 (C6 视觉重做 — _CommentItem) + 右上角 reply count chip (C7)
-        Stack(
-          children: [
-            _CommentItem(
-              key: replyKeys.putIfAbsent(root.id, () => GlobalKey()),
-              reply: root,
-              isNested: false,
-              onLike: () =>
-                  context.read<ForumBloc>().add(ForumLikeReply(root.id)),
-              onReply: () => onReplyTo(
-                root.id,
-                root.author?.name ?? root.authorId.toString(),
-              ),
-              onMentionTap: (id) => onMentionTap(id),
-              highlightStream: highlightStream,
-              canDelete: _canDelete(root),
-              onDelete: () => _confirmAndDelete(context, root),
-            ),
-            if (root.totalChildren > 0)
-              Positioned(
-                top: 8,
-                right: 0,
-                child: _ReplyCountChip(count: root.totalChildren),
-              ),
-          ],
+        // 根评论 (C6 视觉重做 — _CommentItem)
+        // 旧 Stack+Positioned overlay 改为 _CommentItem 内 footer 末尾 Spacer (audit C8 #2)
+        _CommentItem(
+          key: replyKeys.putIfAbsent(root.id, () => GlobalKey()),
+          reply: root,
+          isNested: false,
+          onLike: () =>
+              context.read<ForumBloc>().add(ForumLikeReply(root.id)),
+          onReply: () => onReplyTo(
+            root.id,
+            root.author?.name ?? root.authorId.toString(),
+          ),
+          onMentionTap: (id) => onMentionTap(id),
+          highlightStream: highlightStream,
+          canDelete: _canDelete(root),
+          onDelete: () => _confirmAndDelete(context, root),
+          replyCountBadge: root.totalChildren > 0
+              ? _ReplyCountChip(count: root.totalChildren)
+              : null,
         ),
         // 子回复 (preview + loaded),带左侧缩进
         for (final child in displayChildren)
@@ -2304,6 +2298,7 @@ class _CommentItem extends StatefulWidget {
     this.highlightStream,
     this.canDelete = false,
     this.onDelete,
+    this.replyCountBadge,
   });
 
   final ForumReply reply;
@@ -2316,6 +2311,10 @@ class _CommentItem extends StatefulWidget {
   /// 作者本人可见的删除入口 (audit C8 #1)
   final bool canDelete;
   final VoidCallback? onDelete;
+
+  /// 可选只读 chip (例如 "N 条回复"), footer 行末尾用 Spacer 顶到右边
+  /// (audit C8 #2 — 取代旧 Stack/Positioned overlay,避免遮挡长用户名 + 徽章)
+  final Widget? replyCountBadge;
 
   @override
   State<_CommentItem> createState() => _CommentItemState();
@@ -2500,6 +2499,10 @@ class _CommentItemState extends State<_CommentItem> {
                           ),
                         ),
                       ),
+                    ],
+                    if (widget.replyCountBadge != null) ...[
+                      const Spacer(),
+                      widget.replyCountBadge!,
                     ],
                   ],
                 ),

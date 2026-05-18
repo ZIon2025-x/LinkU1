@@ -1756,6 +1756,77 @@ async def _summarize_history_cached(rows, conversation_id: str) -> str | None:
         return None
 
 
+async def _load_history_compacted(db: AsyncSession, conversation_id: str) -> list[dict]:
+    """分层压缩 history:
+       Layer A (最近 4 轮 = 8 条 msg): 原样保留
+       Layer B (5-12 轮 = 中 16 条): tool_result 替换为 [Tool returned data, omitted]
+       Layer C (13-20 轮 = 最老 16 条): LLM 摘要 + Redis 缓存; 失败丢掉
+
+    短会话 (≤ 4 轮) 完全跳过 compaction,直接走 _build_raw_messages。
+    """
+    max_turns = Config.AI_MAX_HISTORY_TURNS  # 20
+    rows = await _fetch_history_rows(db, conversation_id, max_turns * 2)
+    total = len(rows)
+
+    # 短会话: 跳过 compaction
+    if total <= 8:
+        return _build_raw_messages(rows)
+
+    layer_a = rows[max(0, total - 8):]
+    layer_b = rows[max(0, total - 24):max(0, total - 8)]
+    layer_c = rows[:max(0, total - 24)]
+
+    messages: list[dict] = []
+
+    # Layer C: 摘要 (失败 → 直接丢)
+    if layer_c:
+        summary = await _summarize_history_cached(layer_c, conversation_id)
+        if summary:
+            messages.append({
+                "role": "user",
+                "content": f"[Earlier conversation summary]: {summary}",
+            })
+            messages.append({
+                "role": "assistant",
+                "content": "I've reviewed the earlier conversation.",
+            })
+
+    # Layer B: tool_result 占位符化
+    for msg in layer_b:
+        if msg.role == "assistant" and msg.tool_calls:
+            content_blocks = []
+            if msg.content:
+                content_blocks.append({"type": "text", "text": msg.content})
+            try:
+                tool_calls = json.loads(msg.tool_calls)
+                for tc in tool_calls:
+                    content_blocks.append({
+                        "type": "tool_use", "id": tc["id"],
+                        "name": tc["name"], "input": tc["input"],
+                    })
+            except (json.JSONDecodeError, KeyError):
+                pass
+            messages.append({"role": "assistant", "content": content_blocks})
+
+            if msg.tool_results:
+                try:
+                    tool_results = json.loads(msg.tool_results)
+                    result_blocks = [{
+                        "type": "tool_result", "tool_use_id": tr["tool_use_id"],
+                        "content": "[Tool returned data, omitted]",
+                    } for tr in tool_results]
+                    messages.append({"role": "user", "content": result_blocks})
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        else:
+            messages.append({"role": msg.role, "content": msg.content})
+
+    # Layer A: 原样
+    messages.extend(_build_raw_messages(layer_a))
+
+    return messages
+
+
 async def _save_assistant_message(
     ctx: _PipelineContext, content: str, model_used: str,
     input_tokens: int, output_tokens: int,

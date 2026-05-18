@@ -162,3 +162,126 @@ async def test_summarize_empty_rows_returns_none():
     assert summary is None
     fake_redis.get.assert_not_called()
     fake_llm.chat.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_compacted_short_session_falls_back_to_raw():
+    """≤ 4 轮 (≤ 8 条 msg) 跳过 compaction, 走原 _build_raw_messages."""
+    from app.services import ai_agent
+
+    rows = [
+        _make_msg(i, "user" if i % 2 == 0 else "assistant", f"msg {i}")
+        for i in range(6)
+    ]
+
+    fake_db = MagicMock()
+    with patch.object(ai_agent, "_fetch_history_rows", new=AsyncMock(return_value=rows)):
+        result = await ai_agent._load_history_compacted(fake_db, "conv_1")
+
+    # 应等于 _build_raw_messages(rows)
+    expected = ai_agent._build_raw_messages(rows)
+    assert result == expected
+
+
+@pytest.mark.asyncio
+async def test_compacted_medium_session_uses_layer_b_only():
+    """12 轮 (24 条 msg) 只激活 Layer A + B, 无 Layer C."""
+    from app.services import ai_agent
+
+    rows = [
+        _make_msg(i, "user" if i % 2 == 0 else "assistant", f"msg {i}")
+        for i in range(24)
+    ]
+
+    fake_db = MagicMock()
+    with patch.object(ai_agent, "_fetch_history_rows", new=AsyncMock(return_value=rows)), \
+         patch.object(ai_agent, "_summarize_history_cached", new=AsyncMock(return_value="should not be called")):
+        result = await ai_agent._load_history_compacted(fake_db, "conv_1")
+
+    # 不应包含 "[Earlier conversation summary]"
+    assert not any(
+        isinstance(m.get("content"), str) and "Earlier conversation summary" in m["content"]
+        for m in result
+    )
+
+
+@pytest.mark.asyncio
+async def test_compacted_long_session_emits_summary_prefix_and_ack():
+    """20 轮 (40 条 msg) 三层全激活, 应有 summary user msg + ack assistant msg."""
+    from app.services import ai_agent
+
+    rows = [
+        _make_msg(i, "user" if i % 2 == 0 else "assistant", f"msg {i}")
+        for i in range(40)
+    ]
+
+    fake_db = MagicMock()
+    with patch.object(ai_agent, "_fetch_history_rows", new=AsyncMock(return_value=rows)), \
+         patch.object(ai_agent, "_summarize_history_cached", new=AsyncMock(return_value="Old context.")):
+        result = await ai_agent._load_history_compacted(fake_db, "conv_1")
+
+    # 第一条应该是 summary user msg
+    assert result[0]["role"] == "user"
+    assert "[Earlier conversation summary]" in result[0]["content"]
+    assert "Old context." in result[0]["content"]
+    # 第二条是 ack
+    assert result[1]["role"] == "assistant"
+    assert result[1]["content"] == "I've reviewed the earlier conversation."
+
+
+@pytest.mark.asyncio
+async def test_compacted_drops_layer_c_when_summary_fails():
+    """摘要失败 → 直接丢掉 Layer C, 不出现 summary/ack 消息."""
+    from app.services import ai_agent
+
+    rows = [
+        _make_msg(i, "user" if i % 2 == 0 else "assistant", f"msg {i}")
+        for i in range(40)
+    ]
+
+    fake_db = MagicMock()
+    with patch.object(ai_agent, "_fetch_history_rows", new=AsyncMock(return_value=rows)), \
+         patch.object(ai_agent, "_summarize_history_cached", new=AsyncMock(return_value=None)):
+        result = await ai_agent._load_history_compacted(fake_db, "conv_1")
+
+    assert not any(
+        isinstance(m.get("content"), str)
+        and ("Earlier conversation summary" in m["content"]
+             or "I've reviewed" in m["content"])
+        for m in result
+    )
+
+
+@pytest.mark.asyncio
+async def test_compacted_layer_b_replaces_tool_result_with_placeholder():
+    """Layer B 范围内 (5-12 轮) 的 tool_result 应替换为占位符,不再带原始 JSON."""
+    from app.services import ai_agent
+
+    rows = []
+    for i in range(24):
+        if i == 5:
+            # 在 Layer B 中插入一条带 tool_calls + tool_results 的 assistant
+            rows.append(_make_msg(
+                i, "assistant", "let me check",
+                tool_calls=[{"id": "t1", "name": "search_tasks", "input": {"keyword": "x"}}],
+                tool_results=[{"tool_use_id": "t1", "result": {"big_data": "x" * 1000}}],
+            ))
+        else:
+            rows.append(_make_msg(i, "user" if i % 2 == 0 else "assistant", f"msg {i}"))
+
+    fake_db = MagicMock()
+    with patch.object(ai_agent, "_fetch_history_rows", new=AsyncMock(return_value=rows)):
+        result = await ai_agent._load_history_compacted(fake_db, "conv_1")
+
+    # 找到 tool_result blocks, content 不应包含原 big_data
+    tool_results = [
+        block
+        for m in result
+        if isinstance(m.get("content"), list)
+        for block in m["content"]
+        if isinstance(block, dict) and block.get("type") == "tool_result"
+    ]
+    assert tool_results, "应至少找到一个 tool_result 块"
+    for tr in tool_results:
+        assert "big_data" not in tr["content"]
+        assert "omitted" in tr["content"] or "[Tool" in tr["content"]
