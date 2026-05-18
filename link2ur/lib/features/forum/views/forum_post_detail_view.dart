@@ -2360,7 +2360,9 @@ class _CommentItemState extends State<_CommentItem> {
     final hasAvatarUrl =
         r.author?.avatar != null && r.author!.avatar!.isNotEmpty;
 
-    return AnimatedContainer(
+    return GestureDetector(
+      onLongPress: widget.canDelete ? widget.onDelete : null,
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 800),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
@@ -2490,24 +2492,6 @@ class _CommentItemState extends State<_CommentItem> {
                         ),
                       ),
                     ),
-                    if (widget.canDelete) ...[
-                      const SizedBox(width: 14),
-                      InkWell(
-                        onTap: widget.onDelete,
-                        borderRadius: BorderRadius.circular(4),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 2, vertical: 1),
-                          child: Icon(
-                            Icons.delete_outline,
-                            size: 14,
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
-                          ),
-                        ),
-                      ),
-                    ],
                     if (widget.replyCountBadge != null) ...[
                       const Spacer(),
                       widget.replyCountBadge!,
@@ -2518,6 +2502,7 @@ class _CommentItemState extends State<_CommentItem> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
