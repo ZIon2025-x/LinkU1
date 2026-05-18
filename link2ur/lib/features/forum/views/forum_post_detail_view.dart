@@ -539,8 +539,6 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       final post = state.selectedPost!;
                       final isDark =
                           Theme.of(context).brightness == Brightness.dark;
-                      final keyboardInset =
-                          MediaQuery.of(context).viewInsets.bottom;
 
                       // 使用 CustomScrollView + Sliver 替代 SingleChildScrollView + Column
                       // 评论区使用 SliverList 懒加载，避免一次性构建所有评论 widget
@@ -735,9 +733,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                               ),
                             ),
 
-                          // 底部间距：预留回复栏高度 + 键盘弹起时额外留白，避免输入框被遮挡、列表可滚动
-                          SliverToBoxAdapter(
-                            child: SizedBox(height: 88 + keyboardInset),
+                          // 底部间距：预留回复栏高度。
+                          // UX audit #13: 不再加 keyboardInset, 键盘抬升已由
+                          // _buildBottomReplyBar 内部 Padding(bottom: viewInsets.bottom) 处理,
+                          // 这里再加会重复推高列表底部留白。
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: 88),
                           ),
                         ],
                         ),
