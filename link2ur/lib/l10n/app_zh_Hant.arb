@@ -4633,6 +4633,16 @@
       "h": { "type": "int" }
     }
   },
+  "aiQaNotFound": "題目不存在或已刪除",
+  "aiQaAnswerNotFound": "找不到你的回答",
+  "aiQaSettleFailed": "結算失敗,請聯絡管理員",
+  "aiQaOnlyDraftEditable": "僅草稿狀態可編輯",
+  "aiQaOnlyDraftDeletable": "僅草稿狀態可刪除",
+  "aiQaScoreNotFound": "找不到該評分記錄",
+  "aiQaScoreOutOfRange": "分數必須在 0-100 範圍內",
+  "aiQaRescoreRequiresScoringFailed": "僅評分失敗狀態可重跑評分",
+  "aiQaSettingsConfirmTokenInvalid": "二次確認 token 無效",
+  "aiQaScoreUpdateStatusForbidden": "目前狀態不允許改分(settled/canceled 後無法修改)",
   "chatLoadFailed": "載入訊息失敗",
   "chatLoadMoreFailed": "載入更多訊息失敗",
   "chatNetworkOffline": "目前無網路連線，無法傳送",

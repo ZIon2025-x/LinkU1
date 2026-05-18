@@ -2764,7 +2764,11 @@ def check_expert_volume_thresholds(db: Session):
 
 
 def close_expired_ai_questions():
-    """beat: 扫 status=published & deadline < now,切到 closed 或 closed_empty。"""
+    """beat: 扫 status=published & deadline < now,切到 closed 或 closed_empty。
+
+    状态切换 + 计数都是幂等的 (再跑一次仍是同样结果),所以**单次外层 commit**比每题 commit
+    更稳:中间 IO 错只回滚未完成的,已切的下次 beat 再 retry 也对得齐。
+    """
     from app.models_ai_qa import AiQuestion, AiAnswerScore
     from sqlalchemy import select, func
     db = SessionLocal()
@@ -2776,6 +2780,8 @@ def close_expired_ai_questions():
                 AiQuestion.deadline < now,
             )
         ).scalars().all()
+        closed_count = 0
+        closed_empty_count = 0
         for q in questions:
             # 数 active answer (forum_post 没被删的)
             count = db.execute(
@@ -2789,11 +2795,16 @@ def close_expired_ai_questions():
             ).scalar() or 0
             if count == 0:
                 q.status = "closed_empty"
-                # TODO sponsor: 退款给加注 sponsor
+                closed_empty_count += 1
+                # TODO sponsor: 此处加 carry_over_pledges_to_pool(db, q.id) hook (sponsor spec §4.2)
             else:
                 q.status = "closed"
-            db.commit()
-            logger.info(f"ai_qa: closed question #{q.id}, answer_count={count}, new_status={q.status}")
+                closed_count += 1
+            logger.info(f"ai_qa: marking question #{q.id} → {q.status} (answer_count={count})")
+        # 外层一次 commit:N 题状态切换原子完成,中间 IO 错回滚 → 下次 beat retry 同结果
+        db.commit()
+        if questions:
+            logger.info(f"ai_qa close_expired: closed={closed_count}, closed_empty={closed_empty_count}, total={len(questions)}")
     finally:
         db.close()
 
@@ -2815,17 +2826,25 @@ def score_closed_ai_questions():
 
 
 def score_single_ai_question(qid: int):
-    """单题评分（rescore 也调这个）。"""
+    """单题评分（rescore 也调这个）。
+
+    用 SELECT FOR UPDATE 行锁防止 beat #2 + admin rescore 同时跑同一 qid 的 race —
+    否则两个请求都看到 status='closed' 都通过校验,各跑一次 AI 评分 = 2x 成本
+    (deep audit issue #6)。
+    """
     from app.models_ai_qa import AiQuestion, AiAnswerScore
     from app.services.ai_qa_scoring import score_all_answers
     from sqlalchemy import select
     db = SessionLocal()
     try:
-        q = db.get(AiQuestion, qid)
+        # 行锁,后到的等前面 commit + 看到 status='scoring' 时 return
+        q = db.execute(
+            select(AiQuestion).where(AiQuestion.id == qid).with_for_update()
+        ).scalar_one_or_none()
         if q is None or q.status not in ("closed", "scoring"):
             return
         q.status = "scoring"
-        db.commit()
+        db.commit()  # 释放行锁,让其他 race 看到 scoring 状态后 return
         # 拉所有 active answer
         rows = db.execute(
             select(AiAnswerScore)
@@ -2854,6 +2873,9 @@ def score_single_ai_question(qid: int):
             return
         # UPDATE ai_answer_scores
         score_map = {s["id"]: s for s in scored}
+        # ai_raw_response 单 row 大小限制 (JSONB 单值最大 ~32MB,实际我们存的是简化输出 ~200B/answer,远不到上限)
+        # 这里加 1MB 兜底 ceiling 防止意外大 payload (e.g., AI 返了一坨调试信息) 撑爆 row
+        AI_RAW_RESPONSE_MAX_BYTES = 1024 * 1024  # 1MB
         for r in valid_rows:
             s = score_map.get(r.id)
             if not s:
@@ -2861,7 +2883,28 @@ def score_single_ai_question(qid: int):
             r.ai_score = s.get("score", 0)
             r.off_topic = bool(s.get("off_topic", False))
             r.ai_generated = s.get("ai_generated", "low")
-            r.ai_raw_response = s
+            # 兜底截断: 不太可能命中,但万一 AI 返超大 payload 不至于写爆 DB
+            try:
+                import json as _json
+                raw_bytes = len(_json.dumps(s, ensure_ascii=False).encode("utf-8"))
+                if raw_bytes > AI_RAW_RESPONSE_MAX_BYTES:
+                    logger.warning(f"ai_qa scoring qid={qid} answer={r.id}: ai_raw_response 太大 ({raw_bytes}B),截断保留简化字段")
+                    r.ai_raw_response = {
+                        "id": s.get("id"),
+                        "score": s.get("score"),
+                        "off_topic": s.get("off_topic"),
+                        "ai_generated": s.get("ai_generated"),
+                        "_truncated": True,
+                        "_original_bytes": raw_bytes,
+                    }
+                else:
+                    r.ai_raw_response = s
+            except Exception:
+                # JSON dump 失败兜底:存最小有效集
+                r.ai_raw_response = {
+                    "score": s.get("score"),
+                    "_dump_failed": True,
+                }
         q.status = "scored"
         db.commit()
         logger.info(f"ai_qa: scored question #{qid}, {len(valid_rows)} answers")

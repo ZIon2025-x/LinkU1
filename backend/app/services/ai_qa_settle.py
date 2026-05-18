@@ -61,8 +61,9 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
             r.final_score = r.admin_override_score
         else:
             r.final_score = r.ai_score or 0
-    # 按分降序
-    rows.sort(key=lambda r: r.final_score, reverse=True)
+    # 按分降序 + secondary key (id 升序) 保证 tie-break 稳定 — 否则同分时 DB 返回顺序不保证,
+    # rank_final 会随机分配,导致 top1_user_id 不确定 + ForumPost.is_featured 选择不稳定
+    rows.sort(key=lambda r: (-r.final_score, r.id))
 
     # === 算 winner + 分钱 ===
     scored_tuples = [(r.id, r.final_score) for r in rows]
@@ -121,22 +122,12 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
         # 真正的事务错误 (lock 超时 / DB 故障 / 余额异常) 由 credit_wallet raise,
         # 冒泡到外层 settle_question try/except → status=settle_failed
 
-    # === add_points_transaction (所有未 hide 答主,含答案未被采纳的) ===
-    # 幂等防双发: settle_failed 重试场景下 add_points_transaction 命中 idempotency_key
-    # 会直接 return 已存在 txn (coupon_points_crud:96-102),不会双发。
-    # Final review critical issue #5.
-    for r in rows:
-        add_points_transaction(
-            db,
-            user_id=r.user_id,
-            amount=r.reward_points,
-            type="earn",
-            source="ai_qa_participation",
-            related_id=qid,
-            idempotency_key=f"ai_qa_settle_points_{qid}_{r.user_id}",
-        )
-
     # === leaderboard upsert ===
+    # 先做 leaderboard / is_featured / status,这些是纯 ORM 写入 pending;
+    # 然后 db.flush() 让所有 pending 变 dirty;最后 add_points_transaction 的第一次调用
+    # 会内部 db.commit() (coupon_points_crud.py:172),把上面 wallet credit / rank_final /
+    # leaderboard / is_featured / status 全部一次性原子 commit。任一前置失败 → 整个
+    # rollback → status 不切到 settled → 外层 catch → status=settle_failed (deep audit issue #3)。
     for r in rows:
         ai_qa_crud.upsert_leaderboard(
             db,
@@ -151,9 +142,29 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
         if fp:
             fp.is_featured = True
 
-    # === 切 status ===
+    # === 切 status (在 add_points 前) ===
     q.status = "settled"
     q.settled_at = settled_at
+
+    # 强制 flush 让上面所有 pending writes 进 DB session
+    db.flush()
+
+    # === add_points_transaction (所有未 hide 答主,含答案未被采纳的) ===
+    # 第一次调用内部 db.commit() (coupon_points_crud:172) 会把上面 wallet credit /
+    # rank_final / leaderboard / is_featured / status='settled' 全部一次性原子 commit。
+    # 幂等防双发: settle_failed 重试场景下 add_points_transaction 命中 idempotency_key
+    # 会直接 return 已存在 txn (coupon_points_crud:96-102),不会双发。
+    # Final review critical issue #5 + deep audit issue #3.
+    for r in rows:
+        add_points_transaction(
+            db,
+            user_id=r.user_id,
+            amount=r.reward_points,
+            type="earn",
+            source="ai_qa_participation",
+            related_id=qid,
+            idempotency_key=f"ai_qa_settle_points_{qid}_{r.user_id}",
+        )
 
     # === S3 审计 ===
     # ⚠️ create_audit_log 函数内部自带 db.commit() (crud/audit.py:34) —

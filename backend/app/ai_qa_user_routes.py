@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app import models
 from app.deps import get_db, get_current_user_secure_sync_csrf
@@ -71,17 +72,20 @@ def list_answers(qid: int, db: Session = Depends(get_db)):
     for r in rows:
         post = posts.get(r.forum_post_id)
         user = users.get(r.user_id)
+        # spec §7: 帖子被论坛 hidden 机制隐藏 (is_visible=False) 应跟 is_deleted 一样不显示内容,
+        # 但保留 ai_answer_scores 行 (settle 后仍展示 reward) — deep audit issue #9
+        post_hidden = bool(post and (post.is_deleted or not post.is_visible)) if post else True
         out.append(AiAnswerOut(
             id=r.id,
             forum_post_id=r.forum_post_id,
             user_id=r.user_id,
             user_name=user.name if user else None,
             user_avatar=user.avatar if user else None,
-            title=post.title if post and not post.is_deleted else None,
-            content=post.content if post and not post.is_deleted else None,
-            images=post.images if post and not post.is_deleted else None,
+            title=post.title if post and not post_hidden else None,
+            content=post.content if post and not post_hidden else None,
+            images=post.images if post and not post_hidden else None,
             created_at=post.created_at if post else None,
-            is_deleted=bool(post.is_deleted) if post else True,
+            is_deleted=post_hidden,  # is_deleted 字段对外语义="不显示内容",含论坛 hidden
             ai_score=r.ai_score,
             ai_generated=r.ai_generated,
             final_score=r.final_score,
@@ -127,7 +131,13 @@ def submit_answer(
         device_fingerprint=device_fp, ip_address=ip,
     )
     if not allowed:
-        raise HTTPException(403, f"ai_qa_blocked_by_risk: {reason}")
+        # detail 仅放 error code(让 Flutter error_localizer 命中 l10n),
+        # reason 通过 response header 透传 admin debug
+        raise HTTPException(
+            status_code=403,
+            detail="ai_qa_blocked_by_risk",
+            headers={"X-Risk-Reason": reason or "unknown"},
+        )
     # 事务: 建 ForumPost + ai_answer_scores 行
     # NOTE(P0-T7): plan 原文调用 `forum_crud.create_post(...)`,但 `app.crud.forum` 模块不存在
     # (现有 forum post 创建逻辑在 `app.routes.forum_posts_routes.create_post`,异步、带速率限制/内容审核,
@@ -137,10 +147,12 @@ def submit_answer(
     # 仅靠 risk_control.check_risk 覆盖反作弊。Spec §7 要求"敏感词命中走现有论坛 hidden 机制",
     # P1 接入 _check_content_moderation 或加专用 ai-qa 敏感词检查。
     # 当前接受风险: admin 控制题目方向,UGC 答题量小,人工 admin 审兜底。
+    # title [:200] 后端兜底防止恶意客户端绕过 Pydantic max_length=200 校验
+    safe_title = (payload.title or q.title)[:200]
     post = models.ForumPost(
         author_id=current_user.id,
         category_id=q.target_forum_category_id,
-        title=payload.title or q.title[:200],
+        title=safe_title,
         content=payload.content,
         images=payload.images,
         ai_question_id=qid,
@@ -155,7 +167,13 @@ def submit_answer(
         risk_score=risk_score or 0,
         risk_reasons=reason,
     )
-    db.commit()
+    # 兜底并发场景: 两个客户端同时提交,get_user_answer 都返 None,但 UNIQUE 约束在 commit 时
+    # 触发 IntegrityError。把它转成 409 而不是 500 (deep audit issue #8)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "ai_qa_already_answered")
     return {"forum_post_id": post.id, "ai_question_id": qid}
 
 
@@ -196,7 +214,8 @@ def edit_answer(
     if post is None or post.is_deleted:
         raise HTTPException(404, "ai_qa_answer_not_found")
     # 更新 ForumPost (post 字段; ai_question_id / author_id / category_id 不动)
-    post.title = payload.title or q.title[:200]
+    # title [:200] 后端兜底防止恶意客户端绕过 Pydantic max_length=200 校验
+    post.title = (payload.title or q.title)[:200]
     post.content = payload.content
     if payload.images is not None:
         post.images = payload.images

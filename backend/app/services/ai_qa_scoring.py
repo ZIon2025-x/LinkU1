@@ -61,8 +61,9 @@ def score_answers_batch(
         question=f"{question_title}\n\n{question_content}",
         answers=json.dumps(answers, ensure_ascii=False),
     )
+    # 跟项目通用配置一致 — config.py 默认 claude-sonnet-4-5-20250929,可 env 覆盖
     resp = client.messages.create(
-        model="claude-sonnet-4-6",
+        model=Config.AI_MODEL_LARGE,
         max_tokens=4096,
         messages=[{"role": "user", "content": prompt}],
     )

@@ -213,6 +213,11 @@ def update_score(
     row = db.get(AiAnswerScore, score_id)
     if row is None:
         raise HTTPException(404, "ai_qa_score_not_found")
+    # 不允许改 settled / canceled / closed_empty 状态的答案分数 — settle 已 commit 钱跟 leaderboard,
+    # 改分会造成 ghost data (deep audit issue #10)
+    parent_q = db.get(AiQuestion, row.ai_question_id)
+    if parent_q and parent_q.status not in ("scored", "settle_failed", "scoring", "scoring_failed", "closed"):
+        raise HTTPException(409, "ai_qa_score_update_status_forbidden")
     if payload.admin_override_score is not None and not (0 <= payload.admin_override_score <= 100):
         raise HTTPException(422, "ai_qa_score_out_of_range")
     old = {"admin_override_score": row.admin_override_score, "hide_in_qa": row.hide_in_qa}

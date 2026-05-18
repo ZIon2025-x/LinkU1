@@ -109,9 +109,10 @@ def award_participation_points_on_cancel(db: Session, qid: int) -> int:
 
     count = 0
     for post in posts:
+        # ForumPost 字段名是 author_id 不是 user_id (models.py:2518) — deep audit issue #1
         add_points_transaction(
             db,
-            user_id=post.user_id,
+            user_id=post.author_id,
             type='earn',  # add_points_transaction 必填 (signature: earn/spend/refund/expire)
             amount=q.participation_points,
             source='ai_qa_cancel_participation',
@@ -121,7 +122,7 @@ def award_participation_points_on_cancel(db: Session, qid: int) -> int:
             # 幂等防双发: 双击撤稿/重试 cancel 都走同一个 key,add_points_transaction
             # 命中 idempotency_key 时直接 return 已存在 txn (coupon_points_crud:96-102),
             # 不会双发。Final review critical issue #4.
-            idempotency_key=f'ai_qa_cancel_{qid}_{post.user_id}',
+            idempotency_key=f'ai_qa_cancel_{qid}_{post.author_id}',
         )
         count += 1
     db.flush()
@@ -195,8 +196,14 @@ def update_admin_score(
 def upsert_leaderboard(
     db: Session, user_id: str, won_pence_delta: int, won: bool,
 ):
-    """settle 时调,更新或插入 leaderboard 行。"""
-    lb = db.get(AiQaLeaderboard, {"user_id": user_id})
+    """settle 时调,更新或插入 leaderboard 行。
+
+    注意:AiQaLeaderboard PK 是 id (autoincrement),user_id 是 UNIQUE 但非 PK。
+    所以 db.get(AiQaLeaderboard, pk_value) 不能传 user_id —— 必须 SELECT 查 (deep audit issue #2)。
+    """
+    lb = db.execute(
+        select(AiQaLeaderboard).where(AiQaLeaderboard.user_id == user_id)
+    ).scalar_one_or_none()
     if lb is None:
         lb = AiQaLeaderboard(user_id=user_id, total_won_pence=0, win_count=0, answer_count=0)
         db.add(lb)

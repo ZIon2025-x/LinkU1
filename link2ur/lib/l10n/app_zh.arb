@@ -4661,6 +4661,16 @@
       "h": { "type": "int" }
     }
   },
+  "aiQaNotFound": "题目不存在或已删除",
+  "aiQaAnswerNotFound": "找不到你的回答",
+  "aiQaSettleFailed": "结算失败,请联系管理员",
+  "aiQaOnlyDraftEditable": "仅草稿状态可编辑",
+  "aiQaOnlyDraftDeletable": "仅草稿状态可删除",
+  "aiQaScoreNotFound": "找不到该评分记录",
+  "aiQaScoreOutOfRange": "分数必须在 0-100 范围内",
+  "aiQaRescoreRequiresScoringFailed": "仅评分失败状态可重跑评分",
+  "aiQaSettingsConfirmTokenInvalid": "二次确认 token 无效",
+  "aiQaScoreUpdateStatusForbidden": "当前状态不允许改分(settled/canceled 后无法修改)",
   "chatLoadFailed": "加载消息失败",
   "chatLoadMoreFailed": "加载更多消息失败",
   "chatNetworkOffline": "当前无网络连接，无法发送",

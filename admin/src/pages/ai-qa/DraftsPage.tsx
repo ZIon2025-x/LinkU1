@@ -5,15 +5,32 @@ import React, { useEffect, useState } from 'react';
 import { aiQaApi, Draft } from '../../api/aiQa';
 import { FloorPenceInput } from '../../components/ai-qa/FloorPenceInput';
 
+// deadline 默认 7 天后, datetime-local 输入需要本地格式 (YYYY-MM-DDTHH:mm 无 timezone)
+// — submit 时通过 toLocalISOString 转 UTC ISO 给后端,避免 timezone 错位 (deep audit issue #4)
+const sevenDaysLater = () => {
+  const d = new Date(Date.now() + 7 * 86400000);
+  // 本地年月日时分,用 datetime-local 显示
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const EMPTY_DRAFT: Draft = {
   title: '',
   content: '',
-  target_forum_category_id: 0,
-  deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
+  target_forum_category_id: 1, // 默认 1, FK 必须存在 (deep audit issue #5); admin 应改成实际板块 id
+  deadline: sevenDaysLater(),
   reward_pool_pence: 1000,
   participation_points: 5,
   floor_pence: 10,
   edit_lock_hours_before: 1,
+};
+
+// datetime-local input 输出 'YYYY-MM-DDTHH:mm' 是本地时间,提交时转 UTC ISO
+const localToUTCISO = (local: string): string => {
+  if (!local) return local;
+  // local 已是 'YYYY-MM-DDTHH:mm', Date 构造默认按本地时区解释
+  const d = new Date(local);
+  return d.toISOString(); // 'YYYY-MM-DDTHH:mm:ss.sssZ'
 };
 
 export const DraftsPage: React.FC = () => {
@@ -32,10 +49,16 @@ export const DraftsPage: React.FC = () => {
       alert('大额奖金池(>£50)请勾选下方确认');
       return;
     }
+    if (!editing.target_forum_category_id || editing.target_forum_category_id <= 0) {
+      alert('请填写有效的目标论坛板块 id (必须 > 0)');
+      return;
+    }
+    // deadline 从 datetime-local (本地时间) 转 UTC ISO 给后端
+    const payload = { ...editing, deadline: localToUTCISO(editing.deadline) };
     if (editing.id) {
-      await aiQaApi.updateDraft(editing.id, editing);
+      await aiQaApi.updateDraft(editing.id, payload);
     } else {
-      await aiQaApi.createDraft(editing);
+      await aiQaApi.createDraft(payload);
     }
     setEditing(null);
     setConfirmHigh(false);

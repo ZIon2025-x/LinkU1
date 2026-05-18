@@ -272,6 +272,26 @@ class ErrorLocalizer {
         return context.l10n.aiQaBlockedByRisk;
       case 'ai_qa_status_not_published':
         return context.l10n.aiQaStatusNotPublished;
+      case 'ai_qa_not_found':
+        return context.l10n.aiQaNotFound;
+      case 'ai_qa_answer_not_found':
+        return context.l10n.aiQaAnswerNotFound;
+      case 'ai_qa_settle_failed':
+        return context.l10n.aiQaSettleFailed;
+      case 'ai_qa_only_draft_editable':
+        return context.l10n.aiQaOnlyDraftEditable;
+      case 'ai_qa_only_draft_deletable':
+        return context.l10n.aiQaOnlyDraftDeletable;
+      case 'ai_qa_score_not_found':
+        return context.l10n.aiQaScoreNotFound;
+      case 'ai_qa_score_out_of_range':
+        return context.l10n.aiQaScoreOutOfRange;
+      case 'ai_qa_rescore_requires_scoring_failed':
+        return context.l10n.aiQaRescoreRequiresScoringFailed;
+      case 'ai_qa_settings_confirm_token_invalid':
+        return context.l10n.aiQaSettingsConfirmTokenInvalid;
+      case 'ai_qa_score_update_status_forbidden':
+        return context.l10n.aiQaScoreUpdateStatusForbidden;
       case 'chat_load_failed':
         return context.l10n.chatLoadFailed;
       case 'chat_load_more_failed':

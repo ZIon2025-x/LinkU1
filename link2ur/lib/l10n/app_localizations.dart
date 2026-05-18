@@ -19013,6 +19013,66 @@ abstract class AppLocalizations {
   /// **'{h}h'**
   String aiQaCountdownHours(int h);
 
+  /// No description provided for @aiQaNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Question not found or deleted'**
+  String get aiQaNotFound;
+
+  /// No description provided for @aiQaAnswerNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer not found'**
+  String get aiQaAnswerNotFound;
+
+  /// No description provided for @aiQaSettleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlement failed, please contact admin'**
+  String get aiQaSettleFailed;
+
+  /// No description provided for @aiQaOnlyDraftEditable.
+  ///
+  /// In en, this message translates to:
+  /// **'Only drafts can be edited'**
+  String get aiQaOnlyDraftEditable;
+
+  /// No description provided for @aiQaOnlyDraftDeletable.
+  ///
+  /// In en, this message translates to:
+  /// **'Only drafts can be deleted'**
+  String get aiQaOnlyDraftDeletable;
+
+  /// No description provided for @aiQaScoreNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Score record not found'**
+  String get aiQaScoreNotFound;
+
+  /// No description provided for @aiQaScoreOutOfRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Score must be between 0 and 100'**
+  String get aiQaScoreOutOfRange;
+
+  /// No description provided for @aiQaRescoreRequiresScoringFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescore only allowed when scoring failed'**
+  String get aiQaRescoreRequiresScoringFailed;
+
+  /// No description provided for @aiQaSettingsConfirmTokenInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid confirmation token'**
+  String get aiQaSettingsConfirmTokenInvalid;
+
+  /// No description provided for @aiQaScoreUpdateStatusForbidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot modify scores after settled/canceled'**
+  String get aiQaScoreUpdateStatusForbidden;
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:

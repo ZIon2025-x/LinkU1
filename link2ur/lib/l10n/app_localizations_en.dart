@@ -10373,6 +10373,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get aiQaNotFound => 'Question not found or deleted';
+
+  @override
+  String get aiQaAnswerNotFound => 'Your answer not found';
+
+  @override
+  String get aiQaSettleFailed => 'Settlement failed, please contact admin';
+
+  @override
+  String get aiQaOnlyDraftEditable => 'Only drafts can be edited';
+
+  @override
+  String get aiQaOnlyDraftDeletable => 'Only drafts can be deleted';
+
+  @override
+  String get aiQaScoreNotFound => 'Score record not found';
+
+  @override
+  String get aiQaScoreOutOfRange => 'Score must be between 0 and 100';
+
+  @override
+  String get aiQaRescoreRequiresScoringFailed =>
+      'Rescore only allowed when scoring failed';
+
+  @override
+  String get aiQaSettingsConfirmTokenInvalid => 'Invalid confirmation token';
+
+  @override
+  String get aiQaScoreUpdateStatusForbidden =>
+      'Cannot modify scores after settled/canceled';
+
+  @override
   String get chatLoadFailed => 'Failed to load messages';
 
   @override

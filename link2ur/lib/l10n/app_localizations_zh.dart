@@ -9945,6 +9945,37 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get aiQaNotFound => '题目不存在或已删除';
+
+  @override
+  String get aiQaAnswerNotFound => '找不到你的回答';
+
+  @override
+  String get aiQaSettleFailed => '结算失败,请联系管理员';
+
+  @override
+  String get aiQaOnlyDraftEditable => '仅草稿状态可编辑';
+
+  @override
+  String get aiQaOnlyDraftDeletable => '仅草稿状态可删除';
+
+  @override
+  String get aiQaScoreNotFound => '找不到该评分记录';
+
+  @override
+  String get aiQaScoreOutOfRange => '分数必须在 0-100 范围内';
+
+  @override
+  String get aiQaRescoreRequiresScoringFailed => '仅评分失败状态可重跑评分';
+
+  @override
+  String get aiQaSettingsConfirmTokenInvalid => '二次确认 token 无效';
+
+  @override
+  String get aiQaScoreUpdateStatusForbidden =>
+      '当前状态不允许改分(settled/canceled 后无法修改)';
+
+  @override
   String get chatLoadFailed => '加载消息失败';
 
   @override
@@ -23950,6 +23981,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String aiQaCountdownHours(int h) {
     return '$h小時';
   }
+
+  @override
+  String get aiQaNotFound => '題目不存在或已刪除';
+
+  @override
+  String get aiQaAnswerNotFound => '找不到你的回答';
+
+  @override
+  String get aiQaSettleFailed => '結算失敗,請聯絡管理員';
+
+  @override
+  String get aiQaOnlyDraftEditable => '僅草稿狀態可編輯';
+
+  @override
+  String get aiQaOnlyDraftDeletable => '僅草稿狀態可刪除';
+
+  @override
+  String get aiQaScoreNotFound => '找不到該評分記錄';
+
+  @override
+  String get aiQaScoreOutOfRange => '分數必須在 0-100 範圍內';
+
+  @override
+  String get aiQaRescoreRequiresScoringFailed => '僅評分失敗狀態可重跑評分';
+
+  @override
+  String get aiQaSettingsConfirmTokenInvalid => '二次確認 token 無效';
+
+  @override
+  String get aiQaScoreUpdateStatusForbidden =>
+      '目前狀態不允許改分(settled/canceled 後無法修改)';
 
   @override
   String get chatLoadFailed => '載入訊息失敗';

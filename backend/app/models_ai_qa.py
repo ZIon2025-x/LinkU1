@@ -56,6 +56,7 @@ class AiQuestion(Base):
         Index("idx_ai_questions_status", "status"),
         CheckConstraint("reward_pool_pence BETWEEN 0 AND 100000"),
         CheckConstraint("participation_points BETWEEN 0 AND 1000"),
+        CheckConstraint("floor_pence BETWEEN 1 AND 1000"),  # 同步 SQL migration CHECK,避免 alembic autogen 干扰
     )
 
 
