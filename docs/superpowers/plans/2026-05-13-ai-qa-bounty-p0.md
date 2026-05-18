@@ -2293,13 +2293,14 @@ git commit -m "test(ai-qa): settle 事务集成测试 (S1 幂等 / S5 cap / audi
 - Create: `admin/src/pages/ai-qa/DraftsPage.tsx`
 - Create: `admin/src/components/ai-qa/FloorPenceInput.tsx`
 - Create: `admin/src/api/aiQa.ts`
-- Modify: `admin/src/App.tsx` (加路由)
+- Modify: `admin/src/routes/adminRoutes.tsx` (实际路由文件;App.tsx 只挂 <AdminRoutes/>。**懒加载 + 嵌套 Route 模式**,路径 "ai-qa/drafts" 相对父 /admin/*)
 
 - [ ] **Step 1: 创建 API client**
 
 ```typescript
 // admin/src/api/aiQa.ts
-import { http } from "./http";  // 现有 axios wrapper
+import api from '../api';  // 项目顶级 admin/src/api.ts 导出 default axios 实例 (含 CSRF + 401 拦截器)
+// 注:不存在 ./http wrapper,直接用 api.get/post/patch/delete
 
 // 注: 算法已重写(spec §2.1) — 不再有 TopnFormula 概念,只保留 floor_pence 单字段
 
