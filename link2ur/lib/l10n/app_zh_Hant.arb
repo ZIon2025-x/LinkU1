@@ -4495,6 +4495,7 @@
   "forumReplyDeleted": "回覆已刪除",
   "forumDeleteReplyConfirm": "確定要刪除這條回覆嗎？",
   "forumLongPressToDeleteHint": "長按可刪除自己的評論",
+  "forumBeFirstReply": "成為第一個留言的人",
   "fleaMarketDeleteItemConfirm": "確定要刪除這個商品嗎？此操作不可撤銷。",
   "taskEvidenceTitle": "完成證據",
   "taskEvidenceHint": "您已完成此任務。請上傳相關證據圖片或填寫文字說明（可選），以便發佈者確認任務完成情況。",

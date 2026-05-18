@@ -18587,6 +18587,12 @@ abstract class AppLocalizations {
   /// **'Long-press your own comment to delete'**
   String get forumLongPressToDeleteHint;
 
+  /// No description provided for @forumBeFirstReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Be the first to comment'**
+  String get forumBeFirstReply;
+
   /// No description provided for @fleaMarketDeleteItemConfirm.
   ///
   /// In en, this message translates to:

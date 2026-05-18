@@ -669,6 +669,17 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                               : AppColors.textSecondaryLight,
                                         ),
                                       ),
+                                      const SizedBox(height: 12),
+                                      // UX audit #11: 空评论时一键 focus 输入框
+                                      TextButton(
+                                        onPressed: () => requireAuth(
+                                          context,
+                                          () => _replyFocusNode.requestFocus(),
+                                        ),
+                                        child: Text(
+                                          context.l10n.forumBeFirstReply,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),

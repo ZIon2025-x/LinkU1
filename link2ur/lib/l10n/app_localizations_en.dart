@@ -10129,6 +10129,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Long-press your own comment to delete';
 
   @override
+  String get forumBeFirstReply => 'Be the first to comment';
+
+  @override
   String get fleaMarketDeleteItemConfirm =>
       'Are you sure you want to delete this listing? This action cannot be undone.';
 
