@@ -643,6 +643,11 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                 ),
                                 itemBuilder: (context, index) {
                                   final root = state.replies[index];
+                                  final currentUserId = context
+                                      .read<AuthBloc>()
+                                      .state
+                                      .user
+                                      ?.id;
                                   return _RootReplyGroup(
                                     key: ValueKey('root_${root.id}'),
                                     root: root,
@@ -661,6 +666,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                     scrollController: _scrollController,
                                     highlightStream: _highlightStream.stream,
                                     onMentionTap: _handleMentionTap,
+                                    currentUserId: currentUserId,
                                     onLoadMoreChildren: () {
                                       context.read<ForumBloc>().add(
                                             ForumLoadMoreChildren(root.id),
@@ -1251,6 +1257,7 @@ class _RootReplyGroup extends StatelessWidget {
     required this.highlightStream,
     required this.onMentionTap,
     required this.onLoadMoreChildren,
+    required this.currentUserId,
   });
 
   final ForumReply root;
@@ -1265,6 +1272,28 @@ class _RootReplyGroup extends StatelessWidget {
   final Stream<int> highlightStream;
   final Future<void> Function(int targetReplyId) onMentionTap;
   final VoidCallback onLoadMoreChildren;
+
+  /// 当前登录用户 id (未登录 = null), 用于决定 _CommentItem 是否显示删除入口
+  final String? currentUserId;
+
+  /// 删除回复:确认 + dispatch 事件. 写成方法供 root + 每个 child 复用.
+  Future<void> _confirmAndDelete(BuildContext context, ForumReply reply) async {
+    final bloc = context.read<ForumBloc>();
+    final l10n = context.l10n;
+    final confirmed = await AdaptiveDialogs.showConfirmDialog<bool>(
+      context: context,
+      title: l10n.commonDelete,
+      content: l10n.forumDeleteReplyConfirm,
+      isDestructive: true,
+      onConfirm: () => true,
+    );
+    if (confirmed == true) {
+      bloc.add(ForumDeleteReply(reply.id, postId: postId));
+    }
+  }
+
+  bool _canDelete(ForumReply reply) =>
+      currentUserId != null && currentUserId == reply.authorId;
 
   @override
   Widget build(BuildContext context) {
@@ -1293,6 +1322,8 @@ class _RootReplyGroup extends StatelessWidget {
               ),
               onMentionTap: (id) => onMentionTap(id),
               highlightStream: highlightStream,
+              canDelete: _canDelete(root),
+              onDelete: () => _confirmAndDelete(context, root),
             ),
             if (root.totalChildren > 0)
               Positioned(
@@ -1316,6 +1347,8 @@ class _RootReplyGroup extends StatelessWidget {
             ),
             onMentionTap: (id) => onMentionTap(id),
             highlightStream: highlightStream,
+            canDelete: _canDelete(child),
+            onDelete: () => _confirmAndDelete(context, child),
           ),
         // 展开剩余 N 条按钮 (C7: 18px 短线 + 蓝字, 对齐 mockup .show-more-replies)
         if (showExpand)
@@ -2269,6 +2302,8 @@ class _CommentItem extends StatefulWidget {
     required this.onReply,
     required this.onMentionTap,
     this.highlightStream,
+    this.canDelete = false,
+    this.onDelete,
   });
 
   final ForumReply reply;
@@ -2277,6 +2312,10 @@ class _CommentItem extends StatefulWidget {
   final VoidCallback onReply;
   final void Function(int targetReplyId)? onMentionTap;
   final Stream<int>? highlightStream;
+
+  /// 作者本人可见的删除入口 (audit C8 #1)
+  final bool canDelete;
+  final VoidCallback? onDelete;
 
   @override
   State<_CommentItem> createState() => _CommentItemState();
@@ -2444,6 +2483,24 @@ class _CommentItemState extends State<_CommentItem> {
                         ),
                       ),
                     ),
+                    if (widget.canDelete) ...[
+                      const SizedBox(width: 14),
+                      InkWell(
+                        onTap: widget.onDelete,
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 2, vertical: 1),
+                          child: Icon(
+                            Icons.delete_outline,
+                            size: 14,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
