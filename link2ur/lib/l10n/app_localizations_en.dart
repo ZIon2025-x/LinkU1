@@ -4504,6 +4504,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Play a short sound when an action succeeds';
 
   @override
+  String get settingsNearbyPushTitle => 'Nearby task push';
+
+  @override
+  String get settingsNearbyPushSubtitle =>
+      'When new tasks appear within 1km (max once every 6 hours)';
+
+  @override
+  String get settingsDailyDigestTitle => 'Daily city task digest';
+
+  @override
+  String get settingsDailyDigestSubtitle =>
+      'A daily summary of new tasks in your city at 17:00 UTC';
+
+  @override
   String get settingsAppearance => 'Appearance';
 
   @override
@@ -10295,6 +10309,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiChatResponseTimeout => 'AI response timeout, please try again';
+
+  @override
+  String get aiQaTitle => 'AI Limited-Time Q&A';
+
+  @override
+  String get aiQaAnswerButton => 'Answer';
+
+  @override
+  String get aiQaCanceledBanner => 'This Q&A has been canceled';
+
+  @override
+  String get aiQaSettledBanner =>
+      'Settled. Rewards have been credited to your wallet';
+
+  @override
+  String get aiQaCountdown => 'Countdown';
+
+  @override
+  String get aiQaPool => 'Reward Pool';
+
+  @override
+  String get aiQaAnswered => 'Answered';
+
+  @override
+  String get aiQaDeadlinePassed => 'Deadline passed';
+
+  @override
+  String get aiQaEditLocked => 'Editing locked';
+
+  @override
+  String get aiQaAlreadyAnswered => 'You have already answered this question';
+
+  @override
+  String get aiQaBlockedByRisk => 'Risk control rejected your answer';
+
+  @override
+  String get aiQaStatusNotPublished => 'This question is not open for answers';
 
   @override
   String get chatLoadFailed => 'Failed to load messages';

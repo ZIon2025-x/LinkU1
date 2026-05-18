@@ -4324,6 +4324,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSuccessSoundDescription => '操作成功时播放短促提示音';
 
   @override
+  String get settingsNearbyPushTitle => '附近任务推送';
+
+  @override
+  String get settingsNearbyPushSubtitle => '1km 内有新任务时推送（每 6 小时最多一次）';
+
+  @override
+  String get settingsDailyDigestTitle => '每日同城任务摘要';
+
+  @override
+  String get settingsDailyDigestSubtitle => '每天 17:00 UTC 推送一条同城新任务汇总';
+
+  @override
   String get settingsAppearance => '外观';
 
   @override
@@ -9870,6 +9882,42 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiChatResponseTimeout => 'AI 回复超时，请重试';
+
+  @override
+  String get aiQaTitle => 'AI 限时问答';
+
+  @override
+  String get aiQaAnswerButton => '我来答';
+
+  @override
+  String get aiQaCanceledBanner => '本期问答已被取消';
+
+  @override
+  String get aiQaSettledBanner => '本期已结算，奖金已发到你的钱包';
+
+  @override
+  String get aiQaCountdown => '倒计时';
+
+  @override
+  String get aiQaPool => '奖金池';
+
+  @override
+  String get aiQaAnswered => '已作答';
+
+  @override
+  String get aiQaDeadlinePassed => '答题已截止';
+
+  @override
+  String get aiQaEditLocked => '已锁定编辑';
+
+  @override
+  String get aiQaAlreadyAnswered => '你已答过本题';
+
+  @override
+  String get aiQaBlockedByRisk => '风控拒绝答题';
+
+  @override
+  String get aiQaStatusNotPublished => '本题不在答题中';
 
   @override
   String get chatLoadFailed => '加载消息失败';
@@ -18258,6 +18306,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsSuccessSoundDescription => '操作成功時播放短促提示音';
 
   @override
+  String get settingsNearbyPushTitle => '附近任務推播';
+
+  @override
+  String get settingsNearbyPushSubtitle => '1km 內有新任務時推播（每 6 小時最多一次）';
+
+  @override
+  String get settingsDailyDigestTitle => '每日同城任務摘要';
+
+  @override
+  String get settingsDailyDigestSubtitle => '每天 17:00 UTC 推播一條同城新任務匯總';
+
+  @override
   String get settingsAppearance => '外觀';
 
   @override
@@ -23804,6 +23864,42 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiChatResponseTimeout => 'AI 回覆逾時，請重試';
+
+  @override
+  String get aiQaTitle => 'AI 限時問答';
+
+  @override
+  String get aiQaAnswerButton => '我來答';
+
+  @override
+  String get aiQaCanceledBanner => '本期問答已被取消';
+
+  @override
+  String get aiQaSettledBanner => '本期已結算，獎金已發到你的錢包';
+
+  @override
+  String get aiQaCountdown => '倒數計時';
+
+  @override
+  String get aiQaPool => '獎金池';
+
+  @override
+  String get aiQaAnswered => '已作答';
+
+  @override
+  String get aiQaDeadlinePassed => '答題已截止';
+
+  @override
+  String get aiQaEditLocked => '已鎖定編輯';
+
+  @override
+  String get aiQaAlreadyAnswered => '你已答過本題';
+
+  @override
+  String get aiQaBlockedByRisk => '風控拒絕答題';
+
+  @override
+  String get aiQaStatusNotPublished => '本題不在答題中';
 
   @override
   String get chatLoadFailed => '載入訊息失敗';

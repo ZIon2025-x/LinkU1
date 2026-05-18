@@ -261,6 +261,17 @@ class ErrorLocalizer {
         return context.l10n.aiChatCreateConversationRetry;
       case 'ai_chat_response_timeout':
         return context.l10n.aiChatResponseTimeout;
+      // AI 限时问答（悬赏）
+      case 'ai_qa_deadline_passed':
+        return context.l10n.aiQaDeadlinePassed;
+      case 'ai_qa_edit_locked':
+        return context.l10n.aiQaEditLocked;
+      case 'ai_qa_already_answered':
+        return context.l10n.aiQaAlreadyAnswered;
+      case 'ai_qa_blocked_by_risk':
+        return context.l10n.aiQaBlockedByRisk;
+      case 'ai_qa_status_not_published':
+        return context.l10n.aiQaStatusNotPublished;
       case 'chat_load_failed':
         return context.l10n.chatLoadFailed;
       case 'chat_load_more_failed':

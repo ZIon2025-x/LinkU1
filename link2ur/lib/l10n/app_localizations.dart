@@ -8319,6 +8319,30 @@ abstract class AppLocalizations {
   /// **'Play a short sound when an action succeeds'**
   String get settingsSuccessSoundDescription;
 
+  /// No description provided for @settingsNearbyPushTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby task push'**
+  String get settingsNearbyPushTitle;
+
+  /// No description provided for @settingsNearbyPushSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When new tasks appear within 1km (max once every 6 hours)'**
+  String get settingsNearbyPushSubtitle;
+
+  /// No description provided for @settingsDailyDigestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily city task digest'**
+  String get settingsDailyDigestTitle;
+
+  /// No description provided for @settingsDailyDigestSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A daily summary of new tasks in your city at 17:00 UTC'**
+  String get settingsDailyDigestSubtitle;
+
   /// No description provided for @settingsAppearance.
   ///
   /// In en, this message translates to:
@@ -18874,6 +18898,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI response timeout, please try again'**
   String get aiChatResponseTimeout;
+
+  /// No description provided for @aiQaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Limited-Time Q&A'**
+  String get aiQaTitle;
+
+  /// No description provided for @aiQaAnswerButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer'**
+  String get aiQaAnswerButton;
+
+  /// No description provided for @aiQaCanceledBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'This Q&A has been canceled'**
+  String get aiQaCanceledBanner;
+
+  /// No description provided for @aiQaSettledBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled. Rewards have been credited to your wallet'**
+  String get aiQaSettledBanner;
+
+  /// No description provided for @aiQaCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Countdown'**
+  String get aiQaCountdown;
+
+  /// No description provided for @aiQaPool.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward Pool'**
+  String get aiQaPool;
+
+  /// No description provided for @aiQaAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get aiQaAnswered;
+
+  /// No description provided for @aiQaDeadlinePassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline passed'**
+  String get aiQaDeadlinePassed;
+
+  /// No description provided for @aiQaEditLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing locked'**
+  String get aiQaEditLocked;
+
+  /// No description provided for @aiQaAlreadyAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'You have already answered this question'**
+  String get aiQaAlreadyAnswered;
+
+  /// No description provided for @aiQaBlockedByRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk control rejected your answer'**
+  String get aiQaBlockedByRisk;
+
+  /// No description provided for @aiQaStatusNotPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'This question is not open for answers'**
+  String get aiQaStatusNotPublished;
 
   /// No description provided for @chatLoadFailed.
   ///

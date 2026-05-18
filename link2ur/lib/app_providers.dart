@@ -27,6 +27,7 @@ import 'data/repositories/follow_repository.dart';
 import 'data/repositories/ticker_repository.dart';
 import 'data/repositories/trending_search_repository.dart';
 import 'data/repositories/question_repository.dart';
+import 'data/repositories/ai_qa_repository.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/repositories/package_purchase_repository.dart';
 import 'data/services/ai_chat_service.dart';
@@ -94,6 +95,9 @@ class AppProviders extends StatelessWidget {
         ),
         RepositoryProvider<QuestionRepository>(
           create: (_) => QuestionRepository(apiService: apiService),
+        ),
+        RepositoryProvider<AiQaRepository>(
+          create: (_) => AiQaRepository(apiService: apiService),
         ),
         RepositoryProvider<TaskExpertRepository>(
           create: (_) => TaskExpertRepository(apiService: apiService),

@@ -764,4 +764,12 @@ class ApiEndpoints {
       '/api/ai/conversations/$id';
   static String aiSendMessage(String conversationId) =>
       '/api/ai/conversations/$conversationId/messages';
+
+  // ==================== AI 限时问答（悬赏） ====================
+  // 后端: ai_qa_user_routes.py (prefix: /api/ai-qa)
+  static const String aiQaList = '/api/ai-qa';
+  static const String aiQaLeaderboard = '/api/ai-qa/leaderboard';
+  static String aiQaDetail(int qid) => '/api/ai-qa/$qid';
+  static String aiQaAnswers(int qid) => '/api/ai-qa/$qid/answers';
+  static String aiQaAnswer(int qid) => '/api/ai-qa/$qid/answer';
 }
