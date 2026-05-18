@@ -898,15 +898,22 @@ class _BottomCommentInputState extends State<_BottomCommentInput> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // UX audit #4: 44x44 hit area, 视觉仍 16px icon (a11y 推荐 ≥44)
                       Semantics(
                         button: true,
                         label: 'Clear reply',
-                        child: GestureDetector(
-                          onTap: widget.onCancelReply,
-                          child: Icon(
-                            Icons.close,
-                            size: 16,
-                            color: secondaryColor,
+                        child: SizedBox.square(
+                          dimension: 44,
+                          child: GestureDetector(
+                            onTap: widget.onCancelReply,
+                            behavior: HitTestBehavior.opaque,
+                            child: Center(
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: secondaryColor,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -968,39 +975,45 @@ class _BottomCommentInputState extends State<_BottomCommentInput> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // 右侧发送按钮 (32 圆形)
+                  // 右侧发送按钮 (视觉 32 圆形, hit area 44x44 满足 a11y, UX audit #4)
                   Semantics(
                     button: true,
                     label: 'Send reply',
                     enabled: _canSubmit,
-                    child: GestureDetector(
-                      onTap: _canSubmit ? widget.onSubmit : null,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: _canSubmit
-                              ? AppColors.primary
-                              : AppColors.primary.withValues(alpha: 0.35),
-                          shape: BoxShape.circle,
+                    child: SizedBox.square(
+                      dimension: 44,
+                      child: GestureDetector(
+                        onTap: _canSubmit ? widget.onSubmit : null,
+                        behavior: HitTestBehavior.opaque,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: _canSubmit
+                                  ? AppColors.primary
+                                  : AppColors.primary.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: widget.isSending
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.send,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                          ),
                         ),
-                        alignment: Alignment.center,
-                        child: widget.isSending
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : const Icon(
-                                Icons.send,
-                                size: 16,
-                                color: Colors.white,
-                              ),
                       ),
                     ),
                   ),
