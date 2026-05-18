@@ -605,11 +605,11 @@ class _CreatePostViewState extends State<CreatePostView> {
                       const SizedBox(height: 18),
                     ],
 
-                    // 标题
-                    _TitleField(controller: _titleController),
-                    const SizedBox(height: 8),
-                    // 内容 + 字数计数器
-                    _ContentField(controller: _contentController),
+                    // 标题 + 正文 (一个卡片视觉单元)
+                    _ComposerCard(
+                      titleController: _titleController,
+                      contentController: _contentController,
+                    ),
                     const SizedBox(height: 18),
 
                     // 图片 section (有图片时)
@@ -779,100 +779,154 @@ class _PublishButton extends StatelessWidget {
   }
 }
 
-class _TitleField extends StatelessWidget {
-  const _TitleField({required this.controller});
-  final TextEditingController controller;
+/// 发帖页标题 + 正文一体化卡片
+/// 视觉: 圆角白卡 + 柔和阴影 + dividerLight 边框, 内部上半 title 大字号,
+///        细分割线, 下半 content 大书写区 + 右下角字数计数器
+class _ComposerCard extends StatefulWidget {
+  const _ComposerCard({
+    required this.titleController,
+    required this.contentController,
+  });
+
+  final TextEditingController titleController;
+  final TextEditingController contentController;
 
   @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: context.l10n.forumEnterTitle,
-        hintStyle: const TextStyle(
-          color: AppColors.textPlaceholderLight,
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-        ),
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-        isDense: true,
-      ),
-      style: const TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-      ),
-      maxLength: 200,
-      buildCounter: (context,
-              {required currentLength, required isFocused, maxLength}) =>
-          null,
-      textInputAction: TextInputAction.next,
-    );
-  }
+  State<_ComposerCard> createState() => _ComposerCardState();
 }
 
-class _ContentField extends StatefulWidget {
-  const _ContentField({required this.controller});
-  final TextEditingController controller;
+class _ComposerCardState extends State<_ComposerCard> {
+  late final FocusNode _titleFocus;
+  late final FocusNode _contentFocus;
 
-  @override
-  State<_ContentField> createState() => _ContentFieldState();
-}
-
-class _ContentFieldState extends State<_ContentField> {
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_onChange);
+    _titleFocus = FocusNode();
+    _contentFocus = FocusNode();
+    _titleFocus.addListener(_onFocusChange);
+    _contentFocus.addListener(_onFocusChange);
+    widget.contentController.addListener(_onContentChange);
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_onChange);
+    _titleFocus.dispose();
+    _contentFocus.dispose();
+    widget.contentController.removeListener(_onContentChange);
     super.dispose();
   }
 
-  void _onChange() => setState(() {});
+  void _onFocusChange() => setState(() {});
+  void _onContentChange() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final count = widget.controller.text.length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          controller: widget.controller,
-          decoration: InputDecoration(
-            hintText: context.l10n.forumShareThoughts,
-            hintStyle: const TextStyle(
-              color: AppColors.textPlaceholderLight,
-              fontSize: 15,
-            ),
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-            isDense: true,
+    final bg = isDark ? AppColors.cardBackgroundDark : Colors.white;
+    final dividerColor = isDark ? AppColors.dividerDark : AppColors.dividerLight;
+    final isFocused = _titleFocus.hasFocus || _contentFocus.hasFocus;
+    final borderColor = isFocused
+        ? AppColors.primary.withValues(alpha: 0.4)
+        : dividerColor;
+    final count = widget.contentController.text.length;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: AppRadius.allMedium,
+        border: Border.all(color: borderColor, width: isFocused ? 1.5 : 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isFocused ? 0.06 : 0.03),
+            offset: const Offset(0, 2),
+            blurRadius: 12,
+            spreadRadius: -4,
           ),
-          style: const TextStyle(fontSize: 15, height: 1.65),
-          maxLines: null,
-          minLines: 10,
-        ),
-        const SizedBox(height: 4),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            '$count / 5000',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 标题
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: TextField(
+              controller: widget.titleController,
+              focusNode: _titleFocus,
+              decoration: InputDecoration(
+                hintText: context.l10n.forumEnterTitle,
+                hintStyle: const TextStyle(
+                  color: AppColors.textPlaceholderLight,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+                height: 1.3,
+              ),
+              maxLength: 200,
+              buildCounter: (context,
+                      {required currentLength,
+                      required isFocused,
+                      maxLength}) =>
+                  null,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _contentFocus.requestFocus(),
             ),
           ),
+          // 细分割线
+          Divider(height: 1, thickness: 1, color: dividerColor),
+          // 正文
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: widget.contentController,
+              focusNode: _contentFocus,
+              decoration: InputDecoration(
+                hintText: context.l10n.forumShareThoughts,
+                hintStyle: const TextStyle(
+                  color: AppColors.textPlaceholderLight,
+                  fontSize: 15,
+                  height: 1.6,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+              style: const TextStyle(fontSize: 15, height: 1.6),
+              maxLines: null,
+              minLines: 8,
+            ),
+          ),
+          // 字数计数器
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                  '$count / 5000',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: count >= 5000
+                        ? AppColors.error
+                        : (isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
-    );
+      );
   }
 }
 
