@@ -4522,6 +4522,7 @@
   "forumPostUpdated": "帖子已更新",
   "forumReplyDeleted": "回复已删除",
   "forumDeleteReplyConfirm": "确定要删除这条回复吗？",
+  "forumLongPressToDeleteHint": "长按可删除自己的评论",
   "fleaMarketDeleteItemConfirm": "确定要删除这个商品吗？此操作不可撤销。",
   "taskEvidenceTitle": "完成证据",
   "taskEvidenceHint": "您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。",

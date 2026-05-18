@@ -10125,6 +10125,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to delete this reply?';
 
   @override
+  String get forumLongPressToDeleteHint =>
+      'Long-press your own comment to delete';
+
+  @override
   String get fleaMarketDeleteItemConfirm =>
       'Are you sure you want to delete this listing? This action cannot be undone.';
 

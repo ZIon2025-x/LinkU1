@@ -18581,6 +18581,12 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this reply?'**
   String get forumDeleteReplyConfirm;
 
+  /// No description provided for @forumLongPressToDeleteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press your own comment to delete'**
+  String get forumLongPressToDeleteHint;
+
   /// No description provided for @fleaMarketDeleteItemConfirm.
   ///
   /// In en, this message translates to:

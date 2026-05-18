@@ -9711,6 +9711,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumDeleteReplyConfirm => '确定要删除这条回复吗？';
 
   @override
+  String get forumLongPressToDeleteHint => '长按可删除自己的评论';
+
+  @override
   String get fleaMarketDeleteItemConfirm => '确定要删除这个商品吗？此操作不可撤销。';
 
   @override
@@ -23637,6 +23640,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumDeleteReplyConfirm => '確定要刪除這條回覆嗎？';
+
+  @override
+  String get forumLongPressToDeleteHint => '長按可刪除自己的評論';
 
   @override
   String get fleaMarketDeleteItemConfirm => '確定要刪除這個商品嗎？此操作不可撤銷。';

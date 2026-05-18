@@ -55,6 +55,10 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
   int? _replyToId;
   String? _replyToName;
 
+  /// UX audit #3: 长按删评论的入口不显眼, 在首次发现"有自己可删的评论"时
+  /// 弹一次 SnackBar 提示, 整个 page 生命周期内不重复触发。
+  bool _hasShownDeleteHint = false;
+
   @override
   void dispose() {
     _replyController.dispose();
@@ -112,6 +116,25 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       url: ShareUtil.forumPostUrl(widget.postId),
       imageUrl: imageUrl,
     );
+  }
+
+  /// UX audit #3: 是否有任何"当前用户可删"的根/子评论, 用于决定首次 hint 是否触发
+  bool _hasAnyDeletableComment(ForumState state) {
+    final currentUserId = context.read<AuthBloc>().state.user?.id;
+    if (currentUserId == null) return false;
+    for (final root in state.replies) {
+      if (root.authorId == currentUserId) return true;
+      for (final c in root.previewChildren) {
+        if (c.authorId == currentUserId) return true;
+      }
+      final loaded = state.loadedChildren[root.id];
+      if (loaded != null) {
+        for (final c in loaded) {
+          if (c.authorId == currentUserId) return true;
+        }
+      }
+    }
+    return false;
   }
 
   void _pruneReplyKeys(ForumState state) {
@@ -392,6 +415,30 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(context.l10n.forumReplyDeleted)),
                   );
+                },
+              ),
+              // UX audit #3: replies 加载完毕且有自己可删的评论 → 首次弹 hint
+              BlocListener<ForumBloc, ForumState>(
+                listenWhen: (prev, curr) =>
+                    !_hasShownDeleteHint &&
+                    curr.status == ForumStatus.loaded &&
+                    curr.replies.isNotEmpty,
+                listener: (context, state) {
+                  if (_hasShownDeleteHint) return;
+                  if (!_hasAnyDeletableComment(state)) return;
+                  _hasShownDeleteHint = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          context.l10n.forumLongPressToDeleteHint,
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  });
                 },
               ),
               BlocListener<ForumBloc, ForumState>(
