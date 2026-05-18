@@ -4643,6 +4643,24 @@
   "aiQaAlreadyAnswered": "你已答过本题",
   "aiQaBlockedByRisk": "风控拒绝答题",
   "aiQaStatusNotPublished": "本题不在答题中",
+  "aiQaAnswerDeleted": "该答案已被删除",
+  "aiQaPossiblyAI": "⚠ 可能为 AI 生成",
+  "aiQaAnswerSubmitted": "已提交",
+  "aiQaAnswerTitleOptional": "标题（可选）",
+  "aiQaAnswerContentHint": "正文（建议 100-1500 字）",
+  "aiQaCountdownDaysHours": "{d}天{h}小时",
+  "@aiQaCountdownDaysHours": {
+    "placeholders": {
+      "d": { "type": "int" },
+      "h": { "type": "int" }
+    }
+  },
+  "aiQaCountdownHours": "{h}小时",
+  "@aiQaCountdownHours": {
+    "placeholders": {
+      "h": { "type": "int" }
+    }
+  },
   "chatLoadFailed": "加载消息失败",
   "chatLoadMoreFailed": "加载更多消息失败",
   "chatNetworkOffline": "当前无网络连接，无法发送",

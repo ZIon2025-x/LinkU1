@@ -10348,6 +10348,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiQaStatusNotPublished => 'This question is not open for answers';
 
   @override
+  String get aiQaAnswerDeleted => 'This answer has been deleted';
+
+  @override
+  String get aiQaPossiblyAI => '⚠ Possibly AI-generated';
+
+  @override
+  String get aiQaAnswerSubmitted => 'Submitted';
+
+  @override
+  String get aiQaAnswerTitleOptional => 'Title (optional)';
+
+  @override
+  String get aiQaAnswerContentHint => 'Body (100-1500 chars recommended)';
+
+  @override
+  String aiQaCountdownDaysHours(int d, int h) {
+    return '${d}d ${h}h';
+  }
+
+  @override
+  String aiQaCountdownHours(int h) {
+    return '${h}h';
+  }
+
+  @override
   String get chatLoadFailed => 'Failed to load messages';
 
   @override

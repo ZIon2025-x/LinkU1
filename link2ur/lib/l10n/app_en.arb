@@ -4817,6 +4817,24 @@
   "aiQaAlreadyAnswered": "You have already answered this question",
   "aiQaBlockedByRisk": "Risk control rejected your answer",
   "aiQaStatusNotPublished": "This question is not open for answers",
+  "aiQaAnswerDeleted": "This answer has been deleted",
+  "aiQaPossiblyAI": "⚠ Possibly AI-generated",
+  "aiQaAnswerSubmitted": "Submitted",
+  "aiQaAnswerTitleOptional": "Title (optional)",
+  "aiQaAnswerContentHint": "Body (100-1500 chars recommended)",
+  "aiQaCountdownDaysHours": "{d}d {h}h",
+  "@aiQaCountdownDaysHours": {
+    "placeholders": {
+      "d": { "type": "int" },
+      "h": { "type": "int" }
+    }
+  },
+  "aiQaCountdownHours": "{h}h",
+  "@aiQaCountdownHours": {
+    "placeholders": {
+      "h": { "type": "int" }
+    }
+  },
   "chatLoadFailed": "Failed to load messages",
   "chatLoadMoreFailed": "Failed to load more messages",
   "chatNetworkOffline": "No network connection, unable to send",

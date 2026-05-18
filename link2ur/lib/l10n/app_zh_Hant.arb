@@ -4615,6 +4615,24 @@
   "aiQaAlreadyAnswered": "你已答過本題",
   "aiQaBlockedByRisk": "風控拒絕答題",
   "aiQaStatusNotPublished": "本題不在答題中",
+  "aiQaAnswerDeleted": "該答案已被刪除",
+  "aiQaPossiblyAI": "⚠ 可能為 AI 生成",
+  "aiQaAnswerSubmitted": "已提交",
+  "aiQaAnswerTitleOptional": "標題（可選）",
+  "aiQaAnswerContentHint": "內文（建議 100-1500 字）",
+  "aiQaCountdownDaysHours": "{d}天{h}小時",
+  "@aiQaCountdownDaysHours": {
+    "placeholders": {
+      "d": { "type": "int" },
+      "h": { "type": "int" }
+    }
+  },
+  "aiQaCountdownHours": "{h}小時",
+  "@aiQaCountdownHours": {
+    "placeholders": {
+      "h": { "type": "int" }
+    }
+  },
   "chatLoadFailed": "載入訊息失敗",
   "chatLoadMoreFailed": "載入更多訊息失敗",
   "chatNetworkOffline": "目前無網路連線，無法傳送",

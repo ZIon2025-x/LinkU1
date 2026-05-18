@@ -167,7 +167,9 @@ class _Hero extends StatelessWidget {
     if (diff.isNegative) return l10n.aiQaDeadlinePassed;
     final d = diff.inDays;
     final h = diff.inHours % 24;
-    return d > 0 ? '${d}d ${h}h' : '${h}h';
+    return d > 0
+        ? l10n.aiQaCountdownDaysHours(d, h)
+        : l10n.aiQaCountdownHours(h);
   }
 }
 
@@ -181,6 +183,7 @@ class _AnswerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (answer.hideInQa) return const SizedBox.shrink();
     final isDeleted = answer.isDeleted;
     final isSettledOrCanceled =
@@ -223,10 +226,10 @@ class _AnswerCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           if (isDeleted)
-            const Text(
-              '该答案已被删除',
-              style:
-                  TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+            Text(
+              l10n.aiQaAnswerDeleted,
+              style: const TextStyle(
+                  fontStyle: FontStyle.italic, color: Colors.grey),
             )
           else
             Text(answer.content ?? ''),
@@ -247,9 +250,9 @@ class _AnswerCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 color: Colors.grey.shade200,
-                child: const Text(
-                  '⚠ 可能为 AI 生成',
-                  style: TextStyle(fontSize: 10),
+                child: Text(
+                  l10n.aiQaPossiblyAI,
+                  style: const TextStyle(fontSize: 10),
                 ),
               ),
             ),

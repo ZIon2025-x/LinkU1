@@ -9920,6 +9920,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiQaStatusNotPublished => '本题不在答题中';
 
   @override
+  String get aiQaAnswerDeleted => '该答案已被删除';
+
+  @override
+  String get aiQaPossiblyAI => '⚠ 可能为 AI 生成';
+
+  @override
+  String get aiQaAnswerSubmitted => '已提交';
+
+  @override
+  String get aiQaAnswerTitleOptional => '标题（可选）';
+
+  @override
+  String get aiQaAnswerContentHint => '正文（建议 100-1500 字）';
+
+  @override
+  String aiQaCountdownDaysHours(int d, int h) {
+    return '$d天$h小时';
+  }
+
+  @override
+  String aiQaCountdownHours(int h) {
+    return '$h小时';
+  }
+
+  @override
   String get chatLoadFailed => '加载消息失败';
 
   @override
@@ -23900,6 +23925,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiQaStatusNotPublished => '本題不在答題中';
+
+  @override
+  String get aiQaAnswerDeleted => '該答案已被刪除';
+
+  @override
+  String get aiQaPossiblyAI => '⚠ 可能為 AI 生成';
+
+  @override
+  String get aiQaAnswerSubmitted => '已提交';
+
+  @override
+  String get aiQaAnswerTitleOptional => '標題（可選）';
+
+  @override
+  String get aiQaAnswerContentHint => '內文（建議 100-1500 字）';
+
+  @override
+  String aiQaCountdownDaysHours(int d, int h) {
+    return '$d天$h小時';
+  }
+
+  @override
+  String aiQaCountdownHours(int h) {
+    return '$h小時';
+  }
 
   @override
   String get chatLoadFailed => '載入訊息失敗';

@@ -18971,6 +18971,48 @@ abstract class AppLocalizations {
   /// **'This question is not open for answers'**
   String get aiQaStatusNotPublished;
 
+  /// No description provided for @aiQaAnswerDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This answer has been deleted'**
+  String get aiQaAnswerDeleted;
+
+  /// No description provided for @aiQaPossiblyAI.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠ Possibly AI-generated'**
+  String get aiQaPossiblyAI;
+
+  /// No description provided for @aiQaAnswerSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get aiQaAnswerSubmitted;
+
+  /// No description provided for @aiQaAnswerTitleOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (optional)'**
+  String get aiQaAnswerTitleOptional;
+
+  /// No description provided for @aiQaAnswerContentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Body (100-1500 chars recommended)'**
+  String get aiQaAnswerContentHint;
+
+  /// No description provided for @aiQaCountdownDaysHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{d}d {h}h'**
+  String aiQaCountdownDaysHours(int d, int h);
+
+  /// No description provided for @aiQaCountdownHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{h}h'**
+  String aiQaCountdownHours(int h);
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:

@@ -25,9 +25,10 @@ class _AiQaAnswerFormViewState extends State<AiQaAnswerFormView> {
         ..add(AiQaLoadDetail(widget.qid)),
       child: BlocConsumer<AiQaBloc, AiQaState>(
         listener: (context, state) {
+          final l10n = AppLocalizations.of(context)!;
           if (state.status == AiQaStatus.submitted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('已提交')),
+              SnackBar(content: Text(l10n.aiQaAnswerSubmitted)),
             );
             Navigator.of(context).pop();
           } else if (state.status == AiQaStatus.error) {
@@ -58,8 +59,8 @@ class _AiQaAnswerFormViewState extends State<AiQaAnswerFormView> {
                         const SizedBox(height: 12),
                         TextField(
                           controller: _titleCtl,
-                          decoration: const InputDecoration(
-                            labelText: 'Title (optional)',
+                          decoration: InputDecoration(
+                            labelText: l10n.aiQaAnswerTitleOptional,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -68,10 +69,10 @@ class _AiQaAnswerFormViewState extends State<AiQaAnswerFormView> {
                             controller: _contentCtl,
                             maxLines: null,
                             expands: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Body (100-1500 chars recommended)',
+                            decoration: InputDecoration(
+                              labelText: l10n.aiQaAnswerContentHint,
                               alignLabelWithHint: true,
-                              border: OutlineInputBorder(),
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
