@@ -1133,10 +1133,12 @@ class _ReplySectionHeader extends StatelessWidget {
             ),
           ),
           AppSpacing.hSm,
+          // 对齐 _ReplyCountChip 浅蓝底+主色字模式, 暗色 mode 下也可见 (UX audit #2)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.skeletonBase,
+              color: AppColors.primary
+                  .withValues(alpha: isDark ? 0.18 : 0.10),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -1144,7 +1146,7 @@ class _ReplySectionHeader extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textSecondaryLight,
+                color: AppColors.primary,
               ),
             ),
           ),
