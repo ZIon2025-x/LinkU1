@@ -19,9 +19,14 @@
 
 | spec | migration 编号 | DB 改动 | 上线节奏 |
 |---|---|---|---|
-| **P0 基础** (本 plan) | `237_ai_qa_bounty.sql` | 5 新表 + ForumPost.ai_question_id + SystemSettings 3 项 | 第一波 |
-| **Sponsor 加注** (`2026-05-18-ai-qa-sponsor-pledge-design.md`) | `238_ai_qa_sponsor_pledge.sql` | 3 新表 (ai_qa_pledges / ai_qa_pledge_pool / ai_qa_pledge_pool_transactions) + ai_questions 加 sponsor_pool_pence + pledge_pool_carryover_pence 2 字段 | P0 上线观察一周后 |
-| **社区限时问答** (`2026-05-18-ai-qa-user-submitted-design.md`) | `239_ai_qa_user_submitted.sql` | ai_questions 加 5 字段 (submitted_by_user_id / submitted_at / rejected_at / rejected_reason_code / rejected_reason_detail / withdrawn_at) + status enum 扩展 3 个 (pending_review / rejected / withdrawn) + 2 索引 | 依赖 sponsor 的混合付款流程,sponsor 之后 |
+| **P0 基础** (本 plan) | `237_ai_qa_bounty.sql` | 5 新表 + ForumPost.ai_question_id + SystemSettings 3 项 | 第一波 ✅ 已 deploy linktest |
+| **P0 hotfix** (本 plan) | `240_ai_qa_fix_system_settings_seed.sql` | 修 237 SystemSettings INSERT 缺 created_at → 全 fail 的问题 (linktest 抓到) | 第一波 ✅ |
+| (user 独立) | `238_add_user_profile_preference_city_source.sql` | user_profile 改动 (跟 ai-qa 无关,占了原计划的 sponsor 编号) | — |
+| (user 独立) | `239_add_daily_task_digest.sql` | daily task digest 推送 (占了原计划的 user-submitted 编号) | — |
+| **Sponsor 加注** (`2026-05-18-ai-qa-sponsor-pledge-design.md`) | `241_ai_qa_sponsor_pledge.sql` | 3 新表 + ai_questions 加 2 字段 (sponsor_pool_pence + pledge_pool_carryover_pence) | P0 上线观察一周后 |
+| **社区限时问答** (`2026-05-18-ai-qa-user-submitted-design.md`) | `242_ai_qa_user_submitted.sql` | ai_questions 加 5 字段 + status enum 扩 3 个 + 2 索引 | 依赖 sponsor 的混合付款流程,sponsor 之后 |
+
+**⚠️ 教训 (2026-05-18)**: SystemSettings 等用 Python `default=` 但**无 `server_default`** 的列,纯 SQL INSERT 必须显式带值 (`NOW()` 或具体值)。否则触发 NOT NULL violation → INSERT 全失败 → migration 框架"继续执行"但 row 数=0,**静默失败**。Sponsor / user-submitted plan 写 INSERT 时务必检查。详见 [`feedback_sql_migration_explicit_defaults`]。
 
 **关键 forward-compat 注释** (本 plan 实施时需埋点,避免 sponsor/user-submitted 上线时回头改):
 
