@@ -371,6 +371,10 @@ class Config:
     # 默认 true; 出错自动回退到 raw str system + raw tools 重试一次
     AI_ANTHROPIC_CACHE_ENABLED = os.getenv("AI_ANTHROPIC_CACHE_ENABLED", "true").lower() == "true"
 
+    # History compaction 开关 (老轮次用 LLM 摘要, 中间轮次 tool_result 占位符化)
+    # 默认 false; linktest 灰度验证后改 true
+    AI_HISTORY_COMPACTION_ENABLED = os.getenv("AI_HISTORY_COMPACTION_ENABLED", "false").lower() == "true"
+
     AI_SESSION_TTL_HOURS = int(os.getenv("AI_SESSION_TTL_HOURS", "24"))
     # FAQ 缓存 TTL（秒）
     AI_FAQ_CACHE_TTL = int(os.getenv("AI_FAQ_CACHE_TTL", "3600"))  # 1 小时
