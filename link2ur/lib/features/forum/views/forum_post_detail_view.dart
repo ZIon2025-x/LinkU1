@@ -2100,14 +2100,15 @@ class _AuthorHeader extends StatelessWidget {
   const _AuthorHeader({required this.post});
   final ForumPost post;
 
+  /// UX audit #18: 相对量词走 l10n; 超过 7 天用 ISO 风格 (跨语言通用, 不翻)
   String _formatTime(BuildContext context, DateTime? t) {
     if (t == null) return '';
     final now = DateTime.now();
     final diff = now.difference(t);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
-    if (diff.inDays < 1) return '${diff.inHours} 小时前';
-    if (diff.inDays < 7) return '${diff.inDays} 天前';
+    if (diff.inMinutes < 1) return context.l10n.timeJustNow;
+    if (diff.inHours < 1) return context.l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return context.l10n.timeHoursAgo(diff.inHours);
+    if (diff.inDays < 7) return context.l10n.timeDaysAgo(diff.inDays);
     return '${t.year}-${t.month}-${t.day}';
   }
 
@@ -2228,7 +2229,7 @@ class _StatsRow extends StatelessWidget {
         if (wasEdited) ...[
           Text(' · ', style: TextStyle(color: color)),
           Text(
-            '编辑于 ${_relativeTime(post.updatedAt!)}',
+            '编辑于 ${_relativeTime(context, post.updatedAt!)}',
             style: TextStyle(fontSize: 12, color: color),
           ),
         ],
@@ -2236,12 +2237,13 @@ class _StatsRow extends StatelessWidget {
     );
   }
 
-  String _relativeTime(DateTime t) {
+  /// UX audit #18: 相对量词改 l10n
+  String _relativeTime(BuildContext context, DateTime t) {
     final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
-    if (diff.inDays < 1) return '${diff.inHours} 小时前';
-    return '${diff.inDays} 天前';
+    if (diff.inMinutes < 1) return context.l10n.timeJustNow;
+    if (diff.inHours < 1) return context.l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return context.l10n.timeHoursAgo(diff.inHours);
+    return context.l10n.timeDaysAgo(diff.inDays);
   }
 }
 
