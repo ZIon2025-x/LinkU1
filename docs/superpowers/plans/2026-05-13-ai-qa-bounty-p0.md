@@ -1820,44 +1820,13 @@ git commit -m "feat(ai-qa): admin 端路由 (drafts/cancel/review/scores/settle/
 
 ### Task 9: 答题事务支持（论坛 CRUD 加 ai_question_id）
 
-**Files:**
-- Modify: `backend/app/crud/forum.py` (or wherever `create_post` lives)
-
-- [ ] **Step 1: 找到现有 create_post 函数**
-
-Run: `cd backend && grep -rn "def create_post" app/crud/ app/forum_routes.py | head -5`
-
-- [ ] **Step 2: 改 create_post 接受 ai_question_id 参数**
-
-加 keyword argument `ai_question_id: Optional[int] = None`，在 ForumPost 创建时透传：
-
-```python
-def create_post(db, author_id, category_id, title, content, images=None, ai_question_id=None, ...):
-    post = models.ForumPost(
-        author_id=author_id,
-        category_id=category_id,
-        title=title,
-        content=content,
-        images=images,
-        ai_question_id=ai_question_id,  # 新增
-        ...
-    )
-    db.add(post)
-    db.flush()
-    return post
-```
-
-- [ ] **Step 3: 验证现有 forum 端点不破坏**
-
-Run: `cd backend && pytest tests/test_forum* -v 2>&1 | tail -10`
-Expected: 现有论坛测试全过
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add backend/app/crud/forum.py  # 或实际改的文件
-git commit -m "feat(ai-qa): forum.create_post 加 ai_question_id 参数,支持 AI 限时问答答案绑定"
-```
+> **本 task 已被 T7 实施覆盖,跳过**:
+>
+> `app.crud.forum.create_post` **不存在** — 实际 ForumPost 创建在 `backend/app/routes/forum_posts_routes.py:389` 是带速率限制/敏感词审查的 async 路由,**不适合 ai-qa 答题流程复用** (rate limit + 内容审核跟答题专属 `risk_control.check_risk` 重复且冲突)。
+>
+> T7 用户路由实施时已经 **inline 创建 ForumPost** + `ai_question_id=qid` (绕过 forum_crud),`risk_control.check_risk` 承担 ai-qa 反作弊。详见 `backend/app/ai_qa_user_routes.py` POST /api/ai-qa/{qid}/answer 端点。
+>
+> 本 task 无需独立 commit。
 
 ---
 
