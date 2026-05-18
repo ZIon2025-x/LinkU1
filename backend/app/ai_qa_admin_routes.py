@@ -69,6 +69,11 @@ def update_draft(
         raise HTTPException(404, "ai_qa_not_found")
     if q.status != "draft":
         raise HTTPException(409, "ai_qa_only_draft_editable")
+    # FK preflight: target_forum_category_id 改时校验 forum_categories 存在,避免 commit 时 500
+    if payload.target_forum_category_id is not None:
+        category = db.get(models.ForumCategory, payload.target_forum_category_id)
+        if category is None:
+            raise HTTPException(422, "ai_qa_forum_category_not_found")
     old = {"title": q.title, "reward_pool_pence": q.reward_pool_pence}
     ai_qa_crud.update_draft(db, q, payload)
     _audit(db, "draft_update", qid, admin.id, old=old, new={"title": q.title, "reward_pool_pence": q.reward_pool_pence})

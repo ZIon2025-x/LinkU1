@@ -1,5 +1,5 @@
 // admin/src/pages/ai-qa/ReviewPage.tsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { aiQaApi } from "../../api/aiQa";
 
@@ -35,9 +35,22 @@ export const ReviewPage: React.FC = () => {
     return (b.ai_score ?? 0) - (a.ai_score ?? 0);
   });
 
-  const handleScoreChange = (id: number, score: number) => {
-    setRows(rows.map(r => r.id === id ? { ...r, admin_override_score: score } : r));
-    aiQaApi.updateScore(id, { admin_override_score: score });
+  // debounce 防抖: 用户连续输入只触发最后一次 PATCH (避免每键 1 个请求);
+  // NaN guard: 清空 input 时 parseInt('') = NaN 不应该发 PATCH (Pydantic 会 422)
+  const debouncedScoreUpdate = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const handleScoreChange = (id: number, scoreRaw: number) => {
+    // 立即更新本地 state (响应快)
+    setRows(rows.map(r => r.id === id ? { ...r, admin_override_score: isNaN(scoreRaw) ? null : scoreRaw } : r));
+    // NaN 不发 PATCH (用户在清空 input,等下一次有效输入)
+    if (isNaN(scoreRaw)) return;
+    if (scoreRaw < 0 || scoreRaw > 100) return; // 后端会 422,前端先拦
+    // 取消上一个 pending PATCH,debounce 300ms 再发
+    const existing = debouncedScoreUpdate.current.get(id);
+    if (existing) clearTimeout(existing);
+    debouncedScoreUpdate.current.set(id, setTimeout(() => {
+      aiQaApi.updateScore(id, { admin_override_score: scoreRaw });
+      debouncedScoreUpdate.current.delete(id);
+    }, 300));
   };
 
   const handleHideChange = (id: number, hide: boolean) => {

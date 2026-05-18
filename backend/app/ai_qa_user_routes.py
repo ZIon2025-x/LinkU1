@@ -75,6 +75,14 @@ def list_answers(qid: int, db: Session = Depends(get_db)):
         # spec §7: 帖子被论坛 hidden 机制隐藏 (is_visible=False) 应跟 is_deleted 一样不显示内容,
         # 但保留 ai_answer_scores 行 (settle 后仍展示 reward) — deep audit issue #9
         post_hidden = bool(post and (post.is_deleted or not post.is_visible)) if post else True
+        # ForumPost.images 是 JSON 字段,理论上是 List[str] (Pydantic AnswerCreate.images 已 validate),
+        # 但 legacy data 或 admin 直接改可能塞非 str — defensive coerce 兜底 (deep audit issue #11)
+        post_images = post.images if (post and not post_hidden) else None
+        if post_images is not None:
+            if isinstance(post_images, list):
+                post_images = [str(x) for x in post_images if x is not None]
+            else:
+                post_images = None  # 不是 list 直接丢
         out.append(AiAnswerOut(
             id=r.id,
             forum_post_id=r.forum_post_id,
@@ -83,7 +91,7 @@ def list_answers(qid: int, db: Session = Depends(get_db)):
             user_avatar=user.avatar if user else None,
             title=post.title if post and not post_hidden else None,
             content=post.content if post and not post_hidden else None,
-            images=post.images if post and not post_hidden else None,
+            images=post_images,
             created_at=post.created_at if post else None,
             is_deleted=post_hidden,  # is_deleted 字段对外语义="不显示内容",含论坛 hidden
             ai_score=r.ai_score,
