@@ -2136,74 +2136,87 @@ class _AuthorHeader extends StatelessWidget {
         ? AppColors.textSecondaryDark
         : AppColors.textSecondaryLight;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Row(
-        children: [
-          ClipOval(
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: (displayAvatar != null && displayAvatar.isNotEmpty)
-                  ? AsyncImageView(
-                      imageUrl: displayAvatar,
-                      width: 44,
-                      height: 44,
-                      errorWidget: _GradientAvatarFallback(name: displayName),
-                    )
-                  : _GradientAvatarFallback(name: displayName),
+    // UX audit #22: 整段头像+名字+时间 InkWell 可跳作者主页
+    final authorUserId = author?.id ?? post.authorId;
+    final canTap = authorUserId.isNotEmpty;
+    return InkWell(
+      onTap: canTap
+          ? () => context.goToUserProfile(
+                authorUserId,
+                isAdmin: author?.isAdmin ?? false,
+              )
+          : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+        child: Row(
+          children: [
+            ClipOval(
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: (displayAvatar != null && displayAvatar.isNotEmpty)
+                    ? AsyncImageView(
+                        imageUrl: displayAvatar,
+                        width: 44,
+                        height: 44,
+                        errorWidget:
+                            _GradientAvatarFallback(name: displayName),
+                      )
+                    : _GradientAvatarFallback(name: displayName),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        displayName,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (author?.isVerified == true) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.check,
-                          size: 10,
-                          color: Colors.white,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          displayName,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (author?.isVerified == true) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.check,
+                            size: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                if (timeStr.isNotEmpty)
-                  Text(
-                    timeStr,
-                    style: TextStyle(fontSize: 12, color: metaColor),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-              ],
+                  const SizedBox(height: 2),
+                  if (timeStr.isNotEmpty)
+                    Text(
+                      timeStr,
+                      style: TextStyle(fontSize: 12, color: metaColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
