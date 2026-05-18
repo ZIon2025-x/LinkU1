@@ -1197,20 +1197,21 @@ class _LinkedChip extends StatelessWidget {
 
   static const _purpleGradient = [Color(0xFF7359F2), Color(0xFFA18BFF)];
 
+  // UX audit #17: 改 l10n, 对齐 _LinkedItemCard._typeLabel (forum_post_detail_view.dart)
   String _typeLabel(BuildContext context) {
+    final l10n = context.l10n;
     switch (itemType) {
-      case 'service':
-        return '服务';
-      case 'expert':
-        return '达人';
-      case 'activity':
-        return '活动';
       case 'product':
-        return '商品';
+        return l10n.discoveryFeedTypeProduct;
+      case 'service':
+      case 'expert':
+        return l10n.discoveryFeedTypeService;
+      case 'activity':
+        return l10n.homeHotEvents;
       case 'ranking':
-        return '排行榜';
+        return l10n.discoveryFeedTypeRanking;
       case 'forum_post':
-        return '帖子';
+        return l10n.discoveryFeedTypePost;
       default:
         return itemType;
     }
