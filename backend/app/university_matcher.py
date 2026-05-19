@@ -139,7 +139,26 @@ def match_university_by_email(email: str, db: Session) -> Optional[models.Univer
         db.refresh(uni)
     except IntegrityError:
         db.rollback()
-        uni = db.query(models.University).filter(
+        # 1) email_domain race: 另一事务已 INSERT 同域名 → re-SELECT 拿赢家
+        existing = db.query(models.University).filter(
             models.University.email_domain == registrable
         ).first()
+        if existing:
+            return existing
+        # 2) name UNIQUE 冲突: seed 别名的 name 已被另一域名占用,用 "name (registrable)" 重试
+        uni = models.University(
+            email_domain=registrable,
+            name=f"{name} ({registrable})",
+            name_cn=name_cn,
+            domain_pattern=f"@*.{registrable}",
+            is_active=True,
+        )
+        db.add(uni)
+        try:
+            db.commit()
+            db.refresh(uni)
+        except IntegrityError:
+            # 极端 case: disambiguated name 也冲突 → 放弃
+            db.rollback()
+            return None
     return uni

@@ -178,6 +178,12 @@ ON CONFLICT (email_domain) DO NOTHING;
   可以加一个"`name_cn IS NULL` 的 universities 行"过滤视图,**不在本期 scope**。
 - **机构 rebrand / 域名迁移**(如 NUA / UCLan):新算法直接吃旧+新两个注册域分别
   作为两行 universities,显示名不同但都能验证 — 可接受,admin 后续可合并。
+- **Seed 别名 name 与历史行重名**: `universities.name` 是 UNIQUE NOT NULL。如果 seed
+  里某条 entry 的 `name` 已经被另一行(不同 email_domain)用了(常见于 rebrand 场景:
+  Norwich nua.ac.uk + norwichuni.ac.uk 都是 NUA),lazy INSERT 会 IntegrityError。
+  matcher 会自动重试用 `f"{name} ({registrable})"` 作 disambiguated name。本期 seed JSON
+  中 Norwich 的新条目已主动加 `(norwichuni.ac.uk)` 后缀以避免运行时触发兜底,migration 241
+  同步。
 
 ### 3.10 不做的事(YAGNI)
 

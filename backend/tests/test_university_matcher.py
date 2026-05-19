@@ -129,3 +129,25 @@ class TestMatchUniversityByEmail:
         assert uni1 is not None and uni2 is not None
         assert uni1.id == uni2.id
         assert uni1.email_domain == "imaginary2.ac.uk"
+
+    def test_unique_name_collision_retries_with_disambiguator(self, db):
+        """seed 别名 name 已被另一 email_domain 占用 → 重试用 disambiguated name 成功"""
+        from app.university_matcher import match_university_by_email
+        # 预先占用 seed 给 bcu.ac.uk 的 name (Birmingham City University)
+        # 但分配给一个不同的 email_domain
+        db.add(models.University(
+            name="Birmingham City University",
+            name_cn="伯明翰城市大学",
+            email_domain="some-other-bcu-domain.ac.uk",
+            domain_pattern="@*.some-other-bcu-domain.ac.uk",
+            is_active=True,
+        ))
+        db.flush()
+
+        # 现在 verify bcu.ac.uk 邮箱;seed 别名想用 "Birmingham City University" 名字
+        # 但已被占,应该自动 fallback 到 disambiguated 名字
+        uni = match_university_by_email("alice@mail.bcu.ac.uk", db)
+        assert uni is not None
+        assert uni.email_domain == "bcu.ac.uk"
+        assert uni.name == "Birmingham City University (bcu.ac.uk)"
+        assert uni.name_cn == "伯明翰城市大学"

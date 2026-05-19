@@ -21,8 +21,9 @@ VALUES ('Birmingham City University', '伯明翰城市大学', 'bcu.ac.uk', '@*.
 ON CONFLICT (email_domain) DO NOTHING;
 
 -- 2. Norwich University of the Arts 新域 (与 nua.ac.uk 并存)
+--    name 加 (norwichuni.ac.uk) 后缀避免和现有 nua.ac.uk 那条 UNIQUE name 冲突
 INSERT INTO universities (name, name_cn, email_domain, domain_pattern, is_active)
-VALUES ('Norwich University of the Arts', '诺里奇艺术大学', 'norwichuni.ac.uk', '@*.norwichuni.ac.uk', TRUE)
+VALUES ('Norwich University of the Arts (norwichuni.ac.uk)', '诺里奇艺术大学', 'norwichuni.ac.uk', '@*.norwichuni.ac.uk', TRUE)
 ON CONFLICT (email_domain) DO NOTHING;
 
 -- 3. University of Lancashire 新域 (与 uclan.ac.uk 并存)
