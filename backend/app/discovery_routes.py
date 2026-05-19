@@ -335,18 +335,22 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int, current_user=N
             user_vote_map[vrow[0]] = vrow[1]
 
     # 批量计算每个 LeaderboardItem 在所属榜单的名次 (1-based)
-    # 排序口径: (upvotes - downvotes) DESC, id ASC (稳定 tiebreak)
+    # 排序口径与 custom_leaderboard_routes.py:1543 一致 (vote_score 是 Wilson 分):
+    #   vote_score DESC, net_votes DESC, id ASC
     # 只对当前结果集涉及到的 leaderboard_ids 跑窗口函数,避免全表
     rank_map = {}  # (leaderboard_id, item_id) -> rank
     if rows_list:
         leaderboard_ids = list({row.leaderboard_id for row in rows_list})
-        score_expr = (models.LeaderboardItem.upvotes - models.LeaderboardItem.downvotes)
         rank_query = select(
             models.LeaderboardItem.id,
             models.LeaderboardItem.leaderboard_id,
             func.row_number().over(
                 partition_by=models.LeaderboardItem.leaderboard_id,
-                order_by=[desc(score_expr), models.LeaderboardItem.id],
+                order_by=[
+                    desc(models.LeaderboardItem.vote_score),
+                    desc(models.LeaderboardItem.net_votes),
+                    models.LeaderboardItem.id,
+                ],
             ).label("rank"),
         ).where(
             models.LeaderboardItem.leaderboard_id.in_(leaderboard_ids),
@@ -1042,7 +1046,9 @@ async def _fetch_forum_posts(
         .order_by(desc(models.ForumPost.created_at))
         .limit(limit)
     )
-    # 仅当存在可见板块时按 category_id 过滤,空 list 不加条件 (兜底:让所有可见帖子都能出)
+    # 板块可见性过滤 (与 forum_discovery_routes.py:99-109 标准模式对齐):
+    #   - 有可见 categories: 出 in(visible_ids) 或 category_id IS NULL (NULL 帖对所有用户可见 - spec 2026-05-15 Part 1)
+    #   - 空可见 categories (极端情况,如 anon 无任何 general/skill 板块): 仅出 NULL category 帖,避免泄漏隐藏板块内容
     if visible_category_ids:
         query = query.where(
             or_(
@@ -1050,6 +1056,8 @@ async def _fetch_forum_posts(
                 models.ForumPost.category_id.is_(None),
             )
         )
+    else:
+        query = query.where(models.ForumPost.category_id.is_(None))
 
     result = await db.execute(query)
     rows = result.all()
