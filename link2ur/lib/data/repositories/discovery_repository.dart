@@ -15,6 +15,7 @@ class DiscoveryRepository {
   final ApiService _apiService;
 
   /// 获取发现 Feed
+  /// [scope] 内容池: 'home' (默认,转化导向) | 'community' (社交导向)
   /// [seed] 随机种子，翻页时回传保证排序一致；首次加载不传
   /// [latitude]/[longitude] GPS 坐标，用于地理位置个性化推荐
   /// [city] GPS 反向编码得到的城市名，用于同城内容加权
@@ -22,6 +23,7 @@ class DiscoveryRepository {
     int page = 1,
     int limit = 20,
     int? seed,
+    String? scope,
     double? latitude,
     double? longitude,
     String? city,
@@ -32,6 +34,7 @@ class DiscoveryRepository {
         'page': page,
         'limit': limit,
         if (seed != null) 'seed': seed,
+        if (scope != null && scope.isNotEmpty) 'scope': scope,
         // 保留 3 位小数（~110m 精度），避免全精度坐标导致后端缓存永远 miss
         if (latitude != null) 'latitude': double.parse(latitude.toStringAsFixed(3)),
         if (longitude != null) 'longitude': double.parse(longitude.toStringAsFixed(3)),

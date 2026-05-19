@@ -592,12 +592,14 @@ class _BannerBadge extends StatelessWidget {
 /// 社区 tab(DiscoverView)使用的发现流 Sliver 入口。
 ///
 /// 复用首页 HomeBloc.state.discoveryItems(MainTabView 全局 provider 跨 tab
-/// 共享:main_tab_view.dart:312),行为与首页发现流完全一致 —— 共享分页/加载
-/// 状态/内容排序,首页滑过的 item 切到社区也是同样的位置。
+/// 社区 tab 发现流 sliver
 ///
-/// 设计取舍:这是 part-of home_view 的 public wrapper,只为 community 提供
-/// 一个最小的"对外接口",避免把 _SliverDiscoveryFeed 整段公开化。社区不
-/// 穿插 banner,因此 banners 不暴露成参数。
+/// 数据源:DiscoverBloc.state.communityFeedItems (scope=community,
+/// post/expert/review 社交导向),与首页发现流(HomeBloc, scope=home,转化导向)
+/// 完全独立。不穿插 banner。
+///
+/// 复用 _DiscoveryFeedCard 卡片路由 + _DiscoveryFeedSkeleton 骨架,只是把
+/// state 来源换成 DiscoverBloc。
 class CommunityDiscoveryFeedSliver extends StatelessWidget {
   const CommunityDiscoveryFeedSliver({
     super.key,
@@ -608,6 +610,81 @@ class CommunityDiscoveryFeedSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SliverDiscoveryFeed(horizontalPadding: horizontalPadding);
+    return BlocBuilder<DiscoverBloc, DiscoverState>(
+      buildWhen: (prev, curr) =>
+          prev.communityFeedItems != curr.communityFeedItems ||
+          prev.communityFeedStatus != curr.communityFeedStatus ||
+          prev.communityFeedHasMore != curr.communityFeedHasMore,
+      builder: (context, state) {
+        final isLoading =
+            state.communityFeedStatus == DiscoverFeedStatus.loading;
+        final items = state.communityFeedItems;
+
+        if (isLoading && items.isEmpty) {
+          return SliverToBoxAdapter(
+            child:
+                _DiscoveryFeedSkeleton(horizontalPadding: horizontalPadding),
+          );
+        }
+
+        if (items.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  context.l10n.emptyNoData,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SliverMainAxisGroup(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding == 0 ? 4 : horizontalPadding),
+              sliver: SliverMasonryGrid.count(
+                crossAxisCount: ResponsiveUtils.gridColumnCount(context),
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childCount: items.length,
+                itemBuilder: (context, index) {
+                  return RepaintBoundary(
+                    child: _DiscoveryFeedCard(item: items[index]),
+                  );
+                },
+              ),
+            ),
+            if (state.communityFeedHasMore)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : TextButton(
+                            onPressed: () => context
+                                .read<DiscoverBloc>()
+                                .add(const DiscoverLoadMoreCommunityFeed()),
+                            child: Text(context.l10n.commonLoadMore),
+                          ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }

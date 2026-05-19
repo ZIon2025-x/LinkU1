@@ -21,3 +21,11 @@ class DiscoverToggleFollowExpert extends DiscoverEvent {
   @override
   List<Object?> get props => [expertId];
 }
+
+class DiscoverLoadCommunityFeed extends DiscoverEvent {
+  const DiscoverLoadCommunityFeed();
+}
+
+class DiscoverLoadMoreCommunityFeed extends DiscoverEvent {
+  const DiscoverLoadMoreCommunityFeed();
+}

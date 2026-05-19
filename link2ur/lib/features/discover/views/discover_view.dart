@@ -24,14 +24,15 @@ import '../../../data/models/leaderboard.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/models/trending_search.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/discovery_repository.dart';
 import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/trending_search_repository.dart';
 import '../bloc/discover_bloc.dart';
-// 复用首页 masonry feed (CommunityDiscoveryFeedSliver 是 home_view 的 public
-// wrapper,内部走 HomeBloc.state.discoveryItems,数据跨 tab 共享)
+// 复用首页 masonry feed (CommunityDiscoveryFeedSliver 走 DiscoverBloc 的
+// communityFeedItems,scope=community,与首页发现流独立)
 import '../../home/views/home_view.dart';
 
 // ==================== Gradient palettes ====================
@@ -62,7 +63,10 @@ class DiscoverView extends StatelessWidget {
         taskExpertRepository: ctx.read<TaskExpertRepository>(),
         activityRepository: ctx.read<ActivityRepository>(),
         followRepository: ctx.read<FollowRepository>(),
-      )..add(const DiscoverLoadRequested()),
+        discoveryRepository: ctx.read<DiscoveryRepository>(),
+      )
+        ..add(const DiscoverLoadRequested())
+        ..add(const DiscoverLoadCommunityFeed()),
       child: const _DiscoverContent(),
     );
   }
@@ -141,6 +145,7 @@ class _DiscoverContent extends StatelessWidget {
               onRefresh: () async {
                 final bloc = context.read<DiscoverBloc>();
                 bloc.add(const DiscoverRefreshRequested());
+                bloc.add(const DiscoverLoadCommunityFeed());
                 await bloc.stream
                     .firstWhere((s) => s.status == DiscoverStatus.loaded || s.status == DiscoverStatus.error)
                     .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
@@ -1011,6 +1016,7 @@ class _SectionContainer extends StatelessWidget {
 // ==================== 社区 tab 新布局 widgets (对齐 community-page-mockup.html) ====================
 
 /// 4 功能宫格 (2x2): 榜单 / 活动 / 板块 / 技能
+/// 每个宫格内部再嵌 2 张迷你卡(对齐 community-page-mockup.html)
 class _CommunityFeatureGrid extends StatelessWidget {
   const _CommunityFeatureGrid({
     required this.leaderboards,
@@ -1024,9 +1030,31 @@ class _CommunityFeatureGrid extends StatelessWidget {
   final List<ForumCategory> boards;
   final List<ForumCategory> skillCategories;
 
+  static const List<List<Color>> _leaderboardMiniGradients = [
+    [Color(0xFFFFD84D), Color(0xFFFF9500)],
+    [Color(0xFF56CCF2), Color(0xFF2F80ED)],
+  ];
+  static const List<List<Color>> _activityMiniGradients = [
+    [Color(0xFFFF8033), Color(0xFFFFA600)],
+    [Color(0xFFFF5E62), Color(0xFFFF9966)],
+  ];
+  static const List<List<Color>> _boardMiniGradients = [
+    [Color(0xFF007AFF), Color(0xFF409CFF)],
+    [Color(0xFF7359F2), Color(0xFFA78BFA)],
+  ];
+  static const List<List<Color>> _skillMiniGradients = [
+    [Color(0xFF7359F2), Color(0xFFA78BFA)],
+    [Color(0xFFFF2D55), Color(0xFFFF6B8A)],
+  ];
+
+  static const List<String> _leaderboardEmojis = ['🏆', '💎'];
+  static const List<String> _activityEmojis = ['🎉', '🎟️'];
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final locale = Localizations.localeOf(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
       child: GridView.count(
@@ -1035,6 +1063,7 @@ class _CommunityFeatureGrid extends StatelessWidget {
         mainAxisSpacing: 8,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 0.92,
         children: [
           _FeatureTile(
             title: l10n.communityTileLeaderboards,
@@ -1045,13 +1074,23 @@ class _CommunityFeatureGrid extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            emoji: '🏆',
-            primaryText: leaderboards.isNotEmpty
-                ? leaderboards.first.name
-                : l10n.communityFallbackLeaderboards,
-            secondaryText: leaderboards.isNotEmpty
-                ? l10n.communityStatsLeaderboards(leaderboards.length)
-                : '',
+            fallbackEmoji: '🏆',
+            fallbackText: l10n.communityFallbackLeaderboards,
+            statColor: const Color(0xFFE09000),
+            items: List.generate(
+              leaderboards.length.clamp(0, 2),
+              (i) {
+                final lb = leaderboards[i];
+                return _MiniItemData(
+                  emoji: _leaderboardEmojis[i % _leaderboardEmojis.length],
+                  gradient: _leaderboardMiniGradients[
+                      i % _leaderboardMiniGradients.length],
+                  primaryText: lb.displayName(locale),
+                  secondaryText: l10n.communityItemSeats(lb.itemCount),
+                  onTap: () => context.push('/leaderboard/${lb.id}'),
+                );
+              },
+            ),
             onTap: () => context.push('/leaderboard'),
           ),
           _FeatureTile(
@@ -1063,13 +1102,25 @@ class _CommunityFeatureGrid extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            emoji: '🎉',
-            primaryText: activities.isNotEmpty
-                ? activities.first.title
-                : l10n.communityFallbackActivities,
-            secondaryText: activities.isNotEmpty
-                ? l10n.communityStatsActivitiesActive(activities.length)
-                : '',
+            fallbackEmoji: '🎉',
+            fallbackText: l10n.communityFallbackActivities,
+            statColor: const Color(0xFFFF2D55),
+            // 活动迷你卡:倒计时在上(红色),标题在下
+            items: List.generate(
+              activities.length.clamp(0, 2),
+              (i) {
+                final a = activities[i];
+                return _MiniItemData(
+                  emoji: _activityEmojis[i % _activityEmojis.length],
+                  gradient:
+                      _activityMiniGradients[i % _activityMiniGradients.length],
+                  primaryText: a.displayTitle(locale),
+                  secondaryText: _formatCountdown(context, a.deadline),
+                  secondaryFirst: true,
+                  onTap: () => context.push('/activities/${a.id}'),
+                );
+              },
+            ),
             onTap: () => context.push('/activities'),
           ),
           _FeatureTile(
@@ -1081,13 +1132,28 @@ class _CommunityFeatureGrid extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            emoji: '💬',
-            primaryText: boards.isNotEmpty
-                ? boards.first.name
-                : l10n.communityFallbackBoards,
-            secondaryText: boards.isNotEmpty
-                ? l10n.communityStatsBoards(boards.length)
-                : '',
+            fallbackEmoji: '💬',
+            fallbackText: l10n.communityFallbackBoards,
+            statColor: const Color(0xFF2F80ED),
+            items: List.generate(
+              boards.length.clamp(0, 2),
+              (i) {
+                final b = boards[i];
+                return _MiniItemData(
+                  emoji: b.icon ?? '📌',
+                  gradient: _boardMiniGradients[i % _boardMiniGradients.length],
+                  primaryText: b.displayName(locale),
+                  secondaryText: l10n.communityItemPosts(b.postCount),
+                  onTap: () {
+                    if (b.skillType != null && b.skillType!.isNotEmpty) {
+                      context.push('/forum/skill/${b.id}', extra: b);
+                    } else {
+                      context.push('/forum/category/${b.id}', extra: b);
+                    }
+                  },
+                );
+              },
+            ),
             onTap: () => context.push('/forum'),
           ),
           _FeatureTile(
@@ -1099,19 +1165,63 @@ class _CommunityFeatureGrid extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            emoji: '✨',
-            primaryText: skillCategories.isNotEmpty
-                ? skillCategories.first.name
-                : l10n.communityFallbackSkills,
-            secondaryText: skillCategories.isNotEmpty
-                ? l10n.communityStatsCategories(skillCategories.length)
-                : '',
+            fallbackEmoji: '✨',
+            fallbackText: l10n.communityFallbackSkills,
+            statColor: const Color(0xFF7359F2),
+            items: List.generate(
+              skillCategories.length.clamp(0, 2),
+              (i) {
+                final c = skillCategories[i];
+                return _MiniItemData(
+                  emoji: c.icon ?? '💡',
+                  gradient: _skillMiniGradients[i % _skillMiniGradients.length],
+                  primaryText: c.displayName(locale),
+                  secondaryText: l10n.communityItemServices(c.serviceCount),
+                  onTap: () => context.push('/forum/skill/${c.id}', extra: c),
+                );
+              },
+            ),
             onTap: () => context.push('/task-experts'),
           ),
         ],
       ),
     );
   }
+
+  /// 倒计时格式化:支持天 / 时分 / 分 / 已结束
+  static String _formatCountdown(BuildContext context, DateTime? deadline) {
+    final l10n = context.l10n;
+    if (deadline == null) return '';
+    final diff = deadline.difference(DateTime.now());
+    if (diff.isNegative) return l10n.communityCountdownEnded;
+    if (diff.inDays >= 1) return l10n.communityCountdownDays(diff.inDays);
+    if (diff.inHours >= 1) {
+      return l10n.communityCountdownHM(
+          diff.inHours, diff.inMinutes.remainder(60));
+    }
+    final mins = diff.inMinutes < 1 ? 1 : diff.inMinutes;
+    return l10n.communityCountdownMin(mins);
+  }
+}
+
+/// 单个迷你卡的数据
+class _MiniItemData {
+  const _MiniItemData({
+    required this.emoji,
+    required this.gradient,
+    required this.primaryText,
+    required this.secondaryText,
+    this.secondaryFirst = false,
+    this.onTap,
+  });
+
+  final String emoji;
+  final List<Color> gradient;
+  final String primaryText;
+  final String secondaryText;
+  // true → 副文案放在主文案之前(用于活动倒计时高亮)
+  final bool secondaryFirst;
+  final VoidCallback? onTap;
 }
 
 class _FeatureTile extends StatelessWidget {
@@ -1120,9 +1230,10 @@ class _FeatureTile extends StatelessWidget {
     required this.tag,
     required this.tagColor,
     required this.background,
-    required this.emoji,
-    required this.primaryText,
-    required this.secondaryText,
+    required this.fallbackEmoji,
+    required this.fallbackText,
+    required this.statColor,
+    required this.items,
     required this.onTap,
   });
 
@@ -1130,9 +1241,10 @@ class _FeatureTile extends StatelessWidget {
   final String tag;
   final Color tagColor;
   final Gradient background;
-  final String emoji;
-  final String primaryText;
-  final String secondaryText;
+  final String fallbackEmoji;
+  final String fallbackText;
+  final Color statColor;
+  final List<_MiniItemData> items;
   final VoidCallback onTap;
 
   @override
@@ -1140,7 +1252,7 @@ class _FeatureTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           gradient: background,
           borderRadius: BorderRadius.circular(16),
@@ -1148,20 +1260,25 @@ class _FeatureTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 标题 + tag chip
             Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1C1C1E),
+                Flexible(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1C1C1E),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
+                    horizontal: 5,
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
@@ -1179,32 +1296,144 @@ class _FeatureTile extends StatelessWidget {
                 ),
               ],
             ),
-            const Spacer(),
-            Center(child: Text(emoji, style: const TextStyle(fontSize: 42))),
-            const Spacer(),
-            Text(
-              primaryText,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1C1C1E),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 8),
+            // 内部 2 列迷你卡(或 fallback)
+            Expanded(
+              child: items.isEmpty
+                  ? _buildFallback()
+                  : _buildMiniItems(),
             ),
-            if (secondaryText.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                secondaryText,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: tagColor,
-                  fontWeight: FontWeight.w600,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallback() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(fallbackEmoji, style: const TextStyle(fontSize: 36)),
+          const SizedBox(height: 4),
+          Text(
+            fallbackText,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniItems() {
+    final children = <Widget>[];
+    for (var i = 0; i < 2; i++) {
+      if (i > 0) children.add(const SizedBox(width: 6));
+      if (i < items.length) {
+        children.add(
+          Expanded(child: _MiniItem(data: items[i], statColor: statColor)),
+        );
+      } else {
+        children.add(const Expanded(child: SizedBox.shrink()));
+      }
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+  }
+}
+
+class _MiniItem extends StatelessWidget {
+  const _MiniItem({required this.data, required this.statColor});
+  final _MiniItemData data;
+  final Color statColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondary = data.secondaryText.isEmpty
+        ? null
+        : Text(
+            data.secondaryText,
+            style: TextStyle(
+              fontSize: 11,
+              color: statColor,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+    final primary = Text(
+      data.primaryText,
+      style: const TextStyle(
+        fontSize: 11,
+        color: Color(0xFF1C1C1E),
+        fontWeight: FontWeight.w700,
+        height: 1.2,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
+    return GestureDetector(
+      onTap: data.onTap,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 顶部图(渐变 + emoji)
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: data.gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                alignment: Alignment.center,
+                child: Text(
+                  data.emoji,
+                  style: const TextStyle(fontSize: 26),
+                ),
               ),
-            ],
+            ),
+            // 底部文字
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: data.secondaryFirst
+                    ? [
+                        if (secondary != null) secondary,
+                        if (secondary != null) const SizedBox(height: 2),
+                        primary,
+                      ]
+                    : [
+                        primary,
+                        if (secondary != null) const SizedBox(height: 2),
+                        if (secondary != null) secondary,
+                      ],
+              ),
+            ),
           ],
         ),
       ),

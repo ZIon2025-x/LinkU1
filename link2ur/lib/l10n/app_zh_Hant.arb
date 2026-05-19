@@ -6493,6 +6493,31 @@
   "@communityStatsCategories": {
     "placeholders": { "count": { "type": "int" } }
   },
+  "communityItemSeats": "{count} 人上榜",
+  "@communityItemSeats": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityItemPosts": "{count} 帖",
+  "@communityItemPosts": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityItemServices": "{count} 個服務",
+  "@communityItemServices": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityCountdownDays": "剩 {count} 天",
+  "@communityCountdownDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityCountdownHM": "剩 {h} 時 {m} 分",
+  "@communityCountdownHM": {
+    "placeholders": { "h": { "type": "int" }, "m": { "type": "int" } }
+  },
+  "communityCountdownMin": "剩 {count} 分",
+  "@communityCountdownMin": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityCountdownEnded": "已結束",
   "communityHotSearches": "熱搜榜",
   "communityDiscoverMore": "發現更多",
   "discoveryAnonymousUser": "匿名用戶",

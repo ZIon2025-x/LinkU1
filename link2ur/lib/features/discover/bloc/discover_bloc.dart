@@ -2,11 +2,13 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:link2ur/core/utils/logger.dart';
 import 'package:link2ur/data/models/activity.dart';
+import 'package:link2ur/data/models/discovery_feed.dart';
 import 'package:link2ur/data/models/forum.dart';
 import 'package:link2ur/data/models/leaderboard.dart';
 import 'package:link2ur/data/models/task_expert.dart';
 import 'package:link2ur/data/models/trending_search.dart';
 import 'package:link2ur/data/repositories/activity_repository.dart';
+import 'package:link2ur/data/repositories/discovery_repository.dart';
 import 'package:link2ur/data/repositories/follow_repository.dart';
 import 'package:link2ur/data/repositories/forum_repository.dart';
 import 'package:link2ur/data/repositories/leaderboard_repository.dart';
@@ -25,16 +27,20 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
     required TaskExpertRepository taskExpertRepository,
     required ActivityRepository activityRepository,
     required FollowRepository followRepository,
+    DiscoveryRepository? discoveryRepository,
   })  : _trendingRepo = trendingSearchRepository,
         _forumRepo = forumRepository,
         _leaderboardRepo = leaderboardRepository,
         _expertRepo = taskExpertRepository,
         _activityRepo = activityRepository,
         _followRepo = followRepository,
+        _discoveryRepo = discoveryRepository,
         super(const DiscoverState()) {
     on<DiscoverLoadRequested>(_onLoad);
     on<DiscoverRefreshRequested>(_onRefresh);
     on<DiscoverToggleFollowExpert>(_onToggleFollow);
+    on<DiscoverLoadCommunityFeed>(_onLoadCommunityFeed);
+    on<DiscoverLoadMoreCommunityFeed>(_onLoadMoreCommunityFeed);
   }
 
   final TrendingSearchRepository _trendingRepo;
@@ -43,6 +49,7 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
   final TaskExpertRepository _expertRepo;
   final ActivityRepository _activityRepo;
   final FollowRepository _followRepo;
+  final DiscoveryRepository? _discoveryRepo;
 
   Future<void> _onLoad(DiscoverLoadRequested event, Emitter<DiscoverState> emit) async {
     if (state.status == DiscoverStatus.loading) return;
@@ -240,6 +247,78 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
       }
       emit(state.copyWith(followedExpertIds: revertIds));
       AppLogger.error('Follow toggle failed', e);
+    }
+  }
+
+  // ==================== Community Discovery Feed ====================
+
+  Future<void> _onLoadCommunityFeed(
+    DiscoverLoadCommunityFeed event,
+    Emitter<DiscoverState> emit,
+  ) async {
+    if (_discoveryRepo == null) return;
+    if (state.communityFeedStatus == DiscoverFeedStatus.loading) return;
+
+    emit(state.copyWith(communityFeedStatus: DiscoverFeedStatus.loading));
+    try {
+      final loc = LocationCityService.instance;
+      final response = await _discoveryRepo.getFeed(
+        scope: 'community',
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city,
+      );
+      emit(state.copyWith(
+        communityFeedStatus: DiscoverFeedStatus.loaded,
+        communityFeedItems: response.items,
+        communityFeedHasMore: response.hasMore,
+        communityFeedPage: 1,
+        communityFeedSeed: response.seed,
+      ));
+    } catch (e) {
+      AppLogger.error('Community feed load failed', e);
+      emit(state.copyWith(
+        communityFeedStatus: DiscoverFeedStatus.error,
+      ));
+    }
+  }
+
+  Future<void> _onLoadMoreCommunityFeed(
+    DiscoverLoadMoreCommunityFeed event,
+    Emitter<DiscoverState> emit,
+  ) async {
+    if (_discoveryRepo == null) return;
+    if (state.communityFeedStatus == DiscoverFeedStatus.loading) return;
+    if (!state.communityFeedHasMore) return;
+
+    emit(state.copyWith(communityFeedStatus: DiscoverFeedStatus.loading));
+    try {
+      final nextPage = state.communityFeedPage + 1;
+      final loc = LocationCityService.instance;
+      final response = await _discoveryRepo.getFeed(
+        scope: 'community',
+        page: nextPage,
+        seed: state.communityFeedSeed,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city,
+      );
+      // 去重防跨页重复
+      final existingIds = state.communityFeedItems.map((e) => e.id).toSet();
+      final newItems = response.items
+          .where((item) => !existingIds.contains(item.id))
+          .toList();
+      emit(state.copyWith(
+        communityFeedStatus: DiscoverFeedStatus.loaded,
+        communityFeedItems: [...state.communityFeedItems, ...newItems],
+        communityFeedHasMore: response.hasMore,
+        communityFeedPage: nextPage,
+      ));
+    } catch (e) {
+      AppLogger.error('Community feed load more failed', e);
+      emit(state.copyWith(
+        communityFeedStatus: DiscoverFeedStatus.error,
+      ));
     }
   }
 

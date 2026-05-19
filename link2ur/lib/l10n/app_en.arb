@@ -6707,6 +6707,31 @@
   "@communityStatsCategories": {
     "placeholders": { "count": { "type": "int" } }
   },
+  "communityItemSeats": "{count} on board",
+  "@communityItemSeats": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityItemPosts": "{count} posts",
+  "@communityItemPosts": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityItemServices": "{count} services",
+  "@communityItemServices": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityCountdownDays": "{count}d left",
+  "@communityCountdownDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityCountdownHM": "{h}h {m}m left",
+  "@communityCountdownHM": {
+    "placeholders": { "h": { "type": "int" }, "m": { "type": "int" } }
+  },
+  "communityCountdownMin": "{count}m left",
+  "@communityCountdownMin": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communityCountdownEnded": "Ended",
   "communityHotSearches": "Trending",
   "communityDiscoverMore": "Discover more",
   "discoveryAnonymousUser": "Anonymous",

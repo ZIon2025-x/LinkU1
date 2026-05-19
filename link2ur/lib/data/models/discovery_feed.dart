@@ -257,6 +257,8 @@ class TargetItemBrief extends Equatable {
     this.name,
     this.subtitle,
     this.thumbnail,
+    this.serviceType,
+    this.rank,
   });
 
   final String itemType;
@@ -264,6 +266,12 @@ class TargetItemBrief extends Equatable {
   final String? name;
   final String? subtitle;
   final String? thumbnail;
+  // 仅 itemType=='service' 时有值: 'expert' (达人团队服务) | 'personal' (个人技能)
+  final String? serviceType;
+  // 仅 itemType=='competitor' 时有值: 该竞品在所属榜单内的名次(1-based)
+  final int? rank;
+
+  bool get isPersonalSkill => serviceType == 'personal';
 
   factory TargetItemBrief.fromJson(Map<String, dynamic> json) {
     return TargetItemBrief(
@@ -272,11 +280,13 @@ class TargetItemBrief extends Equatable {
       name: json['name'] as String?,
       subtitle: json['subtitle'] as String?,
       thumbnail: json['thumbnail'] as String?,
+      serviceType: json['service_type'] as String?,
+      rank: json['rank'] as int?,
     );
   }
 
   @override
-  List<Object?> get props => [itemType, itemId];
+  List<Object?> get props => [itemType, itemId, serviceType, rank];
 }
 
 /// 达人服务评价来自活动时的活动简要信息

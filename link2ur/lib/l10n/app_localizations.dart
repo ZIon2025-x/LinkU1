@@ -26892,6 +26892,48 @@ abstract class AppLocalizations {
   /// **'{count} categories'**
   String communityStatsCategories(int count);
 
+  /// No description provided for @communityItemSeats.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} on board'**
+  String communityItemSeats(int count);
+
+  /// No description provided for @communityItemPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} posts'**
+  String communityItemPosts(int count);
+
+  /// No description provided for @communityItemServices.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} services'**
+  String communityItemServices(int count);
+
+  /// No description provided for @communityCountdownDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d left'**
+  String communityCountdownDays(int count);
+
+  /// No description provided for @communityCountdownHM.
+  ///
+  /// In en, this message translates to:
+  /// **'{h}h {m}m left'**
+  String communityCountdownHM(int h, int m);
+
+  /// No description provided for @communityCountdownMin.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}m left'**
+  String communityCountdownMin(int count);
+
+  /// No description provided for @communityCountdownEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get communityCountdownEnded;
+
   /// No description provided for @communityHotSearches.
   ///
   /// In en, this message translates to:

@@ -1,9 +1,11 @@
 """
 Discovery Feed 路由
-聚合多种内容类型（商品、达人推荐、达人服务、任务、活动）
-为首页"发现更多"瀑布流提供统一数据源
+聚合多种内容类型（商品、达人推荐、达人服务、任务、活动、帖子、评价）
+为首页/社区两个 tab 的"发现更多"瀑布流提供统一数据源。
 
-注：帖子 / 评价 / 排行榜 已在社区页展示，从发现流中移除以避免重复曝光。
+scope 参数控制内容池:
+  - home (默认): product / expert / service / task / activity — 转化导向
+  - community: forum_post / expert / competitor_review / service_review — 社交导向
 """
 
 import random
@@ -11,7 +13,7 @@ import logging
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy import select, func, or_, and_, desc
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,12 +37,19 @@ router = APIRouter(prefix="/api/discovery", tags=["发现"])
 
 # ==================== Feed 聚合接口 ====================
 
+_VALID_SCOPES = {"home", "community"}
+
+
 @router.get("/feed")
 @cache_response(ttl=120, key_prefix="discovery")
 async def get_discovery_feed(
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(20, ge=1, le=50, description="每页数量"),
     seed: Optional[int] = Query(None, description="随机种子，保证分页结果一致；首次请求不传则自动生成"),
+    scope: str = Query(
+        "home",
+        description="内容池 scope: home (首页, 转化导向) | community (社区, 社交导向)",
+    ),
     latitude: Optional[float] = Query(None, ge=-90, le=90, description="用户当前纬度（GPS）"),
     longitude: Optional[float] = Query(None, ge=-180, le=180, description="用户当前经度（GPS）"),
     city: Optional[str] = Query(None, max_length=100, description="用户当前城市名（GPS反向编码），用于同城内容加权"),
@@ -53,13 +62,17 @@ async def get_discovery_feed(
     加权随机策略：低频类型（活动、达人推荐）权重更高，确保曝光
     同一类型不连续出现超过 2 条
 
-    帖子 / 评价 / 排行榜 已在社区页展示，不进入发现流
+    scope=home:      product / expert / service / task / activity
+    scope=community: forum_post / expert / competitor_review / service_review
 
     seed: 客户端首次加载不传，后端自动生成并返回；翻页时传回相同 seed 保证排序一致
     """
+    if scope not in _VALID_SCOPES:
+        raise HTTPException(status_code=422, detail=f"invalid scope: {scope}")
+
     # 每种类型获取的数量（多取一些用于混排）
     fetch_limit = limit * 2
-    
+
     # 计算当前用户可见的板块 ID（普通板块 + 技能板块 + 学校板块）
     # 与论坛列表的权限逻辑一致；达人板块 (type='expert') 走专属入口，不进入发现 Feed
     general_result = await db.execute(
@@ -69,19 +82,20 @@ async def get_discovery_feed(
         )
     )
     visible_category_ids = [row[0] for row in general_result.all()]
-    
+
     # 已登录用户额外获取学校板块
     if current_user:
         school_ids = await visible_forums(current_user, db)
         visible_category_ids.extend(school_ids)
-    
+
     all_items = []
 
     # 推荐引擎独立 session（asyncio.wait_for 超时取消时 greenlet 可能仍在用 connection，隔离避免污染主 session）
+    # 仅 home scope 需要 task 推荐分数,community scope 不查 task,跳过节省一次 0.5s 超时窗
     recommendation_scores = None
     user_lat = latitude
     user_lng = longitude
-    if current_user:
+    if current_user and scope == "home":
         user_location = None
         if user_lat is None and getattr(current_user, "residence_city", None):
             user_location = current_user.residence_city
@@ -106,15 +120,23 @@ async def get_discovery_feed(
     user_city = personalization["user_city"]
     user_interest_types = personalization["user_interest_types"]
 
-    # 每个 fetch 用 SAVEPOINT 隔离，单个类型失败不影响其他类型
-    # 帖子 / 评价 / 排行榜 已在社区页展示，从发现流移除
-    fetch_tasks = [
-        ("flea market items", lambda: _fetch_flea_market_items(db, fetch_limit, current_user=current_user)),
-        ("experts", lambda: _fetch_experts(db, fetch_limit)),
-        ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
-        ("tasks", lambda: _fetch_tasks(db, fetch_limit, current_user, recommendation_scores)),
-        ("activities", lambda: _fetch_activities(db, fetch_limit, current_user)),
-    ]
+    # 按 scope 选择 fetcher 列表
+    # 每个 fetch 用 SAVEPOINT 隔离,单个类型失败不影响其他类型
+    if scope == "home":
+        fetch_tasks = [
+            ("flea market items", lambda: _fetch_flea_market_items(db, fetch_limit, current_user=current_user)),
+            ("experts", lambda: _fetch_experts(db, fetch_limit)),
+            ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
+            ("tasks", lambda: _fetch_tasks(db, fetch_limit, current_user, recommendation_scores)),
+            ("activities", lambda: _fetch_activities(db, fetch_limit, current_user)),
+        ]
+    else:  # community
+        fetch_tasks = [
+            ("forum posts", lambda: _fetch_forum_posts(db, fetch_limit, visible_category_ids)),
+            ("experts", lambda: _fetch_experts(db, fetch_limit)),
+            ("competitor reviews", lambda: _fetch_competitor_reviews(db, fetch_limit, current_user=current_user)),
+            ("service reviews", lambda: _fetch_service_reviews(db, fetch_limit, current_user=current_user)),
+        ]
 
     for name, fetch_fn in fetch_tasks:
         try:
@@ -123,13 +145,14 @@ async def get_discovery_feed(
                 all_items.extend(result_items)
         except Exception as e:
             logger.warning(f"Failed to fetch {name} for feed: {e}")
-    
+
     # 首次请求自动生成 seed，翻页时复用保证排序一致
     if seed is None:
         seed = random.randint(0, 2**31 - 1)
 
     # 加权随机混排（确定性 seed）
     feed_items = _weighted_shuffle(all_items, limit, page, seed=seed,
+                                    scope=scope,
                                     user_preferred_categories=user_preferred_categories,
                                     user_city=user_city,
                                     user_interest_types=user_interest_types)
@@ -273,6 +296,7 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int, current_user=N
             models.User.name.label("reviewer_name"),
             models.User.avatar.label("reviewer_avatar"),
             models.LeaderboardItem.id.label("leaderboard_item_id"),
+            models.LeaderboardItem.leaderboard_id.label("leaderboard_id"),
             models.LeaderboardItem.name.label("item_name"),
             models.LeaderboardItem.images.label("item_images"),
             models.LeaderboardItem.upvotes.label("item_upvotes"),
@@ -310,6 +334,28 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int, current_user=N
         for vrow in user_vote_result.all():
             user_vote_map[vrow[0]] = vrow[1]
 
+    # 批量计算每个 LeaderboardItem 在所属榜单的名次 (1-based)
+    # 排序口径: (upvotes - downvotes) DESC, id ASC (稳定 tiebreak)
+    # 只对当前结果集涉及到的 leaderboard_ids 跑窗口函数,避免全表
+    rank_map = {}  # (leaderboard_id, item_id) -> rank
+    if rows_list:
+        leaderboard_ids = list({row.leaderboard_id for row in rows_list})
+        score_expr = (models.LeaderboardItem.upvotes - models.LeaderboardItem.downvotes)
+        rank_query = select(
+            models.LeaderboardItem.id,
+            models.LeaderboardItem.leaderboard_id,
+            func.row_number().over(
+                partition_by=models.LeaderboardItem.leaderboard_id,
+                order_by=[desc(score_expr), models.LeaderboardItem.id],
+            ).label("rank"),
+        ).where(
+            models.LeaderboardItem.leaderboard_id.in_(leaderboard_ids),
+            models.LeaderboardItem.status == "approved",
+        )
+        rank_result = await db.execute(rank_query)
+        for rrow in rank_result.all():
+            rank_map[(rrow.leaderboard_id, rrow.id)] = int(rrow.rank)
+
     items = []
     for row in rows_list:
         reviewer_name = "匿名用户" if row.is_anonymous else (row.reviewer_name or "匿名用户")
@@ -343,6 +389,7 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int, current_user=N
                 "name": row.item_name,
                 "subtitle": row.leaderboard_name,
                 "thumbnail": item_thumb,
+                "rank": rank_map.get((row.leaderboard_id, row.vote_item_id)),
             },
             "activity_info": None,
             "is_experienced": None,
@@ -375,6 +422,7 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int, current_user=None
             models.Task.parent_activity_id,
             models.Task.task_source,
             models.TaskExpertService.service_name,
+            models.TaskExpertService.service_type,
             models.TaskExpertService.images.label("service_images"),
             models.Activity.title.label("activity_title"),
             getattr(models.Activity, "title_zh", None).label("activity_title_zh"),
@@ -447,6 +495,9 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int, current_user=None
                 "name": row.service_name,
                 "subtitle": None,
                 "thumbnail": service_thumb,
+                # service_type: 'expert' (达人团队服务) | 'personal' (个人技能服务)
+                # 前端按此字段切配色:expert → 粉/橙,personal → 绿
+                "service_type": row.service_type,
             },
             "activity_info": activity_info,
             "is_experienced": None,
@@ -955,6 +1006,122 @@ async def _fetch_activities(db: AsyncSession, limit: int, current_user=None) -> 
     return items
 
 
+async def _fetch_forum_posts(
+    db: AsyncSession, limit: int, visible_category_ids: list
+) -> list:
+    """获取论坛帖子 for community feed.
+
+    - 仅取 is_deleted=False AND is_visible=True
+    - 仅取用户可见板块 (visible_category_ids,普通 + 技能 + 学校板块)
+    - 作者可能是 User 或 Expert (达人团队发帖),分别 batch fetch
+    - 按 created_at 倒序取候选,排序权重在 _weighted_shuffle 里
+    """
+    from app.models_expert import Expert
+
+    query = (
+        select(
+            models.ForumPost.id,
+            models.ForumPost.title,
+            models.ForumPost.title_zh,
+            models.ForumPost.title_en,
+            models.ForumPost.content,
+            models.ForumPost.content_zh,
+            models.ForumPost.content_en,
+            models.ForumPost.images,
+            models.ForumPost.author_id,
+            models.ForumPost.expert_id,
+            models.ForumPost.like_count,
+            models.ForumPost.reply_count,
+            models.ForumPost.view_count,
+            models.ForumPost.created_at,
+        )
+        .where(
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True,
+        )
+        .order_by(desc(models.ForumPost.created_at))
+        .limit(limit)
+    )
+    # 仅当存在可见板块时按 category_id 过滤,空 list 不加条件 (兜底:让所有可见帖子都能出)
+    if visible_category_ids:
+        query = query.where(
+            or_(
+                models.ForumPost.category_id.in_(visible_category_ids),
+                models.ForumPost.category_id.is_(None),
+            )
+        )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    # Batch-fetch user authors + expert team authors
+    user_ids = {r.author_id for r in rows if r.author_id}
+    expert_ids = {r.expert_id for r in rows if r.expert_id}
+    user_map = {}
+    expert_map = {}
+    if user_ids:
+        user_result = await db.execute(
+            select(models.User.id, models.User.name, models.User.avatar)
+            .where(models.User.id.in_(list(user_ids)))
+        )
+        user_map = {r.id: r for r in user_result.all()}
+    if expert_ids:
+        expert_result = await db.execute(
+            select(Expert.id, Expert.name, Expert.avatar)
+            .where(Expert.id.in_(list(expert_ids)))
+        )
+        expert_map = {r.id: r for r in expert_result.all()}
+
+    items = []
+    for row in rows:
+        first_img = _first_image(row.images)
+        # 达人团队发帖优先,否则 User 作者
+        if row.expert_id and row.expert_id in expert_map:
+            e = expert_map[row.expert_id]
+            display_name = e.name
+            display_avatar = e.avatar
+            user_id_str = None
+        else:
+            u = user_map.get(row.author_id)
+            display_name = u.name if u else None
+            display_avatar = u.avatar if u else None
+            user_id_str = str(row.author_id) if row.author_id else None
+
+        items.append({
+            "feed_type": "forum_post",
+            "id": f"post_{row.id}",
+            "title": row.title,
+            "title_zh": row.title_zh,
+            "title_en": row.title_en,
+            "description": (row.content or "")[:100],
+            "description_zh": (row.content_zh or "")[:100] if row.content_zh else None,
+            "description_en": (row.content_en or "")[:100] if row.content_en else None,
+            "images": [first_img] if first_img else None,
+            "user_id": user_id_str,
+            "user_name": display_name,
+            "user_avatar": display_avatar,
+            "price": None,
+            "original_price": None,
+            "discount_percentage": None,
+            "currency": None,
+            "rating": None,
+            "like_count": row.like_count or 0,
+            "comment_count": row.reply_count or 0,
+            "view_count": row.view_count or 0,
+            "upvote_count": None,
+            "downvote_count": None,
+            "linked_item": None,
+            "target_item": None,
+            "activity_info": None,
+            "is_experienced": None,
+            "is_favorited": None,
+            "user_vote_type": None,
+            "extra_data": None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        })
+    return items
+
+
 # ==================== 辅助函数 ====================
 
 async def _batch_resolve_linked_items(db: AsyncSession, pairs: list) -> dict:
@@ -1067,6 +1234,7 @@ async def _batch_resolve_linked_items(db: AsyncSession, pairs: list) -> dict:
 
 
 def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
+                      scope: str = "home",
                       user_preferred_categories: list = None,
                       user_city: str = None,
                       user_interest_types: set = None) -> list:
@@ -1076,6 +1244,9 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
     - 低频类型（activity, expert）权重更高
     - 同一类型不连续出现超过 2 条
     - 使用 seed 保证跨页分页结果一致（同一 seed 排列相同）
+    - scope 决定 type_weights:
+        home: product/expert/service/task/activity
+        community: forum_post/expert/competitor_review/service_review
     """
     if not items:
         return []
@@ -1083,13 +1254,23 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
     # 使用固定 seed 的 Random 实例，确保分页结果稳定
     rng = random.Random(seed)
 
-    type_weights = {
-        "product": 1.0,
-        "expert": 2.5,      # 达人推荐
-        "service": 1.5,
-        "task": 1.5,       # Tasks: medium frequency
-        "activity": 2.0,    # Activities: low frequency, higher weight
-    }
+    if scope == "community":
+        # 社交流: post 主轴, review 低频高权重, expert 中等权重穿插
+        type_weights = {
+            "forum_post": 2.0,
+            "expert": 1.5,
+            "competitor_review": 2.5,
+            "service_review": 2.5,
+        }
+    else:
+        # 首页转化流 (保持原 weights)
+        type_weights = {
+            "product": 1.0,
+            "expert": 2.5,      # 达人推荐
+            "service": 1.5,
+            "task": 1.5,       # Tasks: medium frequency
+            "activity": 2.0,    # Activities: low frequency, higher weight
+        }
 
     by_type = {}
     for item in items:

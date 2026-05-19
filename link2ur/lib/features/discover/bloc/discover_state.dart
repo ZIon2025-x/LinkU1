@@ -2,6 +2,8 @@ part of 'discover_bloc.dart';
 
 enum DiscoverStatus { initial, loading, loaded, error }
 
+enum DiscoverFeedStatus { initial, loading, loaded, error }
+
 class DiscoverState extends Equatable {
   const DiscoverState({
     this.status = DiscoverStatus.initial,
@@ -14,6 +16,11 @@ class DiscoverState extends Equatable {
     this.followedExpertIds = const {},
     this.errorMessage,
     this.userCity,
+    this.communityFeedStatus = DiscoverFeedStatus.initial,
+    this.communityFeedItems = const [],
+    this.communityFeedPage = 1,
+    this.communityFeedSeed,
+    this.communityFeedHasMore = true,
   });
 
   final DiscoverStatus status;
@@ -27,6 +34,13 @@ class DiscoverState extends Equatable {
   final String? errorMessage;
   final String? userCity;
 
+  // 社区 tab 独立的 discovery feed (scope=community)
+  final DiscoverFeedStatus communityFeedStatus;
+  final List<DiscoveryFeedItem> communityFeedItems;
+  final int communityFeedPage;
+  final int? communityFeedSeed;
+  final bool communityFeedHasMore;
+
   DiscoverState copyWith({
     DiscoverStatus? status,
     List<TrendingSearchItem>? trendingSearches,
@@ -38,6 +52,11 @@ class DiscoverState extends Equatable {
     Set<String>? followedExpertIds,
     String? errorMessage,
     String? userCity,
+    DiscoverFeedStatus? communityFeedStatus,
+    List<DiscoveryFeedItem>? communityFeedItems,
+    int? communityFeedPage,
+    int? communityFeedSeed,
+    bool? communityFeedHasMore,
   }) {
     return DiscoverState(
       status: status ?? this.status,
@@ -50,6 +69,11 @@ class DiscoverState extends Equatable {
       followedExpertIds: followedExpertIds ?? this.followedExpertIds,
       errorMessage: errorMessage,
       userCity: userCity ?? this.userCity,
+      communityFeedStatus: communityFeedStatus ?? this.communityFeedStatus,
+      communityFeedItems: communityFeedItems ?? this.communityFeedItems,
+      communityFeedPage: communityFeedPage ?? this.communityFeedPage,
+      communityFeedSeed: communityFeedSeed ?? this.communityFeedSeed,
+      communityFeedHasMore: communityFeedHasMore ?? this.communityFeedHasMore,
     );
   }
 
@@ -58,5 +82,7 @@ class DiscoverState extends Equatable {
     status, trendingSearches, boards, leaderboards,
     skillCategories, experts, activities, followedExpertIds,
     errorMessage, userCity,
+    communityFeedStatus, communityFeedItems, communityFeedPage,
+    communityFeedSeed, communityFeedHasMore,
   ];
 }

@@ -35,6 +35,7 @@ import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/decorative_background.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../discover/bloc/discover_bloc.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';

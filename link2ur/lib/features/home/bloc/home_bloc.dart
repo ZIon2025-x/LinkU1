@@ -399,6 +399,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       // 首次加载不传 seed，后端自动生成；传 GPS 坐标+城市名做地理个性化
       final loc = LocationCityService.instance;
       final response = await _discoveryRepository.getFeed(
+        scope: 'home',
         latitude: loc.latitude,
         longitude: loc.longitude,
         city: loc.city,
@@ -429,6 +430,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final nextPage = state.discoveryPage + 1;
       final loc = LocationCityService.instance;
       final response = await _discoveryRepository.getFeed(
+        scope: 'home',
         page: nextPage,
         seed: state.discoverySeed,
         latitude: loc.latitude,

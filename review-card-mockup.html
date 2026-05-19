@@ -165,6 +165,78 @@
 
   /* 个人技能配色调 */
   .card.new.skill .target-name { color: #059669; }
+
+  /* ===================================================================
+     C. 竞品评价 — 海报式(同 service review) + 排名右上 + 立场 icon 前缀
+     =================================================================== */
+  .card.new.compet .top-badge { background: rgba(0,0,0,0.55); }
+  .card.new.compet .rank-tr {
+    position: absolute; top: 8px; right: 8px;
+    background: linear-gradient(135deg, #FFD84D, #FF9500);
+    color: #fff;
+    padding: 4px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 800;
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; gap: 3px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  .card.new.compet .rank-tr .rank-num { font-size: 13px; font-style: italic; }
+  .card.new.compet .rank-tr.tier2 { background: linear-gradient(135deg,#C0C0C0,#9aa0aa); }
+  .card.new.compet .rank-tr.tier3 { background: linear-gradient(135deg,#CD7F32,#8B5A2B); }
+  .card.new.compet .rank-tr.tier-other {
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+  }
+
+  .card.new.compet .stance-row {
+    display: flex; align-items: flex-start; gap: 6px;
+    margin-bottom: 8px;
+  }
+  .card.new.compet .stance-icon {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .card.new.compet .stance-icon.up   { background: #22C55E; color: #fff; }
+  .card.new.compet .stance-icon.down { background: #EF4444; color: #fff; }
+  .card.new.compet .stance-text {
+    font-size: 13px; line-height: 1.4;
+    font-weight: 500; color: #fff;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+  .card.new.compet .target-name { color: #DB2777; }
+
+  /* —— 当前竞品评价(参考)—— */
+  .card.current.compet .badge { background: #FCE7F3; color: #DB2777; }
+  .card.current.compet .vote-row { display: flex; gap: 6px; margin-top: 8px; }
+  .card.current.compet .vote {
+    flex: 1; padding: 4px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 3px;
+  }
+  .card.current.compet .vote.up   { background: #DCFCE7; color: #16A34A; }
+  .card.current.compet .vote.down { background: #FEE2E2; color: #DC2626; }
+  .card.current.compet .target-icon-row {
+    display: flex; align-items: center; gap: 6px;
+    background: linear-gradient(90deg, #EFF6FF, transparent);
+    border-left: 3px solid #007AFF;
+    padding: 6px 8px; border-radius: 0 6px 6px 0;
+    margin-bottom: 8px;
+  }
+  .card.current.compet .target-icon-row .thumb {
+    width: 24px; height: 24px; border-radius: 4px;
+    background: linear-gradient(135deg, #FF8033, #FFA600);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .card.current.compet .target-icon-row .target-text {
+    font-size: 11px; font-weight: 600; color: #111;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 </style>
 </head>
 <body>
@@ -327,18 +399,146 @@
   </div>
 </div>
 
+<h1 style="margin-top:48px;">竞品评价卡 — 海报式(去掉 UP/DOWN,改用立场 icon + 排名角标)</h1>
+<p class="intro">
+  原方案有 UP/DOWN 两个对称按钮,占垂直空间且和图片背景视觉冲突。新方案:
+  <br>· <b>评价人立场</b>: 评论前一个圆形 icon —— 👍 绿色表示该用户给这个竞品 upvote, 👎 红色表示 downvote (取自现有 <code>vote_type</code> 字段,不变)
+  <br>· <b>排名角标</b>: 右上角显示该竞品在所属榜单的排名(#1 金 / #2 银 / #3 铜 / 其他黑底白字)。<b>需要后端补一个 rank 字段</b> —— 当前 <code>_fetch_competitor_reviews</code> 只暴露 upvotes/downvotes 总数,没算名次。
+  <br>· 点卡片跳转目标:可以继续是榜单条目详情页(或 leaderboard 页面定位到该 item)。
+</p>
+
+<div class="row">
+
+  <!-- 列 A: 当前样式(参考) -->
+  <div class="col">
+    <h3>当前竞品评价(参考)</h3>
+    <div class="wrap">
+      <div class="card current compet">
+        <span class="badge">💬 竞品评价</span>
+        <div class="target-icon-row">
+          <span class="thumb">🥡</span>
+          <span class="target-text">Pho Mile End · Camden 越南菜榜</span>
+        </div>
+        <div class="quote"><div class="quote-text">汤底很正,牛肉量足,比另一家性价比高,墙裂推荐!</div></div>
+        <div class="user-row">
+          <span class="av">陈</span>
+          <span class="name">陈同学</span>
+        </div>
+        <div class="vote-row">
+          <span class="vote up">👍 UP 42</span>
+          <span class="vote down">👎 DOWN 3</span>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      白底 + 引用框 + 两个并排投票按钮<br>
+      <span class="cons">⚠️ 投票按钮纯展示(点不进票)</span><br>
+      <span class="cons">⚠️ 信息密度低,卡片偏高</span>
+    </div>
+  </div>
+
+  <!-- 列 B: 新样式 — 有图 + 支持(upvote) -->
+  <div class="col">
+    <h3>新样式 — 支持 upvote</h3>
+    <div class="wrap">
+      <div class="card new compet">
+        <div class="bg svc1" data-emoji="🥡"></div>
+        <div class="veil"></div>
+        <span class="top-badge">💬 竞品评价</span>
+        <div class="rank-tr"><span class="rank-num">#1</span> 🏆</div>
+        <div class="content">
+          <div class="stance-row">
+            <span class="stance-icon up">👍</span>
+            <div class="stance-text">汤底很正,牛肉量足,比另一家 Banh Mi 11 性价比高,墙裂推荐!吃过 3 次都没踩雷,新生周强推。</div>
+          </div>
+          <div class="user-row">
+            <span class="av">陈</span>
+            <span class="name">陈同学 · 2 小时前</span>
+            <span class="target-name">Pho Mile End</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      #1 金色排名角标<br>
+      <span class="pros">✅ 一眼看出此评价的立场</span><br>
+      <span class="pros">✅ 显示该竞品在榜单的"江湖地位"</span>
+    </div>
+  </div>
+
+  <!-- 列 C: 新样式 — 有图 + 反对(downvote) + #4+ rank -->
+  <div class="col">
+    <h3>新样式 — 反对 downvote</h3>
+    <div class="wrap">
+      <div class="card new compet">
+        <div class="bg svc2" data-emoji="🏃"></div>
+        <div class="veil"></div>
+        <span class="top-badge">💬 竞品评价</span>
+        <div class="rank-tr tier-other"><span class="rank-num">#7</span></div>
+        <div class="content">
+          <div class="stance-row">
+            <span class="stance-icon down">👎</span>
+            <div class="stance-text">器械较旧,夏天空调不给力,学生价 £18/月 看似便宜但人多到挤不进去。</div>
+          </div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#F72585,#B5179E);">M</span>
+            <span class="name">Mia · 昨天</span>
+            <span class="target-name">Soho Gym</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      #7 普通排名(黑底白字)<br>
+      <span class="pros">✅ 红色 icon 立刻警示"差评"</span><br>
+      <span class="pros">✅ 比 UP/DOWN 计数更轻盈</span>
+    </div>
+  </div>
+
+  <!-- 列 D: 新样式 — #2 银色 -->
+  <div class="col">
+    <h3>新样式 — #2 银色</h3>
+    <div class="wrap">
+      <div class="card new compet">
+        <div class="bg skill2" data-emoji="🍜"></div>
+        <div class="veil"></div>
+        <span class="top-badge">💬 竞品评价</span>
+        <div class="rank-tr tier2"><span class="rank-num">#2</span> 🥈</div>
+        <div class="content">
+          <div class="stance-row">
+            <span class="stance-icon up">👍</span>
+            <div class="stance-text">分量管饱,辣度可调,Soho 那家是吃过最稳的一家。</div>
+          </div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#7359F2,#A78BFA);">Y</span>
+            <span class="name">Yvonne</span>
+            <span class="target-name">Bun Brothers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      <span class="pros">✅ #2 银 / #3 铜 / 其他黑底</span><br>
+      <span class="pros">✅ 视觉层次跟"金银铜"的直觉一致</span>
+    </div>
+  </div>
+
+</div>
+
 <div style="margin-top: 32px; padding: 18px 22px; background: #fff; border-radius: 12px; max-width: 1200px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
   <h2 style="font-size: 16px; margin-bottom: 10px;">实现思路</h2>
   <p style="font-size: 13px; color: #555; line-height: 1.7;">
-    Flutter 改动只动 <code>_ServiceReviewCard</code> + <code>_CompetitorReviewCard</code>(+ 如果有个人技能评价卡的话也类似):
-    <br>1. 卡片 build 时先 check <code>item.targetItem?.thumbnail</code>
-    <br>2. 有图 → 渲染 3:4 AspectRatio + Stack:背景 AsyncImageView 全屏 + 底部黑色渐变 + 角标/星级/评价文字/用户行 overlay
-    <br>3. 无图 → 保留现在的白底引用框样式(零回归风险)
+    <b>Flutter 改动</b>:
+    <br>1. <code>_ServiceReviewCard</code> 已用海报式 + serviceType 切配色 ✅ (已完成)
+    <br>2. <code>_CompetitorReviewCard</code>:有 <code>targetItem.thumbnail</code> → 海报式(同 service review 结构),把现有 UP/DOWN row 替换为前置 <code>stance-icon</code>(👍/👎,来自 <code>item.voteType</code>);右上角加 <code>_RankBadge</code>(#1 金 / #2 银 / #3 铜 / 其他黑底)
+    <br>3. 无 thumbnail → 保留现在的白底引用框样式作 fallback
     <br><br>
-    要不要这么做?如果可以,我建议:
-    <br>· 这一版只改<b>服务评价</b>(<code>_ServiceReviewCard</code>),先验证视觉效果
-    <br>· 个人技能评价(personal_skill_review):看看实际 feedType 是不是这个,如果是就用同样改动
-    <br>· 竞品评价(<code>_CompetitorReviewCard</code>):它有 UP/DOWN 投票按钮,不太适合图片背景(按钮在图片上视觉吵),建议先不改它
+    <b>后端改动</b> (<code>_fetch_competitor_reviews</code>):
+    <br>· 需要算 <code>rank</code> 字段 —— 该 LeaderboardItem 在所属 CustomLeaderboard 内的排名(按 upvotes-downvotes desc 或现有排序逻辑)
+    <br>· 实现选项: ① 子查询用 <code>ROW_NUMBER() OVER (PARTITION BY leaderboard_id ORDER BY upvotes-downvotes DESC)</code> ② 在 Python 层 group-by leaderboard 后排序赋名次
+    <br>· 加到 <code>target_item.rank</code>,前端 <code>TargetItemBrief.rank: int?</code>
+    <br><br>
+    <b>建议先做</b>:UI 改造在前(用占位 rank=null 时不显示角标),后端 rank 计算在后 —— 后端 SQL window function 要小心成本,值得单独评估。
   </p>
 </div>
 

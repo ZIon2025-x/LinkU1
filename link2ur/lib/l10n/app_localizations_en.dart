@@ -14661,6 +14661,39 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String communityItemSeats(int count) {
+    return '$count on board';
+  }
+
+  @override
+  String communityItemPosts(int count) {
+    return '$count posts';
+  }
+
+  @override
+  String communityItemServices(int count) {
+    return '$count services';
+  }
+
+  @override
+  String communityCountdownDays(int count) {
+    return '${count}d left';
+  }
+
+  @override
+  String communityCountdownHM(int h, int m) {
+    return '${h}h ${m}m left';
+  }
+
+  @override
+  String communityCountdownMin(int count) {
+    return '${count}m left';
+  }
+
+  @override
+  String get communityCountdownEnded => 'Ended';
+
+  @override
   String get communityHotSearches => 'Trending';
 
   @override

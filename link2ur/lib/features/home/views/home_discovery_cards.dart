@@ -358,7 +358,198 @@ class _CompetitorReviewCard extends StatelessWidget {
         ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
         : null;
     final isUpvote = item.voteType == 'upvote';
+    final thumbnail = item.targetItem?.thumbnail;
+    final hasThumbnail = thumbnail != null && thumbnail.isNotEmpty;
+    final rank = item.targetItem?.rank;
 
+    if (hasThumbnail) {
+      return _buildPosterCard(
+          context, locale, displayDesc, thumbnail, isUpvote, rank);
+    }
+    return _buildWhiteCard(context, isDark, displayDesc, isUpvote, rank);
+  }
+
+  /// 海报式 — 有 thumbnail 时使用
+  Widget _buildPosterCard(
+    BuildContext context,
+    Locale locale,
+    String? displayDesc,
+    String thumbnail,
+    bool isUpvote,
+    int? rank,
+  ) {
+    final targetName = item.targetItem?.name ?? '';
+    final rawUserName = item.userName;
+    final displayUserName = (rawUserName == null || rawUserName.isEmpty)
+        ? context.l10n.discoveryAnonymousUser
+        : rawUserName;
+    return Semantics(
+      button: true,
+      label: 'View review',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          if (item.targetItem != null) {
+            context.push('/leaderboard/item/${item.targetItem!.itemId}');
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                AsyncImageView(
+                  imageUrl: thumbnail,
+                  memCacheWidth: 600,
+                  placeholder: Container(color: Colors.black12),
+                  errorWidget: Container(
+                    color: Colors.black26,
+                    child: const Center(
+                      child: Icon(Icons.image_outlined,
+                          size: 40, color: Colors.white54),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [0.0, 0.25, 0.55, 1.0],
+                        colors: [
+                          Colors.black.withValues(alpha: 0.28),
+                          Colors.transparent,
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.78),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // 顶部左:类型 badge
+                const Positioned(
+                  top: 8, left: 8,
+                  child: _FeedTypeBadge(feedType: 'competitor_review'),
+                ),
+                // 顶部右:排名角标(4 档配色)
+                if (rank != null && rank > 0)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: _RankBadge(rank: rank),
+                  ),
+                // 底部:立场 icon + 评价文字 + 用户行
+                Positioned(
+                  left: 10, right: 10, bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (displayDesc != null && displayDesc.isNotEmpty) ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _StanceIcon(isUpvote: isUpvote),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                displayDesc,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w500,
+                                  shadows: [
+                                    Shadow(color: Colors.black54, blurRadius: 4),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        children: [
+                          AvatarView(
+                            imageUrl: item.userAvatar,
+                            name: displayUserName,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              displayUserName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  Shadow(color: Colors.black54, blurRadius: 3),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (targetName.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.95),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  targetName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFFDB2777),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 白底 fallback — 无 thumbnail 时使用,同样去掉 UP/DOWN 计数,用立场 icon 前置
+  Widget _buildWhiteCard(
+    BuildContext context,
+    bool isDark,
+    String? displayDesc,
+    bool isUpvote,
+    int? rank,
+  ) {
     return Semantics(
       button: true,
       label: 'View review',
@@ -385,98 +576,219 @@ class _CompetitorReviewCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _FeedTypeBadge(feedType: 'competitor_review'),
-            const SizedBox(height: 8),
-            if (displayDesc != null && displayDesc.isNotEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isUpvote
-                        ? (isDark
-                            ? [
-                                AppColors.success.withValues(alpha: 0.15),
-                                AppColors.success.withValues(alpha: 0.06),
-                              ]
-                            : [
-                                AppColors.successLight,
-                                const Color(0xFFC8E6C9),
-                              ])
-                        : (isDark
-                            ? [
-                                Colors.white.withValues(alpha: 0.06),
-                                Colors.white.withValues(alpha: 0.03),
-                              ]
-                            : [
-                                const Color(0xFFF8F7FF),
-                                const Color(0xFFFFF0F5),
-                              ]),
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(8),
-                    bottomRight: Radius.circular(8),
-                  ),
-                  border: const Border(
-                    left: BorderSide(
-                      color: AppColors.primary,
-                      width: 3,
+              Row(
+                children: [
+                  const _FeedTypeBadge(feedType: 'competitor_review'),
+                  if (rank != null && rank > 0) ...[
+                    const SizedBox(width: 6),
+                    _RankBadge(rank: rank, compact: true),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (displayDesc != null && displayDesc.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isUpvote
+                          ? (isDark
+                              ? [
+                                  AppColors.success.withValues(alpha: 0.15),
+                                  AppColors.success.withValues(alpha: 0.06),
+                                ]
+                              : [
+                                  AppColors.successLight,
+                                  const Color(0xFFC8E6C9),
+                                ])
+                          : (isDark
+                              ? [
+                                  AppColors.error.withValues(alpha: 0.15),
+                                  AppColors.error.withValues(alpha: 0.05),
+                                ]
+                              : [
+                                  const Color(0xFFFEE2E2),
+                                  const Color(0xFFFFE4E1),
+                                ]),
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
+                    border: Border(
+                      left: BorderSide(
+                        color: isUpvote ? AppColors.success : AppColors.error,
+                        width: 3,
+                      ),
                     ),
                   ),
-                ),
-                child: Text(
-                  displayDesc,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _StanceIcon(isUpvote: isUpvote, dropShadow: false),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          displayDesc,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              const SizedBox(height: 8),
+              _DiscoveryUserRow(
+                userId: item.userId,
+                userName: item.userName,
+                userAvatar: item.userAvatar,
+                expertId: item.expertId,
+                isDark: isDark,
               ),
-            const SizedBox(height: 8),
-            _DiscoveryUserRow(
-              userId: item.userId,
-              userName: item.userName,
-              userAvatar: item.userAvatar,
-              expertId: item.expertId,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 8),
-            if (item.targetItem != null) _TargetItemTag(target: item.targetItem!),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                    item.userVoteType == 'upvote'
-                        ? Icons.thumb_up
-                        : Icons.thumb_up_outlined,
-                    size: 12, color: AppColors.success),
-                const SizedBox(width: 3),
-                Text('${item.upvoteCount ?? 0}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.success)),
-                const SizedBox(width: 12),
-                Icon(
-                    item.userVoteType == 'downvote'
-                        ? Icons.thumb_down
-                        : Icons.thumb_down_outlined,
-                    size: 12, color: AppColors.error),
-                const SizedBox(width: 3),
-                Text('${item.downvoteCount ?? 0}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.error)),
-              ],
-            ),
-          ],
+              const SizedBox(height: 8),
+              if (item.targetItem != null)
+                _TargetItemTag(target: item.targetItem!),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
+}
+
+/// 立场圆 icon — 👍 (绿) / 👎 (红),前置到评价文字旁
+class _StanceIcon extends StatelessWidget {
+  const _StanceIcon({required this.isUpvote, this.dropShadow = true});
+  final bool isUpvote;
+  final bool dropShadow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: isUpvote ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+        shape: BoxShape.circle,
+        boxShadow: dropShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : null,
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        isUpvote ? Icons.thumb_up : Icons.thumb_down,
+        color: Colors.white,
+        size: 12,
+      ),
+    );
+  }
+}
+
+/// 排名角标 — 4 档配色: #1 金 / #2 银 / #3 铜 / 其他 黑底
+class _RankBadge extends StatelessWidget {
+  const _RankBadge({required this.rank, this.compact = false});
+  final int rank;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final tier = _tierFor(rank);
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 6 : 9,
+        vertical: compact ? 1 : 3,
+      ),
+      decoration: BoxDecoration(
+        gradient: tier.gradient,
+        color: tier.gradient == null ? Colors.black.withValues(alpha: 0.55) : null,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: compact
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '#$rank',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: compact ? 10 : 11,
+              fontWeight: FontWeight.w800,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          if (!compact && tier.emoji != null) ...[
+            const SizedBox(width: 3),
+            Text(tier.emoji!, style: const TextStyle(fontSize: 11)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static _RankTier _tierFor(int rank) {
+    if (rank == 1) {
+      return const _RankTier(
+        gradient: LinearGradient(
+          colors: [Color(0xFFFFD84D), Color(0xFFFF9500)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        emoji: '🏆',
+      );
+    }
+    if (rank == 2) {
+      return const _RankTier(
+        gradient: LinearGradient(
+          colors: [Color(0xFFC0C0C0), Color(0xFF9AA0AA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        emoji: '🥈',
+      );
+    }
+    if (rank == 3) {
+      return const _RankTier(
+        gradient: LinearGradient(
+          colors: [Color(0xFFCD7F32), Color(0xFF8B5A2B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        emoji: '🥉',
+      );
+    }
+    return const _RankTier(); // 其他名次 → 黑底白字,无 emoji
+  }
+}
+
+class _RankTier {
+  const _RankTier({this.gradient, this.emoji});
+  final Gradient? gradient;
+  final String? emoji;
 }
 
 // =============================================================================
@@ -497,10 +809,18 @@ class _ServiceReviewCard extends StatelessWidget {
     final hasActivity = item.activityInfo != null;
     final thumbnail = item.targetItem?.thumbnail;
     final hasThumbnail = thumbnail != null && thumbnail.isNotEmpty;
+    // 个人技能评价配色 → 绿;达人服务评价 → 粉/橙
+    final isPersonal = item.targetItem?.isPersonalSkill ?? false;
+    final badgeType = isPersonal ? 'personal_skill' : 'service_review';
+    final accent =
+        isPersonal ? const Color(0xFF059669) : AppColors.priceRed;
 
     // 评价目标(服务/技能)有图 → 海报式背景版;否则保持白底引用框版作 fallback
     if (hasThumbnail) {
-      return _buildPosterCard(context, isDark, locale, displayDesc, thumbnail);
+      return _buildPosterCard(
+        context, isDark, locale, displayDesc, thumbnail,
+        badgeType: badgeType, accent: accent,
+      );
     }
 
     return Semantics(
@@ -566,7 +886,7 @@ class _ServiceReviewCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _FeedTypeBadge(feedType: 'service_review'),
+                  _FeedTypeBadge(feedType: badgeType),
                   const SizedBox(height: 8),
                   if (displayDesc != null && displayDesc.isNotEmpty)
                     Container(
@@ -578,15 +898,19 @@ class _ServiceReviewCard extends StatelessWidget {
                           end: Alignment.bottomRight,
                           colors: isDark
                               ? [Colors.white.withValues(alpha: 0.06), Colors.white.withValues(alpha: 0.03)]
-                              : [const Color(0xFFF8F7FF), const Color(0xFFFFF0F5)],
+                              : isPersonal
+                                  ? [const Color(0xFFECFDF5), Colors.transparent]
+                                  : [const Color(0xFFF8F7FF), const Color(0xFFFFF0F5)],
                         ),
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(8),
                           bottomRight: Radius.circular(8),
                         ),
-                        border: const Border(
+                        border: Border(
                           left: BorderSide(
-                            color: AppColors.primary,
+                            color: isPersonal
+                                ? const Color(0xFF16A34A)
+                                : AppColors.primary,
                             width: 3,
                           ),
                         ),
@@ -630,13 +954,17 @@ class _ServiceReviewCard extends StatelessWidget {
 
   /// 海报式背景卡 — 评价目标有 thumbnail 时使用
   /// 视觉:3:4 比例 + 全屏背景图 + 底部渐变蒙层 + 白色文字 overlay
+  /// [badgeType] 决定顶部类型徽章(service_review 粉 / personal_skill 绿)
+  /// [accent] 决定底部 target tag 文字颜色
   Widget _buildPosterCard(
     BuildContext context,
     bool isDark,
     Locale locale,
     String? displayDesc,
-    String thumbnail,
-  ) {
+    String thumbnail, {
+    required String badgeType,
+    required Color accent,
+  }) {
     final rating = item.rating;
     final targetName = item.targetItem?.name ?? '';
     // 匿名评价(userName 为 null/空)显示本地化的"匿名用户"
@@ -703,9 +1031,9 @@ class _ServiceReviewCard extends StatelessWidget {
                   ),
                 ),
                 // 顶部左:类型 badge
-                const Positioned(
+                Positioned(
                   top: 8, left: 8,
-                  child: _FeedTypeBadge(feedType: 'service_review'),
+                  child: _FeedTypeBadge(feedType: badgeType),
                 ),
                 // 顶部右:星级
                 if (rating != null && rating > 0)
@@ -797,8 +1125,8 @@ class _ServiceReviewCard extends StatelessWidget {
                                   targetName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: AppColors.priceRed,
+                                  style: TextStyle(
+                                    color: accent,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                   ),

@@ -14024,6 +14024,39 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String communityItemSeats(int count) {
+    return '$count 人上榜';
+  }
+
+  @override
+  String communityItemPosts(int count) {
+    return '$count 帖';
+  }
+
+  @override
+  String communityItemServices(int count) {
+    return '$count 个服务';
+  }
+
+  @override
+  String communityCountdownDays(int count) {
+    return '剩 $count 天';
+  }
+
+  @override
+  String communityCountdownHM(int h, int m) {
+    return '剩 $h 时 $m 分';
+  }
+
+  @override
+  String communityCountdownMin(int count) {
+    return '剩 $count 分';
+  }
+
+  @override
+  String get communityCountdownEnded => '已结束';
+
+  @override
   String get communityHotSearches => '热搜榜';
 
   @override
@@ -28060,6 +28093,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String communityStatsCategories(int count) {
     return '$count 個分類';
   }
+
+  @override
+  String communityItemSeats(int count) {
+    return '$count 人上榜';
+  }
+
+  @override
+  String communityItemPosts(int count) {
+    return '$count 帖';
+  }
+
+  @override
+  String communityItemServices(int count) {
+    return '$count 個服務';
+  }
+
+  @override
+  String communityCountdownDays(int count) {
+    return '剩 $count 天';
+  }
+
+  @override
+  String communityCountdownHM(int h, int m) {
+    return '剩 $h 時 $m 分';
+  }
+
+  @override
+  String communityCountdownMin(int count) {
+    return '剩 $count 分';
+  }
+
+  @override
+  String get communityCountdownEnded => '已結束';
 
   @override
   String get communityHotSearches => '熱搜榜';
