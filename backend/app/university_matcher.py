@@ -19,6 +19,23 @@ from app import models
 logger = logging.getLogger(__name__)
 
 
+def extract_registrable_ac_uk(domain: str) -> Optional[str]:
+    """从 .ac.uk 域名提取注册域(最后 3 段)。
+
+    - mail.bcu.ac.uk → bcu.ac.uk
+    - student.bham.ac.uk → bham.ac.uk
+    - imperial.ac.uk → imperial.ac.uk(已经是 3 段)
+    - gmail.com → None(非 .ac.uk)
+    - ac.uk → None(不足 3 段)
+    """
+    if not domain:
+        return None
+    parts = domain.lower().split(".")
+    if len(parts) < 3 or parts[-2:] != ["ac", "uk"]:
+        return None
+    return ".".join(parts[-3:])
+
+
 class UniversityMatcher:
     """大学匹配器（内存缓存版本）"""
     
