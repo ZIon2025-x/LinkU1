@@ -2,8 +2,10 @@
 大学匹配器（使用Aho-Corasick算法优化性能）
 启动时加载所有大学pattern到内存，避免每次匹配都查询数据库
 """
+import json
 import logging
 import threading
+from pathlib import Path
 from typing import Optional
 
 try:
@@ -34,6 +36,44 @@ def extract_registrable_ac_uk(domain: str) -> Optional[str]:
     if len(parts) < 3 or parts[-2:] != ["ac", "uk"]:
         return None
     return ".".join(parts[-3:])
+
+
+_seed_aliases_cache: Optional[dict] = None
+
+
+def _load_seed_aliases() -> dict[str, tuple[str, Optional[str]]]:
+    """加载 scripts/university_email_domains.json,返回 {注册域 -> (name, name_cn)}。
+
+    - 重复 key 时后者覆盖前者
+    - 非 .ac.uk 或异常条目跳过
+    - 结果在进程级缓存(_seed_aliases_cache),避免每次磁盘读
+    """
+    global _seed_aliases_cache
+    if _seed_aliases_cache is not None:
+        return _seed_aliases_cache
+
+    # backend/app/university_matcher.py → repo root: parents[2]
+    json_path = Path(__file__).resolve().parents[2] / "scripts" / "university_email_domains.json"
+    if not json_path.exists():
+        logger.warning(f"seed JSON 不存在: {json_path}")
+        _seed_aliases_cache = {}
+        return _seed_aliases_cache
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    aliases: dict[str, tuple[str, Optional[str]]] = {}
+    for uni in data:
+        email_domain = uni.get("email_domain")
+        if not email_domain:
+            continue
+        registrable = extract_registrable_ac_uk(email_domain)
+        if registrable is None:
+            continue
+        aliases[registrable] = (uni.get("name") or registrable, uni.get("name_cn"))
+
+    _seed_aliases_cache = aliases
+    return aliases
 
 
 class UniversityMatcher:

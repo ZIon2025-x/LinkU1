@@ -29,3 +29,35 @@ class TestExtractRegistrableAcUk:
         assert extract_registrable_ac_uk("ac.uk") is None
         assert extract_registrable_ac_uk("uk") is None
         assert extract_registrable_ac_uk("") is None
+
+
+from app.university_matcher import _load_seed_aliases
+
+
+class TestSeedAliasLoader:
+    def test_loads_known_entry(self):
+        aliases = _load_seed_aliases()
+        assert "bham.ac.uk" in aliases
+        name, name_cn = aliases["bham.ac.uk"]
+        assert name == "University of Birmingham"
+        assert name_cn == "伯明翰大学"
+
+    def test_loads_newly_added_entries(self):
+        aliases = _load_seed_aliases()
+        assert "bcu.ac.uk" in aliases
+        assert "norwichuni.ac.uk" in aliases
+        assert "lancashire.ac.uk" in aliases
+
+    def test_total_unique_entries(self):
+        aliases = _load_seed_aliases()
+        assert len(aliases) == 122
+
+    def test_keys_are_registrable_domains(self):
+        """seed JSON 里若有 student.gla.ac.uk 这种带子域的 email_domain,
+        loader 也要规范化成注册域 gla.ac.uk 当 key。"""
+        aliases = _load_seed_aliases()
+        # University of Glasgow seed 里 email_domain 是 student.gla.ac.uk
+        # 期望 loader 把它 normalize 成 gla.ac.uk
+        assert "gla.ac.uk" in aliases
+        name, _ = aliases["gla.ac.uk"]
+        assert name == "University of Glasgow"
