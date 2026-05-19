@@ -6,9 +6,10 @@ import '../../../../data/models/ai_qa.dart';
 
 /// AI 限时问答列表项卡片 (P0-T23, mockup M1 "官方活动" qa-item 样式)
 ///
-/// 视觉要点（与 mockup `2026-05-13-ai-qa-bounty-mockup.html` line 436-448 对齐）:
-/// - 左侧 3px 金色边框 (#FFD700) — 区分于社区限时问答(蓝)/新手任务(紫)
-/// - 顶部 badge 行: £X 现金 + +X 积分 + 进行中
+/// 视觉要点（mockup `2026-05-13-ai-qa-bounty-mockup.html` 早期 M1 用金色,
+/// 实际按品牌色规范 `mockups/blue-white-gradient-preview.html` 方案 B 统一蓝白）:
+/// - 左侧 3px Apple System Blue 边框 (#007AFF) — 区分于其他类型卡片
+/// - 顶部 badge 行: £X 现金 (橙) + +X 积分 (紫) + 进行中 (绿) — functional badge 跨 feature 一致
 /// - 题面 2 行 ellipsis
 /// - 底部 stats 行: 🤖 AI 出题 + 📝 X 人作答 + ⏱ 倒计时
 class AiQaListItemCard extends StatelessWidget {
