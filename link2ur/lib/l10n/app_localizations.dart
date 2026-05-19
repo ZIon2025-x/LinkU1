@@ -19169,6 +19169,18 @@ abstract class AppLocalizations {
   /// **'Canceled by admin'**
   String get aiQaListAdminCanceled;
 
+  /// No description provided for @aiQaSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get aiQaSeeAll;
+
+  /// No description provided for @aiQaAiPosed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Posed'**
+  String get aiQaAiPosed;
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:

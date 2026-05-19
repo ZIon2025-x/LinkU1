@@ -2,8 +2,10 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/utils/logger.dart';
+import '../../../data/models/ai_qa.dart';
 import '../../../data/models/newbie_task.dart';
 import '../../../data/models/official_task.dart';
+import '../../../data/repositories/ai_qa_repository.dart';
 import '../../../data/repositories/newbie_tasks_repository.dart';
 import '../../../data/repositories/official_tasks_repository.dart';
 
@@ -49,6 +51,7 @@ class NewbieTasksState extends Equatable {
     this.tasks = const [],
     this.stages = const [],
     this.officialTasks = const [],
+    this.publishedAiQuestions = const [],
     this.errorMessage,
     this.claimingTaskKey,
     this.claimingStage,
@@ -58,6 +61,7 @@ class NewbieTasksState extends Equatable {
   final List<NewbieTaskProgress> tasks;
   final List<StageProgress> stages;
   final List<OfficialTask> officialTasks;
+  final List<AiQuestion> publishedAiQuestions;
   final String? errorMessage;
   final String? claimingTaskKey;
   final int? claimingStage;
@@ -79,6 +83,7 @@ class NewbieTasksState extends Equatable {
     List<NewbieTaskProgress>? tasks,
     List<StageProgress>? stages,
     List<OfficialTask>? officialTasks,
+    List<AiQuestion>? publishedAiQuestions,
     String? errorMessage,
     String? claimingTaskKey,
     int? claimingStage,
@@ -90,6 +95,8 @@ class NewbieTasksState extends Equatable {
       tasks: tasks ?? this.tasks,
       stages: stages ?? this.stages,
       officialTasks: officialTasks ?? this.officialTasks,
+      publishedAiQuestions:
+          publishedAiQuestions ?? this.publishedAiQuestions,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       claimingTaskKey:
           clearClaiming ? null : (claimingTaskKey ?? this.claimingTaskKey),
@@ -104,6 +111,7 @@ class NewbieTasksState extends Equatable {
         tasks,
         stages,
         officialTasks,
+        publishedAiQuestions,
         errorMessage,
         claimingTaskKey,
         claimingStage,
@@ -116,8 +124,10 @@ class NewbieTasksBloc extends Bloc<NewbieTasksEvent, NewbieTasksState> {
   NewbieTasksBloc({
     required NewbieTasksRepository newbieTasksRepository,
     required OfficialTasksRepository officialTasksRepository,
+    required AiQaRepository aiQaRepository,
   })  : _newbieTasksRepository = newbieTasksRepository,
         _officialTasksRepository = officialTasksRepository,
+        _aiQaRepository = aiQaRepository,
         super(const NewbieTasksState()) {
     on<NewbieTasksLoadRequested>(_onLoadRequested);
     on<NewbieTaskClaimRequested>(_onClaimRequested);
@@ -126,6 +136,7 @@ class NewbieTasksBloc extends Bloc<NewbieTasksEvent, NewbieTasksState> {
 
   final NewbieTasksRepository _newbieTasksRepository;
   final OfficialTasksRepository _officialTasksRepository;
+  final AiQaRepository _aiQaRepository;
 
   Future<void> _onLoadRequested(
     NewbieTasksLoadRequested event,
@@ -134,20 +145,32 @@ class NewbieTasksBloc extends Bloc<NewbieTasksEvent, NewbieTasksState> {
     emit(state.copyWith(status: NewbieTasksStatus.loading, clearError: true));
 
     try {
+      // AI QA list 拉失败 *不应* block 整个任务中心加载 → 单独 catch
+      // 见 spec P0-T23: ai_qa 是新增 section,失败 graceful。
+      final Future<List<AiQuestion>> aiQaFuture = _aiQaRepository
+          .listQuestions(statuses: const ['published'], limit: 5)
+          .catchError((Object e, StackTrace s) {
+        AppLogger.warning('AI QA list fetch failed (graceful): $e');
+        return <AiQuestion>[];
+      });
+
       final results = await Future.wait([
         _newbieTasksRepository.getProgress(),
         _newbieTasksRepository.getStages(),
         _officialTasksRepository.getOfficialTasks(),
+        aiQaFuture,
       ]);
 
-      final progressData = results[0];
-      final stagesData = results[1];
-      final officialData = results[2];
+      final progressData = results[0] as List<Map<String, dynamic>>;
+      final stagesData = results[1] as List<Map<String, dynamic>>;
+      final officialData = results[2] as List<Map<String, dynamic>>;
+      final publishedAiQuestions = results[3] as List<AiQuestion>;
 
       AppLogger.info('NewbieTasks API response - '
           'progress: ${progressData.length} items, '
           'stages: ${stagesData.length} items, '
-          'official: ${officialData.length} items');
+          'official: ${officialData.length} items, '
+          'aiQa: ${publishedAiQuestions.length} items');
       if (progressData.isNotEmpty) {
         AppLogger.info('NewbieTasks first item: ${progressData.first}');
       }
@@ -175,6 +198,7 @@ class NewbieTasksBloc extends Bloc<NewbieTasksEvent, NewbieTasksState> {
         tasks: tasks,
         stages: stages,
         officialTasks: officialTasks,
+        publishedAiQuestions: publishedAiQuestions,
         clearClaiming: true,
       ));
     } catch (e, stackTrace) {

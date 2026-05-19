@@ -10,9 +10,11 @@ import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../data/repositories/ai_qa_repository.dart';
 import '../../../data/repositories/newbie_tasks_repository.dart';
 import '../../../data/repositories/official_tasks_repository.dart';
 import '../bloc/newbie_tasks_bloc.dart';
+import 'widgets/ai_qa_list_item_card.dart';
 import 'widgets/official_task_bottom_sheet.dart';
 import 'widgets/official_task_card.dart';
 import 'widgets/stage_progress_widget.dart';
@@ -45,6 +47,7 @@ class NewbieTasksCenterView extends StatelessWidget {
       create: (context) => NewbieTasksBloc(
         newbieTasksRepository: context.read<NewbieTasksRepository>(),
         officialTasksRepository: context.read<OfficialTasksRepository>(),
+        aiQaRepository: context.read<AiQaRepository>(),
       )..add(const NewbieTasksLoadRequested()),
       child: const _TaskCenterContent(),
     );
@@ -203,6 +206,81 @@ class _TaskCenterContent extends StatelessWidget {
                           .add(const NewbieTasksLoadRequested());
                     }
                   },
+                );
+              },
+            ),
+          ),
+        ],
+
+        // AI 限时问答 section (P0-T23) — 排在 Official Tasks 之后,按 mockup M1
+        // 设计:金色左边框、🤖 标志、与 OfficialTask 平级。
+        if (state.publishedAiQuestions.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        // 金色,跟 mockup M1 (#FFD700 → #FFAA00) 一致
+                        colors: [Color(0xFFFFD700), Color(0xFFFFAA00)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        '🤖',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ),
+                  AppSpacing.hSm,
+                  Text(
+                    l10n.aiQaTitle,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const Spacer(),
+                  // 右上角"查看全部 →"跳列表页
+                  GestureDetector(
+                    onTap: () => context.push(AppRoutes.aiQaList),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        '${l10n.aiQaSeeAll} →',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: AppSpacing.horizontalMd,
+            sliver: SliverList.separated(
+              itemCount: state.publishedAiQuestions.length,
+              separatorBuilder: (_, __) => AppSpacing.vSm,
+              itemBuilder: (context, index) {
+                final q = state.publishedAiQuestions[index];
+                return AiQaListItemCard(
+                  key: ValueKey('ai_qa_${q.id}'),
+                  question: q,
+                  onTap: () => context.push('/ai-qa/${q.id}'),
                 );
               },
             ),

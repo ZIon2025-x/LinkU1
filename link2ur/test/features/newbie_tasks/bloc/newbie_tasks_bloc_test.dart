@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:link2ur/features/newbie_tasks/bloc/newbie_tasks_bloc.dart';
+import 'package:link2ur/data/models/ai_qa.dart';
 import 'package:link2ur/data/models/newbie_task.dart';
 import 'package:link2ur/data/models/official_task.dart';
+import 'package:link2ur/data/repositories/ai_qa_repository.dart';
 import 'package:link2ur/data/repositories/newbie_tasks_repository.dart';
 import 'package:link2ur/data/repositories/official_tasks_repository.dart';
 
@@ -13,9 +15,12 @@ class MockNewbieTasksRepository extends Mock implements NewbieTasksRepository {}
 class MockOfficialTasksRepository extends Mock
     implements OfficialTasksRepository {}
 
+class MockAiQaRepository extends Mock implements AiQaRepository {}
+
 void main() {
   late MockNewbieTasksRepository mockNewbieTasksRepository;
   late MockOfficialTasksRepository mockOfficialTasksRepository;
+  late MockAiQaRepository mockAiQaRepository;
   late NewbieTasksBloc bloc;
 
   // Mock data
@@ -76,9 +81,18 @@ void main() {
   setUp(() {
     mockNewbieTasksRepository = MockNewbieTasksRepository();
     mockOfficialTasksRepository = MockOfficialTasksRepository();
+    mockAiQaRepository = MockAiQaRepository();
+    // 默认 AI QA list 返回空,避免每个测试都重复 stub。
+    // (P0-T23: ai_qa list 拉失败不应 block,Bloc 已 catchError graceful)
+    when(() => mockAiQaRepository.listQuestions(
+          statuses: any(named: 'statuses'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+        )).thenAnswer((_) async => const <AiQuestion>[]);
     bloc = NewbieTasksBloc(
       newbieTasksRepository: mockNewbieTasksRepository,
       officialTasksRepository: mockOfficialTasksRepository,
+      aiQaRepository: mockAiQaRepository,
     );
   });
 
@@ -92,6 +106,7 @@ void main() {
       expect(bloc.state.tasks, isEmpty);
       expect(bloc.state.stages, isEmpty);
       expect(bloc.state.officialTasks, isEmpty);
+      expect(bloc.state.publishedAiQuestions, isEmpty);
       expect(bloc.state.errorMessage, isNull);
       expect(bloc.state.claimingTaskKey, isNull);
       expect(bloc.state.claimingStage, isNull);

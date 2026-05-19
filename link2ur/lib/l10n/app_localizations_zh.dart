@@ -10034,6 +10034,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiQaListAdminCanceled => 'admin 撤稿';
 
   @override
+  String get aiQaSeeAll => '查看全部';
+
+  @override
+  String get aiQaAiPosed => 'AI 出题';
+
+  @override
   String get chatLoadFailed => '加载消息失败';
 
   @override
@@ -24164,6 +24170,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiQaListAdminCanceled => 'admin 撤稿';
+
+  @override
+  String get aiQaSeeAll => '查看全部';
+
+  @override
+  String get aiQaAiPosed => 'AI 出題';
 
   @override
   String get chatLoadFailed => '載入訊息失敗';

@@ -4886,6 +4886,8 @@
     }
   },
   "aiQaListAdminCanceled": "Canceled by admin",
+  "aiQaSeeAll": "See all",
+  "aiQaAiPosed": "AI Posed",
   "chatLoadFailed": "Failed to load messages",
   "chatLoadMoreFailed": "Failed to load more messages",
   "chatNetworkOffline": "No network connection, unable to send",

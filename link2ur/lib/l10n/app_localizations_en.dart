@@ -10463,6 +10463,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiQaListAdminCanceled => 'Canceled by admin';
 
   @override
+  String get aiQaSeeAll => 'See all';
+
+  @override
+  String get aiQaAiPosed => 'AI Posed';
+
+  @override
   String get chatLoadFailed => 'Failed to load messages';
 
   @override

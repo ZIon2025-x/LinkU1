@@ -4684,6 +4684,8 @@
     }
   },
   "aiQaListAdminCanceled": "admin 撤稿",
+  "aiQaSeeAll": "查看全部",
+  "aiQaAiPosed": "AI 出題",
   "chatLoadFailed": "載入訊息失敗",
   "chatLoadMoreFailed": "載入更多訊息失敗",
   "chatNetworkOffline": "目前無網路連線，無法傳送",
