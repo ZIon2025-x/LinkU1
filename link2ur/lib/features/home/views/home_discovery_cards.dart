@@ -710,6 +710,20 @@ class _RankBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tier = _tierFor(rank);
+    // 海报版(!compact) 永远在暗背景上 → 用黑底 alpha 0.55 兜底,对比 OK
+    // 白底 fallback(compact) 在 dark mode 卡片背景下是深色 → 黑底会"消失",
+    // 此时用浅色半透明 + 灰色字
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isOtherTierOnDarkCompact =
+        tier.gradient == null && compact && isDark;
+    final bgColor = tier.gradient == null
+        ? (isOtherTierOnDarkCompact
+            ? Colors.white.withValues(alpha: 0.18)
+            : Colors.black.withValues(alpha: 0.55))
+        : null;
+    final fgColor = isOtherTierOnDarkCompact
+        ? Colors.white.withValues(alpha: 0.85)
+        : Colors.white;
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 6 : 9,
@@ -717,7 +731,7 @@ class _RankBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         gradient: tier.gradient,
-        color: tier.gradient == null ? Colors.black.withValues(alpha: 0.55) : null,
+        color: bgColor,
         borderRadius: BorderRadius.circular(999),
         boxShadow: compact
             ? null
@@ -735,7 +749,7 @@ class _RankBadge extends StatelessWidget {
           Text(
             '#$rank',
             style: TextStyle(
-              color: Colors.white,
+              color: fgColor,
               fontSize: compact ? 10 : 11,
               fontWeight: FontWeight.w800,
               fontStyle: FontStyle.italic,

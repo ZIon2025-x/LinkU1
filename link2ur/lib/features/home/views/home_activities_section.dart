@@ -618,12 +618,53 @@ class CommunityDiscoveryFeedSliver extends StatelessWidget {
       builder: (context, state) {
         final isLoading =
             state.communityFeedStatus == DiscoverFeedStatus.loading;
+        final isError =
+            state.communityFeedStatus == DiscoverFeedStatus.error;
         final items = state.communityFeedItems;
 
         if (isLoading && items.isEmpty) {
           return SliverToBoxAdapter(
             child:
                 _DiscoveryFeedSkeleton(horizontalPadding: horizontalPadding),
+          );
+        }
+
+        // 错误态(首次加载失败 → 列表为空) 给 retry 按钮,避免误导成"社区空空"
+        if (isError && items.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.cloud_off_outlined,
+                      size: 36,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.errorNetworkError,
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => context
+                          .read<DiscoverBloc>()
+                          .add(const DiscoverLoadCommunityFeed()),
+                      child: Text(context.l10n.commonRetry),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 

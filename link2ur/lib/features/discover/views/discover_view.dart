@@ -146,9 +146,15 @@ class _DiscoverContent extends StatelessWidget {
                 final bloc = context.read<DiscoverBloc>();
                 bloc.add(const DiscoverRefreshRequested());
                 bloc.add(const DiscoverLoadCommunityFeed());
+                // 等两条流都 settle (静态内容 + 社区 feed) 再收起下拉
                 await bloc.stream
-                    .firstWhere((s) => s.status == DiscoverStatus.loaded || s.status == DiscoverStatus.error)
-                    .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
+                    .firstWhere((s) =>
+                        (s.status == DiscoverStatus.loaded ||
+                            s.status == DiscoverStatus.error) &&
+                        (s.communityFeedStatus == DiscoverFeedStatus.loaded ||
+                            s.communityFeedStatus == DiscoverFeedStatus.error))
+                    .timeout(const Duration(seconds: 10),
+                        onTimeout: () => bloc.state);
               },
               child: CustomScrollView(
                 slivers: [
