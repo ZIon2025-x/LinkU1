@@ -718,6 +718,24 @@
     "name_cn": "西英格兰大学布里斯托",
     "email_domain": "uwe.ac.uk",
     "domain_pattern": "@uwe.ac.uk"
+  },
+  {
+    "name": "Birmingham City University",
+    "name_cn": "伯明翰城市大学",
+    "email_domain": "bcu.ac.uk",
+    "domain_pattern": "@*.bcu.ac.uk"
+  },
+  {
+    "name": "Norwich University of the Arts",
+    "name_cn": "诺里奇艺术大学",
+    "email_domain": "norwichuni.ac.uk",
+    "domain_pattern": "@*.norwichuni.ac.uk"
+  },
+  {
+    "name": "University of Lancashire",
+    "name_cn": "兰开夏大学",
+    "email_domain": "lancashire.ac.uk",
+    "domain_pattern": "@*.lancashire.ac.uk"
   }
 ]
 

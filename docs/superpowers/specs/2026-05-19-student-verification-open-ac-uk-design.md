@@ -2,25 +2,34 @@
 
 **Date**: 2026-05-19
 **Status**: Approved (pending implementation plan)
-**Trigger**: 2026-05-19 BCU 学生 `yujun.liu@mail.bcu.ac.uk` 提交学生认证被拒,排查中发现
-seed JSON 不仅缺 BCU,且 University of Birmingham 条目 `birmingham.ac.uk` 本身就是错
-的(那是官网域,学生邮箱实际是 `@student.bham.ac.uk`)。121 条 seed 里很可能还有类似
-"官网域当邮件域"的错误。
+**Trigger**: 2026-05-19 BCU 学生 `yujun.liu@mail.bcu.ac.uk` 提交学生认证被拒,
+排查发现 seed JSON 缺 BCU 这一所学校。后续 121 条 seed 系统审计结论:
+
+- 没有"官网域当邮件域"的错条目(Birmingham `bham.ac.uk` 等都是对的)
+- 但有 3 个机构缺漏 / 不完整需补:
+  1. **Birmingham City University** (post-92 学校,完全漏录)
+  2. **Norwich University of the Arts** 正在 `nua.ac.uk` → `norwichuni.ac.uk`
+     过渡,seed 只有旧域
+  3. **University of Central Lancashire** 已 rebrand 为 University of
+     Lancashire,新域 `lancashire.ac.uk`,seed 只有旧域 `uclan.ac.uk`
+
+同时本期顺势把整个验证机制改成 open-by-suffix,避免未来再被"漏录"事故反复拖累。
 
 ## 1. 问题
 
 当前学生认证流程:
-1. 用户提交学生邮箱 → 后端 `match_university_by_email()` 在 `universities` 表(seed
-   JSON 预装 121 条)里做精确匹配 / 子域匹配 / 通配符匹配。
+1. 用户提交学生邮箱 → `match_university_by_email()` 在 `universities` 表(seed
+   JSON 预装 121 条)里做精确 / 子域 / 通配符匹配。
 2. 命中 → 创建 `student_verifications` 行(状态 pending → verified)。
 3. 未命中 → 返回 `INVALID_EMAIL_DOMAIN` 400。
 
 问题:
-- 白名单本身**质量没法保证**:Birmingham 已确认是错的(域名 `birmingham.ac.uk` 不发邮件),
-  其他 121 条没逐条验证过。
-- 每次新增一所学校都要 **手动改 seed → 跑 migration → 重启 backend 让 matcher
-  重读缓存**,运营负担大。
-- BCU 这种 post-92 学校直接被拒,用户体验差。
+- 每次出现 seed 未覆盖的学校(BCU / Norwich / Lancashire 这种新名 / rebrand),
+  都要 **手动改 seed → 跑 migration → 重启 backend 让 matcher 重读缓存**,运营
+  负担大,而且只有用户被拒之后才发现。
+- 现行 matcher 三种匹配方式(精确 / 子域 / 通配符)逻辑复杂、用 Aho-Corasick 加速,
+  对一个低频操作来说是过度工程,且**内存缓存**模式让 seed/DB 改动后必须重启服务。
+- BCU 这次直接被拒,用户体验差。
 
 ## 2. 决策
 
@@ -89,49 +98,45 @@ def extract_registrable_ac_uk(domain: str) -> Optional[str]:
 
 ### 3.2 Seed JSON 改造
 
-`scripts/university_email_domains.json` 保留,但用途从"白名单"变成"curated 别名表":
+`scripts/university_email_domains.json` 保留,用途从"白名单"变成"curated 别名表":
 - 命中时提供漂亮的中英文 name
 - 未命中时占位名 = 注册域字符串
 
 启动时不再加载到内存(matcher 不再用 Aho-Corasick)。Seed 改读时机:
 - **方案 A**(选定):启动时一次性把 seed JSON 读成 `dict[registrable_domain → (name, name_cn)]`
-  在内存里,匹配时查这个 dict 拿别名。文件改动后需重启 backend。
+  存在内存,匹配时查这个 dict 拿别名。文件改动后需重启 backend。
 - 方案 B(不选):每次 INSERT 临时 open 读 JSON。频次低但 IO 浪费。
 
-### 3.3 数据迁移 (`backend/migrations/241_*.sql`)
+### 3.3 数据迁移 (`backend/migrations/241_add_missing_universities.sql`)
 
 ```sql
--- 修正错条目:Birmingham 官网域 → 实际邮件域
--- (注意:不 UPDATE 现有错行,而是 INSERT 新行 + 禁用错行,避免 FK 影响)
-UPDATE universities SET is_active = FALSE
-WHERE email_domain = 'birmingham.ac.uk';
-
-INSERT INTO universities (name, name_cn, email_domain, domain_pattern, is_active)
-VALUES ('University of Birmingham', '伯明翰大学', 'bham.ac.uk', '@*.bham.ac.uk', TRUE)
-ON CONFLICT (email_domain) DO NOTHING;
-
+-- 补 3 条缺漏:BCU + Norwich 新域 + Lancashire 新域
 INSERT INTO universities (name, name_cn, email_domain, domain_pattern, is_active)
 VALUES ('Birmingham City University', '伯明翰城市大学', 'bcu.ac.uk', '@*.bcu.ac.uk', TRUE)
 ON CONFLICT (email_domain) DO NOTHING;
+
+INSERT INTO universities (name, name_cn, email_domain, domain_pattern, is_active)
+VALUES ('Norwich University of the Arts', '诺里奇艺术大学', 'norwichuni.ac.uk', '@*.norwichuni.ac.uk', TRUE)
+ON CONFLICT (email_domain) DO NOTHING;
+
+INSERT INTO universities (name, name_cn, email_domain, domain_pattern, is_active)
+VALUES ('University of Lancashire', '兰开夏大学', 'lancashire.ac.uk', '@*.lancashire.ac.uk', TRUE)
+ON CONFLICT (email_domain) DO NOTHING;
 ```
 
-注:旧 121 条 seed 里其他可能错的条目**不做主动审计**。理由:
-- 新模型自愈 —— 错条目在新算法下不会被任何真实邮箱命中,处于 dormant 状态
-- 真实学生提交时会自动 INSERT 正确的注册域行
-- Admin 后台后续可手工查"两行 name 相似 / 一个 dormant 一个有 verifications"的对再清理
-
-**实施前验证**:跑一遍 `SELECT u.email_domain, COUNT(sv.id) FROM universities u
-LEFT JOIN student_verifications sv ON sv.university_id = u.id
-WHERE u.email_domain = 'birmingham.ac.uk' GROUP BY u.email_domain;`
-确认现有 `birmingham.ac.uk` 行下确实没有真实 verifications(理论上应该为 0)。
-如果有,需要在 migration 里把这些 verifications 的 `university_id` 改指向新的
-`bham.ac.uk` 行。
+注:其他 118 条 seed entry 经审计**全部正确**(包括 Birmingham `bham.ac.uk`、post-92
+学校用 root 域名 + 学生子域邮箱的情况:Sheffield Hallam `shu.ac.uk` → 学生
+`@stu.shu.ac.uk`,新算法走"提取注册域 → SELECT seed"路径,直接命中)。**不做主动
+修改**。Glamorgan(2013 年并入 USW)等 historical 条目保留 dormant,无害。
 
 ### 3.4 Seed JSON 文件清洗(代码内,与 DB migration 并行)
 
-- 修 `birmingham.ac.uk` 条目:`email_domain` → `bham.ac.uk`,`domain_pattern` → `@*.bham.ac.uk`
-- 追加 BCU 条目(已加好,见现状)
-- 其他错条目自愈,不主动审计
+`scripts/university_email_domains.json` 追加 3 条(本期 commit 实际状态):
+- `bcu.ac.uk` — Birmingham City University
+- `norwichuni.ac.uk` — Norwich University of the Arts(并存于旧 `nua.ac.uk`)
+- `lancashire.ac.uk` — University of Lancashire(并存于旧 `uclan.ac.uk`)
+
+其他 121 条不动。
 
 ### 3.5 代码改动
 
@@ -139,8 +144,8 @@ WHERE u.email_domain = 'birmingham.ac.uk' GROUP BY u.email_domain;`
 |------|------|
 | `app/university_matcher.py` | 整体重写。删 Aho-Corasick / wildcard / right-to-left subdomain 逻辑,只留新算法。`UniversityMatcher` 类降级为简单的 seed 别名加载器,匹配走 DB 直接 SELECT/INSERT。 |
 | `app/main.py:1507-1508` startup | `_university_matcher.initialize(db)` 改成 seed JSON 加载,不再加载 universities 表。 |
-| `app/student_verification_routes.py` | 错误消息可保留 `INVALID_EMAIL_DOMAIN`,但触发条件实际只剩"不是 `.ac.uk`"。 |
-| `scripts/init_universities.py` | 不需要改,可以保留作为可选的运维工具(强制按 seed 全量 sync)。 |
+| `app/student_verification_routes.py` | 错误消息保留 `INVALID_EMAIL_DOMAIN`,但触发条件实际只剩"不是 `.ac.uk`"。 |
+| `scripts/init_universities.py` | 不需改,保留作可选运维工具(强制按 seed 全量 sync)。 |
 
 ### 3.6 错误码 / 文案
 
@@ -163,19 +168,19 @@ WHERE u.email_domain = 'birmingham.ac.uk' GROUP BY u.email_domain;`
 
 ### 3.9 风险
 
-- **JANET 之外的 `.ac.uk`**:极少数研究机构(`stfc.ac.uk`、`nerc.ac.uk`、
-  `mod.uk` 不算因为不是 ac.uk)。当前**不做黑名单**,等出现实际滥用再加。
+- **JANET 之外的 `.ac.uk`**:极少数研究机构(`stfc.ac.uk`、`nerc.ac.uk` 等)。
+  当前**不做黑名单**,等出现实际滥用再加。
 - **没有显式 audit**:未在 seed 里的注册域会"静默 INSERT"。Admin 后台想感知新学校
   可以加一个"`name_cn IS NULL` 的 universities 行"过滤视图,**不在本期 scope**。
-- **现有错条目孤儿**:实施前 SQL 验证(见 3.3),理论上 `birmingham.ac.uk` 下无真实
-  verifications。
+- **机构 rebrand / 域名迁移**(如 NUA / UCLan):新算法直接吃旧+新两个注册域分别
+  作为两行 universities,显示名不同但都能验证 — 可接受,admin 后续可合并。
 
 ### 3.10 不做的事(YAGNI)
 
-- 不做学校名校验/查重(自愈机制 + admin 后补)
+- 不做学校名校验 / 查重(自愈机制 + admin 后补)
 - 不做 WebSearch / PSL 动态查中英文名(过度设计)
 - 不做用户提交学校名表单字段
-- 不做 121 条 seed 全量审计(自愈兜底)
+- 不做 121 条 seed 全量主动审计(已一次性审计完;新模型自愈兜底)
 - 不删 `universities.domain_pattern` 列(留作旧数据,不读)
 
 ## 4. 测试策略
@@ -219,24 +224,24 @@ WHERE u.email_domain = 'birmingham.ac.uk' GROUP BY u.email_domain;`
 
 ## 6. 已确认的设计点
 
-- ✅ 注册域 = `.ac.uk` 前2段 + `.ac.uk`(`bham.ac.uk`、`ox.ac.uk` 这种)
+- ✅ 注册域 = `.ac.uk` 域名最后 3 段(`bham.ac.uk`、`ox.ac.uk` 这种)
 - ✅ universities 表保留 + 懒加载
 - ✅ Seed JSON 作为别名表,未命中用注册域字符串占位
-- ✅ Migration 241 仅修 Birmingham + 加 BCU,其他 119 条自愈
+- ✅ Migration 241 = BCU + Norwich 新域 + Lancashire 新域 共 3 条 INSERT
 - ✅ `.ac.uk` 全开(含研究机构),无黑名单
 
 ## 7. 文件清单(预期改动)
 
 ```
 backend/
-├── app/university_matcher.py             # 重写
-├── app/main.py                           # 调整 startup 初始化
-├── app/student_verification_routes.py    # 微调错误文案(可选)
-├── migrations/241_open_ac_uk_verification.sql  # 新增
-└── tests/test_university_matcher.py      # 新增/重写
+├── app/university_matcher.py                       # 重写
+├── app/main.py                                     # 调整 startup 初始化
+├── app/student_verification_routes.py              # 微调错误文案(可选)
+├── migrations/241_add_missing_universities.sql     # 新增(已写)
+└── tests/test_university_matcher.py                # 新增 / 重写
 
 scripts/
-└── university_email_domains.json         # 修 Birmingham + 加 BCU(已加 BCU)
+└── university_email_domains.json                   # 已追加 BCU + Norwich + Lancashire
 
 docs/superpowers/specs/
 └── 2026-05-19-student-verification-open-ac-uk-design.md  # 本文
