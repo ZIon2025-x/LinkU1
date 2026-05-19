@@ -61,3 +61,71 @@ class TestSeedAliasLoader:
         assert "gla.ac.uk" in aliases
         name, _ = aliases["gla.ac.uk"]
         assert name == "University of Glasgow"
+
+
+from app import models
+
+
+@pytest.fixture(autouse=True)
+def _reset_seed_cache():
+    """每个测试前重置 seed 缓存,避免测试间状态污染。"""
+    import app.university_matcher as m
+    m._seed_aliases_cache = None
+    yield
+
+
+class TestMatchUniversityByEmail:
+    def test_invalid_email_format(self, db):
+        from app.university_matcher import match_university_by_email
+        assert match_university_by_email("not-an-email", db) is None
+        assert match_university_by_email("", db) is None
+        assert match_university_by_email(None, db) is None
+
+    def test_non_ac_uk_rejected(self, db):
+        from app.university_matcher import match_university_by_email
+        assert match_university_by_email("user@gmail.com", db) is None
+        assert match_university_by_email("user@example.com", db) is None
+
+    def test_existing_registrable_returns_existing_row(self, db):
+        from app.university_matcher import match_university_by_email
+        # Use a unique fictional domain to avoid conflicts with existing seed data
+        db.add(models.University(
+            name="Test University of Testland",
+            name_cn="测试大学",
+            email_domain="testland.ac.uk",
+            domain_pattern="@*.testland.ac.uk",
+            is_active=True,
+        ))
+        db.flush()
+
+        uni = match_university_by_email("alice@student.testland.ac.uk", db)
+        assert uni is not None
+        assert uni.email_domain == "testland.ac.uk"
+        assert uni.name == "Test University of Testland"
+
+    def test_lazy_insert_uses_seed_alias(self, db):
+        """bcu.ac.uk 在 seed JSON 里但 DB 没有 → INSERT 用 curated 中文名"""
+        from app.university_matcher import match_university_by_email
+        uni = match_university_by_email("alice@mail.bcu.ac.uk", db)
+        assert uni is not None
+        assert uni.email_domain == "bcu.ac.uk"
+        assert uni.name == "Birmingham City University"
+        assert uni.name_cn == "伯明翰城市大学"
+
+    def test_lazy_insert_unknown_domain_uses_fallback_name(self, db):
+        """注册域既不在 DB 也不在 seed → INSERT,name = 注册域,name_cn = NULL"""
+        from app.university_matcher import match_university_by_email
+        uni = match_university_by_email("alice@dept.imaginary.ac.uk", db)
+        assert uni is not None
+        assert uni.email_domain == "imaginary.ac.uk"
+        assert uni.name == "imaginary.ac.uk"
+        assert uni.name_cn is None
+
+    def test_same_registrable_grouped(self, db):
+        """同注册域不同子域邮箱 → 同 university_id(兜底:同 .ac.uk 同校)"""
+        from app.university_matcher import match_university_by_email
+        uni1 = match_university_by_email("alice@x.imaginary2.ac.uk", db)
+        uni2 = match_university_by_email("bob@y.imaginary2.ac.uk", db)
+        assert uni1 is not None and uni2 is not None
+        assert uni1.id == uni2.id
+        assert uni1.email_domain == "imaginary2.ac.uk"

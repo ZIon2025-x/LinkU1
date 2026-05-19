@@ -8,6 +8,9 @@ import threading
 from pathlib import Path
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 try:
     from pyahocorasick import Automaton
     HAS_AHOCORASICK = True
@@ -196,20 +199,48 @@ class UniversityMatcher:
 _university_matcher = UniversityMatcher()
 
 
-def match_university_by_email(email: str, db=None) -> Optional[models.University]:
+def match_university_by_email(email: str, db: Session) -> Optional[models.University]:
+    """根据 .ac.uk 邮箱匹配或自动创建大学行。
+
+    1. 不是 .ac.uk 后缀 → None
+    2. 提取注册域(最后 3 段)→ SELECT universities
+    3. 命中 → 返回
+    4. 不命中 → INSERT(name 从 seed JSON 别名表查;查不到用注册域字符串作 name)
+    5. 并发 IntegrityError → re-SELECT 兜底
     """
-    根据邮箱地址匹配大学（使用内存缓存）
-    
-    重要约束：只有以 `.ac.uk` 结尾的邮箱才能验证学生身份
-    
-    性能优化：
-    - 启动时加载所有pattern到内存
-    - 使用Aho-Corasick算法，一次匹配完成
-    - 避免多次数据库查询，性能提升10倍+
-    """
-    # 确保已初始化
-    if not _university_matcher._initialized and db:
-        _university_matcher.initialize(db)
-    
-    return _university_matcher.match(email)
+    if not email or "@" not in email:
+        return None
+    _, _, domain = email.partition("@")
+    domain = domain.strip().lower()
+
+    registrable = extract_registrable_ac_uk(domain)
+    if registrable is None:
+        return None
+
+    uni = db.query(models.University).filter(
+        models.University.email_domain == registrable
+    ).first()
+    if uni:
+        return uni
+
+    aliases = _load_seed_aliases()
+    name, name_cn = aliases.get(registrable, (registrable, None))
+
+    uni = models.University(
+        email_domain=registrable,
+        name=name,
+        name_cn=name_cn,
+        domain_pattern=f"@*.{registrable}",  # 占位,新算法不读
+        is_active=True,
+    )
+    db.add(uni)
+    try:
+        db.commit()
+        db.refresh(uni)
+    except IntegrityError:
+        db.rollback()
+        uni = db.query(models.University).filter(
+            models.University.email_domain == registrable
+        ).first()
+    return uni
 
