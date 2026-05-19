@@ -19073,6 +19073,102 @@ abstract class AppLocalizations {
   /// **'Cannot modify scores after settled/canceled'**
   String get aiQaScoreUpdateStatusForbidden;
 
+  /// No description provided for @aiQaListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Q&A'**
+  String get aiQaListTitle;
+
+  /// No description provided for @aiQaListTabCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get aiQaListTabCurrent;
+
+  /// No description provided for @aiQaListTabHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get aiQaListTabHistory;
+
+  /// No description provided for @aiQaListEmptyCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'No active questions right now'**
+  String get aiQaListEmptyCurrent;
+
+  /// No description provided for @aiQaListEmptyHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'No history yet'**
+  String get aiQaListEmptyHistory;
+
+  /// No description provided for @aiQaListRecentClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently closed'**
+  String get aiQaListRecentClosed;
+
+  /// No description provided for @aiQaStatusLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get aiQaStatusLive;
+
+  /// No description provided for @aiQaStatusSettled.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled'**
+  String get aiQaStatusSettled;
+
+  /// No description provided for @aiQaStatusCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled'**
+  String get aiQaStatusCanceled;
+
+  /// No description provided for @aiQaStatusNoAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'No answers'**
+  String get aiQaStatusNoAnswers;
+
+  /// No description provided for @aiQaListCash.
+  ///
+  /// In en, this message translates to:
+  /// **'£{amount} cash'**
+  String aiQaListCash(String amount);
+
+  /// No description provided for @aiQaListPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'+{points} pts'**
+  String aiQaListPoints(int points);
+
+  /// No description provided for @aiQaListAnswerCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} answers'**
+  String aiQaListAnswerCount(int count);
+
+  /// No description provided for @aiQaListWinnersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} winners'**
+  String aiQaListWinnersCount(int count);
+
+  /// No description provided for @aiQaListPayoutSent.
+  ///
+  /// In en, this message translates to:
+  /// **'£{amount} paid out'**
+  String aiQaListPayoutSent(String amount);
+
+  /// No description provided for @aiQaListAdminCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled by admin'**
+  String get aiQaListAdminCanceled;
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:
@@ -22156,6 +22252,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activity'**
   String get discoveryFeedTypeActivity;
+
+  /// No description provided for @discoveryFeedTypeAiQa.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Q&A'**
+  String get discoveryFeedTypeAiQa;
 
   /// No description provided for @discoveryFeedTypeCompletion.
   ///

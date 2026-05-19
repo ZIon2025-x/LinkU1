@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import func, select, case
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -19,13 +20,48 @@ router = APIRouter(prefix="/api/ai-qa", tags=["AI Limited QA"])
 @router.get("", response_model=List[AiQuestionOut])
 def list_questions(
     status: Optional[str] = None,
+    status_in: Optional[str] = None,
     limit: int = 20,
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    """用户端列表（当期 + 历史）。无权限校验。"""
-    qs = ai_qa_crud.list_questions(db, status=status, limit=limit, offset=offset)
-    return qs
+    """用户端列表（当期 + 历史）。无权限校验。
+
+    M2 列表页支持 status_in (逗号分隔多状态)，例如:
+      ?status_in=published,scoring,scored   → 当期
+      ?status_in=settled,canceled,closed_empty → 历史
+    单 status 参数保留兼容老调用方。response 包含 answer_count / winners_count
+    便于 list-card UI 渲染 "X 人作答 / 采纳 Y 条"，不影响详情页/admin端逻辑。
+    """
+    statuses: Optional[List[str]] = None
+    if status_in:
+        statuses = [s.strip() for s in status_in.split(",") if s.strip()]
+    qs = ai_qa_crud.list_questions(
+        db, status=status, statuses=statuses, limit=limit, offset=offset,
+    )
+    if not qs:
+        return []
+    qids = [q.id for q in qs]
+    # 一次性统计 answer_count + winners_count，避免 N+1
+    rows = db.execute(
+        select(
+            AiAnswerScore.ai_question_id,
+            func.count(AiAnswerScore.id).label("answer_count"),
+            func.sum(case((AiAnswerScore.reward_pence > 0, 1), else_=0)).label("winners_count"),
+        )
+        .where(AiAnswerScore.ai_question_id.in_(qids))
+        .where(AiAnswerScore.hide_in_qa == False)  # noqa: E712
+        .group_by(AiAnswerScore.ai_question_id)
+    ).all()
+    stats = {r.ai_question_id: (r.answer_count or 0, r.winners_count or 0) for r in rows}
+    out: List[AiQuestionOut] = []
+    for q in qs:
+        item = AiQuestionOut.model_validate(q)
+        ac, wc = stats.get(q.id, (0, 0))
+        item.answer_count = ac
+        item.winners_count = wc
+        out.append(item)
+    return out
 
 
 @router.get("/leaderboard")

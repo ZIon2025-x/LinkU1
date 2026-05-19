@@ -67,6 +67,10 @@ class AiQuestionOut(BaseModel):
     floor_pence: int
     target_forum_category_id: int
     created_at: datetime
+    # 列表页可选字段（M2 mockup §设计要点：mostat显示"23 人作答"+"采纳 25 条"）。
+    # 详情页/admin 端口不填，from_attributes 容忍 None。
+    answer_count: Optional[int] = None
+    winners_count: Optional[int] = None
 
     class Config:
         from_attributes = True

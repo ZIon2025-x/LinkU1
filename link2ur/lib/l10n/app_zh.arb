@@ -4671,6 +4671,47 @@
   "aiQaRescoreRequiresScoringFailed": "仅评分失败状态可重跑评分",
   "aiQaSettingsConfirmTokenInvalid": "二次确认 token 无效",
   "aiQaScoreUpdateStatusForbidden": "当前状态不允许改分(settled/canceled 后无法修改)",
+  "aiQaListTitle": "AI 限时问答",
+  "aiQaListTabCurrent": "当期",
+  "aiQaListTabHistory": "历史",
+  "aiQaListEmptyCurrent": "暂无进行中的题目",
+  "aiQaListEmptyHistory": "暂无历史",
+  "aiQaListRecentClosed": "最近结束的几期",
+  "aiQaStatusLive": "进行中",
+  "aiQaStatusSettled": "已结算",
+  "aiQaStatusCanceled": "已取消",
+  "aiQaStatusNoAnswers": "无人作答",
+  "aiQaListCash": "£{amount} 现金",
+  "@aiQaListCash": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "aiQaListPoints": "+{points} 积分",
+  "@aiQaListPoints": {
+    "placeholders": {
+      "points": { "type": "int" }
+    }
+  },
+  "aiQaListAnswerCount": "{count} 人作答",
+  "@aiQaListAnswerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiQaListWinnersCount": "采纳 {count} 条答案",
+  "@aiQaListWinnersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiQaListPayoutSent": "£{amount} 已发完",
+  "@aiQaListPayoutSent": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "aiQaListAdminCanceled": "admin 撤稿",
   "chatLoadFailed": "加载消息失败",
   "chatLoadMoreFailed": "加载更多消息失败",
   "chatNetworkOffline": "当前无网络连接，无法发送",
@@ -5337,6 +5378,7 @@
   "homeActivityFree": "免费",
   "discoveryFeedTypeTask": "任务",
   "discoveryFeedTypeActivity": "活动",
+  "discoveryFeedTypeAiQa": "AI 问答",
   "discoveryFeedTypeCompletion": "完成",
   "homeStoryPhotography": "摄影",
   "homeStoryCoding": "编程",

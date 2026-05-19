@@ -4845,6 +4845,47 @@
   "aiQaRescoreRequiresScoringFailed": "Rescore only allowed when scoring failed",
   "aiQaSettingsConfirmTokenInvalid": "Invalid confirmation token",
   "aiQaScoreUpdateStatusForbidden": "Cannot modify scores after settled/canceled",
+  "aiQaListTitle": "AI Q&A",
+  "aiQaListTabCurrent": "Current",
+  "aiQaListTabHistory": "History",
+  "aiQaListEmptyCurrent": "No active questions right now",
+  "aiQaListEmptyHistory": "No history yet",
+  "aiQaListRecentClosed": "Recently closed",
+  "aiQaStatusLive": "Live",
+  "aiQaStatusSettled": "Settled",
+  "aiQaStatusCanceled": "Canceled",
+  "aiQaStatusNoAnswers": "No answers",
+  "aiQaListCash": "£{amount} cash",
+  "@aiQaListCash": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "aiQaListPoints": "+{points} pts",
+  "@aiQaListPoints": {
+    "placeholders": {
+      "points": { "type": "int" }
+    }
+  },
+  "aiQaListAnswerCount": "{count} answers",
+  "@aiQaListAnswerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiQaListWinnersCount": "{count} winners",
+  "@aiQaListWinnersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiQaListPayoutSent": "£{amount} paid out",
+  "@aiQaListPayoutSent": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "aiQaListAdminCanceled": "Canceled by admin",
   "chatLoadFailed": "Failed to load messages",
   "chatLoadMoreFailed": "Failed to load more messages",
   "chatNetworkOffline": "No network connection, unable to send",
@@ -5511,6 +5552,7 @@
   "homeActivityFree": "Free",
   "discoveryFeedTypeTask": "Task",
   "discoveryFeedTypeActivity": "Activity",
+  "discoveryFeedTypeAiQa": "AI Q&A",
   "discoveryFeedTypeCompletion": "Completed",
   "homeStoryPhotography": "Photography",
   "homeStoryCoding": "Coding",

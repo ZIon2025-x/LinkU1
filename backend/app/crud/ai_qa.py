@@ -130,10 +130,17 @@ def award_participation_points_on_cancel(db: Session, qid: int) -> int:
 
 
 def list_questions(
-    db: Session, status: Optional[str] = None, limit: int = 50, offset: int = 0
+    db: Session,
+    status: Optional[str] = None,
+    statuses: Optional[List[str]] = None,
+    limit: int = 50,
+    offset: int = 0,
 ) -> List[AiQuestion]:
+    """列出题目。status 单值过滤兼容老调用方，statuses 列表用于 M2 列表页 status_in。"""
     stmt = select(AiQuestion)
-    if status:
+    if statuses:
+        stmt = stmt.where(AiQuestion.status.in_(statuses))
+    elif status:
         stmt = stmt.where(AiQuestion.status == status)
     stmt = stmt.order_by(AiQuestion.created_at.desc()).limit(limit).offset(offset)
     return list(db.execute(stmt).scalars())

@@ -9976,6 +9976,64 @@ class AppLocalizationsZh extends AppLocalizations {
       '当前状态不允许改分(settled/canceled 后无法修改)';
 
   @override
+  String get aiQaListTitle => 'AI 限时问答';
+
+  @override
+  String get aiQaListTabCurrent => '当期';
+
+  @override
+  String get aiQaListTabHistory => '历史';
+
+  @override
+  String get aiQaListEmptyCurrent => '暂无进行中的题目';
+
+  @override
+  String get aiQaListEmptyHistory => '暂无历史';
+
+  @override
+  String get aiQaListRecentClosed => '最近结束的几期';
+
+  @override
+  String get aiQaStatusLive => '进行中';
+
+  @override
+  String get aiQaStatusSettled => '已结算';
+
+  @override
+  String get aiQaStatusCanceled => '已取消';
+
+  @override
+  String get aiQaStatusNoAnswers => '无人作答';
+
+  @override
+  String aiQaListCash(String amount) {
+    return '£$amount 现金';
+  }
+
+  @override
+  String aiQaListPoints(int points) {
+    return '+$points 积分';
+  }
+
+  @override
+  String aiQaListAnswerCount(int count) {
+    return '$count 人作答';
+  }
+
+  @override
+  String aiQaListWinnersCount(int count) {
+    return '采纳 $count 条答案';
+  }
+
+  @override
+  String aiQaListPayoutSent(String amount) {
+    return '£$amount 已发完';
+  }
+
+  @override
+  String get aiQaListAdminCanceled => 'admin 撤稿';
+
+  @override
   String get chatLoadFailed => '加载消息失败';
 
   @override
@@ -11550,6 +11608,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoveryFeedTypeActivity => '活动';
+
+  @override
+  String get discoveryFeedTypeAiQa => 'AI 问答';
 
   @override
   String get discoveryFeedTypeCompletion => '完成';
@@ -24047,6 +24108,64 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '目前狀態不允許改分(settled/canceled 後無法修改)';
 
   @override
+  String get aiQaListTitle => 'AI 限時問答';
+
+  @override
+  String get aiQaListTabCurrent => '當期';
+
+  @override
+  String get aiQaListTabHistory => '歷史';
+
+  @override
+  String get aiQaListEmptyCurrent => '暫無進行中的題目';
+
+  @override
+  String get aiQaListEmptyHistory => '暫無歷史';
+
+  @override
+  String get aiQaListRecentClosed => '最近結束的幾期';
+
+  @override
+  String get aiQaStatusLive => '進行中';
+
+  @override
+  String get aiQaStatusSettled => '已結算';
+
+  @override
+  String get aiQaStatusCanceled => '已取消';
+
+  @override
+  String get aiQaStatusNoAnswers => '無人作答';
+
+  @override
+  String aiQaListCash(String amount) {
+    return '£$amount 現金';
+  }
+
+  @override
+  String aiQaListPoints(int points) {
+    return '+$points 積分';
+  }
+
+  @override
+  String aiQaListAnswerCount(int count) {
+    return '$count 人作答';
+  }
+
+  @override
+  String aiQaListWinnersCount(int count) {
+    return '採納 $count 條答案';
+  }
+
+  @override
+  String aiQaListPayoutSent(String amount) {
+    return '£$amount 已發完';
+  }
+
+  @override
+  String get aiQaListAdminCanceled => 'admin 撤稿';
+
+  @override
   String get chatLoadFailed => '載入訊息失敗';
 
   @override
@@ -25621,6 +25740,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get discoveryFeedTypeActivity => '活動';
+
+  @override
+  String get discoveryFeedTypeAiQa => 'AI 問答';
 
   @override
   String get discoveryFeedTypeCompletion => '完成';

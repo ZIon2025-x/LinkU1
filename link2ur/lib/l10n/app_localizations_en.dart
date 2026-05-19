@@ -10405,6 +10405,64 @@ class AppLocalizationsEn extends AppLocalizations {
       'Cannot modify scores after settled/canceled';
 
   @override
+  String get aiQaListTitle => 'AI Q&A';
+
+  @override
+  String get aiQaListTabCurrent => 'Current';
+
+  @override
+  String get aiQaListTabHistory => 'History';
+
+  @override
+  String get aiQaListEmptyCurrent => 'No active questions right now';
+
+  @override
+  String get aiQaListEmptyHistory => 'No history yet';
+
+  @override
+  String get aiQaListRecentClosed => 'Recently closed';
+
+  @override
+  String get aiQaStatusLive => 'Live';
+
+  @override
+  String get aiQaStatusSettled => 'Settled';
+
+  @override
+  String get aiQaStatusCanceled => 'Canceled';
+
+  @override
+  String get aiQaStatusNoAnswers => 'No answers';
+
+  @override
+  String aiQaListCash(String amount) {
+    return '£$amount cash';
+  }
+
+  @override
+  String aiQaListPoints(int points) {
+    return '+$points pts';
+  }
+
+  @override
+  String aiQaListAnswerCount(int count) {
+    return '$count answers';
+  }
+
+  @override
+  String aiQaListWinnersCount(int count) {
+    return '$count winners';
+  }
+
+  @override
+  String aiQaListPayoutSent(String amount) {
+    return '£$amount paid out';
+  }
+
+  @override
+  String get aiQaListAdminCanceled => 'Canceled by admin';
+
+  @override
   String get chatLoadFailed => 'Failed to load messages';
 
   @override
@@ -12047,6 +12105,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoveryFeedTypeActivity => 'Activity';
+
+  @override
+  String get discoveryFeedTypeAiQa => 'AI Q&A';
 
   @override
   String get discoveryFeedTypeCompletion => 'Completed';

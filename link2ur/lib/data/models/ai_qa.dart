@@ -12,6 +12,9 @@ class AiQuestion extends Equatable {
   final int rewardPoolPence;
   final int participationPoints;
   final int targetForumCategoryId;
+  // M2 列表页字段（仅 GET /api/ai-qa 列表填充；详情/admin 返 null）。
+  final int? answerCount;
+  final int? winnersCount;
 
   const AiQuestion({
     required this.id,
@@ -25,6 +28,8 @@ class AiQuestion extends Equatable {
     required this.rewardPoolPence,
     required this.participationPoints,
     required this.targetForumCategoryId,
+    this.answerCount,
+    this.winnersCount,
   });
 
   factory AiQuestion.fromJson(Map<String, dynamic> json) => AiQuestion(
@@ -47,6 +52,8 @@ class AiQuestion extends Equatable {
         rewardPoolPence: json['reward_pool_pence'] as int,
         participationPoints: json['participation_points'] as int,
         targetForumCategoryId: json['target_forum_category_id'] as int,
+        answerCount: json['answer_count'] as int?,
+        winnersCount: json['winners_count'] as int?,
       );
 
   @override
@@ -62,6 +69,8 @@ class AiQuestion extends Equatable {
         rewardPoolPence,
         participationPoints,
         targetForumCategoryId,
+        answerCount,
+        winnersCount,
       ];
 }
 

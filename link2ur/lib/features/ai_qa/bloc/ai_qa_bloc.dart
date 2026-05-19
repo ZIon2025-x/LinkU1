@@ -23,6 +23,15 @@ class AiQaLoadDetail extends AiQaEvent {
   List<Object?> get props => [qid];
 }
 
+/// M2 列表页：拉指定 status 集合。statuses=null 拉全部。
+class AiQaLoadList extends AiQaEvent {
+  final List<String>? statuses;
+  const AiQaLoadList({this.statuses});
+
+  @override
+  List<Object?> get props => [statuses];
+}
+
 class AiQaSubmitAnswer extends AiQaEvent {
   final int qid;
   final String? title;
@@ -50,12 +59,15 @@ class AiQaState extends Equatable {
   final AiQaStatus status;
   final AiQuestion? question;
   final List<AiAnswer> answers;
+  // M2 列表页字段：detail/answer-form 不动它。
+  final List<AiQuestion> items;
   final String? errorMessage;
 
   const AiQaState({
     this.status = AiQaStatus.initial,
     this.question,
     this.answers = const [],
+    this.items = const [],
     this.errorMessage,
   });
 
@@ -63,19 +75,22 @@ class AiQaState extends Equatable {
     AiQaStatus? status,
     AiQuestion? question,
     List<AiAnswer>? answers,
+    List<AiQuestion>? items,
     String? errorMessage,
   }) =>
       AiQaState(
         status: status ?? this.status,
         question: question ?? this.question,
         answers: answers ?? this.answers,
+        items: items ?? this.items,
         // errorMessage 走 replace 语义,跟其他 bloc 一致:
         // copyWith 不传 null 也会重置,与现有 AuthBloc/CouponPointsBloc 等保持一致。
         errorMessage: errorMessage,
       );
 
   @override
-  List<Object?> get props => [status, question, answers, errorMessage];
+  List<Object?> get props =>
+      [status, question, answers, items, errorMessage];
 }
 
 // ============================================================================
@@ -89,7 +104,24 @@ class AiQaBloc extends Bloc<AiQaEvent, AiQaState> {
       : _repository = repository,
         super(const AiQaState()) {
     on<AiQaLoadDetail>(_onLoadDetail);
+    on<AiQaLoadList>(_onLoadList);
     on<AiQaSubmitAnswer>(_onSubmit);
+  }
+
+  Future<void> _onLoadList(
+    AiQaLoadList event,
+    Emitter<AiQaState> emit,
+  ) async {
+    emit(state.copyWith(status: AiQaStatus.loading));
+    try {
+      final items = await _repository.listQuestions(statuses: event.statuses);
+      emit(state.copyWith(status: AiQaStatus.loaded, items: items));
+    } catch (err) {
+      emit(state.copyWith(
+        status: AiQaStatus.error,
+        errorMessage: err.toString(),
+      ));
+    }
   }
 
   Future<void> _onLoadDetail(

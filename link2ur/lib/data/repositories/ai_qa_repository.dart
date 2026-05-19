@@ -12,6 +12,33 @@ class AiQaRepository {
 
   final ApiService _apiService;
 
+  /// 列出问题（M2 列表页）。statuses 不传则返全部。
+  /// 传 ['published','scoring','scored'] = 当期；
+  /// 传 ['settled','canceled','closed_empty'] = 历史。
+  Future<List<AiQuestion>> listQuestions({
+    List<String>? statuses,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = <String, String>{
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    if (statuses != null && statuses.isNotEmpty) {
+      query['status_in'] = statuses.join(',');
+    }
+    final resp =
+        await _apiService.get(ApiEndpoints.aiQaList, queryParameters: query);
+    if (resp.isSuccess && resp.data != null) {
+      final List items = resp.data as List;
+      return items
+          .map((j) => AiQuestion.fromJson(j as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(
+        resp.errorCode ?? resp.message ?? 'ai_qa_load_list_failed');
+  }
+
   /// 获取问题详情
   Future<AiQuestion> getQuestion(int id) async {
     final resp = await _apiService.get(ApiEndpoints.aiQaDetail(id));

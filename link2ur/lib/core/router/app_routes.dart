@@ -156,6 +156,7 @@ class AppRoutes {
   static const String supportChat = '/support-chat';
 
   // AI 限时问答（悬赏）
+  static const String aiQaList = '/ai-qa';
   static const String aiQaDetail = '/ai-qa/:id';
   static const String aiQaAnswer = '/ai-qa/:id/answer';
 

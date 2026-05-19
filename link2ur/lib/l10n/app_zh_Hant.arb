@@ -4643,6 +4643,47 @@
   "aiQaRescoreRequiresScoringFailed": "僅評分失敗狀態可重跑評分",
   "aiQaSettingsConfirmTokenInvalid": "二次確認 token 無效",
   "aiQaScoreUpdateStatusForbidden": "目前狀態不允許改分(settled/canceled 後無法修改)",
+  "aiQaListTitle": "AI 限時問答",
+  "aiQaListTabCurrent": "當期",
+  "aiQaListTabHistory": "歷史",
+  "aiQaListEmptyCurrent": "暫無進行中的題目",
+  "aiQaListEmptyHistory": "暫無歷史",
+  "aiQaListRecentClosed": "最近結束的幾期",
+  "aiQaStatusLive": "進行中",
+  "aiQaStatusSettled": "已結算",
+  "aiQaStatusCanceled": "已取消",
+  "aiQaStatusNoAnswers": "無人作答",
+  "aiQaListCash": "£{amount} 現金",
+  "@aiQaListCash": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "aiQaListPoints": "+{points} 積分",
+  "@aiQaListPoints": {
+    "placeholders": {
+      "points": { "type": "int" }
+    }
+  },
+  "aiQaListAnswerCount": "{count} 人作答",
+  "@aiQaListAnswerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiQaListWinnersCount": "採納 {count} 條答案",
+  "@aiQaListWinnersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiQaListPayoutSent": "£{amount} 已發完",
+  "@aiQaListPayoutSent": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "aiQaListAdminCanceled": "admin 撤稿",
   "chatLoadFailed": "載入訊息失敗",
   "chatLoadMoreFailed": "載入更多訊息失敗",
   "chatNetworkOffline": "目前無網路連線，無法傳送",
@@ -5284,6 +5325,7 @@
   "homeActivityFree": "免費",
   "discoveryFeedTypeTask": "任務",
   "discoveryFeedTypeActivity": "活動",
+  "discoveryFeedTypeAiQa": "AI 問答",
   "discoveryFeedTypeCompletion": "完成",
   "homeStoryPhotography": "攝影",
   "homeStoryCoding": "編程",
