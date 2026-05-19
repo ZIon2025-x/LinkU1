@@ -2275,6 +2275,128 @@ class _DiscoveryActivityCard extends StatelessWidget {
 }
 
 // =============================================================================
+// 卡片类型 8b: AI 限时问答卡片（瀑布流） — 跟 _DiscoveryActivityCard 平行
+// 复用 activity_info 字段:
+//   - activityInfo.deadline (倒计时)
+//   - extraData['ai_question_id'] (onTap 跳详情)
+//   - extraData['reward_pool_pence'] / ['participation_points']
+// =============================================================================
+
+class _DiscoveryAiQaCard extends StatelessWidget {
+  const _DiscoveryAiQaCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final displayDesc = item.displayDescription(locale) != null
+        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
+        : null;
+
+    final extra = item.extraData ?? const {};
+    // 优先从 extra_data 取(后端推荐),否则 activity_info.activity_id 兜底(应不发生)
+    final aiQuestionId = extra['ai_question_id']?.toString() ??
+        item.id.replaceFirst('ai_qa_', '');
+    final rewardPoolPence = (extra['reward_pool_pence'] as num?)?.toInt();
+
+    return Semantics(
+      button: true,
+      label: 'View AI Q&A',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          if (aiQuestionId.isNotEmpty) {
+            context.push('/ai-qa/$aiQuestionId');
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Gradient header with robot emoji (ai_qa 永远无图)
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF7C3AED), Color(0xFFEC4899)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text('🤖', style: TextStyle(fontSize: 36)),
+                ),
+              ),
+              // Body
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _FeedTypeBadge(feedType: 'ai_qa'),
+                    const SizedBox(height: 6),
+                    if (displayTitle.isNotEmpty)
+                      Text(
+                        displayTitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (displayDesc != null && displayDesc.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        displayDesc,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    // Reward pool — 跟 activity 的价格行视觉对齐
+                    if (rewardPoolPence != null && rewardPoolPence > 0)
+                      Text(
+                        '💰 ${_currencySymbol(item.currency)}${(rewardPoolPence / 100).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.priceRed,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
 // 卡片类型 9: 完成记录卡片（关注 Feed）
 // =============================================================================
 

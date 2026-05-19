@@ -129,6 +129,7 @@ async def get_discovery_feed(
             ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
             ("tasks", lambda: _fetch_tasks(db, fetch_limit, current_user, recommendation_scores)),
             ("activities", lambda: _fetch_activities(db, fetch_limit, current_user)),
+            ("ai_qa", lambda: _fetch_ai_qa_items(db, fetch_limit)),
         ]
     else:  # community
         fetch_tasks = [
@@ -136,6 +137,7 @@ async def get_discovery_feed(
             ("experts", lambda: _fetch_experts(db, fetch_limit)),
             ("competitor reviews", lambda: _fetch_competitor_reviews(db, fetch_limit, current_user=current_user)),
             ("service reviews", lambda: _fetch_service_reviews(db, fetch_limit, current_user=current_user)),
+            ("ai_qa", lambda: _fetch_ai_qa_items(db, fetch_limit)),
         ]
 
     for name, fetch_fn in fetch_tasks:
@@ -1010,6 +1012,75 @@ async def _fetch_activities(db: AsyncSession, limit: int, current_user=None) -> 
     return items
 
 
+async def _fetch_ai_qa_items(db: AsyncSession, limit: int) -> list:
+    """获取 published 状态的 AI 限时问答，作为活动卡片接入发现 Feed.
+
+    - 仅取 status='published' 且 deadline > now (还在答题期内)
+    - shape 跟 _fetch_activities 平行,无图片 → 前端用 gradient + emoji fallback
+    - id 用 'ai_qa_{id}' 前缀,跟 'activity_{id}' 同模式
+    """
+    from app.models_ai_qa import AiQuestion
+    from app.utils.time_utils import get_utc_time
+
+    now = get_utc_time()
+
+    query = (
+        select(AiQuestion)
+        .where(
+            AiQuestion.status == "published",
+            AiQuestion.deadline > now,
+        )
+        .order_by(desc(AiQuestion.published_at))
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    questions = result.scalars().all()
+
+    items = []
+    for q in questions:
+        items.append({
+            "feed_type": "ai_qa",
+            "id": f"ai_qa_{q.id}",
+            "title": q.title,
+            "title_zh": q.title,
+            "title_en": q.title,
+            "description": (q.content or "")[:100],
+            "description_zh": (q.content or "")[:100],
+            "description_en": (q.content or "")[:100],
+            "images": None,  # ai_qa 无图,Flutter gradient fallback
+            "user_id": None,
+            "user_name": "Link²Ur AI",
+            "user_avatar": None,
+            "price": None,
+            "original_price": None,
+            "discount_percentage": None,
+            "currency": "GBP",
+            "rating": None,
+            "like_count": None,
+            "comment_count": None,
+            "view_count": None,
+            "upvote_count": None,
+            "downvote_count": None,
+            "linked_item": None,
+            "target_item": None,
+            "activity_info": {
+                "deadline": q.deadline.isoformat() if q.deadline else None,
+                "reward_pool_pence": q.reward_pool_pence,
+                "participation_points": q.participation_points,
+                "ai_question_id": q.id,
+            },
+            "is_experienced": None,
+            "is_favorited": None,
+            "user_vote_type": None,
+            "extra_data": {
+                "topic_tag": q.topic_tag,
+                "target_forum_category_id": q.target_forum_category_id,
+            },
+            "created_at": (q.published_at or q.created_at).isoformat() if (q.published_at or q.created_at) else None,
+        })
+    return items
+
+
 async def _fetch_forum_posts(
     db: AsyncSession, limit: int, visible_category_ids: list
 ) -> list:
@@ -1269,6 +1340,7 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
             "expert": 1.5,
             "competitor_review": 2.5,
             "service_review": 2.5,
+            "ai_qa": 2.5,       # AI 限时问答: 低频高权重,稀缺曝光
         }
     else:
         # 首页转化流 (保持原 weights)
@@ -1278,6 +1350,7 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
             "service": 1.5,
             "task": 1.5,       # Tasks: medium frequency
             "activity": 2.0,    # Activities: low frequency, higher weight
+            "ai_qa": 2.5,       # AI 限时问答: 低频高权重,与 activity 同维度
         }
 
     by_type = {}

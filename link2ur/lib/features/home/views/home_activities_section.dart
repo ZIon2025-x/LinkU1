@@ -276,6 +276,8 @@ class _DiscoveryFeedCard extends StatelessWidget {
         return _DiscoveryTaskCard(item: item);
       case 'activity':
         return _DiscoveryActivityCard(item: item);
+      case 'ai_qa':
+        return _DiscoveryAiQaCard(item: item);
       case 'completion':
         return _DiscoveryCompletionCard(item: item);
       default:
@@ -339,6 +341,8 @@ class _FeedTypeBadge extends StatelessWidget {
         return (_label(context, type), const Color(0xFFEFF6FF), const Color(0xFF3B82F6));
       case 'activity':
         return (_label(context, type), const Color(0xFFF0FDF4), const Color(0xFF16A34A));
+      case 'ai_qa':
+        return (_label(context, type), const Color(0xFFF5F3FF), const Color(0xFF7C3AED));
       case 'completion':
         return (_label(context, type), const Color(0xFFF0FDF4), const Color(0xFF15803D));
       default:
@@ -369,6 +373,8 @@ class _FeedTypeBadge extends StatelessWidget {
         return '📋 ${l10n.discoveryFeedTypeTask}';
       case 'activity':
         return '🎪 ${l10n.discoveryFeedTypeActivity}';
+      case 'ai_qa':
+        return '🤖 ${l10n.discoveryFeedTypeAiQa}';
       case 'completion':
         return '✅ ${l10n.discoveryFeedTypeCompletion}';
       default:
