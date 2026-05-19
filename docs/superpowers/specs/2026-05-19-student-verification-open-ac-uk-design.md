@@ -131,12 +131,16 @@ ON CONFLICT (email_domain) DO NOTHING;
 
 ### 3.4 Seed JSON 文件清洗(代码内,与 DB migration 并行)
 
-`scripts/university_email_domains.json` 追加 3 条(本期 commit 实际状态):
-- `bcu.ac.uk` — Birmingham City University
-- `norwichuni.ac.uk` — Norwich University of the Arts(并存于旧 `nua.ac.uk`)
-- `lancashire.ac.uk` — University of Lancashire(并存于旧 `uclan.ac.uk`)
+`scripts/university_email_domains.json` 改动:
+- 追加 3 条:
+  - `bcu.ac.uk` — Birmingham City University
+  - `norwichuni.ac.uk` — Norwich University of the Arts(并存于旧 `nua.ac.uk`)
+  - `lancashire.ac.uk` — University of Lancashire(并存于旧 `uclan.ac.uk`)
+- 去重 1 条:`uwe.ac.uk` 原本有两行(`University of the West of England` 和
+  `University of West of England, Bristol`),保留前者删除后者
+- 最终 122 条,unique 122
 
-其他 121 条不动。
+其他条目不动。
 
 ### 3.5 代码改动
 

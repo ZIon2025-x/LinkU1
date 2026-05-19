@@ -714,12 +714,6 @@
     "domain_pattern": "@glam.ac.uk"
   },
   {
-    "name": "University of West of England, Bristol",
-    "name_cn": "西英格兰大学布里斯托",
-    "email_domain": "uwe.ac.uk",
-    "domain_pattern": "@uwe.ac.uk"
-  },
-  {
     "name": "Birmingham City University",
     "name_cn": "伯明翰城市大学",
     "email_domain": "bcu.ac.uk",
