@@ -123,11 +123,15 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
         # 冒泡到外层 settle_question try/except → status=settle_failed
 
     # === leaderboard upsert ===
-    # 先做 leaderboard / is_featured / status,这些是纯 ORM 写入 pending;
-    # 然后 db.flush() 让所有 pending 变 dirty;最后 add_points_transaction 的第一次调用
-    # 会内部 db.commit() (coupon_points_crud.py:172),把上面 wallet credit / rank_final /
-    # leaderboard / is_featured / status 全部一次性原子 commit。任一前置失败 → 整个
-    # rollback → status 不切到 settled → 外层 catch → status=settle_failed (deep audit issue #3)。
+    # leaderboard + is_featured 都是 ORM-pending,会跟 wallet credit 一起被
+    # add_points_transaction 第一次调用的内部 commit 一并 commit (coupon_points_crud:172)。
+    #
+    # ⚠️ TODO P1 (push 后 final review Bug 2): upsert_leaderboard 当前不幂等 — 如果
+    # settle 走到 add_points 中间失败,前面 wallet/leaderboard/is_featured 已 commit,
+    # 路由 catch 标 settle_failed,admin 重试 settle 时 leaderboard 会**重复 increment**
+    # (answer_count/win_count/total_won_pence)。修法:AiQaLeaderboard 表加
+    # last_settled_ai_question_id 字段 (migration 241) + upsert_leaderboard 检查跳过同 qid。
+    # 实际触发概率极低 (PG OperationalError 极少),P0 接受此风险。
     for r in rows:
         ai_qa_crud.upsert_leaderboard(
             db,
@@ -142,19 +146,17 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
         if fp:
             fp.is_featured = True
 
-    # === 切 status (在 add_points 前) ===
-    q.status = "settled"
-    q.settled_at = settled_at
-
-    # 强制 flush 让上面所有 pending writes 进 DB session
+    # 强制 flush 让 wallet credit + leaderboard + is_featured 写入 pending;
+    # 注意 status 故意还没设 (见下面 add_points 之后的 status 切换)
     db.flush()
 
     # === add_points_transaction (所有未 hide 答主,含答案未被采纳的) ===
     # 第一次调用内部 db.commit() (coupon_points_crud:172) 会把上面 wallet credit /
-    # rank_final / leaderboard / is_featured / status='settled' 全部一次性原子 commit。
+    # rank_final / leaderboard / is_featured 全部一次性原子 commit。
+    # **status 故意还在 'scored'/'settle_failed'** — 这样 add_points 中间失败时
+    # 路由 catch 标 settle_failed 是合法的状态转移,而不是覆盖已 commit 的 'settled' (Bug 1 修)。
     # 幂等防双发: settle_failed 重试场景下 add_points_transaction 命中 idempotency_key
     # 会直接 return 已存在 txn (coupon_points_crud:96-102),不会双发。
-    # Final review critical issue #5 + deep audit issue #3.
     for r in rows:
         add_points_transaction(
             db,
@@ -165,6 +167,14 @@ def settle_question(db: Session, qid: int, admin_id: str) -> dict:
             related_id=qid,
             idempotency_key=f"ai_qa_settle_points_{qid}_{r.user_id}",
         )
+
+    # === 切 status (在 add_points 之后,Bug 1 修) ===
+    # 此时 wallet credit / leaderboard / is_featured / 所有 add_points 都已 commit。
+    # 单独切 status='settled',下面 create_audit_log 内部 commit 把 status 一起 commit。
+    # 如果 status 切换或 audit_log 中间挂 → 钱已发,但 status 还是 'scored'/'settle_failed'
+    # → 重试 settle 时 wallet/points 幂等跳过已发的,补完 status='settled' 即可。
+    q.status = "settled"
+    q.settled_at = settled_at
 
     # === S3 审计 ===
     # ⚠️ create_audit_log 函数内部自带 db.commit() (crud/audit.py:34) —

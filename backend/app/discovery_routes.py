@@ -1072,9 +1072,16 @@ async def _fetch_ai_qa_items(db: AsyncSession, limit: int) -> list:
             "is_experienced": None,
             "is_favorited": None,
             "user_vote_type": None,
+            # extra_data 复制 ai_question_id + reward_pool_pence + participation_points
+            # 让前端 _DiscoveryAiQaCard 直读 (跟 activity_info 双写;Flutter 端读 extra 更稳)
+            # 修 Agent B 抓到的 Bug 3: 之前 _DiscoveryAiQaCard 从 extra_data 读 reward_pool_pence
+            # 但只在 activity_info 里,导致 💰 行永不渲染
             "extra_data": {
                 "topic_tag": q.topic_tag,
                 "target_forum_category_id": q.target_forum_category_id,
+                "ai_question_id": q.id,
+                "reward_pool_pence": q.reward_pool_pence,
+                "participation_points": q.participation_points,
             },
             "created_at": (q.published_at or q.created_at).isoformat() if (q.published_at or q.created_at) else None,
         })
