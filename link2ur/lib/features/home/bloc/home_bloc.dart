@@ -228,6 +228,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       // 刷新时也重新加载热搜
       add(const HomeLoadTrendingSearches());
+      // 刷新时也重新加载发现流(scope=home), 否则下拉只刷推荐任务,发现流保留旧内容
+      add(const HomeLoadDiscoveryFeed());
     } catch (e) {
       AppLogger.error('Failed to refresh home data', e);
       // 刷新失败：通知 UI 层显示 Toast，保持现有数据不变
