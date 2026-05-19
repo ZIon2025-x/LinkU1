@@ -225,8 +225,8 @@ class _TaskCenterContent extends StatelessWidget {
                     height: 28,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        // 金色,跟 mockup M1 (#FFD700 → #FFAA00) 一致
-                        colors: [Color(0xFFFFD700), Color(0xFFFFAA00)],
+                        // 蓝白品牌色 (mockups/blue-white-gradient-preview.html 方案 B): #007AFF → #B3D9FF
+                        colors: [Color(0xFF007AFF), Color(0xFFB3D9FF)],
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),

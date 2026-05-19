@@ -37,8 +37,9 @@ class AiQaListItemCard extends StatelessWidget {
               : AppColors.cardBackgroundLight,
           borderRadius: BorderRadius.circular(10),
           border: Border(
-            // 金色左边框 (mockup M1: border-left:3px solid #ffd700)
-            left: const BorderSide(color: Color(0xFFFFD700), width: 3),
+            // 蓝色左边框 (品牌色 Apple System Blue #007AFF,
+            // mockups/blue-white-gradient-preview.html 方案 B)
+            left: const BorderSide(color: Color(0xFF007AFF), width: 3),
             top: BorderSide(
               color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
               width: 0.5,

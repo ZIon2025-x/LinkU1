@@ -342,7 +342,8 @@ class _FeedTypeBadge extends StatelessWidget {
       case 'activity':
         return (_label(context, type), const Color(0xFFF0FDF4), const Color(0xFF16A34A));
       case 'ai_qa':
-        return (_label(context, type), const Color(0xFFF5F3FF), const Color(0xFF7C3AED));
+        // 蓝白品牌色 (Apple System Blue 主色),跟 task badge (#3B82F6) 区分
+        return (_label(context, type), const Color(0xFFE5F2FF), const Color(0xFF007AFF));
       case 'completion':
         return (_label(context, type), const Color(0xFFF0FDF4), const Color(0xFF15803D));
       default:

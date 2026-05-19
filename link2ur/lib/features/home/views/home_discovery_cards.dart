@@ -2328,12 +2328,13 @@ class _DiscoveryAiQaCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Gradient header with robot emoji (ai_qa 永远无图)
+              // 蓝白渐变 (品牌色规范 mockups/blue-white-gradient-preview.html 方案 B): #007AFF → #B3D9FF
               AspectRatio(
                 aspectRatio: 16 / 9,
                 child: Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFF7C3AED), Color(0xFFEC4899)],
+                      colors: [Color(0xFF007AFF), Color(0xFFB3D9FF)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
