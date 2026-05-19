@@ -110,7 +110,11 @@ def extract_registrable_ac_uk(domain: str) -> Optional[str]:
 ### 3.3 数据迁移 (`backend/migrations/241_add_missing_universities.sql`)
 
 ```sql
--- 补 3 条缺漏:BCU + Norwich 新域 + Lancashire 新域
+-- 0. 去掉 name UNIQUE 约束 — rebrand 场景(Norwich/UCLan)需要同名两行,UNIQUE 反而碍事
+--    重名防护改靠 email_domain UNIQUE 兜底
+ALTER TABLE universities DROP CONSTRAINT IF EXISTS universities_name_key;
+
+-- 1. 补 3 条缺漏:BCU + Norwich 新域 + Lancashire 新域
 INSERT INTO universities (name, name_cn, email_domain, domain_pattern, is_active)
 VALUES ('Birmingham City University', '伯明翰城市大学', 'bcu.ac.uk', '@*.bcu.ac.uk', TRUE)
 ON CONFLICT (email_domain) DO NOTHING;
@@ -123,6 +127,10 @@ INSERT INTO universities (name, name_cn, email_domain, domain_pattern, is_active
 VALUES ('University of Lancashire', '兰开夏大学', 'lancashire.ac.uk', '@*.lancashire.ac.uk', TRUE)
 ON CONFLICT (email_domain) DO NOTHING;
 ```
+
+注:Norwich 两行(`nua.ac.uk` 和 `norwichuni.ac.uk`)同 `name="Norwich University of the Arts"`,
+学生收到的认证邮件和 API 响应显示统一干净。`models.py:3086` 也去掉了 `unique=True` 让模型
+和 schema 一致。
 
 注:其他 118 条 seed entry 经审计**全部正确**(包括 Birmingham `bham.ac.uk`、post-92
 学校用 root 域名 + 学生子域邮箱的情况:Sheffield Hallam `shu.ac.uk` → 学生
@@ -160,9 +168,11 @@ ON CONFLICT (email_domain) DO NOTHING;
 ### 3.7 自动 INSERT 的并发安全
 
 懒加载方案下,两个学生同时第一次用同一新域名提交时可能竞态。处理:
-- DB 层:`universities.email_domain` 已 `UNIQUE`(030 migration)。INSERT 用
-  `ON CONFLICT (email_domain) DO NOTHING RETURNING id`(或先 SELECT → 失败再 SELECT)
-- 应用层:`try: db.add+commit; except IntegrityError: db.rollback(); 重新 SELECT`
+- DB 层:`universities.email_domain` 是 UNIQUE(030 migration)
+- 应用层:`try: db.add + commit; except IntegrityError: db.rollback(); 重新 SELECT by email_domain`
+
+`name` 不再 UNIQUE(241 migration 去掉),所以 IntegrityError 唯一来源就是 email_domain
+race,re-SELECT 一定能拿到赢家行。
 
 ### 3.8 Forum School ACL(migration 032)
 
@@ -177,13 +187,10 @@ ON CONFLICT (email_domain) DO NOTHING;
 - **没有显式 audit**:未在 seed 里的注册域会"静默 INSERT"。Admin 后台想感知新学校
   可以加一个"`name_cn IS NULL` 的 universities 行"过滤视图,**不在本期 scope**。
 - **机构 rebrand / 域名迁移**(如 NUA / UCLan):新算法直接吃旧+新两个注册域分别
-  作为两行 universities,显示名不同但都能验证 — 可接受,admin 后续可合并。
-- **Seed 别名 name 与历史行重名**: `universities.name` 是 UNIQUE NOT NULL。如果 seed
-  里某条 entry 的 `name` 已经被另一行(不同 email_domain)用了(常见于 rebrand 场景:
-  Norwich nua.ac.uk + norwichuni.ac.uk 都是 NUA),lazy INSERT 会 IntegrityError。
-  matcher 会自动重试用 `f"{name} ({registrable})"` 作 disambiguated name。本期 seed JSON
-  中 Norwich 的新条目已主动加 `(norwichuni.ac.uk)` 后缀以避免运行时触发兜底,migration 241
-  同步。
+  作为两行 universities,**`name` UNIQUE 已去**(migration 241 Step 0),两行可共享 name,
+  学生邮件 / API 显示统一。Admin 后续可合并 / 标记 dormant。
+- **`name` UNIQUE 去掉的副作用**:admin 现在手抖建重名学校 DB 不会拦,要靠 admin UI 自己
+  把关。但 email_domain UNIQUE 仍在,真正的"同校"防重复靠它兜底。
 
 ### 3.10 不做的事(YAGNI)
 

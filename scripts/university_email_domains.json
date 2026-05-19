@@ -720,7 +720,7 @@
     "domain_pattern": "@*.bcu.ac.uk"
   },
   {
-    "name": "Norwich University of the Arts (norwichuni.ac.uk)",
+    "name": "Norwich University of the Arts",
     "name_cn": "诺里奇艺术大学",
     "email_domain": "norwichuni.ac.uk",
     "domain_pattern": "@*.norwichuni.ac.uk"

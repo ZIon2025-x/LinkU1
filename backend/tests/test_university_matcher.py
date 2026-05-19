@@ -130,24 +130,24 @@ class TestMatchUniversityByEmail:
         assert uni1.id == uni2.id
         assert uni1.email_domain == "imaginary2.ac.uk"
 
-    def test_unique_name_collision_retries_with_disambiguator(self, db):
-        """seed 别名 name 已被另一 email_domain 占用 → 重试用 disambiguated name 成功"""
+    def test_duplicate_name_different_domain_allowed(self, db):
+        """name UNIQUE 已在 migration 241 去掉,同名不同 email_domain 允许并存
+        (rebrand 双行场景:Norwich nua.ac.uk + norwichuni.ac.uk 同 name)"""
         from app.university_matcher import match_university_by_email
-        # 预先占用 seed 给 bcu.ac.uk 的 name (Birmingham City University)
-        # 但分配给一个不同的 email_domain
+        # 用 fictional sibling domain 占住 seed 给 bcu.ac.uk 的 name
         db.add(models.University(
             name="Birmingham City University",
             name_cn="伯明翰城市大学",
-            email_domain="some-other-bcu-domain.ac.uk",
-            domain_pattern="@*.some-other-bcu-domain.ac.uk",
+            email_domain="bcu-legacy-test.ac.uk",
+            domain_pattern="@*.bcu-legacy-test.ac.uk",
             is_active=True,
         ))
         db.flush()
 
-        # 现在 verify bcu.ac.uk 邮箱;seed 别名想用 "Birmingham City University" 名字
-        # 但已被占,应该自动 fallback 到 disambiguated 名字
+        # verify bcu.ac.uk: seed alias 给 "Birmingham City University",已被占用
+        # name UNIQUE 没了,应当顺利 INSERT(干净 name,不带括号)
         uni = match_university_by_email("alice@mail.bcu.ac.uk", db)
         assert uni is not None
         assert uni.email_domain == "bcu.ac.uk"
-        assert uni.name == "Birmingham City University (bcu.ac.uk)"
+        assert uni.name == "Birmingham City University"
         assert uni.name_cn == "伯明翰城市大学"

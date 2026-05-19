@@ -3083,7 +3083,7 @@ class University(Base):
     __tablename__ = "universities"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, unique=True)  # 大学名称（英文）
+    name = Column(String(255), nullable=False)  # 大学名称（英文）— UNIQUE 已在 migration 241 去掉,rebrand 双行允许同名
     name_cn = Column(String(255), nullable=True)  # 大学名称（中文）
     email_domain = Column(String(255), nullable=False, unique=True)  # 邮箱域名（如 bristol.ac.uk）
     domain_pattern = Column(String(255), nullable=False)  # 匹配模式（支持通配符）
