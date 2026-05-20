@@ -99,7 +99,7 @@ class Message extends Equatable {
     this.negotiationCurrency,
     this.meta,
     int? applicationId,
-  }) : _topLevelApplicationId = applicationId;
+  }) : _applicationId = applicationId;
 
   final int id;
   final String senderId;
@@ -118,7 +118,7 @@ class Message extends Equatable {
   /// 解析后的 meta JSON（系统消息的结构化数据，如 deal_closed 的 application_id/price 等）
   final Map<String, dynamic>? meta;
   /// 顶层 application_id（WS push 消息携带）
-  final int? _topLevelApplicationId;
+  final int? _applicationId;
 
   /// 系统消息动作类型（如 'deal_closed', 'application_rejected'）
   String? get systemAction => meta?['system_action'] as String?;
@@ -135,7 +135,7 @@ class Message extends Equatable {
   /// 优先读顶层 application_id（WS push 消息）；不存在时回退到 meta.application_id（系统消息）；
   /// 两者都没有则返回 null。
   int? get applicationId {
-    if (_topLevelApplicationId != null) return _topLevelApplicationId;
+    if (_applicationId != null) return _applicationId;
     return systemApplicationId;
   }
 
@@ -268,12 +268,12 @@ class Message extends Equatable {
       negotiationPrice: negotiationPrice ?? this.negotiationPrice,
       negotiationCurrency: negotiationCurrency ?? this.negotiationCurrency,
       meta: meta ?? this.meta,
-      applicationId: applicationId ?? _topLevelApplicationId,
+      applicationId: applicationId ?? _applicationId,
     );
   }
 
   @override
-  List<Object?> get props => [id, senderId, receiverId, content, createdAt, negotiationPrice, negotiationCurrency];
+  List<Object?> get props => [id, senderId, receiverId, content, createdAt, negotiationPrice, negotiationCurrency, _applicationId];
 }
 
 /// 最后一条消息（含发送者信息，对齐iOS LastMessage）

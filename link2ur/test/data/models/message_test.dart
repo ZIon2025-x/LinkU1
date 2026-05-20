@@ -43,5 +43,19 @@ void main() {
       }));
       expect(m.applicationId, 7);
     });
+
+    test('two messages with different applicationId are not equal', () {
+      final base = <String, dynamic>{
+        'id': 1,
+        'sender_id': 'u1',
+        'receiver_id': 'u2',
+        'content': 'hi',
+        'message_type': 'text',
+      };
+      final a = Message.fromJson({...base, 'application_id': 42});
+      final b = Message.fromJson({...base, 'application_id': 99});
+      expect(a == b, isFalse,
+          reason: 'applicationId must participate in equality');
+    });
   });
 }
