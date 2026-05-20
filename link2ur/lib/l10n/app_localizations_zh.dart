@@ -14133,6 +14133,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoveryAnonymousUser => '匿名用户';
 
   @override
+  String discoveryTaskApplicants(int count) {
+    return '$count 人应征';
+  }
+
+  @override
   String get commonFollow => '+ 关注';
 
   @override
@@ -28269,6 +28274,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get discoveryAnonymousUser => '匿名用戶';
+
+  @override
+  String discoveryTaskApplicants(int count) {
+    return '$count 人應徵';
+  }
 
   @override
   String get commonFollow => '+ 關注';

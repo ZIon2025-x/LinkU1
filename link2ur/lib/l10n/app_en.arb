@@ -6779,6 +6779,10 @@
   "communityHotSearches": "Trending",
   "communityDiscoverMore": "Discover more",
   "discoveryAnonymousUser": "Anonymous",
+  "discoveryTaskApplicants": "{count} applicants",
+  "@discoveryTaskApplicants": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "commonFollow": "+ Follow",
   "commonFollowing": "Following",
   "commonAnonymous": "Anonymous"

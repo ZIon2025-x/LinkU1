@@ -6593,6 +6593,10 @@
   "communityHotSearches": "热搜榜",
   "communityDiscoverMore": "发现更多",
   "discoveryAnonymousUser": "匿名用户",
+  "discoveryTaskApplicants": "{count} 人应征",
+  "@discoveryTaskApplicants": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "commonFollow": "+ 关注",
   "commonFollowing": "已关注",
   "commonAnonymous": "匿名"

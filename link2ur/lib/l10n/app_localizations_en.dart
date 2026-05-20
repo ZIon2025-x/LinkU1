@@ -14770,6 +14770,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoveryAnonymousUser => 'Anonymous';
 
   @override
+  String discoveryTaskApplicants(int count) {
+    return '$count applicants';
+  }
+
+  @override
   String get commonFollow => '+ Follow';
 
   @override

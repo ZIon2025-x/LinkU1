@@ -6565,6 +6565,10 @@
   "communityHotSearches": "熱搜榜",
   "communityDiscoverMore": "發現更多",
   "discoveryAnonymousUser": "匿名用戶",
+  "discoveryTaskApplicants": "{count} 人應徵",
+  "@discoveryTaskApplicants": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "commonFollow": "+ 關注",
   "commonFollowing": "已關注",
   "commonAnonymous": "匿名"

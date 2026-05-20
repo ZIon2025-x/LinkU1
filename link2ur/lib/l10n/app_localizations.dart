@@ -27066,6 +27066,12 @@ abstract class AppLocalizations {
   /// **'Anonymous'**
   String get discoveryAnonymousUser;
 
+  /// No description provided for @discoveryTaskApplicants.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} applicants'**
+  String discoveryTaskApplicants(int count);
+
   /// No description provided for @commonFollow.
   ///
   /// In en, this message translates to:

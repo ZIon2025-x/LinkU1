@@ -239,6 +239,14 @@
   }
 
   /* ===================================================================
+     品牌渐变 — fallback 通用 (帖子/达人/任务/服务 无图时一致)
+     Apple System Blue → primaryLight (与 AppColors.gradientPrimary 对齐)
+     =================================================================== */
+  .card.new .bg.brand {
+    background: linear-gradient(135deg, #007AFF, #409CFF);
+  }
+
+  /* ===================================================================
      D. 帖子卡 — 海报式 (首图当背景 + 文字 overlay)
      =================================================================== */
   .card.new.post { aspect-ratio: 3/4; }
@@ -369,6 +377,165 @@
     padding: 1px 5px; border-radius: 4px;
     font-size: 9px; font-weight: 700;
     color: #FFE07A;
+  }
+
+  /* ===================================================================
+     F. 任务卡 — 海报式 (首图当背景 + 类型 tag + 赏金 chip + 底部 overlay)
+     =================================================================== */
+  .card.new.task { aspect-ratio: 3/4; }
+
+  /* 任务类型渐变 fallback (无首图时) */
+  .card.new.task .bg.tt-shopping  { background: linear-gradient(135deg, #2563EB, #60A5FA); }
+  .card.new.task .bg.tt-tutoring  { background: linear-gradient(135deg, #7359F2, #A78BFA); }
+  .card.new.task .bg.tt-food      { background: linear-gradient(135deg, #FF6B35, #FFC857); }
+  .card.new.task .bg.tt-moving    { background: linear-gradient(135deg, #475569, #94A3B8); }
+  .card.new.task .bg.tt-other     { background: linear-gradient(135deg, #6B7280, #9CA3AF); }
+  .card.new.task .bg::after {
+    /* fallback 大 icon 用一个圆形 fake-svg 占位即可 (mockup 用 emoji 模拟) */
+    opacity: 0.4;
+  }
+
+  /* 任务类型 chip — 左上 */
+  .card.new.task .type-tag {
+    position: absolute; top: 8px; left: 8px;
+    padding: 3px 8px; border-radius: 999px;
+    color: #fff; font-size: 10px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 3px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    max-width: calc(100% - 90px);
+  }
+  .card.new.task .type-tag.tt-shopping { background: rgba(37, 99, 235, 0.92); }
+  .card.new.task .type-tag.tt-tutoring { background: rgba(115, 89, 242, 0.92); }
+  .card.new.task .type-tag.tt-food     { background: rgba(255, 107, 53, 0.92); }
+  .card.new.task .type-tag.tt-moving   { background: rgba(71, 85, 105, 0.92); }
+  .card.new.task .type-tag.tt-other    { background: rgba(107, 114, 128, 0.92); }
+  .card.new.task .type-tag .label {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* 赏金 chip — 右上,大字红色 */
+  .card.new.task .reward-tr {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(239, 68, 68, 0.95); color: #fff;
+    padding: 4px 9px; border-radius: 999px;
+    font-size: 13px; font-weight: 800;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    font-style: italic;
+  }
+  .card.new.task .reward-tr.quoted {
+    background: rgba(107, 114, 128, 0.88);
+    font-style: normal;
+    font-size: 11px;
+  }
+
+  /* 任务标题 */
+  .card.new.task .task-title {
+    font-size: 14px; font-weight: 700; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 4px;
+  }
+  /* 任务 meta 行 (地点 · 截止) */
+  .card.new.task .meta-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.88);
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .card.new.task .meta-row .dl {
+    background: rgba(239, 68, 68, 0.55);
+    padding: 1px 6px; border-radius: 4px;
+    font-weight: 700; color: #fff;
+  }
+  .card.new.task .meta-row .loc {
+    display: inline-flex; align-items: center; gap: 2px;
+  }
+  /* 任务应征人数 chip (用户行右侧) */
+  .card.new.task .applicants {
+    background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.22);
+    padding: 1px 7px; border-radius: 999px;
+    font-size: 9px; font-weight: 700;
+    color: #fff;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* ===================================================================
+     G. 服务卡 — 海报式 (首图背景 + feedType chip + 评分 + 价格)
+     =================================================================== */
+  .card.new.service { aspect-ratio: 3/4; }
+  /* isExpert: 金色 1.5px 描边 (CSS box-shadow 模拟) */
+  .card.new.service.expert {
+    box-shadow:
+      0 0 0 1.5px rgba(218, 165, 32, 0.55),
+      0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  /* feedType chip (服务 / 个人技能 不同色) */
+  .card.new.service .ft-tag {
+    position: absolute; top: 8px; left: 8px;
+    padding: 3px 8px; border-radius: 999px;
+    color: #fff; font-size: 10px; font-weight: 700;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .card.new.service .ft-tag.service-expert { background: rgba(234, 88, 12, 0.92); }
+  .card.new.service .ft-tag.personal-skill { background: rgba(5, 150, 105, 0.92); }
+
+  /* 右上评分 chip (有 rating 才显示) */
+  .card.new.service .rating-tr {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.55); color: #FFD84D;
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+    backdrop-filter: blur(4px);
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .card.new.service .rating-tr .num { color: #fff; }
+
+  /* 服务标题 */
+  .card.new.service .svc-title {
+    font-size: 14px; font-weight: 700; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  /* 用户行 + 价格 同行 */
+  .card.new.service .bottom-row {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card.new.service .bottom-row .user-mini {
+    display: inline-flex; align-items: center; gap: 6px;
+    flex: 1; min-width: 0;
+  }
+  .card.new.service .bottom-row .av {
+    width: 22px; height: 22px;
+  }
+  /* 达人头像 — 金色描边 */
+  .card.new.service.expert .bottom-row .av {
+    border: 1.5px solid #DAA520;
+    box-sizing: border-box;
+  }
+  .card.new.service .bottom-row .name {
+    font-size: 11px; font-weight: 600; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .card.new.service .bottom-row .price {
+    color: #fff;
+    background: rgba(239, 68, 68, 0.92);
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 13px; font-weight: 800;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+  }
+  .card.new.service .bottom-row .price .from {
+    font-size: 9px; font-weight: 600;
+    opacity: 0.85; margin-right: 1px;
   }
 </style>
 </head>
@@ -779,7 +946,7 @@
     <h3>无图 fallback — 类别渐变</h3>
     <div class="wrap">
       <div class="card new post">
-        <div class="bg" style="background:linear-gradient(135deg,#FF2D55,#FF8FAB);" data-emoji="🍜"></div>
+        <div class="bg brand" data-emoji="🍜"></div>
         <div class="veil"></div>
         <span class="top-badge cat-food">🍜 美食</span>
         <div class="stats-tr">
@@ -935,7 +1102,8 @@
     <h3>无 cover fallback — 类别渐变</h3>
     <div class="wrap">
       <div class="card new expert">
-        <div class="bg cat-design" data-emoji="🎨"></div>
+        <div class="bg brand"></div>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:90px;color:rgba(255,255,255,0.45);">🎨</div>
         <div class="veil"></div>
         <div class="badges-tl">
           <span class="ex-badge featured">★ 精选</span>
@@ -976,7 +1144,7 @@
     <b>帖子卡 (<code>_PostCard</code>)</b>:
     <br>· <b>统一海报式</b> — 无论有无首图,都用 <code>Stack(fit: StackFit.expand, ...)</code> 海报布局
     <br>· <code>item.hasImages</code> = true → 首图 <code>AsyncImageView</code> 占满做背景
-    <br>· <code>item.hasImages</code> = false → 用 category 渐变(参考 <code>ServiceCategoryHelper.getGradient</code> 或自建 post category gradient map) + <code>item.categoryIcon</code> emoji 大字(<code>fontSize: 90, opacity: 0.5</code>) 占位 —— 跟达人卡 fallback 风格一致
+    <br>· <code>item.hasImages</code> = false → 用 <b>品牌蓝渐变</b> <code>AppColors.gradientPrimary</code> (#007AFF→#409CFF) + <code>item.categoryIcon</code> emoji 大字(<code>fontSize: 90, opacity: 0.5</code>) 占位 —— 所有 fallback 统一品牌色,不按 category 五颜六色
     <br>· 顶部加 <code>LinearGradient(0.35→0→0.45→0.85)</code> veil 保证 overlay 文字可读
     <br>· 顶部 overlay: 左上 category badge (按 category 染色), 右上 stats chip (❤ likeCount · 💬 commentCount)
     <br>· 底部 overlay: title (2 行) + desc (2 行) + 用户行 (AvatarView + userName · 时间) + linkedItem tag (有则显)
@@ -984,7 +1152,7 @@
     <br><br>
     <b>达人卡 (<code>_ExpertCard</code>)</b>:
     <br>· 现有 cover (3:4) 已经存在,只需把<b>下半白底信息区</b>也合进 cover overlay
-    <br>· cover 缺失 → 沿用 <code>ServiceCategoryHelper.getGradient(category)</code> 渐变 + 类别 emoji 大字 (透明度 0.5),Flutter 用 <code>Center(child: Text(emoji, fontSize: 90, color: white.withOpacity(0.5)))</code>
+    <br>· cover 缺失 → 用 <b>品牌蓝渐变</b> <code>AppColors.gradientPrimary</code> + <code>ServiceCategoryHelper.getIcon(category)</code> Material icon 90px white-45% (类别用图标区分,渐变保持品牌一致)
     <br>· 头像从 cover 左下移到 content overlay 内,跟名字成 head-row;尺寸 38-40px + 白边 + 阴影
     <br>· 技能 chip 改半透白底 (<code>Colors.white.withOpacity(0.22)</code>) + 边框 0.22 alpha,不再用 <code>Color(0xFFDBEAFE)</code> 蓝底
     <br>· 营业中/休息中 pill: 营业中绿色 0.92, 休息中灰色 0.88
@@ -993,6 +1161,282 @@
     <br><br>
     <b>无需后端字段改动</b> — 字段全部沿用现有 <code>DiscoveryFeedItem</code>。
     <br><b>渐进上线</b>: 先做帖子卡 (改动小,fallback 安全),再做达人卡 (信息密度变化大,需要看 masonry 流整体节奏)。
+  </p>
+</div>
+
+<h1 style="margin-top:48px;">任务卡新样式 — 海报式(首图背景 + 类型 tag + 赏金 chip)</h1>
+<p class="intro">
+  当前 <code>_DiscoveryTaskCard</code> (<code>home_discovery_cards.dart:2174</code>): 上半 4:3 图 + 下半白底 feedType badge + 标题 + 两个 tag (任务类型 + 赏金)。
+  <br>新方案: <b>3:4 海报 · 首图当背景</b>, 任务类型 chip 左上 (按 TaskType 染色), 赏金红色斜体 chip 右上, 标题/地点·截止/发布者 overlay 在底部。
+  <br><b>无图</b> fallback: <code>TaskTypeHelper.getGradient(taskType)</code> + <code>TaskTypeHelper.getIcon(taskType)</code> 90px white-45% (跟达人卡 fallback 同款)。
+  <br>赏金 chip: 数值显示 红底白字斜体 (强金额感); <code>rewardToBeQuoted == true</code> → 灰底 "面议"。
+  <br>对应字段: <code>item.firstImage</code> / <code>item.taskType</code> / <code>item.price</code> + <code>item.currency</code> + <code>item.rewardToBeQuoted</code> / <code>item.taskLocation</code> / <code>item.taskDeadline</code> / <code>item.applicationCount</code> / <code>item.userName + userAvatar</code>。
+</p>
+
+<div class="row">
+
+  <!-- 列 T1: 当前样式 -->
+  <div class="col">
+    <h3>当前任务卡(参考)</h3>
+    <div class="wrap">
+      <div class="card" style="padding:0;">
+        <div style="aspect-ratio:4/3;background:linear-gradient(135deg,#2563EB,#60A5FA);display:flex;align-items:center;justify-content:center;font-size:54px;opacity:0.85;color:#fff;">🛒</div>
+        <div style="padding:10px 10px 12px;">
+          <div style="display:inline-block;background:#EFF6FF;color:#3B82F6;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-bottom:6px;">📋 任务</div>
+          <div style="font-size:14px;font-weight:600;color:#222;line-height:1.4;">帮忙去 Selfridges 代购一支 La Mer 面霜</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
+            <span style="background:#F0F0FF;color:#667EEA;font-size:11px;padding:2px 8px;border-radius:10px;">代购跑腿</span>
+            <span style="background:#FEE2E2;color:#DC2626;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;">£30</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      4:3 图 + 下半白底,赏金作为普通 tag<br>
+      <span class="pros">✅ 信息清晰</span><br>
+      <span class="cons">⚠️ 赏金视觉权重不够,跟普通 tag 一样</span>
+    </div>
+  </div>
+
+  <!-- 列 T2: 新样式 — 代购跑腿(蓝) -->
+  <div class="col">
+    <h3>新样式 — 代购跑腿(蓝)</h3>
+    <div class="wrap">
+      <div class="card new task">
+        <div class="bg" style="background:linear-gradient(135deg,#2563EB,#60A5FA);" data-emoji="🛒"></div>
+        <div class="veil"></div>
+        <span class="type-tag tt-shopping">🛒 <span class="label">代购跑腿</span></span>
+        <div class="reward-tr">£30</div>
+        <div class="content">
+          <div class="task-title">帮忙去 Selfridges 代购一支 La Mer 面霜</div>
+          <div class="meta-row">
+            <span class="loc">📍 伦敦 W1</span>
+            <span class="dl">还剩 2 天</span>
+          </div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#FF6B35,#FFB627);">陈</span>
+            <span class="name">陈同学 · 1 小时前</span>
+            <span class="applicants">3 人应征</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      赏金红色斜体大字,一眼看到金额<br>
+      <span class="pros">✅ 类型 tag 按 TaskType 染色</span><br>
+      <span class="pros">✅ 截止/应征数据带上,转化率更高</span>
+    </div>
+  </div>
+
+  <!-- 列 T3: 新样式 — 课业辅导(紫) + 长标题 -->
+  <div class="col">
+    <h3>新样式 — 课业辅导(紫)</h3>
+    <div class="wrap">
+      <div class="card new task">
+        <div class="bg" style="background:linear-gradient(135deg,#7359F2,#A78BFA);" data-emoji="📚"></div>
+        <div class="veil"></div>
+        <span class="type-tag tt-tutoring">📚 <span class="label">课业辅导</span></span>
+        <div class="reward-tr">£120</div>
+        <div class="content">
+          <div class="task-title">UCL Stats 期末突击 — 3 节一对一,Mediation Analysis 重点过</div>
+          <div class="meta-row">
+            <span class="loc">🌐 线上</span>
+            <span class="dl">本周内</span>
+          </div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#7359F2,#A78BFA);">林</span>
+            <span class="name">林同学</span>
+            <span class="applicants">8 人应征</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      <span class="pros">✅ 紫色任务类型,跟达人卡风格协调</span><br>
+      <span class="pros">✅ 长标题 2 行截断不挤压 meta</span>
+    </div>
+  </div>
+
+  <!-- 列 T4: 新样式 — 无图 fallback + 面议 -->
+  <div class="col">
+    <h3>无图 fallback — 品牌蓝</h3>
+    <div class="wrap">
+      <div class="card new task">
+        <div class="bg brand" data-emoji="🚚"></div>
+        <div class="veil"></div>
+        <span class="type-tag tt-moving">🚚 <span class="label">搬家服务</span></span>
+        <div class="reward-tr quoted">面议</div>
+        <div class="content">
+          <div class="task-title">周末搬家,从 Camden 到 Stratford,3 房</div>
+          <div class="meta-row">
+            <span class="loc">📍 NW1 → E15</span>
+          </div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#16A34A,#22C55E);">Z</span>
+            <span class="name">Zoe</span>
+            <span class="applicants">1 人应征</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      无图时统一品牌蓝渐变 <code>[#007AFF, #409CFF]</code><br>
+      <span class="pros">✅ 跟其他海报卡 fallback 一致</span><br>
+      <span class="pros">✅ 类型 chip 颜色保留,信息没丢</span><br>
+      <span class="pros">✅ 面议 灰 chip 跟现有逻辑对应</span>
+    </div>
+  </div>
+</div>
+
+<h1 style="margin-top:48px;">服务卡新样式 — 海报式(首图背景 + feedType + 评分 + 价格)</h1>
+<p class="intro">
+  当前 <code>_ServiceCard</code> (<code>home_discovery_cards.dart:1855</code>): 上半 3:4 图 + 下半白底 feedType badge + 标题 + 用户行 + 价格 + 评分。<code>isExpert</code> 时金色 border。
+  <br>新方案: <b>3:4 海报 · 首图当背景</b>, feedType chip 左上 (达人服务橙 / 个人技能绿), 评分 chip 右上, 标题/用户/价格全 overlay 在底部。
+  <br><b>达人服务保留金色识别</b>: 卡片整体加 1.5px 金色描边 <code>rgba(218,165,32,0.55)</code>, 用户行头像加金色环 1.5px ——"达人服务"用户一眼能认出。
+  <br><b>无图</b> fallback: <code>ServiceCategoryHelper.getGradient(category)</code> + 大 icon 90px (同达人卡 fallback)。
+  <br>价格用红色 pill 包起来 (跟任务赏金视觉一致), 显示"起 £X" (复用 <code>l10n.servicePriceFrom</code>)。
+  <br>对应字段: <code>item.firstImage</code> / <code>item.expertId</code> (区分达人服务/个人技能) / <code>item.displayTitle</code> / <code>item.userAvatar + userName</code> / <code>item.price + currency</code> / <code>item.rating</code> / <code>item.extraData.category</code> (fallback 用)。
+</p>
+
+<div class="row">
+
+  <!-- 列 S1: 当前样式 -->
+  <div class="col">
+    <h3>当前服务卡(参考)</h3>
+    <div class="wrap">
+      <div class="card" style="padding:0;border:1.5px solid rgba(218,165,32,0.4);">
+        <div style="aspect-ratio:3/4;background:linear-gradient(135deg,#FFE29F,#FFA99F);display:flex;align-items:center;justify-content:center;font-size:54px;opacity:0.9;color:#fff;">📷</div>
+        <div style="padding:10px;">
+          <div style="display:inline-block;background:#FFF7ED;color:#EA580C;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-bottom:6px;">🔧 服务</div>
+          <div style="font-size:14px;font-weight:600;color:#222;line-height:1.4;">伦敦 Zone 1-2 人像写真</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+            <div style="display:flex;align-items:center;gap:4px;">
+              <span style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#F72585,#B5179E);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;">Y</span>
+              <span style="font-size:11px;color:#555;">Yvonne</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:15px;font-weight:700;color:#EF4444;">起 £80</span>
+              <span style="font-size:11px;color:#888;">⭐ 4.9</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      上 cover + 下白底,达人服务金色 border<br>
+      <span class="pros">✅ 价格醒目</span><br>
+      <span class="cons">⚠️ 跟帖子/达人卡视觉割裂(上图下白)</span>
+    </div>
+  </div>
+
+  <!-- 列 S2: 新样式 — 达人服务(橙) 有图 -->
+  <div class="col">
+    <h3>新样式 — 达人服务(橙)</h3>
+    <div class="wrap">
+      <div class="card new service expert">
+        <div class="bg" style="background:linear-gradient(135deg,#FFE29F,#FFA99F);" data-emoji="📷"></div>
+        <div class="veil"></div>
+        <span class="ft-tag service-expert">🔧 服务</span>
+        <div class="rating-tr">★ <span class="num">4.9</span></div>
+        <div class="content">
+          <div class="svc-title">伦敦 Zone 1-2 人像写真 · 含修图 5 张</div>
+          <div class="bottom-row">
+            <div class="user-mini">
+              <span class="av" style="background:linear-gradient(135deg,#F72585,#B5179E);">Y</span>
+              <span class="name">Yvonne · 达人</span>
+            </div>
+            <span class="price"><span class="from">起</span>£80</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      <code>isExpert == true</code> → 卡外 1.5px 金边 + 头像金圈<br>
+      <span class="pros">✅ 价格红 pill 跟任务赏金视觉一致</span><br>
+      <span class="pros">✅ 评分独立右上,不抢主体</span>
+    </div>
+  </div>
+
+  <!-- 列 S3: 新样式 — 个人技能(绿) 有图 -->
+  <div class="col">
+    <h3>新样式 — 个人技能(绿)</h3>
+    <div class="wrap">
+      <div class="card new service">
+        <div class="bg" style="background:linear-gradient(135deg,#06D6A0,#118AB2);" data-emoji="🎨"></div>
+        <div class="veil"></div>
+        <span class="ft-tag personal-skill">✋ 个人技能</span>
+        <div class="rating-tr">★ <span class="num">4.7</span></div>
+        <div class="content">
+          <div class="svc-title">Q 版头像约稿 · 情头 / 表情包</div>
+          <div class="bottom-row">
+            <div class="user-mini">
+              <span class="av" style="background:linear-gradient(135deg,#B5179E,#F72585);">妙</span>
+              <span class="name">妙妙</span>
+            </div>
+            <span class="price"><span class="from">起</span>£25</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      <code>isExpert == false</code> → 无金边 + 头像无金圈<br>
+      <span class="pros">✅ feedType chip 绿色,跟达人服务区分</span><br>
+      <span class="pros">✅ 同样海报式,视觉统一</span>
+    </div>
+  </div>
+
+  <!-- 列 S4: 新样式 — 无图 fallback -->
+  <div class="col">
+    <h3>无图 fallback — 类别渐变</h3>
+    <div class="wrap">
+      <div class="card new service expert">
+        <div class="bg brand">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:90px;opacity:0.45;color:#fff;">💻</div>
+        </div>
+        <div class="veil"></div>
+        <span class="ft-tag service-expert">🔧 服务</span>
+        <div class="content">
+          <div class="svc-title">React / Flutter 项目咨询 · 远程</div>
+          <div class="bottom-row">
+            <div class="user-mini">
+              <span class="av" style="background:linear-gradient(135deg,#007AFF,#409CFF);">林</span>
+              <span class="name">林学长 · 达人</span>
+            </div>
+            <span class="price"><span class="from">起</span>£60</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      <code>item.firstImage == null</code> →<br>
+      <code>ServiceCategoryHelper.getGradient(category)</code> + 大 icon<br>
+      <span class="pros">✅ 新达人(无评分)不显示右上 chip</span><br>
+      <span class="pros">✅ 跟有图卡风格一致</span>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 32px; padding: 18px 22px; background: #fff; border-radius: 12px; max-width: 1200px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+  <h2 style="font-size: 16px; margin-bottom: 10px;">实现思路 — 任务卡 + 服务卡</h2>
+  <p style="font-size: 13px; color: #555; line-height: 1.7;">
+    <b>任务卡 (<code>_DiscoveryTaskCard</code>)</b>:
+    <br>· 统一海报式 — <code>AspectRatio(3/4)</code> + <code>Stack(StackFit.expand)</code>, 复用 <code>_PosterVeil</code>
+    <br>· <code>hasImages</code> = true → <code>AsyncImageView</code> 占满; false → <b>品牌蓝渐变</b> <code>AppColors.gradientPrimary</code> + <code>TaskTypeHelper.getIcon(taskType)</code> 90px white-45% (类型用图标区分,bg 保持品牌一致)
+    <br>· 左上 chip: 任务类型 emoji + 本地化 label (用 TaskTypeHelper 主色, e.g. shopping 蓝 / tutoring 紫 / moving 灰); <code>max-width</code> 留给右上赏金
+    <br>· 右上 chip: 赏金 — <code>rewardToBeQuoted == true</code> → 灰底 "面议"; 否则红底斜体 <code>{currencySymbol}{price.toInt()}</code> (体现金额感)
+    <br>· 底部 overlay: 标题 2 行 + meta row (📍 location · 红底"还剩 X 天" 截止 chip) + 用户行 (avatar+name · 相对时间 + 右侧"X 人应征" chip)
+    <br>· 应征数: <code>item.applicationCount</code>; 截止: <code>item.taskDeadline</code> → 用 <code>DateFormatter</code> 算 countdown
+    <br><br>
+    <b>服务卡 (<code>_ServiceCard</code>)</b>:
+    <br>· 统一海报式 — <code>AspectRatio(3/4)</code> + <code>Stack</code>
+    <br>· <code>hasImages</code> = true → cover 占满; false → <b>品牌蓝渐变</b> + <code>ServiceCategoryHelper.getIcon(category)</code> 90px white-45% (跟达人卡 fallback 完全一样)
+    <br>· 左上 chip: feedType — <code>item.expertId != null</code> 时 "🔧 服务" 橙底, 否则 "✋ 个人技能" 绿底
+    <br>· 右上 chip: ★ + rating (1 位小数); rating==null/0 时不显示
+    <br>· 底部 bottom-row: 用户行 (avatar 22px + name + " · 达人" 后缀 if expert) + 价格红 pill (起 + price); Row 用 spaceBetween, name 占左 Flexible 防止挤价格
+    <br>· <code>isExpert</code> 金色识别保留: 卡片外圈 <code>boxShadow: [0 0 0 1.5 #DAA520*0.55, normal shadow]</code> + 头像 <code>Border(color: #DAA520, width: 1.5)</code>
+    <br><br>
+    <b>无需后端字段改动</b> — 全用现有 <code>DiscoveryFeedItem</code> 字段。
+    <br><b>渐进上线建议</b>: 服务卡先做 (跟达人卡 fallback 完全复用 <code>_ExpertCoverFallback</code> 类似的逻辑);任务卡随后 (需要 TaskTypeHelper 颜色 map 验证)。
   </p>
 </div>
 

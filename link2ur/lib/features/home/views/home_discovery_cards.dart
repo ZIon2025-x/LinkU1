@@ -156,33 +156,20 @@ class _PostCard extends StatelessWidget {
   }
 }
 
-/// 帖子卡海报式 fallback — 类别渐变 + 大 emoji
-/// 用 categoryIcon emoji 字符做稳定哈希,同一板块色一致
+/// 帖子卡海报式 fallback — 品牌蓝渐变 + 大 emoji
+/// 不按 category 五颜六色 — 所有 fallback 统一品牌色,类别用 emoji 区分
 class _PostFallbackBackground extends StatelessWidget {
   const _PostFallbackBackground({this.icon});
   final String? icon;
 
-  static const _gradients = <List<Color>>[
-    [Color(0xFFFF8033), Color(0xFFFFA600)], // orange — 留学生活
-    [Color(0xFF2E86AB), Color(0xFF56CCF2)], // blue — 学习
-    [Color(0xFF7359F2), Color(0xFFA78BFA)], // purple — 租房
-    [Color(0xFFFF2D55), Color(0xFFFF8FAB)], // pink — 美食
-    [Color(0xFF26BF73), Color(0xFF5ED99F)], // green — 技能
-    [Color(0xFFEC4899), Color(0xFFBE185D)], // hot pink — 美妆
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final key = icon ?? '📝';
-    final hash =
-        key.codeUnits.fold<int>(0, (a, c) => a * 31 + c).abs();
-    final colors = _gradients[hash % _gradients.length];
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: colors,
+          colors: AppColors.gradientPrimary,
         ),
       ),
       child: Center(
@@ -1648,7 +1635,8 @@ class _ExpertCard extends StatelessWidget {
   }
 }
 
-/// 达人卡海报式 cover fallback — 类别渐变 + 大类别 icon
+/// 达人卡海报式 cover fallback — 品牌蓝渐变 + 大类别 icon
+/// 不按 category 五颜六色 — 类别用 Material icon 区分,bg 保持品牌一致
 class _ExpertCoverFallback extends StatelessWidget {
   const _ExpertCoverFallback({this.category});
   final String? category;
@@ -1656,11 +1644,11 @@ class _ExpertCoverFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: ServiceCategoryHelper.getGradient(category),
+          colors: AppColors.gradientPrimary,
         ),
       ),
       child: Center(
@@ -1858,10 +1846,18 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
     final locale = Localizations.localeOf(context);
     final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
     final isExpert = item.expertId != null;
+    final category = item.extraData?['category'] as String?;
+    final hasImage = item.hasImages;
+    final price = item.price;
+    final currency = item.currency ?? 'GBP';
+    final rating = item.rating;
+    final rawUserName = item.userName;
+    final isAnonymous = rawUserName == null || rawUserName.isEmpty;
+    final displayUserName = isAnonymous ? l10n.discoveryAnonymousUser : rawUserName;
 
     return Semantics(
       button: true,
@@ -1874,142 +1870,315 @@ class _ServiceCard extends StatelessWidget {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            // 达人服务: 1.5px 金色描边 (识别度,跟个人技能区分)
             border: isExpert
                 ? Border.all(
-                    color: const Color(0xFFDAA520).withValues(alpha: 0.4),
+                    color: const Color(0xFFDAA520).withValues(alpha: 0.55),
                     width: 1.5,
                   )
                 : null,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 3,
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
             ],
           ),
           clipBehavior: Clip.hardEdge,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (item.hasImages)
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final w = constraints.maxWidth;
-                    final h = w * 3 / 4;
-                  return ClipRect(
-                    child: AsyncImageView(
-                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
-                      fallbackUrl: Helpers.getImageUrl(item.firstImage!),
-                      width: w,
-                      height: h,
-                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                    ),
-                  );
-                },
-              )
-              else
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final w = constraints.maxWidth;
-                    final h = w * 3 / 4;
-                    final category = item.extraData?['category'] as String?;
-                    final colors = ServiceCategoryHelper.getGradient(category);
-                    return Container(
-                      width: w,
-                      height: h,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: colors,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        ServiceCategoryHelper.getIcon(category),
-                        size: 48,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    );
-                  },
-                ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _FeedTypeBadge(feedType: isExpert ? 'service' : 'personal_skill'),
-                  const SizedBox(height: 6),
-                  if (displayTitle.isNotEmpty)
-                    Text(
-                      displayTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  Row(
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── 背景: 首图 OR 品牌蓝渐变 + 类别 icon ──
+                if (hasImage)
+                  AsyncImageView(
+                    imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
+                    fallbackUrl: Helpers.getImageUrl(item.firstImage!),
+                    memCacheWidth: 600,
+                    placeholder: _ExpertCoverFallback(category: category),
+                    errorWidget: _ExpertCoverFallback(category: category),
+                  )
+                else
+                  _ExpertCoverFallback(category: category),
+                // ── Veil ──
+                const Positioned.fill(child: _PosterVeil()),
+                // ── 顶部 Row: feedType chip (橙/绿) + 评分 chip (有则显) ──
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _DiscoveryUserRow(
-                          userId: item.userId,
-                          userName: item.userName,
-                          userAvatar: item.userAvatar,
-                          expertId: item.expertId,
-                          isDark: isDark,
-                        ),
+                      Flexible(
+                        child: _ServiceFeedTypeChip(isExpert: isExpert),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (item.price != null)
-                            Text(
-                              context.l10n.servicePriceFrom('${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(0)}'),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.priceRed,
-                              ),
-                            ),
-                          if (item.price != null && item.rating != null)
-                            const SizedBox(width: 6),
-                          if (item.rating != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.star,
-                                    size: 12, color: AppColors.warning),
-                                const SizedBox(width: 2),
-                                Text(
-                                  item.rating!.toStringAsFixed(1),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : AppColors.textSecondaryLight,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
+                      if (rating != null && rating > 0) ...[
+                        const SizedBox(width: 6),
+                        _ServiceRatingChip(rating: rating),
+                      ],
+                    ],
+                  ),
+                ),
+                // ── 底部 overlay: 标题 + 用户行(可选金圈) + 价格红 pill ──
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (displayTitle.isNotEmpty)
+                        Text(
+                          displayTitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      _ServiceBottomRow(
+                        userId: item.userId,
+                        userName: rawUserName,
+                        displayName: displayUserName,
+                        userAvatar: item.userAvatar,
+                        expertId: item.expertId,
+                        isAnonymous: isAnonymous,
+                        isExpert: isExpert,
+                        price: price,
+                        currency: currency,
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// 服务卡左上 feedType chip — 达人服务橙 / 个人技能绿
+class _ServiceFeedTypeChip extends StatelessWidget {
+  const _ServiceFeedTypeChip({required this.isExpert});
+  final bool isExpert;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final color = isExpert
+        ? const Color(0xFFEA580C).withValues(alpha: 0.92)
+        : const Color(0xFF059669).withValues(alpha: 0.92);
+    final emoji = isExpert ? '🔧' : '✋';
+    final label = isExpert
+        ? l10n.discoveryFeedTypeService
+        : l10n.discoveryFeedTypePersonalSkill;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 11)),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 服务卡右上评分 chip — ★ + rating (rating null/0 时不显示)
+class _ServiceRatingChip extends StatelessWidget {
+  const _ServiceRatingChip({required this.rating});
+  final double rating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded,
+              size: 12, color: Color(0xFFFFD84D)),
+          const SizedBox(width: 2),
+          Text(
+            rating.toStringAsFixed(1),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 服务卡底部行 — 用户(可点击,达人金圈) + 价格红 pill
+class _ServiceBottomRow extends StatelessWidget {
+  const _ServiceBottomRow({
+    required this.userId,
+    required this.userName,
+    required this.displayName,
+    required this.userAvatar,
+    required this.expertId,
+    required this.isAnonymous,
+    required this.isExpert,
+    required this.price,
+    required this.currency,
+  });
+
+  final String? userId;
+  final String? userName;
+  final String displayName;
+  final String? userAvatar;
+  final String? expertId;
+  final bool isAnonymous;
+  final bool isExpert;
+  final double? price;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    // 头像 + 名字 (达人头像加金圈,名字带"· 达人"后缀)
+    Widget avatar = AvatarView(
+      imageUrl: isAnonymous ? null : userAvatar,
+      name: userName,
+      size: 22,
+      isAnonymous: isAnonymous,
+    );
+    if (isExpert) {
+      avatar = Container(
+        padding: const EdgeInsets.all(1),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFDAA520), width: 1.5),
+        ),
+        child: avatar,
+      );
+    }
+    final userArea = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        avatar,
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            isExpert
+                ? '$displayName · ${l10n.discoveryFeedTypeExpert}'
+                : displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
+            ),
+          ),
+        ),
+      ],
+    );
+    final canGoExpert = expertId != null && expertId!.isNotEmpty;
+    final canGoUser = userId != null && userId!.isNotEmpty;
+    final tappableUser = (canGoExpert || canGoUser)
+        ? GestureDetector(
+            onTap: () {
+              if (canGoExpert) {
+                context.push('/task-experts/$expertId');
+              } else {
+                context.push('/user/$userId');
+              }
+            },
+            behavior: HitTestBehavior.opaque,
+            child: userArea,
+          )
+        : userArea;
+    return Row(
+      children: [
+        Expanded(child: tappableUser),
+        if (price != null) ...[
+          const SizedBox(width: 6),
+          _ServicePriceChip(price: price!, currency: currency),
+        ],
+      ],
+    );
+  }
+}
+
+/// 服务卡价格红 pill — "起 £X" (复用 servicePriceFrom)
+class _ServicePriceChip extends StatelessWidget {
+  const _ServicePriceChip({required this.price, required this.currency});
+  final double price;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final symbol = Helpers.currencySymbolFor(currency);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEF4444).withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        context.l10n.servicePriceFrom('$symbol${price.toStringAsFixed(0)}'),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -2177,9 +2346,26 @@ class _DiscoveryTaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
     final locale = Localizations.localeOf(context);
     final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final taskType = item.taskType;
+    final hasImage = item.hasImages;
+    final taskLocation = item.taskLocation;
+    final deadline = item.taskDeadline != null
+        ? DateTime.tryParse(item.taskDeadline!)
+        : null;
+    final applications = item.applicationCount ?? 0;
+    final price = item.price;
+    final isQuoted = item.rewardToBeQuoted == true;
+    final currency = item.currency ?? 'GBP';
+    final rawUserName = item.userName;
+    final isAnonymous = rawUserName == null || rawUserName.isEmpty;
+    final displayUserName =
+        isAnonymous ? l10n.discoveryAnonymousUser : rawUserName;
+    final timeAgo = item.createdAt != null
+        ? DateFormatter.formatRelative(item.createdAt!, l10n: l10n)
+        : null;
 
     return Semantics(
       button: true,
@@ -2192,129 +2378,348 @@ class _DiscoveryTaskCard extends StatelessWidget {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 3,
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
             ],
           ),
           clipBehavior: Clip.hardEdge,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image or gradient placeholder
-              _buildImage(isDark),
-              // Body
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _FeedTypeBadge(feedType: 'task'),
-                    const SizedBox(height: 6),
-                    if (displayTitle.isNotEmpty)
-                      Text(
-                        displayTitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                          height: 1.4,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── 背景: 首图 OR 品牌蓝渐变 + TaskType icon ──
+                if (hasImage)
+                  AsyncImageView(
+                    imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
+                    fallbackUrl: Helpers.getImageUrl(item.firstImage!),
+                    memCacheWidth: 600,
+                    placeholder: _TaskFallbackBackground(taskType: taskType),
+                    errorWidget: _TaskFallbackBackground(taskType: taskType),
+                  )
+                else
+                  _TaskFallbackBackground(taskType: taskType),
+                // ── Veil ──
+                const Positioned.fill(child: _PosterVeil()),
+                // ── 顶部 Row: 任务类型 chip + 赏金 chip ──
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: _TaskTypeChip(taskType: taskType),
                       ),
-                    const SizedBox(height: 8),
-                    // Tags: task type + price
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        if (item.taskType != null)
-                          _buildTag(
-                            TaskTypeHelper.getLocalizedLabel(item.taskType!, context.l10n),
-                            isDark
-                                ? Colors.white.withValues(alpha: 0.12)
-                                : const Color(0xFFF0F0FF),
-                            isDark ? Colors.white70 : const Color(0xFF667EEA),
+                      const SizedBox(width: 6),
+                      _TaskRewardChip(
+                        price: price,
+                        currency: currency,
+                        isQuoted: isQuoted,
+                      ),
+                    ],
+                  ),
+                ),
+                // ── 底部 overlay: 标题 + meta(地点·截止) + 用户行 + 应征 chip ──
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (displayTitle.isNotEmpty)
+                        Text(
+                          displayTitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 4),
+                            ],
                           ),
-                        if (item.price != null)
-                          _buildTag(
-                            item.rewardToBeQuoted == true
-                                ? context.l10n.taskRewardToBeQuoted
-                                : '${Helpers.currencySymbolFor(item.currency ?? 'GBP')}${item.price!.toStringAsFixed(0)}',
-                            isDark
-                                ? Colors.white.withValues(alpha: 0.12)
-                                : AppColors.priceRed.withValues(alpha: 0.08),
-                            AppColors.priceRed,
-                            isBold: true,
-                          ),
+                        ),
+                      if ((taskLocation != null && taskLocation.isNotEmpty) ||
+                          deadline != null) ...[
+                        const SizedBox(height: 6),
+                        _TaskMetaRow(
+                            location: taskLocation, deadline: deadline),
                       ],
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _PostOverlayUserRow(
+                              userId: item.userId,
+                              userName: rawUserName,
+                              displayName: displayUserName,
+                              userAvatar: item.userAvatar,
+                              expertId: item.expertId,
+                              isAnonymous: isAnonymous,
+                              timeAgo: timeAgo,
+                            ),
+                          ),
+                          if (applications > 0) ...[
+                            const SizedBox(width: 6),
+                            _ApplicantsChip(count: applications),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 任务卡海报式 fallback — 品牌蓝渐变 + 大任务类型 icon
+class _TaskFallbackBackground extends StatelessWidget {
+  const _TaskFallbackBackground({this.taskType});
+  final String? taskType;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: AppColors.gradientPrimary,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          TaskTypeHelper.getIcon(taskType ?? 'other'),
+          size: 90,
+          color: Colors.white.withValues(alpha: 0.45),
+        ),
+      ),
+    );
+  }
+}
+
+/// 任务类型 chip — 用 TaskTypeHelper.getGradient[1] 深色端 + 白字 (overlay)
+class _TaskTypeChip extends StatelessWidget {
+  const _TaskTypeChip({this.taskType});
+  final String? taskType;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final label = (taskType != null && taskType!.isNotEmpty)
+        ? TaskTypeHelper.getLocalizedLabel(taskType!, l10n)
+        : '';
+    final colors = TaskTypeHelper.getGradient(taskType);
+    final chipColor = colors[1].withValues(alpha: 0.92);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: chipColor,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            TaskTypeHelper.getIcon(taskType ?? 'other'),
+            size: 11,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 任务赏金 chip — 红底斜体大字; rewardToBeQuoted 时灰底"面议"
+class _TaskRewardChip extends StatelessWidget {
+  const _TaskRewardChip({
+    required this.price,
+    required this.currency,
+    required this.isQuoted,
+  });
+  final double? price;
+  final String currency;
+  final bool isQuoted;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (isQuoted || price == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade600.withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Text(
+          l10n.taskRewardToBeQuoted,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
+    final symbol = Helpers.currencySymbolFor(currency);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEF4444).withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        '$symbol${price!.toStringAsFixed(0)}',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+  }
+}
+
+/// 任务卡 meta 行 (📍 location · 红底截止 chip),Wrap 自适应
+class _TaskMetaRow extends StatelessWidget {
+  const _TaskMetaRow({this.location, this.deadline});
+  final String? location;
+  final DateTime? deadline;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final hasLocation = location != null && location!.isNotEmpty;
+    final hasDeadline = deadline != null;
+    if (!hasLocation && !hasDeadline) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (hasLocation)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.place_outlined,
+                  size: 11, color: Colors.white70),
+              const SizedBox(width: 2),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 110),
+                child: Text(
+                  location!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 10,
+                    shadows: const [
+                      Shadow(color: Colors.black54, blurRadius: 3),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImage(bool isDark) {
-    if (item.hasImages) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth;
-          final h = w * 3 / 4;
-          return ClipRect(
-            child: AsyncImageView(
-              imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
-              fallbackUrl: Helpers.getImageUrl(item.firstImage!),
-              width: w,
-              height: h,
-              memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+        if (hasDeadline)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(4),
             ),
-          );
-        },
-      );
-    }
-    return _buildPlaceholder();
-  }
-
-  Widget _buildPlaceholder() {
-    final colors = TaskTypeHelper.getGradient(item.taskType);
-    final icon = TaskTypeHelper.getIcon(item.taskType ?? 'other');
-    return AspectRatio(
-      aspectRatio: 4 / 3,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            child: Text(
+              DateFormatter.formatDeadline(deadline!, l10n: l10n),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        ),
-        alignment: Alignment.center,
-        child: Icon(icon, size: 48, color: Colors.white.withValues(alpha: 0.9)),
-      ),
+      ],
     );
   }
+}
 
-  Widget _buildTag(String text, Color bg, Color fg, {bool isBold = false}) {
+/// 任务卡应征人数 chip — 用户行右侧
+class _ApplicantsChip extends StatelessWidget {
+  const _ApplicantsChip({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 0.5,
+        ),
+      ),
       child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          color: fg,
-          fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+        context.l10n.discoveryTaskApplicants(count),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
         ),
       ),
     );
