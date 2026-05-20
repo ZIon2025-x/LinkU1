@@ -14729,7 +14729,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String communityItemSeats(int count) {
-    return '$count on board';
+    return '$count contenders';
   }
 
   @override

@@ -27009,7 +27009,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityItemSeats.
   ///
   /// In en, this message translates to:
-  /// **'{count} on board'**
+  /// **'{count} contenders'**
   String communityItemSeats(int count);
 
   /// No description provided for @communityItemPosts.

@@ -1063,13 +1063,17 @@ class _CommunityFeatureGrid extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-      child: GridView.count(
-        crossAxisCount: 2,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+      child: GridView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 0.92,
+        // 锁定宫格高度而非纵横比 — 防止宽屏下 tile 跟随宽度等比拉高，
+        // 底部出现大块多余渐变 (community-page-mockup.html tile min-height 154)
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          mainAxisExtent: 156,
+        ),
         children: [
           _FeatureTile(
             title: l10n.communityTileLeaderboards,
@@ -1091,6 +1095,7 @@ class _CommunityFeatureGrid extends StatelessWidget {
                   emoji: _leaderboardEmojis[i % _leaderboardEmojis.length],
                   gradient: _leaderboardMiniGradients[
                       i % _leaderboardMiniGradients.length],
+                  imageUrl: lb.coverImage,
                   primaryText: lb.displayName(locale),
                   secondaryText: l10n.communityItemSeats(lb.itemCount),
                   onTap: () => context.push('/leaderboard/${lb.id}'),
@@ -1217,6 +1222,7 @@ class _MiniItemData {
     required this.gradient,
     required this.primaryText,
     required this.secondaryText,
+    this.imageUrl,
     this.secondaryFirst = false,
     this.onTap,
   });
@@ -1225,6 +1231,8 @@ class _MiniItemData {
   final List<Color> gradient;
   final String primaryText;
   final String secondaryText;
+  // 有值时迷你卡顶部用真实封面图替代 emoji+渐变 (榜单自带 cover_image)
+  final String? imageUrl;
   // true → 副文案放在主文案之前(用于活动倒计时高亮)
   final bool secondaryFirst;
   final VoidCallback? onTap;
@@ -1350,7 +1358,8 @@ class _FeatureTile extends StatelessWidget {
         children.add(const Expanded(child: SizedBox.shrink()));
       }
     }
-    return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+    // 顶端对齐 — 迷你卡自身用 mainAxisSize.min 决定高度，不被父 Row 拉伸
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: children);
   }
 }
 
@@ -1386,6 +1395,7 @@ class _MiniItem extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
     );
 
+    final hasImage = data.imageUrl != null && data.imageUrl!.isNotEmpty;
     return GestureDetector(
       onTap: data.onTap,
       child: Container(
@@ -1401,25 +1411,63 @@ class _MiniItem extends StatelessWidget {
             ),
           ],
         ),
+        // mainAxisSize.min 让卡片高度由内容决定，不被父 Row 垂直拉伸
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 顶部图(渐变 + emoji)
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: data.gradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  data.emoji,
-                  style: const TextStyle(fontSize: 26),
-                ),
-              ),
+            // 顶部图: 固定 64px 高度 (对齐 community-page-mockup.html ti-img height:70)
+            // 用固定高度而非 AspectRatio，避免宽屏下宫格变宽时图也跟着变高拉伸
+            // 有 imageUrl 时显示真实封面 (榜单 cover_image)，否则渐变背景 + emoji
+            SizedBox(
+              height: 64,
+              child: hasImage
+                  ? CachedNetworkImage(
+                      imageUrl: Helpers.getImageUrl(data.imageUrl!),
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: data.gradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          data.emoji,
+                          style: const TextStyle(fontSize: 26),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: data.gradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          data.emoji,
+                          style: const TextStyle(fontSize: 26),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: data.gradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        data.emoji,
+                        style: const TextStyle(fontSize: 26),
+                      ),
+                    ),
             ),
             // 底部文字
             Padding(

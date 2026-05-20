@@ -14044,7 +14044,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityTileBoards => '板块';
 
   @override
-  String get communityTileSkills => '技能';
+  String get communityTileSkills => '技能板块';
 
   @override
   String get communityTagLocalHot => '同城热门';
@@ -14092,7 +14092,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String communityItemSeats(int count) {
-    return '$count 人上榜';
+    return '$count 个竞品';
   }
 
   @override
@@ -28182,7 +28182,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get communityTileBoards => '板塊';
 
   @override
-  String get communityTileSkills => '技能';
+  String get communityTileSkills => '技能板塊';
 
   @override
   String get communityTagLocalHot => '同城熱門';
@@ -28230,7 +28230,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String communityItemSeats(int count) {
-    return '$count 人上榜';
+    return '$count 個競品';
   }
 
   @override

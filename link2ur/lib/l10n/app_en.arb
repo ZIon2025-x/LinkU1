@@ -6751,7 +6751,7 @@
   "@communityStatsCategories": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "communityItemSeats": "{count} on board",
+  "communityItemSeats": "{count} contenders",
   "@communityItemSeats": {
     "placeholders": { "count": { "type": "int" } }
   },

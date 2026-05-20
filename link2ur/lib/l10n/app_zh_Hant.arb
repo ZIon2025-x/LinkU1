@@ -6512,7 +6512,7 @@
   "communityTileLeaderboards": "榜單",
   "communityTileActivities": "活動",
   "communityTileBoards": "板塊",
-  "communityTileSkills": "技能",
+  "communityTileSkills": "技能板塊",
   "communityTagLocalHot": "同城熱門",
   "communityTagLimitedTime": "限時報名",
   "communityTagDiscuss": "一起討論",
@@ -6537,7 +6537,7 @@
   "@communityStatsCategories": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "communityItemSeats": "{count} 人上榜",
+  "communityItemSeats": "{count} 個競品",
   "@communityItemSeats": {
     "placeholders": { "count": { "type": "int" } }
   },
