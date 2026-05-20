@@ -1192,7 +1192,7 @@ class _CommunityFeatureGrid extends StatelessWidget {
                 );
               },
             ),
-            onTap: () => context.push('/task-experts'),
+            onTap: () => context.push('/forum?filter=skills'),
           ),
         ],
       ),
