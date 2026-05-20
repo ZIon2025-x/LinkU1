@@ -98,7 +98,8 @@ class Message extends Equatable {
     this.negotiationPrice,
     this.negotiationCurrency,
     this.meta,
-  });
+    int? applicationId,
+  }) : _topLevelApplicationId = applicationId;
 
   final int id;
   final String senderId;
@@ -116,6 +117,8 @@ class Message extends Equatable {
   final String? negotiationCurrency;
   /// 解析后的 meta JSON（系统消息的结构化数据，如 deal_closed 的 application_id/price 等）
   final Map<String, dynamic>? meta;
+  /// 顶层 application_id（WS push 消息携带）
+  final int? _topLevelApplicationId;
 
   /// 系统消息动作类型（如 'deal_closed', 'application_rejected'）
   String? get systemAction => meta?['system_action'] as String?;
@@ -126,6 +129,14 @@ class Message extends Equatable {
     if (v == null) return null;
     if (v is int) return v;
     return int.tryParse(v.toString());
+  }
+
+  /// 消息所属的咨询/申请 ID。
+  /// 优先读顶层 application_id（WS push 消息）；不存在时回退到 meta.application_id（系统消息）；
+  /// 两者都没有则返回 null。
+  int? get applicationId {
+    if (_topLevelApplicationId != null) return _topLevelApplicationId;
+    return systemApplicationId;
   }
 
   /// 是否是图片消息
@@ -168,6 +179,15 @@ class Message extends Equatable {
       } catch (_) {}
     }
 
+    // Parse top-level application_id (present in WS push messages)
+    final rawAppId = json['application_id'];
+    int? topLevelApplicationId;
+    if (rawAppId != null) {
+      topLevelApplicationId = rawAppId is int
+          ? rawAppId
+          : int.tryParse(rawAppId.toString());
+    }
+
     return Message(
       id: json['id'] as int,
       senderId: json['sender_id']?.toString() ?? '',
@@ -194,6 +214,7 @@ class Message extends Equatable {
           : null,
       negotiationCurrency: metaMap?['currency'] as String?,
       meta: metaMap,
+      applicationId: topLevelApplicationId,
     );
   }
 
@@ -229,6 +250,7 @@ class Message extends Equatable {
     double? negotiationPrice,
     String? negotiationCurrency,
     Map<String, dynamic>? meta,
+    int? applicationId,
   }) {
     return Message(
       id: id ?? this.id,
@@ -246,6 +268,7 @@ class Message extends Equatable {
       negotiationPrice: negotiationPrice ?? this.negotiationPrice,
       negotiationCurrency: negotiationCurrency ?? this.negotiationCurrency,
       meta: meta ?? this.meta,
+      applicationId: applicationId ?? _topLevelApplicationId,
     );
   }
 
