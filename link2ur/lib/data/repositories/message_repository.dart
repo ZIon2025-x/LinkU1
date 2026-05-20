@@ -327,6 +327,7 @@ class MessageRepository {
 
   /// 获取任务聊天消息（后端使用 limit + cursor 分页，非 page）
   /// 返回 [taskStatus] 用于 UI 显示「进行中/已关闭」及是否展示关闭提示条
+  /// [applicationId] 咨询模式时传 application_id，后端用于隔离不同申请者的消息
   Future<({
     List<Message> messages,
     String? nextCursor,
@@ -336,6 +337,7 @@ class MessageRepository {
     int taskId, {
     int limit = 20,
     String? cursor,
+    int? applicationId,
   }) async {
     final cacheKey = CacheManager.buildKey(
       CacheManager.prefixTaskMessages,
@@ -348,6 +350,9 @@ class MessageRepository {
       final params = <String, dynamic>{'limit': limit.clamp(1, 100)};
       if (cursor != null && cursor.isNotEmpty) {
         params['cursor'] = cursor;
+      }
+      if (applicationId != null) {
+        params['application_id'] = applicationId;
       }
       final response = await _apiService.get(
         ApiEndpoints.taskChatMessages(taskId),
@@ -408,11 +413,13 @@ class MessageRepository {
 
   /// 发送任务聊天消息
   /// [attachments] 附件数组，与 iOS sendMessageWithAttachment 对齐：每项含 attachment_type、url、可选 meta
+  /// [applicationId] 咨询模式时传 application_id，后端用于隔离不同申请者的消息
   Future<Message> sendTaskChatMessage(
     int taskId, {
     required String content,
     String messageType = 'text',
     List<Map<String, dynamic>>? attachments,
+    int? applicationId,
   }) async {
     final data = <String, dynamic>{
       'content': content,
@@ -420,6 +427,9 @@ class MessageRepository {
     };
     if (attachments != null && attachments.isNotEmpty) {
       data['attachments'] = attachments;
+    }
+    if (applicationId != null) {
+      data['application_id'] = applicationId;
     }
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.taskChatSend(taskId),
