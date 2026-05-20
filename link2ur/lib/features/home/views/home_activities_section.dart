@@ -592,9 +592,10 @@ class _BannerBadge extends StatelessWidget {
 }
 
 // Discovery card types (_PostCard, _ProductCard, _CompetitorReviewCard,
-// _ServiceReviewCard, _RankingCard, _ServiceCard) and shared widgets
-// (_DiscoveryUserRow, _LinkedItemTag, _TargetItemTag, _ActivityPriceRow)
-// are defined in home_discovery_cards.dart
+// _ServiceReviewCard, _RankingCard, _ServiceCard, _ExpertCard) and shared widgets
+// (_DiscoveryUserRow, _TargetItemTag, _ActivityPriceRow, _PosterVeil) are
+// defined in home_discovery_cards.dart
+// _PostCard 与 _ExpertCard 已改为海报式 — 首图/cover 当背景 + 文字全 overlay
 
 /// 社区 tab(DiscoverView)使用的发现流 Sliver 入口。
 ///

@@ -10,15 +10,24 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final metaColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
-    final metaStyle = TextStyle(fontSize: 11, color: metaColor);
+    final l10n = context.l10n;
     final locale = Localizations.localeOf(context);
     final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
     final displayDesc = item.displayDescription(locale) != null
         ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
         : null;
     final categoryName = item.displayCategoryName(locale);
+    final categoryIcon = item.categoryIcon;
+    final hasImage = item.hasImages;
+    final likeCount = item.likeCount ?? 0;
+    final commentCount = item.commentCount ?? 0;
+    final isFavorited = item.isFavorited == true;
+    final rawUserName = item.userName;
+    final isAnonymous = rawUserName == null || rawUserName.isEmpty;
+    final displayUserName = isAnonymous ? l10n.discoveryAnonymousUser : rawUserName;
+    final timeAgo = item.createdAt != null
+        ? DateFormatter.formatRelative(item.createdAt!, l10n: l10n)
+        : null;
 
     return Semantics(
       button: true,
@@ -31,169 +40,409 @@ class _PostCard extends StatelessWidget {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 3,
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
             ],
           ),
           clipBehavior: Clip.hardEdge,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (item.hasImages)
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final w = constraints.maxWidth;
-                    final h = w * 4 / 3;
-                    return ClipRect(
-                      child: AsyncImageView(
-                        imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
-                        fallbackUrl: Helpers.getImageUrl(item.firstImage!),
-                        width: w,
-                        height: h,
-                        memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      ),
-                    );
-                  },
-                )
-              else
-                _PostCategoryPlaceholder(icon: item.categoryIcon),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── 背景: 首图 OR 类别渐变 + 大 emoji ──
+                if (hasImage)
+                  AsyncImageView(
+                    imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
+                    fallbackUrl: Helpers.getImageUrl(item.firstImage!),
+                    memCacheWidth: 600,
+                    placeholder: _PostFallbackBackground(icon: categoryIcon),
+                    errorWidget: _PostFallbackBackground(icon: categoryIcon),
+                  )
+                else
+                  _PostFallbackBackground(icon: categoryIcon),
+                // ── Veil (顶/底双暗,中间留干净的封面区) ──
+                const Positioned.fill(child: _PosterVeil()),
+                // ── 顶部: 左 板块 badge / 右 互动 chip (Flexible 自适应宽度) ──
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  child: Row(
                     children: [
-                      const _FeedTypeBadge(feedType: 'forum_post'),
-                      if (categoryName != null && categoryName.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            categoryName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
-                            ),
+                      Flexible(
+                        child: _PostCategoryBadge(
+                          icon: categoryIcon,
+                          name: categoryName,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      _PostStatsChip(
+                        likeCount: likeCount,
+                        commentCount: commentCount,
+                        isFavorited: isFavorited,
+                      ),
+                    ],
+                  ),
+                ),
+                // ── 底部 overlay: 标题 / 描述 / linked / 用户行 ──
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (displayTitle.isNotEmpty)
+                        Text(
+                          displayTitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                      if (displayDesc != null && displayDesc.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          displayDesc,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            fontSize: 11,
+                            height: 1.4,
+                            shadows: const [
+                              Shadow(color: Colors.black54, blurRadius: 3),
+                            ],
                           ),
                         ),
                       ],
+                      if (item.linkedItem != null) ...[
+                        const SizedBox(height: 6),
+                        _PostLinkedItemChip(linkedItem: item.linkedItem!),
+                      ],
+                      const SizedBox(height: 8),
+                      _PostOverlayUserRow(
+                        userId: item.userId,
+                        userName: rawUserName,
+                        displayName: displayUserName,
+                        userAvatar: item.userAvatar,
+                        expertId: item.expertId,
+                        isAnonymous: isAnonymous,
+                        timeAgo: timeAgo,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  if (displayTitle.isNotEmpty)
-                    Text(
-                      displayTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  if (displayDesc != null && displayDesc.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      displayDesc,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                  if (item.linkedItem != null) ...[
-                    const SizedBox(height: 6),
-                    _LinkedItemTag(linkedItem: item.linkedItem!),
-                  ],
-                  const SizedBox(height: 8),
-                  _DiscoveryUserRow(
-                    userId: item.userId,
-                    userName: item.userName,
-                    userAvatar: item.userAvatar,
-                    expertId: item.expertId,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Row(
-                      children: [
-                        Icon(
-                            item.isFavorited == true
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            size: 14,
-                            color: item.isFavorited == true
-                                ? AppColors.error
-                                : metaColor),
-                        const SizedBox(width: 3),
-                        Text('${item.likeCount ?? 0}',
-                            style: metaStyle),
-                        const SizedBox(width: 12),
-                        Icon(Icons.chat_bubble_outline, size: 14,
-                            color: metaColor),
-                        const SizedBox(width: 3),
-                        Text('${item.commentCount ?? 0}',
-                            style: metaStyle),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
 }
 
-/// 帖子无图时的板块 icon 占位
-class _PostCategoryPlaceholder extends StatelessWidget {
-  const _PostCategoryPlaceholder({this.icon});
-
+/// 帖子卡海报式 fallback — 类别渐变 + 大 emoji
+/// 用 categoryIcon emoji 字符做稳定哈希,同一板块色一致
+class _PostFallbackBackground extends StatelessWidget {
+  const _PostFallbackBackground({this.icon});
   final String? icon;
+
+  static const _gradients = <List<Color>>[
+    [Color(0xFFFF8033), Color(0xFFFFA600)], // orange — 留学生活
+    [Color(0xFF2E86AB), Color(0xFF56CCF2)], // blue — 学习
+    [Color(0xFF7359F2), Color(0xFFA78BFA)], // purple — 租房
+    [Color(0xFFFF2D55), Color(0xFFFF8FAB)], // pink — 美食
+    [Color(0xFF26BF73), Color(0xFF5ED99F)], // green — 技能
+    [Color(0xFFEC4899), Color(0xFFBE185D)], // hot pink — 美妆
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+    final key = icon ?? '📝';
+    final hash =
+        key.codeUnits.fold<int>(0, (a, c) => a * 31 + c).abs();
+    final colors = _gradients[hash % _gradients.length];
     return Container(
-      width: double.infinity,
-      height: 100,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: isDark
-              ? [const Color(0xFF2C2C3E), const Color(0xFF1C1C2E)]
-              : [const Color(0xFFF0F0FF), const Color(0xFFE8E0F0)],
+          colors: colors,
         ),
       ),
       child: Center(
         child: Text(
-          icon ?? '💬',
-          style: const TextStyle(fontSize: 36),
+          icon ?? '📝',
+          style: TextStyle(
+            fontSize: 90,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
         ),
       ),
     );
+  }
+}
+
+/// 海报顶/底双渐变蒙层 — 保证 overlay 文字可读,中间留封面干净
+class _PosterVeil extends StatelessWidget {
+  const _PosterVeil();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0.0, 0.25, 0.5, 0.7, 1.0],
+          colors: [
+            Colors.black.withValues(alpha: 0.32),
+            Colors.black.withValues(alpha: 0.10),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.42),
+            Colors.black.withValues(alpha: 0.85),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 帖子卡左上角板块 badge — emoji + 板块名
+class _PostCategoryBadge extends StatelessWidget {
+  const _PostCategoryBadge({this.icon, this.name});
+  final String? icon;
+  final String? name;
+
+  @override
+  Widget build(BuildContext context) {
+    final emoji = icon ?? '📝';
+    final label = name?.isNotEmpty == true
+        ? name!
+        : context.l10n.discoveryFeedTypePost;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 11)),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 帖子卡右上角互动 chip — ❤ N · 💬 N
+class _PostStatsChip extends StatelessWidget {
+  const _PostStatsChip({
+    required this.likeCount,
+    required this.commentCount,
+    required this.isFavorited,
+  });
+  final int likeCount;
+  final int commentCount;
+  final bool isFavorited;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isFavorited ? Icons.favorite : Icons.favorite_border,
+            size: 11,
+            color: isFavorited ? const Color(0xFFFF8FAB) : Colors.white,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            '$likeCount',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.chat_bubble_outline, size: 11, color: Colors.white),
+          const SizedBox(width: 3),
+          Text(
+            '$commentCount',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 帖子卡 linkedItem 紧凑 overlay chip
+class _PostLinkedItemChip extends StatelessWidget {
+  const _PostLinkedItemChip({required this.linkedItem});
+  final LinkedItemBrief linkedItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = linkedItem.name ?? '';
+    if (name.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_iconForType(linkedItem.itemType), size: 12, color: Colors.white),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'product':
+        return Icons.shopping_bag_outlined;
+      case 'service':
+        return Icons.build_outlined;
+      case 'task':
+        return Icons.assignment_outlined;
+      case 'activity':
+        return Icons.event_outlined;
+      default:
+        return Icons.link;
+    }
+  }
+}
+
+/// 帖子卡 overlay 用户行 — 白色文字 + 阴影,点击跳转用户/达人
+class _PostOverlayUserRow extends StatelessWidget {
+  const _PostOverlayUserRow({
+    required this.userId,
+    required this.userName,
+    required this.displayName,
+    required this.userAvatar,
+    required this.expertId,
+    required this.isAnonymous,
+    this.timeAgo,
+  });
+
+  final String? userId;
+  final String? userName;
+  final String displayName;
+  final String? userAvatar;
+  final String? expertId;
+  final bool isAnonymous;
+  final String? timeAgo;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Row(
+      children: [
+        AvatarView(
+          imageUrl: isAnonymous ? null : userAvatar,
+          name: userName,
+          size: 20,
+          isAnonymous: isAnonymous,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            timeAgo != null && timeAgo!.isNotEmpty
+                ? '$displayName · $timeAgo'
+                : displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
+            ),
+          ),
+        ),
+      ],
+    );
+    final canGoExpert = expertId != null && expertId!.isNotEmpty;
+    final canGoUser = userId != null && userId!.isNotEmpty;
+    if (canGoExpert || canGoUser) {
+      return Semantics(
+        button: true,
+        label: 'View profile',
+        child: GestureDetector(
+          onTap: () {
+            if (canGoExpert) {
+              context.push('/task-experts/$expertId');
+            } else {
+              context.push('/user/$userId');
+            }
+          },
+          behavior: HitTestBehavior.opaque,
+          child: content,
+        ),
+      );
+    }
+    return content;
   }
 }
 
@@ -1174,7 +1423,6 @@ class _ExpertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
     final l10n = context.l10n;
     final name = Helpers.normalizeContentNewlines(item.displayTitle(locale));
@@ -1189,6 +1437,16 @@ class _ExpertCard extends StatelessWidget {
         : (item.expertFeaturedSkillsEn.isNotEmpty
             ? item.expertFeaturedSkillsEn
             : item.expertFeaturedSkills);
+    final hasCover = cover != null && cover.isNotEmpty;
+    // 副标题: 地点 · 类别 (任一缺则只显示另一个)
+    final categoryLabel = (category != null && category.isNotEmpty)
+        ? ServiceCategoryHelper.getLocalizedLabel(category, l10n)
+        : null;
+    final subtitleParts = <String>[
+      if (location != null && location.isNotEmpty) location,
+      if (categoryLabel != null) categoryLabel,
+    ];
+    final subtitle = subtitleParts.join(' · ');
 
     return Semantics(
       button: true,
@@ -1203,209 +1461,186 @@ class _ExpertCard extends StatelessWidget {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 3,
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
             ],
           ),
           clipBehavior: Clip.hardEdge,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── 封面（cover_image 或 类别渐变兜底）──
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = w * 3 / 4;
-                  return SizedBox(
-                    width: w,
-                    height: h,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (cover != null && cover.isNotEmpty)
-                          AsyncImageView(
-                            imageUrl: Helpers.getThumbnailUrl(cover),
-                            fallbackUrl: Helpers.getImageUrl(cover),
-                            width: w,
-                            height: h,
-                            memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                          )
-                        else
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: ServiceCategoryHelper.getGradient(category),
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── 背景: cover OR 类别渐变 + 大类别图标 ──
+                if (hasCover)
+                  AsyncImageView(
+                    imageUrl: Helpers.getThumbnailUrl(cover),
+                    fallbackUrl: Helpers.getImageUrl(cover),
+                    memCacheWidth: 600,
+                    placeholder: _ExpertCoverFallback(category: category),
+                    errorWidget: _ExpertCoverFallback(category: category),
+                  )
+                else
+                  _ExpertCoverFallback(category: category),
+                // ── Veil: 顶/底双暗,头像区附近留干净 ──
+                const Positioned.fill(child: _PosterVeil()),
+                // ── 顶部: 左 徽章组 / 右 营业状态 (Flexible 自适应) ──
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [
+                            if (item.expertIsOfficial)
+                              _ExpertOverlayBadge(
+                                label: l10n.discoveryExpertBadgeOfficial,
+                                color: const Color(0xFF2563EB),
                               ),
-                            ),
-                          ),
-                        // 左上角徽章（官方/认证/精选）
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: [
-                              if (item.expertIsOfficial)
-                                _ExpertBadge(
-                                  label: l10n.discoveryExpertBadgeOfficial,
-                                  color: const Color(0xFF2563EB),
-                                ),
-                              if (item.expertIsVerified)
-                                _ExpertBadge(
-                                  label: l10n.discoveryExpertBadgeVerified,
-                                  color: const Color(0xFF10B981),
-                                  icon: Icons.verified,
-                                ),
-                              if (item.expertIsFeatured)
-                                _ExpertBadge(
-                                  label: l10n.discoveryExpertBadgeFeatured,
-                                  color: const Color(0xFFF97316),
-                                  icon: Icons.star,
-                                ),
-                            ],
-                          ),
+                            if (item.expertIsVerified)
+                              _ExpertOverlayBadge(
+                                label: l10n.discoveryExpertBadgeVerified,
+                                color: const Color(0xFF10B981),
+                                icon: Icons.verified,
+                              ),
+                            if (item.expertIsFeatured)
+                              _ExpertOverlayBadge(
+                                label: l10n.discoveryExpertBadgeFeatured,
+                                color: const Color(0xFFF97316),
+                                icon: Icons.star,
+                              ),
+                          ],
                         ),
-                        // 右上角：营业中/休息中（null 表示未设置营业时间，不显示）
-                        if (item.expertIsOpen != null)
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: _ExpertOpenStatusPill(isOpen: item.expertIsOpen!),
-                          ),
-                        // 左下角头像
-                        Positioned(
-                          left: 8,
-                          bottom: 8,
-                          child: Container(
+                      ),
+                      if (item.expertIsOpen != null) ...[
+                        const SizedBox(width: 6),
+                        _ExpertOpenStatusPill(isOpen: item.expertIsOpen!),
+                      ],
+                    ],
+                  ),
+                ),
+                // ── 底部 overlay: 头像 + 名字 + 技能 + 评分 ──
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 头像 + 名字 / 副标题
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 3,
+                                  color: Colors.black.withValues(alpha: 0.35),
+                                  blurRadius: 4,
                                 ),
                               ],
                             ),
                             child: AvatarView(
                               imageUrl: avatar,
                               name: name,
+                              size: 36,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 标签 + 类型（模仿帖子卡片）
-                    Row(
-                      children: [
-                        const _FeedTypeBadge(feedType: 'expert'),
-                        if (category != null && category.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              ServiceCategoryHelper.getLocalizedLabel(category, l10n),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight,
-                              ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.2,
+                                    shadows: [
+                                      Shadow(color: Colors.black54, blurRadius: 4),
+                                    ],
+                                  ),
+                                ),
+                                if (subtitle.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.88),
+                                      fontSize: 10,
+                                      height: 1.3,
+                                      shadows: const [
+                                        Shadow(color: Colors.black54, blurRadius: 3),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // 名称
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
                       ),
-                    ),
-                    // 副标题：地址（城市/地点）
-                    if (location != null && location.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        location,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                    ],
-                    // 技能标签
-                    if (skills.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 4,
-                        runSpacing: 3,
-                        children: skills.take(3).map((s) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDBEAFE),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            s,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF2563EB),
-                              fontWeight: FontWeight.w500,
+                      // 技能 chip — 半透白底
+                      if (skills.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: skills.take(3).map((s) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                width: 0.5,
+                              ),
                             ),
-                          ),
-                        )).toList(),
-                      ),
+                            child: Text(
+                              s,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  Shadow(color: Colors.black54, blurRadius: 3),
+                                ],
+                              ),
+                            ),
+                          )).toList(),
+                        ),
+                      ],
+                      // 评分 · 完单数
+                      const SizedBox(height: 6),
+                      _ExpertOverlayRatingRow(
+                          rating: rating, completed: completed),
                     ],
-                    // 评分 · 完单数（新达人：★ 新 + 刚开业）
-                    const SizedBox(height: 6),
-                    _ExpertRatingRow(
-                      rating: rating,
-                      completed: completed,
-                      isDark: isDark,
-                    ),
-                    // 推荐理由
-                    if (item.expertReasonCode != null) ...[
-                      const SizedBox(height: 8),
-                      _ExpertReasonStrip(
-                        code: item.expertReasonCode!,
-                        isNew: completed == 0,
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1413,8 +1648,39 @@ class _ExpertCard extends StatelessWidget {
   }
 }
 
-class _ExpertBadge extends StatelessWidget {
-  const _ExpertBadge({required this.label, required this.color, this.icon});
+/// 达人卡海报式 cover fallback — 类别渐变 + 大类别 icon
+class _ExpertCoverFallback extends StatelessWidget {
+  const _ExpertCoverFallback({this.category});
+  final String? category;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: ServiceCategoryHelper.getGradient(category),
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          ServiceCategoryHelper.getIcon(category),
+          size: 90,
+          color: Colors.white.withValues(alpha: 0.45),
+        ),
+      ),
+    );
+  }
+}
+
+/// 达人卡左上角徽章 (overlay 用) — 半透色底 + 白字 + 模糊阴影
+class _ExpertOverlayBadge extends StatelessWidget {
+  const _ExpertOverlayBadge({
+    required this.label,
+    required this.color,
+    this.icon,
+  });
   final String label;
   final Color color;
   final IconData? icon;
@@ -1422,10 +1688,17 @@ class _ExpertBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(6),
+        color: color.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1437,13 +1710,94 @@ class _ExpertBadge extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               color: Colors.white,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 达人卡评分行 (overlay 用) — 白字 + 阴影 + 新手 tag
+class _ExpertOverlayRatingRow extends StatelessWidget {
+  const _ExpertOverlayRatingRow({
+    required this.rating,
+    required this.completed,
+  });
+  final double? rating;
+  final int completed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isNew = completed == 0;
+    const shadow = Shadow(color: Colors.black54, blurRadius: 3);
+
+    if (isNew || rating == null || rating! <= 0) {
+      // 新达人 — 黄底"★ 新" tag + "刚开业"
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD84D).withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: const Color(0xFFFFD84D).withValues(alpha: 0.5),
+                width: 0.5,
+              ),
+            ),
+            child: Text(
+              '★ ${l10n.discoveryExpertRatingNew}',
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFFFE07A),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            l10n.discoveryExpertCompletedTasks(completed),
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.88),
+              shadows: const [shadow],
+            ),
+          ),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        const Icon(Icons.star_rounded,
+            size: 14,
+            color: Color(0xFFFFD84D),
+            shadows: [Shadow(color: Colors.black54, blurRadius: 3)]),
+        const SizedBox(width: 2),
+        Text(
+          rating!.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFFFFD84D),
+            shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          l10n.discoveryExpertCompletedTasks(completed),
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.white.withValues(alpha: 0.88),
+            shadows: const [shadow],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1489,97 +1843,6 @@ class _ExpertOpenStatusPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 评分 + 完单数。新达人（completed==0）显示 "★ 新 / 刚开业"
-class _ExpertRatingRow extends StatelessWidget {
-  const _ExpertRatingRow({
-    required this.rating,
-    required this.completed,
-    required this.isDark,
-  });
-  final double? rating;
-  final int completed;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final isNew = completed == 0;
-    final tertiary = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
-
-    return Row(
-      children: [
-        const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFB300)),
-        const SizedBox(width: 2),
-        Text(
-          isNew || rating == null || rating! <= 0
-              ? l10n.discoveryExpertRatingNew
-              : rating!.toStringAsFixed(1),
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFFFFB300),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          l10n.discoveryExpertCompletedTasks(completed),
-          style: TextStyle(fontSize: 11, color: tertiary),
-        ),
-      ],
-    );
-  }
-}
-
-class _ExpertReasonStrip extends StatelessWidget {
-  const _ExpertReasonStrip({required this.code, this.isNew = false});
-  final String code;
-  /// 新达人（completed==0）时，same_city 场景替换为"同城新上线"文案
-  final bool isNew;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    String? label;
-    Color bg;
-    Color fg;
-    switch (code) {
-      case 'same_city':
-        label = isNew
-            ? '📍 ${l10n.discoveryExpertReasonNewNearby}'
-            : '📍 ${l10n.discoveryExpertReasonSameCity}';
-        bg = const Color(0xFFDCFCE7);
-        fg = const Color(0xFF166534);
-        break;
-      case 'category_match':
-        label = '🎯 ${l10n.discoveryExpertReasonCategoryMatch}';
-        bg = const Color(0xFFE0E7FF);
-        fg = const Color(0xFF3730A3);
-        break;
-      case 'featured':
-        label = '✨ ${l10n.discoveryExpertReasonFeatured}';
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFF92400E);
-        break;
-      default:
-        return const SizedBox.shrink();
-    }
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 10.5, color: fg, height: 1.3),
       ),
     );
   }
@@ -1820,68 +2083,6 @@ class _DiscoveryUserRow extends StatelessWidget {
       );
     }
     return content;
-  }
-}
-
-class _LinkedItemTag extends StatelessWidget {
-  const _LinkedItemTag({required this.linkedItem});
-  final LinkedItemBrief linkedItem;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : AppColors.purple.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.surface2(Theme.of(context).brightness),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(_iconForType(linkedItem.itemType), size: 16, color: AppColors.purple),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              linkedItem.name ?? '',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDark ? AppColors.primaryLight : AppColors.purple,
-              ),
-            ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            size: 14,
-            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _iconForType(String type) {
-    switch (type) {
-      case 'product': return Icons.shopping_bag_outlined;
-      case 'service': return Icons.school_outlined;
-      case 'activity': return Icons.event_outlined;
-      case 'ranking': return Icons.emoji_events_outlined;
-      case 'forum_post': return Icons.forum_outlined;
-      default: return Icons.link;
-    }
   }
 }
 

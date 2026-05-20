@@ -237,6 +237,139 @@
     font-size: 11px; font-weight: 600; color: #111;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+
+  /* ===================================================================
+     D. 帖子卡 — 海报式 (首图当背景 + 文字 overlay)
+     =================================================================== */
+  .card.new.post { aspect-ratio: 3/4; }
+  .card.new.post .stats-tr {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.5); color: #fff;
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card.new.post .stats-tr .stat { display: inline-flex; align-items: center; gap: 3px; }
+  .card.new.post .stats-tr .heart { color: #FF8FAB; }
+  .card.new.post .post-title {
+    font-size: 14px; font-weight: 700; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .card.new.post .post-desc {
+    font-size: 11px; line-height: 1.4; font-weight: 400;
+    opacity: 0.9;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .card.new.post .top-badge.cat-life    { background: rgba(255, 107, 53, 0.88); }
+  .card.new.post .top-badge.cat-study   { background: rgba(47, 128, 237, 0.88); }
+  .card.new.post .top-badge.cat-housing { background: rgba(115, 89, 242, 0.88); }
+  .card.new.post .top-badge.cat-food    { background: rgba(255, 45, 85, 0.88); }
+  .card.new.post .top-badge.cat-skill   { background: rgba(38, 191, 115, 0.88); }
+
+  /* ===================================================================
+     E. 达人卡 — 海报式 (背景 + 头像 + 文字全 overlay 在图上)
+     =================================================================== */
+  .card.new.expert { aspect-ratio: 3/4; }
+
+  /* 类别渐变兜底 (cover 缺失时) */
+  .card.new.expert .bg.cat-edu     { background: linear-gradient(135deg, #2E86AB, #4FC3F7); }
+  .card.new.expert .bg.cat-food    { background: linear-gradient(135deg, #FF6B6B, #FFC857); }
+  .card.new.expert .bg.cat-photo   { background: linear-gradient(135deg, #F72585, #B5179E); }
+  .card.new.expert .bg.cat-design  { background: linear-gradient(135deg, #7359F2, #A78BFA); }
+  .card.new.expert .bg.cat-fitness { background: linear-gradient(135deg, #26BF73, #5ED99F); }
+
+  /* 海报式更需要顶部蒙层 (徽章可读性) */
+  .card.new.expert .veil {
+    background: linear-gradient(180deg,
+      rgba(0,0,0,0.35) 0%,
+      rgba(0,0,0,0.15) 25%,
+      transparent 45%,
+      rgba(0,0,0,0.45) 70%,
+      rgba(0,0,0,0.85) 100%);
+  }
+
+  .card.new.expert .badges-tl {
+    position: absolute; top: 8px; left: 8px;
+    display: flex; gap: 4px; flex-wrap: wrap;
+    max-width: calc(100% - 90px);
+  }
+  .card.new.expert .ex-badge {
+    font-size: 9px; font-weight: 700;
+    padding: 3px 7px; border-radius: 999px;
+    color: #fff;
+    display: inline-flex; align-items: center; gap: 2px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .card.new.expert .ex-badge.official { background: rgba(37, 99, 235, 0.92); }
+  .card.new.expert .ex-badge.verified { background: rgba(16, 185, 129, 0.92); }
+  .card.new.expert .ex-badge.featured { background: rgba(249, 115, 22, 0.92); }
+
+  .card.new.expert .open-tr {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(34, 197, 94, 0.92); color: #fff;
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 700;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .card.new.expert .open-tr.closed { background: rgba(107, 114, 128, 0.88); }
+
+  .card.new.expert .content {
+    /* 海报式覆盖范围更大，留更多底部空间 */
+    left: 10px; right: 10px; bottom: 10px;
+  }
+  .card.new.expert .head-row {
+    display: flex; align-items: flex-end; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .card.new.expert .ex-av {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #007AFF, #409CFF);
+    color: #fff; font-size: 16px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,0.95);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+    flex-shrink: 0;
+  }
+  .card.new.expert .ex-meta { flex: 1; min-width: 0; }
+  .card.new.expert .ex-name {
+    font-size: 14px; font-weight: 800; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card.new.expert .ex-sub {
+    font-size: 10px; opacity: 0.88; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+  .card.new.expert .skill-row {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;
+  }
+  .card.new.expert .skill-chip {
+    font-size: 9px; font-weight: 600;
+    padding: 2px 7px; border-radius: 6px;
+    background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(2px);
+    white-space: nowrap;
+  }
+  .card.new.expert .rating-row {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600;
+  }
+  .card.new.expert .rating-row .star { color: #FFD84D; }
+  .card.new.expert .rating-row .sep  { opacity: 0.5; }
+  .card.new.expert .rating-row .new-tag {
+    background: rgba(255,215,77,0.25);
+    border: 1px solid rgba(255,215,77,0.45);
+    padding: 1px 5px; border-radius: 4px;
+    font-size: 9px; font-weight: 700;
+    color: #FFE07A;
+  }
 </style>
 </head>
 <body>
@@ -539,6 +672,327 @@
     <br>· 加到 <code>target_item.rank</code>,前端 <code>TargetItemBrief.rank: int?</code>
     <br><br>
     <b>建议先做</b>:UI 改造在前(用占位 rank=null 时不显示角标),后端 rank 计算在后 —— 后端 SQL window function 要小心成本,值得单独评估。
+  </p>
+</div>
+
+<h1 style="margin-top:48px;">帖子卡新样式 — 海报式(首图当背景 + 文字 overlay)</h1>
+<p class="intro">
+  当前 <code>_PostCard</code> (<code>home_discovery_cards.dart:7-166</code>): 上半 4:3 首图 + 下半白底文字区(category badge / title / desc / 用户行 / 点赞-评论)。
+  <br>新方案: <b>整张卡 3:4 海报,首图当背景</b>, 标题/描述/作者全 overlay 在图上。互动数据(❤ / 💬)挪到右上角 chip。
+  <br><b>无首图</b> 时 fallback 回当前白底布局(保持可读性,跟用户既有习惯一致)。
+  <br>对应字段: <code>item.firstImage</code> / <code>item.displayTitle</code> / <code>item.displayDescription</code> / <code>item.userAvatar</code> / <code>item.userName</code> / <code>item.likeCount</code> / <code>item.commentCount</code> / <code>item.displayCategoryName</code>。
+</p>
+
+<div class="row">
+
+  <!-- 列 P1: 当前样式 -->
+  <div class="col">
+    <h3>当前帖子卡(参考)</h3>
+    <div class="wrap">
+      <div class="card" style="padding:0;">
+        <div style="aspect-ratio:4/3;background:linear-gradient(135deg,#7359F2,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:60px;">🏠</div>
+        <div style="padding:10px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span style="background:#EEF2FF;color:#4F46E5;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">📝 帖子</span>
+            <span style="font-size:10px;color:#999;">留学生活</span>
+          </div>
+          <div style="font-size:14px;font-weight:600;color:#222;line-height:1.35;">伦敦租房避坑:押金被吞经历</div>
+          <div style="font-size:12px;color:#666;margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">第一次找房一定要看清合同条款,下面是我的血泪经验,大家避坑...</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+            <span style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#FF6B35,#FFB627);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">陈</span>
+            <span style="font-size:11px;color:#555;">陈同学</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11px;color:#888;">
+            <span>❤ 42</span><span>💬 18</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      4:3 图 + 下半白底文字区<br>
+      <span class="pros">✅ 信息密度高,文字清晰</span><br>
+      <span class="cons">⚠️ masonry 流里同质化,刷起来灰白</span>
+    </div>
+  </div>
+
+  <!-- 列 P2: 新样式 - 有图(留学生活/橙) -->
+  <div class="col">
+    <h3>新样式 — 留学生活(橙)</h3>
+    <div class="wrap">
+      <div class="card new post">
+        <div class="bg svc1" data-emoji="🏠"></div>
+        <div class="veil"></div>
+        <span class="top-badge cat-life">🏠 留学生活</span>
+        <div class="stats-tr">
+          <span class="stat"><span class="heart">❤</span> 42</span>
+          <span class="stat">💬 18</span>
+        </div>
+        <div class="content">
+          <div class="post-title">伦敦租房避坑:押金被吞经历</div>
+          <div class="post-desc">第一次找房一定要看清合同条款,下面是我的血泪经验,新生周来不及看的存一份...</div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#FF6B35,#FFB627);">陈</span>
+            <span class="name">陈同学 · 2 天前</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      3:4 海报 · 首图背景 · 文字 overlay<br>
+      <span class="pros">✅ 视觉跳出来,封面图传达情绪</span><br>
+      <span class="pros">✅ 互动数据右上角不抢主图</span>
+    </div>
+  </div>
+
+  <!-- 列 P3: 新样式 - 有图(学习/蓝) + 长标题 -->
+  <div class="col">
+    <h3>新样式 — 学术学习(蓝)</h3>
+    <div class="wrap">
+      <div class="card new post">
+        <div class="bg" data-emoji="📚" style="background:linear-gradient(135deg,#2E86AB,#56CCF2);"></div>
+        <div class="veil"></div>
+        <span class="top-badge cat-study">📚 学习</span>
+        <div class="stats-tr">
+          <span class="stat"><span class="heart">❤</span> 128</span>
+          <span class="stat">💬 31</span>
+        </div>
+        <div class="content">
+          <div class="post-title">UCL Stats 期末突击三步走 — 我从挂科边缘救回来</div>
+          <div class="post-desc">把 Mediation Analysis 拆成可视化图谱,再套两套真题,稳了。文末附我自己整理的笔记 PDF...</div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#007AFF,#409CFF);">林</span>
+            <span class="name">林学长</span>
+            <span class="target-name" style="color:#2563EB;">置顶</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      左上 badge 跟 category 同色(蓝)<br>
+      <span class="pros">✅ 长标题 2 行截断不挤压描述</span><br>
+      <span class="pros">✅ 右上角 stats 不抢主体</span>
+    </div>
+  </div>
+
+  <!-- 列 P4: 新样式 - 无图 fallback(海报式 · 类别渐变 + 大 emoji) -->
+  <div class="col">
+    <h3>无图 fallback — 类别渐变</h3>
+    <div class="wrap">
+      <div class="card new post">
+        <div class="bg" style="background:linear-gradient(135deg,#FF2D55,#FF8FAB);" data-emoji="🍜"></div>
+        <div class="veil"></div>
+        <span class="top-badge cat-food">🍜 美食</span>
+        <div class="stats-tr">
+          <span class="stat"><span class="heart">❤</span> 9</span>
+          <span class="stat">💬 4</span>
+        </div>
+        <div class="content">
+          <div class="post-title">Camden 越南菜哪家强 — 吃了 6 家排序</div>
+          <div class="post-desc">没拍照但每家都记得分量、汤底、价格,横向打分给大家参考,新生周可以照着 try。</div>
+          <div class="user-row">
+            <span class="av" style="background:linear-gradient(135deg,#7359F2,#A78BFA);">Y</span>
+            <span class="name">Yvonne · 4 天前</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      <code>item.firstImage == null</code> →<br>
+      用 category 渐变 + 大 emoji 占位<br>
+      <span class="pros">✅ 跟有图卡视觉风格统一</span><br>
+      <span class="pros">✅ 不再"灰白成片"</span><br>
+      <span class="pros">✅ 无需新字段(emoji 取自 categoryIcon)</span>
+    </div>
+  </div>
+</div>
+
+<h1 style="margin-top:48px;">达人卡新样式 — 海报式(背景图 + 头像 + 文字全在图上)</h1>
+<p class="intro">
+  当前 <code>_ExpertCard</code> (<code>home_discovery_cards.dart:1171-1414</code>): 上半 3:4 cover (头像 + 徽章 + 营业状态叠在 cover 上) + 下半白底文字区(name / location / skills / rating / reason)。
+  <br>新方案: <b>整张卡都用 cover 当背景</b>, 头像 + 名字 + 地点 + 技能 chip + 评分 全 overlay 在图上 —— 像"主理人头牌海报"。
+  <br><b>无 cover</b> fallback: <b>类别渐变 + 大 emoji</b> (沿用现在的 <code>ServiceCategoryHelper.getGradient(category)</code>),保持视觉一致。
+  <br>徽章和"营业中"chip 用 <b>半透明 + backdrop-blur</b>,不破坏底图。技能 chip 改用半透白底,跟海报融洽。
+  <br>对应字段: <code>item.firstImage</code>(cover) / <code>item.userAvatar</code>(头像) / <code>item.displayTitle</code>(达人名) / <code>item.expertCategory</code> / <code>item.expertLocation</code> / <code>item.expertFeaturedSkills</code> / <code>item.rating</code> / <code>item.expertCompletedTasks</code> / <code>item.expertIsOpen</code> / 三个徽章 flag。
+</p>
+
+<div class="row">
+
+  <!-- 列 E1: 当前样式 -->
+  <div class="col">
+    <h3>当前达人卡(参考)</h3>
+    <div class="wrap">
+      <div class="card" style="padding:0;">
+        <div style="aspect-ratio:3/4;background:linear-gradient(135deg,#2E86AB,#A23B72);position:relative;">
+          <div style="position:absolute;top:8px;left:8px;display:flex;gap:4px;">
+            <span style="background:#2563EB;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">官方</span>
+            <span style="background:#10B981;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">✓ 认证</span>
+          </div>
+          <div style="position:absolute;top:8px;right:8px;background:#22C55E;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;">营业中</div>
+          <div style="position:absolute;left:8px;bottom:8px;width:42px;height:42px;border-radius:50%;border:2px solid #fff;background:linear-gradient(135deg,#007AFF,#409CFF);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);">林</div>
+        </div>
+        <div style="padding:10px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span style="background:#FFF7ED;color:#EA580C;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">⭐ 达人</span>
+            <span style="font-size:10px;color:#999;">学术辅导</span>
+          </div>
+          <div style="font-size:14px;font-weight:700;color:#222;">林学长 · Stats 答疑</div>
+          <div style="font-size:11px;color:#888;margin-top:3px;">UCL · 伦敦</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+            <span style="background:#DBEAFE;color:#2563EB;font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;">SPSS</span>
+            <span style="background:#DBEAFE;color:#2563EB;font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;">R 语言</span>
+          </div>
+          <div style="font-size:11px;color:#555;margin-top:6px;">⭐ 4.9 · 完单 86</div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      上半 cover + 下半白底信息区<br>
+      <span class="pros">✅ 信息密度高</span><br>
+      <span class="cons">⚠️ 视觉割裂(图 / 白底)</span>
+    </div>
+  </div>
+
+  <!-- 列 E2: 新样式 — 标准达人(有 cover) -->
+  <div class="col">
+    <h3>新样式 — 标准达人</h3>
+    <div class="wrap">
+      <div class="card new expert">
+        <div class="bg" style="background:linear-gradient(135deg,#2E86AB,#A23B72);" data-emoji="📊"></div>
+        <div class="veil"></div>
+        <div class="badges-tl">
+          <span class="ex-badge official">官方</span>
+          <span class="ex-badge verified">✓ 认证</span>
+          <span class="ex-badge featured">★ 精选</span>
+        </div>
+        <span class="open-tr">● 营业中</span>
+        <div class="content">
+          <div class="head-row">
+            <span class="ex-av">林</span>
+            <div class="ex-meta">
+              <div class="ex-name">林学长 · Stats 答疑</div>
+              <div class="ex-sub">UCL · 伦敦 · 学术辅导</div>
+            </div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-chip">SPSS</span>
+            <span class="skill-chip">R 语言</span>
+            <span class="skill-chip">Mediation</span>
+          </div>
+          <div class="rating-row">
+            <span class="star">★</span><span>4.9</span>
+            <span class="sep">·</span><span>完单 86</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      整张图当背景,头像 + 名字 + 技能 + 评分全 overlay<br>
+      <span class="pros">✅ "主理人头牌海报"质感</span><br>
+      <span class="pros">✅ 徽章 backdrop-blur 不喧宾夺主</span>
+    </div>
+  </div>
+
+  <!-- 列 E3: 新样式 — 新手达人(无评分) -->
+  <div class="col">
+    <h3>新样式 — 新手达人</h3>
+    <div class="wrap">
+      <div class="card new expert">
+        <div class="bg" style="background:linear-gradient(135deg,#F72585,#B5179E);" data-emoji="📷"></div>
+        <div class="veil"></div>
+        <div class="badges-tl">
+          <span class="ex-badge verified">✓ 认证</span>
+        </div>
+        <span class="open-tr closed">休息中</span>
+        <div class="content">
+          <div class="head-row">
+            <span class="ex-av" style="background:linear-gradient(135deg,#F72585,#B5179E);">Y</span>
+            <div class="ex-meta">
+              <div class="ex-name">Yvonne · 写真摄影</div>
+              <div class="ex-sub">伦敦 Zone 1-2 · 摄影</div>
+            </div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-chip">人像写真</span>
+            <span class="skill-chip">街拍</span>
+            <span class="skill-chip">情侣约拍</span>
+          </div>
+          <div class="rating-row">
+            <span class="new-tag">★ 新</span>
+            <span class="sep">·</span><span>刚开业</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      无评分 = "★ 新" tag (跟现在的新手徽章一致)<br>
+      <span class="pros">✅ 休息中状态用灰色 chip</span><br>
+      <span class="pros">✅ 没"完单 0"这种刺眼数据</span>
+    </div>
+  </div>
+
+  <!-- 列 E4: 新样式 — 无 cover fallback (类别渐变 + 大 emoji) -->
+  <div class="col">
+    <h3>无 cover fallback — 类别渐变</h3>
+    <div class="wrap">
+      <div class="card new expert">
+        <div class="bg cat-design" data-emoji="🎨"></div>
+        <div class="veil"></div>
+        <div class="badges-tl">
+          <span class="ex-badge featured">★ 精选</span>
+        </div>
+        <span class="open-tr">● 营业中</span>
+        <div class="content">
+          <div class="head-row">
+            <span class="ex-av" style="background:linear-gradient(135deg,#7359F2,#A78BFA);">妙</span>
+            <div class="ex-meta">
+              <div class="ex-name">妙妙 · 头像约稿</div>
+              <div class="ex-sub">远程 · 设计创作</div>
+            </div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-chip">Q 版头像</span>
+            <span class="skill-chip">情头</span>
+            <span class="skill-chip">表情包</span>
+          </div>
+          <div class="rating-row">
+            <span class="star">★</span><span>4.8</span>
+            <span class="sep">·</span><span>完单 24</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="desc">
+      <code>item.firstImage == null</code> →<br>
+      用 <code>ServiceCategoryHelper.getGradient(category)</code> + 大 emoji<br>
+      <span class="pros">✅ 跟有图卡视觉风格统一</span><br>
+      <span class="pros">✅ 不用加新字段</span>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 32px; padding: 18px 22px; background: #fff; border-radius: 12px; max-width: 1200px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+  <h2 style="font-size: 16px; margin-bottom: 10px;">实现思路 — 帖子卡 + 达人卡</h2>
+  <p style="font-size: 13px; color: #555; line-height: 1.7;">
+    <b>帖子卡 (<code>_PostCard</code>)</b>:
+    <br>· <b>统一海报式</b> — 无论有无首图,都用 <code>Stack(fit: StackFit.expand, ...)</code> 海报布局
+    <br>· <code>item.hasImages</code> = true → 首图 <code>AsyncImageView</code> 占满做背景
+    <br>· <code>item.hasImages</code> = false → 用 category 渐变(参考 <code>ServiceCategoryHelper.getGradient</code> 或自建 post category gradient map) + <code>item.categoryIcon</code> emoji 大字(<code>fontSize: 90, opacity: 0.5</code>) 占位 —— 跟达人卡 fallback 风格一致
+    <br>· 顶部加 <code>LinearGradient(0.35→0→0.45→0.85)</code> veil 保证 overlay 文字可读
+    <br>· 顶部 overlay: 左上 category badge (按 category 染色), 右上 stats chip (❤ likeCount · 💬 commentCount)
+    <br>· 底部 overlay: title (2 行) + desc (2 行) + 用户行 (AvatarView + userName · 时间) + linkedItem tag (有则显)
+    <br>· cardRadius 沿用 <code>_kDiscoveryCardRadius</code>,aspect-ratio 改 3:4 (跟现在的达人卡一致,masonry 高度差异更舒服)
+    <br><br>
+    <b>达人卡 (<code>_ExpertCard</code>)</b>:
+    <br>· 现有 cover (3:4) 已经存在,只需把<b>下半白底信息区</b>也合进 cover overlay
+    <br>· cover 缺失 → 沿用 <code>ServiceCategoryHelper.getGradient(category)</code> 渐变 + 类别 emoji 大字 (透明度 0.5),Flutter 用 <code>Center(child: Text(emoji, fontSize: 90, color: white.withOpacity(0.5)))</code>
+    <br>· 头像从 cover 左下移到 content overlay 内,跟名字成 head-row;尺寸 38-40px + 白边 + 阴影
+    <br>· 技能 chip 改半透白底 (<code>Colors.white.withOpacity(0.22)</code>) + 边框 0.22 alpha,不再用 <code>Color(0xFFDBEAFE)</code> 蓝底
+    <br>· 营业中/休息中 pill: 营业中绿色 0.92, 休息中灰色 0.88
+    <br>· 评分 0 时显示 "★ 新 · 刚开业" tag (不显示 "完单 0")
+    <br>· 推荐理由 <code>expertReasonCode</code> 在海报式里塞不下,**移到 cover 顶部右侧或省略**(masonry 卡太挤);可选保留在长按 / 详情页
+    <br><br>
+    <b>无需后端字段改动</b> — 字段全部沿用现有 <code>DiscoveryFeedItem</code>。
+    <br><b>渐进上线</b>: 先做帖子卡 (改动小,fallback 安全),再做达人卡 (信息密度变化大,需要看 masonry 流整体节奏)。
   </p>
 </div>
 
